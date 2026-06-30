@@ -1,0 +1,291 @@
+.kartoteki {
+  display: grid;
+  gap: 18px;
+  color: #f4fff7;
+}
+
+.kartoteki__widok {
+  display: grid;
+  gap: 18px;
+}
+
+.kartoteki__naglowek,
+.kartoteki__pasek,
+.kartoteki__akcje,
+.kartoteki__akcje-formularza,
+.kartoteki__filtry,
+.kartoteki__zakladki,
+.kartoteki__paginacja,
+.kartoteki__tytul {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.kartoteki__naglowek {
+  justify-content: space-between;
+  padding: 2px 0 8px;
+}
+
+.kartoteki__tytul {
+  align-items: flex-start;
+}
+
+.kartoteki__tytul h1 {
+  margin: 0;
+  font-size: 1.35rem;
+  line-height: 1.15;
+}
+
+.kartoteki__tytul p {
+  margin: 6px 0 0;
+  color: #9ccfab;
+  font-size: 0.86rem;
+}
+
+.kartoteki__ikona {
+  display: inline-grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  color: #38f585;
+  font-size: 1.25rem;
+}
+
+.kartoteki__ikona--zolty {
+  color: #fbbf24;
+}
+
+.kartoteki__zakladki {
+  flex-wrap: wrap;
+}
+
+.kartoteki__panel,
+.kartoteki__wiersz,
+.kartoteki__tabela-opakowanie {
+  border: 1px solid rgba(74, 222, 128, 0.28);
+  border-radius: 8px;
+  background: #062313;
+}
+
+.kartoteki__panel {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.kartoteki__pasek {
+  justify-content: space-between;
+}
+
+.kartoteki__pasek > span,
+.kartoteki__liczba-pozycji {
+  color: #9ccfab;
+  font-size: 0.84rem;
+}
+
+.kartoteki__filtry,
+.kartoteki__akcje,
+.kartoteki__akcje-formularza,
+.kartoteki__paginacja {
+  flex-wrap: wrap;
+}
+
+.kartoteki__akcje {
+  justify-content: flex-end;
+}
+
+.kartoteki__paginacja {
+  justify-content: flex-end;
+}
+
+.kartoteki__paginacja span {
+  color: #dff7e6;
+  font-weight: 700;
+}
+
+.kartoteki__lista {
+  display: grid;
+  gap: 12px;
+}
+
+.kartoteki__wiersz {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px;
+}
+
+.kartoteki__wiersz strong,
+.kartoteki__panel strong {
+  display: block;
+  color: #f7fff9;
+}
+
+.kartoteki__wiersz span {
+  display: block;
+  margin-top: 3px;
+  color: #9ccfab;
+  font-size: 0.86rem;
+}
+
+.kartoteki__formularz {
+  display: grid;
+  gap: 10px;
+}
+
+.kartoteki__formularz--dwa {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.kartoteki__formularz--trzy {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.kartoteki__pole-szerokie {
+  grid-column: span 2;
+}
+
+.kartoteki input,
+.kartoteki select {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid rgba(74, 222, 128, 0.36);
+  border-radius: 6px;
+  background: #03180c;
+  color: #f7fff9;
+  font: inherit;
+  font-size: 0.86rem;
+  padding: 8px 10px;
+}
+
+.kartoteki input::placeholder {
+  color: #91b99d;
+}
+
+.kartoteki__wyszukiwarka {
+  max-width: 360px;
+}
+
+.kartoteki__liczba-pozycji {
+  display: grid;
+  min-width: 170px;
+  gap: 5px;
+}
+
+.kartoteki__przycisk {
+  min-height: 34px;
+  border: 1px solid rgba(74, 222, 128, 0.24);
+  border-radius: 6px;
+  background: #0b2b17;
+  color: #e9fff0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  padding: 7px 10px;
+  white-space: nowrap;
+}
+
+.kartoteki__przycisk:hover:not(:disabled) {
+  border-color: #4ade80;
+  background: #123a20;
+}
+
+.kartoteki__przycisk:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+.kartoteki__przycisk--glowny {
+  border-color: #4ade80;
+  background: #4ade80;
+  color: #052e12;
+}
+
+.kartoteki__przycisk--jasny {
+  border-color: #f7fff9;
+  background: #f7fff9;
+  color: #03180c;
+}
+
+.kartoteki__komunikat {
+  margin: 0;
+  border-left: 3px solid #38f585;
+  border-radius: 6px;
+  background: #073018;
+  color: #9fffd0;
+  padding: 9px 12px;
+}
+
+.kartoteki__tabela-opakowanie {
+  overflow-x: auto;
+}
+
+.kartoteki__tabela {
+  width: 100%;
+  min-width: 1120px;
+  border-collapse: collapse;
+}
+
+.kartoteki__tabela th,
+.kartoteki__tabela td {
+  border-bottom: 1px solid rgba(74, 222, 128, 0.18);
+  padding: 12px 10px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.kartoteki__tabela th {
+  color: #dff7e6;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.kartoteki__tabela td {
+  color: #f7fff9;
+  font-size: 0.86rem;
+}
+
+.kartoteki__status--ok {
+  color: #38f585;
+}
+
+.kartoteki__status--uwaga {
+  color: #facc15;
+}
+
+@media (max-width: 1180px) {
+  .kartoteki__wiersz,
+  .kartoteki__formularz--dwa,
+  .kartoteki__formularz--trzy {
+    grid-template-columns: 1fr;
+  }
+
+  .kartoteki__pole-szerokie {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  .kartoteki__naglowek,
+  .kartoteki__pasek,
+  .kartoteki__wiersz,
+  .kartoteki__akcje,
+  .kartoteki__paginacja {
+    align-items: stretch;
+    justify-content: stretch;
+  }
+
+  .kartoteki__pasek,
+  .kartoteki__wiersz {
+    display: grid;
+  }
+
+  .kartoteki__wyszukiwarka,
+  .kartoteki__liczba-pozycji {
+    max-width: none;
+    width: 100%;
+  }
+}

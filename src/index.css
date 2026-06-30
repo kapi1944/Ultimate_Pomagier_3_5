@@ -1,0 +1,24 @@
+:root {
+  font-family: Inter, system-ui, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: #f4fff7;
+  background: #02140a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  background: #02140a;
+}

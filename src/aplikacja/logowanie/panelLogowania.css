@@ -1,0 +1,64 @@
+.panel-logowania {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 24px;
+  background: #02140a;
+  color: #f4fff7;
+}
+
+.panel-logowania__formularz {
+  display: grid;
+  width: min(100%, 420px);
+  gap: 16px;
+  border: 1px solid rgba(74, 222, 128, 0.25);
+  border-radius: 8px;
+  padding: 28px;
+  background: #082b14;
+}
+
+.panel-logowania__formularz h1 {
+  margin: 0 0 8px;
+  font-size: 1.6rem;
+}
+
+.panel-logowania__formularz p {
+  margin: 0;
+  color: #b9d7c2;
+}
+
+.panel-logowania__formularz label {
+  display: grid;
+  gap: 8px;
+  color: #e7fff0;
+  font-weight: 700;
+}
+
+.panel-logowania__formularz input {
+  border: 1px solid rgba(74, 222, 128, 0.35);
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: #03180c;
+  color: #f4fff7;
+  font: inherit;
+}
+
+.panel-logowania__formularz input:focus {
+  outline: 2px solid rgba(74, 222, 128, 0.55);
+  outline-offset: 2px;
+}
+
+.panel-logowania__formularz button {
+  border: 1px solid #4ade80;
+  border-radius: 6px;
+  padding: 10px 14px;
+  background: #4ade80;
+  color: #052e12;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+
+.panel-logowania__blad {
+  color: #fecaca;
+}

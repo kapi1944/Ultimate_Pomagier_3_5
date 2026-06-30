@@ -1,0 +1,1519 @@
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import {
+  parsujTekstProgramu,
+  type PodpunktProgramu,
+  type PozycjaListyProgramu,
+} from './ParserTekstu'
+import { EdytorProgramuWysiwyg } from './komponenty/EdytorProgramuWysiwyg'
+import {
+  konwertujHtmlNaTekstProgramu,
+  konwertujTekstProgramuNaHtml,
+  oczyscHtmlProgramu,
+} from './komponenty/konwersjaProgramuWysiwyg'
+
+type ProfilFirmy = 'semper' | 'iist'
+type StylDni = 'pasek' | 'naglowek'
+type SeparacjaModulow = 'brak' | 'ramka' | 'linia' | 'separator-pytan'
+type StylPodpunktow = 'punktory' | 'numeracja'
+type StylListyGlownej = 'numeracja' | 'punktory'
+type FormatCudzyslowu = 'dolny-gorny' | 'gorny-gorny'
+
+type UstawieniaProgramu = {
+  profilFirmy: ProfilFirmy
+  kolorAkcentuProgramu: string
+  kolorReczny: boolean
+  formatowanieSkryptowe: boolean
+  stylDni: StylDni
+  separacjaModulow: SeparacjaModulow
+  stylPodpunktow: StylPodpunktow
+  stylListyGlownej: StylListyGlownej
+  stylePoziomowListy: string[]
+  gruboscObramowaniaTytulu: number
+  formatCudzyslowu: FormatCudzyslowu
+  szerokoscLogotypu: number
+  czyPogrubiacNaglowkiListyProgramu: boolean
+}
+
+type ZapisProgramuRoboczego = {
+  tytulSzkolenia: string
+  trescProgramu: string
+  trescProgramuHtml: string
+  ustawienia: UstawieniaProgramu
+  logotypProgramu: string
+  linkLogotypu: string
+}
+
+type DaneProfiluFirmy = {
+  nazwa: string
+  kolor: string
+  kontakt: string
+  stopka: string
+}
+
+const kluczProgramuRoboczego = 'ultimate-pomagier-program-szkolenia-roboczy'
+const wzorzecHex = /^#[0-9a-f]{6}$/i
+const punktoryDoWyboru = ['•', '◦', '▪', '-', '–', '*']
+const etykietaNumeracjiListyGlownej = '1,2,3'
+
+const daneProfilowFirmy: Record<ProfilFirmy, DaneProfiluFirmy> = {
+  semper: {
+    nazwa: 'SEMPER',
+    kolor: '#DE1914',
+    kontakt: 'Centrum Organizacji Szkoleń i Konferencji SEMPER',
+    stopka:
+      'Centrum Organizacji Szkoleń i Konferencji SEMPER | ul. Libelta 1a/2, 61-706 Poznań | NIP 7772616176 | REGON 301265926 | biuro@szkolenia-semper.pl',
+  },
+  iist: {
+    nazwa: 'IIST',
+    kolor: '#2E89BE',
+    kontakt: 'Międzynarodowy Instytut Szkoleń Specjalistycznych IIST',
+    stopka: 'IIST - robocza stopka dokumentu programu szkolenia',
+  },
+}
+
+const domyslneUstawienia: UstawieniaProgramu = {
+  profilFirmy: 'semper',
+  kolorAkcentuProgramu: daneProfilowFirmy.semper.kolor,
+  kolorReczny: false,
+  formatowanieSkryptowe: true,
+  stylDni: 'pasek',
+  separacjaModulow: 'ramka',
+  stylPodpunktow: 'punktory',
+  stylListyGlownej: 'numeracja',
+  stylePoziomowListy: ['•', '◦', '▪'],
+  gruboscObramowaniaTytulu: 1,
+  formatCudzyslowu: 'dolny-gorny',
+  szerokoscLogotypu: 90,
+  czyPogrubiacNaglowkiListyProgramu: true,
+}
+
+const domyslnyZapisProgramu: ZapisProgramuRoboczego = {
+  tytulSzkolenia: '',
+  trescProgramu: '',
+  trescProgramuHtml: '',
+  ustawienia: domyslneUstawienia,
+  logotypProgramu: '',
+  linkLogotypu: '',
+}
+
+const styleProgramuSzkolenia = `
+.program-szkolen {
+  display: grid;
+  gap: 18px;
+  color: #f4fff7;
+}
+
+.program-szkolen *,
+.program-szkolen *::before,
+.program-szkolen *::after {
+  box-sizing: border-box;
+}
+
+.program-szkolen__naglowek {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.program-szkolen__naglowek h1 {
+  margin: 0;
+  font-size: 2rem;
+  line-height: 1.2;
+}
+
+.program-szkolen__akcje,
+.program-szkolen__przyciski,
+.program-szkolen__wiersz-przyciskow {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.program-szkolen__przycisk {
+  min-height: 38px;
+  border: 1px solid rgba(74, 222, 128, 0.35);
+  border-radius: 6px;
+  padding: 8px 12px;
+  background: #041f0f;
+  color: #f4fff7;
+  cursor: pointer;
+  font: inherit;
+}
+
+.program-szkolen__przycisk:hover,
+.program-szkolen__przycisk--aktywny {
+  border-color: #4ade80;
+  background: #4ade80;
+  color: #052e12;
+}
+
+.program-szkolen__komunikat {
+  border: 1px solid rgba(74, 222, 128, 0.28);
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: #082b14;
+  color: #c7ead0;
+  font-size: 0.92rem;
+}
+
+.program-szkolen__uklad {
+  display: grid;
+  grid-template-columns: minmax(710px, 1fr) minmax(800px, 800px) minmax(260px, 420px);
+  justify-content: stretch;
+  gap: 20px;
+  align-items: start;
+  min-width: 0;
+}
+
+.program-szkolen__panel {
+  display: contents;
+}
+
+.program-szkolen__sekcja {
+  border: 1px solid rgba(74, 222, 128, 0.25);
+  border-radius: 8px;
+  padding: 16px;
+  background: #082b14;
+}
+
+.program-szkolen__sekcja--import {
+  grid-column: 1;
+  grid-row: 1;
+  order: 1;
+}
+
+.program-szkolen__sekcja--edycja {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  order: 2;
+}
+
+.program-szkolen__sekcja--logotypy {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: center;
+  width: min(100%, 800px);
+  order: 3;
+}
+
+.program-szkolen__sekcja--ustawienia {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  order: 5;
+}
+
+.program-szkolen__sekcja h2 {
+  margin: 0 0 14px;
+  color: #e7fff0;
+  font-size: 1rem;
+  letter-spacing: 0;
+}
+
+.program-szkolen__siatka {
+  display: grid;
+  gap: 12px;
+}
+
+.program-szkolen__siatka--dwie {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.program-szkolen__siatka--logotypy {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  gap: 24px;
+}
+
+.program-szkolen__blok-logotypu {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.program-szkolen__blok-logotypu--link {
+  border-left: 1px solid rgba(74, 222, 128, 0.22);
+  padding-left: 24px;
+}
+
+.program-szkolen__separator {
+  height: 1px;
+  margin: 2px 0;
+  background: rgba(74, 222, 128, 0.22);
+}
+
+.program-szkolen__srodtytul {
+  margin: 4px 0 0;
+  border-top: 1px solid rgba(74, 222, 128, 0.18);
+  padding-top: 12px;
+  color: #e7fff0;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.program-szkolen__etykieta {
+  display: grid;
+  gap: 6px;
+  color: #e7fff0;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.program-szkolen__etykieta--poziom {
+  grid-template-columns: 1fr 108px;
+  align-items: center;
+}
+
+.program-szkolen__pole,
+.program-szkolen__lista {
+  width: 100%;
+  border: 1px solid rgba(74, 222, 128, 0.35);
+  border-radius: 6px;
+  padding: 9px 10px;
+  background: #03180c;
+  color: #f4fff7;
+  font: inherit;
+}
+
+.program-szkolen__edytor-wysiwyg {
+  display: grid;
+  gap: 8px;
+}
+
+.program-szkolen__pasek-edytora {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  border: 1px solid rgba(74, 222, 128, 0.25);
+  border-radius: 6px;
+  padding: 8px;
+  background: #03180c;
+}
+
+.program-szkolen__obszar-edytora {
+  border: 1px solid rgba(74, 222, 128, 0.35);
+  border-radius: 6px;
+  background: #03180c;
+  color: #f4fff7;
+}
+
+.program-szkolen__pole[type='color'] {
+  min-height: 40px;
+  padding: 3px;
+}
+
+.program-szkolen__pole[type='range'] {
+  padding: 0;
+}
+
+.program-szkolen__pole:focus,
+.program-szkolen__lista:focus {
+  outline: 2px solid rgba(74, 222, 128, 0.55);
+  outline-offset: 2px;
+}
+
+.program-szkolen__obszar-edytora:focus-within {
+  outline: 2px solid rgba(74, 222, 128, 0.55);
+  outline-offset: 2px;
+}
+
+.program-szkolen__tiptap {
+  min-height: 620px;
+  padding: 14px;
+  color: #f4fff7;
+  font: inherit;
+  line-height: 1.55;
+}
+
+.program-szkolen__tiptap:focus {
+  outline: none;
+}
+
+.program-szkolen__tiptap p,
+.program-szkolen__tiptap h2,
+.program-szkolen__tiptap h3,
+.program-szkolen__tiptap ul,
+.program-szkolen__tiptap ol {
+  margin-top: 0;
+}
+
+.program-szkolen__tiptap h2,
+.program-szkolen__tiptap h3 {
+  color: #e7fff0;
+}
+
+.program-szkolen__tiptap ul,
+.program-szkolen__tiptap ol {
+  padding-left: 24px;
+}
+
+.program-szkolen__tiptap hr {
+  border: 0;
+  border-top: 1px solid rgba(74, 222, 128, 0.35);
+  margin: 18px 0;
+}
+
+.program-szkolen__tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #86a891;
+  pointer-events: none;
+  height: 0;
+}
+
+.program-szkolen__lista--punktor-poziomu {
+  font-size: 1.25rem;
+  line-height: 1.2;
+}
+
+.program-szkolen__wybor {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.program-szkolen__wybor--trzy {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.program-szkolen__wybor-profilu {
+  border: 1px solid rgba(74, 222, 128, 0.35);
+  border-radius: 6px;
+  padding: 3px;
+  background: #03180c;
+}
+
+.program-szkolen__przycisk-profilu {
+  border-color: transparent;
+  background: transparent;
+}
+
+.program-szkolen__blad {
+  color: #fecaca;
+  font-size: 0.82rem;
+}
+
+.program-szkolen__opis {
+  margin: 0;
+  color: #c7ead0;
+  font-size: 0.82rem;
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+.program-szkolen__podglad {
+  display: flex;
+  grid-column: 2;
+  grid-row: 2;
+  justify-content: center;
+  overflow: visible;
+  order: 4;
+  padding-bottom: 24px;
+}
+
+.program-kartka-a4 {
+  width: min(100%, 800px);
+  aspect-ratio: 210 / 297;
+  min-height: auto;
+  margin: 0 auto;
+  padding: 52px 56px;
+  background: #ffffff;
+  color: #1f2933;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
+  font-family: Arial, sans-serif;
+}
+
+.program-kartka-a4__naglowek {
+  border-bottom: 4px solid currentColor;
+  padding-bottom: 22px;
+}
+
+.program-kartka-a4__meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 32px;
+}
+
+.program-kartka-a4__profil {
+  color: #111827;
+  font-size: 1.45rem;
+  font-weight: 700;
+}
+
+.program-kartka-a4__kontakt {
+  max-width: 310px;
+  color: #4b5563;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  text-align: right;
+}
+
+.program-kartka-a4__logotyp {
+  display: flex;
+  justify-content: center;
+  margin-top: 28px;
+}
+
+.program-kartka-a4__logotyp img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+.program-kartka-a4__etykieta {
+  margin-top: 30px;
+  color: #111827;
+  font-size: 1.08rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.program-kartka-a4__tytul {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18cm;
+  max-width: 100%;
+  min-height: 52px;
+  margin: 12px auto 0;
+  padding: 10px 16px;
+  background: #d9d9d9;
+  border: 1px solid #a6a6a6;
+  font-size: 1.08rem;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+}
+
+.program-kartka-a4__tresc {
+  margin-top: 34px;
+}
+
+.program-kartka-a4__pusty {
+  border: 1px dashed #cbd5e1;
+  padding: 28px;
+  color: #64748b;
+  font-size: 0.92rem;
+  text-align: center;
+}
+
+.program-kartka-a4__surowy {
+  white-space: pre-wrap;
+  color: #374151;
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+.program-kartka-a4__dzien {
+  break-inside: avoid-page;
+  margin-bottom: 28px;
+}
+
+.program-kartka-a4__dzien-tytul {
+  margin: 0 0 16px;
+  font-size: 1rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.program-kartka-a4__dzien-tytul--pasek {
+  padding: 8px 14px;
+  color: #ffffff;
+}
+
+.program-kartka-a4__dzien-tytul--naglowek {
+  border-bottom: 2px solid currentColor;
+  padding-bottom: 8px;
+  color: #111827;
+}
+
+.program-kartka-a4__temat-dnia {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.92rem;
+  text-transform: none;
+}
+
+.program-kartka-a4__moduly {
+  display: grid;
+  gap: 14px;
+}
+
+.program-kartka-a4__modul {
+  break-inside: avoid-page;
+}
+
+.program-kartka-a4__modul--ramka {
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 13px 14px;
+}
+
+.program-kartka-a4__modul--separator-pytan {
+  border-top: 2px solid currentColor;
+  padding-top: 16px;
+}
+
+.program-kartka-a4__modul-tytul {
+  margin: 0 0 10px;
+  color: #1f2937;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.program-kartka-a4__modul-tytul--linia {
+  border-bottom: 1px solid #d1d5db;
+  padding-bottom: 7px;
+}
+
+.program-kartka-a4__lista {
+  display: grid;
+  gap: 7px;
+}
+
+.program-kartka-a4__pozycja {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  gap: 8px;
+  color: #374151;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.program-kartka-a4__marker {
+  color: #1f2937;
+  text-align: right;
+}
+
+.program-kartka-a4__stopka {
+  margin-top: 42px;
+  border-top: 1px solid #d1d5db;
+  padding-top: 12px;
+  color: #6b7280;
+  font-size: 0.7rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
+@media (max-width: 1860px) {
+  .program-szkolen__uklad {
+    grid-template-columns: minmax(420px, 1fr) minmax(0, 800px);
+  }
+
+  .program-szkolen__sekcja--ustawienia {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+}
+
+@media (max-width: 760px) {
+  .program-szkolen__uklad {
+    grid-template-columns: 1fr;
+  }
+
+  .program-szkolen__sekcja--import,
+  .program-szkolen__sekcja--edycja,
+  .program-szkolen__sekcja--logotypy,
+  .program-szkolen__sekcja--ustawienia,
+  .program-szkolen__podglad {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .program-szkolen__siatka--dwie,
+  .program-szkolen__siatka--logotypy,
+  .program-szkolen__wybor,
+  .program-szkolen__wybor--trzy {
+    grid-template-columns: 1fr;
+  }
+
+  .program-szkolen__blok-logotypu--link {
+    border-left: 0;
+    border-top: 1px solid rgba(74, 222, 128, 0.22);
+    padding-top: 14px;
+    padding-left: 0;
+  }
+
+  .program-kartka-a4 {
+    padding: 28px 20px;
+  }
+
+  .program-kartka-a4__meta {
+    flex-wrap: wrap;
+  }
+
+  .program-kartka-a4__kontakt {
+    max-width: none;
+    text-align: left;
+  }
+
+  .program-kartka-a4__tytul {
+    width: 100%;
+  }
+}
+
+@page {
+  size: A4 portrait;
+  margin: 14mm;
+}
+
+@media print {
+  body {
+    background: #ffffff !important;
+  }
+
+  .program-panel-roboczy,
+  .menu-boczne {
+    display: none !important;
+  }
+
+  .uklad-aplikacji {
+    display: block !important;
+    min-height: auto !important;
+    background: #ffffff !important;
+  }
+
+  .uklad-aplikacji__obszar-roboczy {
+    padding: 0 !important;
+  }
+
+  .program-szkolen__uklad {
+    display: block !important;
+  }
+
+  .program-szkolen__podglad {
+    overflow: visible !important;
+  }
+
+  .program-kartka-a4 {
+    box-shadow: none !important;
+    margin: 0 !important;
+    width: 100% !important;
+    min-height: auto !important;
+    page-break-after: always;
+  }
+}
+`
+
+function sprawdzHex(kolor: string) {
+  return wzorzecHex.test(kolor)
+}
+
+function pobierzKolorAkcentu(ustawienia: UstawieniaProgramu) {
+  return sprawdzHex(ustawienia.kolorAkcentuProgramu)
+    ? ustawienia.kolorAkcentuProgramu
+    : daneProfilowFirmy[ustawienia.profilFirmy].kolor
+}
+
+function formatujTytulSzkolenia(tytul: string, formatCudzyslowu: FormatCudzyslowu) {
+  const tekst = tytul.trim()
+
+  if (!tekst) {
+    return tekst
+  }
+
+  return formatCudzyslowu === 'gorny-gorny' ? `"${tekst}"` : `„${tekst}”`
+}
+
+function renderujMarkdownInline(tekst: string): ReactNode[] {
+  const elementy: ReactNode[] = []
+  const wzorzec = /(\*\*([^*]+)\*\*|\+\+([^+]+)\+\+|\*([^*\n]+)\*)/g
+  let ostatniIndeks = 0
+  let dopasowanie: RegExpExecArray | null = wzorzec.exec(tekst)
+
+  while (dopasowanie) {
+    if (dopasowanie.index > ostatniIndeks) {
+      elementy.push(tekst.slice(ostatniIndeks, dopasowanie.index))
+    }
+
+    const klucz = `${dopasowanie.index}-${dopasowanie[0]}`
+
+    if (dopasowanie[2]) {
+      elementy.push(<strong key={klucz}>{dopasowanie[2]}</strong>)
+    } else if (dopasowanie[3]) {
+      elementy.push(<u key={klucz}>{dopasowanie[3]}</u>)
+    } else if (dopasowanie[4]) {
+      elementy.push(<em key={klucz}>{dopasowanie[4]}</em>)
+    }
+
+    ostatniIndeks = dopasowanie.index + dopasowanie[0].length
+    dopasowanie = wzorzec.exec(tekst)
+  }
+
+  if (ostatniIndeks < tekst.length) {
+    elementy.push(tekst.slice(ostatniIndeks))
+  }
+
+  return elementy.length ? elementy : [tekst]
+}
+
+function wczytajZapisRoboczy(): ZapisProgramuRoboczego {
+  let zapis: string | null = null
+
+  try {
+    zapis = localStorage.getItem(kluczProgramuRoboczego)
+
+    if (!zapis) {
+      return domyslnyZapisProgramu
+    }
+
+    const dane = JSON.parse(zapis) as Partial<ZapisProgramuRoboczego>
+    const trescProgramu = dane.trescProgramu ?? ''
+
+    return {
+      tytulSzkolenia: dane.tytulSzkolenia ?? '',
+      trescProgramu,
+      trescProgramuHtml: dane.trescProgramuHtml ?? konwertujTekstProgramuNaHtml(trescProgramu),
+      ustawienia: {
+        ...domyslneUstawienia,
+        ...dane.ustawienia,
+        stylePoziomowListy: dane.ustawienia?.stylePoziomowListy?.length
+          ? dane.ustawienia.stylePoziomowListy
+          : domyslneUstawienia.stylePoziomowListy,
+      },
+      logotypProgramu: dane.logotypProgramu ?? '',
+      linkLogotypu: dane.linkLogotypu ?? '',
+    }
+  } catch {
+    const trescProgramu = zapis ?? ''
+
+    return {
+      ...domyslnyZapisProgramu,
+      trescProgramu,
+      trescProgramuHtml: konwertujTekstProgramuNaHtml(trescProgramu),
+    }
+  }
+
+  return domyslnyZapisProgramu
+}
+
+function zapiszProgramRoboczo(daneProgramu: ZapisProgramuRoboczego) {
+  localStorage.setItem(kluczProgramuRoboczego, JSON.stringify(daneProgramu))
+}
+
+function czyPlikTekstowy(plik: File) {
+  return plik.type.startsWith('text/') || /\.(txt|md|csv|html?)$/i.test(plik.name)
+}
+
+export function WidokProgramowSzkolen() {
+  const pomijajZapisRef = useRef(false)
+  const [daneProgramu, ustawDaneProgramu] = useState<ZapisProgramuRoboczego>(wczytajZapisRoboczy)
+  const [komunikat, ustawKomunikat] = useState('')
+  const { tytulSzkolenia, trescProgramu, trescProgramuHtml, ustawienia, logotypProgramu, linkLogotypu } = daneProgramu
+
+  const program = useMemo(() => parsujTekstProgramu(trescProgramu), [trescProgramu])
+  const tytulDokumentu = tytulSzkolenia.trim() || program.tytul
+  const tytulZCudzyslowem = formatujTytulSzkolenia(tytulDokumentu, ustawienia.formatCudzyslowu)
+  const kolorAkcentu = pobierzKolorAkcentu(ustawienia)
+  const profil = daneProfilowFirmy[ustawienia.profilFirmy]
+  const kolorNiepoprawny = !sprawdzHex(ustawienia.kolorAkcentuProgramu)
+  const gruboscObramowaniaTytulu = Number.isFinite(ustawienia.gruboscObramowaniaTytulu)
+    ? Math.min(20, Math.max(0.1, ustawienia.gruboscObramowaniaTytulu))
+    : domyslneUstawienia.gruboscObramowaniaTytulu
+  const etykietaGrubosciObramowaniaTytulu = gruboscObramowaniaTytulu.toFixed(1).replace('.', ',')
+  const czyListaGlownaNumerowana = ustawienia.stylListyGlownej === 'numeracja'
+  const czyPokazacPoziomyPodpunktow = ustawienia.stylPodpunktow === 'punktory'
+  const widoczneStylePoziomowListy = ustawienia.stylePoziomowListy
+    .map((styl, indeks) => ({ styl, indeks }))
+    .filter(({ indeks }) => indeks === 0 || czyPokazacPoziomyPodpunktow)
+
+  useEffect(() => {
+    if (pomijajZapisRef.current) {
+      pomijajZapisRef.current = false
+      return
+    }
+
+    try {
+      zapiszProgramRoboczo(daneProgramu)
+    } catch {
+      return
+    }
+  }, [daneProgramu])
+
+  function zmienDane<Nazwa extends keyof ZapisProgramuRoboczego>(nazwa: Nazwa, wartosc: ZapisProgramuRoboczego[Nazwa]) {
+    ustawDaneProgramu((aktualne) => ({
+      ...aktualne,
+      [nazwa]: wartosc,
+    }))
+  }
+
+  function zmienTrescProgramuHtml(html: string, tekst = konwertujHtmlNaTekstProgramu(html)) {
+    ustawDaneProgramu((aktualne) => ({
+      ...aktualne,
+      trescProgramuHtml: html,
+      trescProgramu: tekst,
+    }))
+  }
+
+  function zmienUstawienie<Nazwa extends keyof UstawieniaProgramu>(nazwa: Nazwa, wartosc: UstawieniaProgramu[Nazwa]) {
+    ustawDaneProgramu((aktualne) => ({
+      ...aktualne,
+      ustawienia: {
+        ...aktualne.ustawienia,
+        [nazwa]: wartosc,
+      },
+    }))
+  }
+
+  function zapiszRoboczo() {
+    try {
+      zapiszProgramRoboczo(daneProgramu)
+      ustawKomunikat('Program zapisany roboczo lokalnie.')
+    } catch {
+      ustawKomunikat('Nie udało się zapisać programu roboczo.')
+    }
+  }
+
+  function wyczyscProgram() {
+    pomijajZapisRef.current = true
+    ustawDaneProgramu(domyslnyZapisProgramu)
+    localStorage.removeItem(kluczProgramuRoboczego)
+    ustawKomunikat('Program wyczyszczony.')
+  }
+
+  function zmienProfilFirmy(profilFirmy: ProfilFirmy) {
+    ustawDaneProgramu((aktualne) => {
+      const poprzedniKolor = daneProfilowFirmy[aktualne.ustawienia.profilFirmy].kolor
+      const czyKolorProfilu = !aktualne.ustawienia.kolorReczny || aktualne.ustawienia.kolorAkcentuProgramu === poprzedniKolor
+
+      return {
+        ...aktualne,
+        ustawienia: {
+          ...aktualne.ustawienia,
+          profilFirmy,
+          kolorAkcentuProgramu: czyKolorProfilu
+            ? daneProfilowFirmy[profilFirmy].kolor
+            : aktualne.ustawienia.kolorAkcentuProgramu,
+          kolorReczny: czyKolorProfilu ? false : aktualne.ustawienia.kolorReczny,
+        },
+      }
+    })
+  }
+
+  function zmienKolor(kolor: string, kolorReczny = true) {
+    ustawDaneProgramu((aktualne) => ({
+      ...aktualne,
+      ustawienia: {
+        ...aktualne.ustawienia,
+        kolorAkcentuProgramu: kolor.toUpperCase(),
+        kolorReczny,
+      },
+    }))
+  }
+
+  function przywrocKolorProfilu() {
+    ustawDaneProgramu((aktualne) => ({
+      ...aktualne,
+      ustawienia: {
+        ...aktualne.ustawienia,
+        kolorAkcentuProgramu: daneProfilowFirmy[aktualne.ustawienia.profilFirmy].kolor,
+        kolorReczny: false,
+      },
+    }))
+  }
+
+  function dodajPoziomListy() {
+    ustawDaneProgramu((aktualne) => ({
+      ...aktualne,
+      ustawienia: {
+        ...aktualne.ustawienia,
+        stylePoziomowListy: [
+          ...aktualne.ustawienia.stylePoziomowListy,
+          punktoryDoWyboru[aktualne.ustawienia.stylePoziomowListy.length % punktoryDoWyboru.length],
+        ],
+      },
+    }))
+  }
+
+  function zmienStylPoziomu(indeks: number, wartosc: string) {
+    ustawDaneProgramu((aktualne) => ({
+      ...aktualne,
+      ustawienia: {
+        ...aktualne.ustawienia,
+        stylePoziomowListy: aktualne.ustawienia.stylePoziomowListy.map((styl, pozycja) =>
+          pozycja === indeks ? wartosc : styl,
+        ),
+      },
+    }))
+  }
+
+  function importujProgramZPliku(plik?: File) {
+    if (!plik) {
+      return
+    }
+
+    if (!czyPlikTekstowy(plik)) {
+      ustawKomunikat('DOC/DOCX/PDF wymagają wcześniejszej konwersji treści.')
+      return
+    }
+
+    const czytnik = new FileReader()
+    czytnik.onload = () => {
+      const zawartosc = String(czytnik.result ?? '')
+      const czyHtml = plik.type === 'text/html' || /\.html?$/i.test(plik.name)
+      const tekstProgramu = czyHtml ? konwertujHtmlNaTekstProgramu(zawartosc) : zawartosc
+      const htmlProgramu = czyHtml ? oczyscHtmlProgramu(zawartosc) : konwertujTekstProgramuNaHtml(zawartosc)
+
+      zmienTrescProgramuHtml(htmlProgramu, tekstProgramu)
+      ustawKomunikat(`Zaimportowano program z pliku: ${plik.name}.`)
+    }
+    czytnik.onerror = () => ustawKomunikat('Nie udało się odczytać pliku programu.')
+    czytnik.readAsText(plik)
+  }
+
+  function importujLogotypZPliku(plik?: File) {
+    if (!plik) {
+      return
+    }
+
+    if (!plik.type.startsWith('image/')) {
+      ustawKomunikat('Wybierz plik graficzny logotypu.')
+      return
+    }
+
+    const czytnik = new FileReader()
+    czytnik.onload = () => {
+      zmienDane('logotypProgramu', String(czytnik.result ?? ''))
+      ustawKomunikat(`Dodano logotyp z pliku: ${plik.name}.`)
+    }
+    czytnik.onerror = () => ustawKomunikat('Nie udało się odczytać pliku logotypu.')
+    czytnik.readAsDataURL(plik)
+  }
+
+  function zastosujLinkLogotypu() {
+    const link = linkLogotypu.trim()
+
+    if (!link) {
+      return
+    }
+
+    zmienDane('logotypProgramu', link)
+    ustawKomunikat('Dodano logotyp z linku.')
+  }
+
+  function otworzDyskGoogle() {
+    window.open('https://drive.google.com', '_blank', 'noopener,noreferrer')
+  }
+
+  function pobierzMarkerListy(pozycja: PozycjaListyProgramu, liczniki: number[]) {
+    const poziom = Math.max(0, pozycja.poziom)
+
+    liczniki[poziom] = (liczniki[poziom] ?? 0) + 1
+    liczniki.length = poziom + 1
+
+    if (poziom === 0 && ustawienia.stylListyGlownej === 'numeracja') {
+      return `${liczniki[0]}.`
+    }
+
+    return ustawienia.stylePoziomowListy[Math.min(poziom, ustawienia.stylePoziomowListy.length - 1)] ?? '•'
+  }
+
+  function pobierzMarkerPodpunktu(podpunkt: PodpunktProgramu, liczniki: number[]) {
+    const poziom = Math.max(0, podpunkt.poziom)
+
+    liczniki[poziom] = (liczniki[poziom] ?? 0) + 1
+    liczniki.length = poziom + 1
+
+    if (poziom === 0 && ustawienia.stylPodpunktow === 'numeracja') {
+      return `${liczniki[0]}.`
+    }
+
+    return ustawienia.stylePoziomowListy[Math.min(poziom, ustawienia.stylePoziomowListy.length - 1)] ?? '•'
+  }
+
+  function czyPogrubicNaglowekListyProgramu(poziom: number, typ?: PodpunktProgramu['typ'] | PozycjaListyProgramu['typ']) {
+    return ustawienia.czyPogrubiacNaglowkiListyProgramu && (typ === 'naglowekListyProgramu' || (poziom === 0 && !typ))
+  }
+
+  function renderujTekstFormatowany(tekst: string) {
+    return renderujMarkdownInline(tekst)
+  }
+
+  function renderujListeProsta() {
+    const liczniki: number[] = []
+
+    if (!program.listaProsta.length) {
+      return <div className="program-kartka-a4__pusty">Brak treści programu.</div>
+    }
+
+    return (
+      <div className="program-kartka-a4__lista">
+        {program.listaProsta.map((pozycja) => {
+          const poziom = Math.max(0, pozycja.poziom)
+          const stylPozycji = {
+            marginLeft: `${Math.min(poziom, 8) * 22}px`,
+            fontWeight: czyPogrubicNaglowekListyProgramu(poziom, pozycja.typ) ? 700 : 400,
+          }
+
+          return (
+            <div className="program-kartka-a4__pozycja" key={pozycja.id} style={stylPozycji}>
+              <span className="program-kartka-a4__marker">{pobierzMarkerListy(pozycja, liczniki)}</span>
+              <span>{renderujTekstFormatowany(pozycja.tresc)}</span>
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
+
+  function renderujPodpunkty(podpunkty: PodpunktProgramu[]) {
+    const liczniki: number[] = []
+
+    if (!podpunkty.length) {
+      return <div className="program-kartka-a4__pusty">Brak podpunktów.</div>
+    }
+
+    return (
+      <div className="program-kartka-a4__lista">
+        {podpunkty.map((podpunkt) => {
+          const poziom = Math.max(0, podpunkt.poziom)
+          const stylPodpunktu = {
+            marginLeft: `${Math.min(poziom, 8) * 22}px`,
+            fontWeight: czyPogrubicNaglowekListyProgramu(poziom, podpunkt.typ) ? 700 : 400,
+          }
+
+          return (
+            <div
+              className="program-kartka-a4__pozycja"
+              key={podpunkt.id}
+              style={stylPodpunktu}
+            >
+              <span className="program-kartka-a4__marker">{pobierzMarkerPodpunktu(podpunkt, liczniki)}</span>
+              <span>{renderujTekstFormatowany(podpunkt.tresc)}</span>
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
+
+  function renderujProgramSkryptowy() {
+    if (!program.dni.length) {
+      return renderujListeProsta()
+    }
+
+    return (
+      <>
+        {program.dni.map((dzien) => (
+          <section className="program-kartka-a4__dzien" key={dzien.id}>
+            {!dzien.czyDomyslny && (
+              <h2
+                className={`program-kartka-a4__dzien-tytul program-kartka-a4__dzien-tytul--${ustawienia.stylDni}`}
+                style={{
+                  backgroundColor: ustawienia.stylDni === 'pasek' ? kolorAkcentu : 'transparent',
+                  borderColor: kolorAkcentu,
+                }}
+              >
+                {dzien.tytul}
+                {dzien.tytulDnia && (
+                  <span className="program-kartka-a4__temat-dnia">{renderujTekstFormatowany(dzien.tytulDnia)}</span>
+                )}
+              </h2>
+            )}
+
+            <div className="program-kartka-a4__moduly">
+              {dzien.moduly.map((modul, indeksModulu) => (
+                <article
+                  className={`program-kartka-a4__modul${
+                    ustawienia.separacjaModulow === 'ramka' ? ' program-kartka-a4__modul--ramka' : ''
+                  }${
+                    ustawienia.separacjaModulow === 'separator-pytan' && indeksModulu > 0
+                      ? ' program-kartka-a4__modul--separator-pytan'
+                      : ''
+                  }`}
+                  style={
+                    ustawienia.separacjaModulow === 'separator-pytan' && indeksModulu > 0
+                      ? { borderColor: kolorAkcentu }
+                      : undefined
+                  }
+                  key={modul.id}
+                >
+                  <h3
+                    className={`program-kartka-a4__modul-tytul${
+                      ustawienia.separacjaModulow === 'linia' ? ' program-kartka-a4__modul-tytul--linia' : ''
+                    }`}
+                    style={{
+                      fontWeight: ustawienia.czyPogrubiacNaglowkiListyProgramu && !modul.typ ? 700 : 400,
+                    }}
+                  >
+                    {renderujTekstFormatowany(modul.tytul)}
+                  </h3>
+                  {renderujPodpunkty(modul.podpunkty)}
+                </article>
+              ))}
+            </div>
+          </section>
+        ))}
+      </>
+    )
+  }
+
+  function renderujProgramZachowawczy() {
+    if (!trescProgramu.trim()) {
+      return <div className="program-kartka-a4__pusty">Brak treści programu.</div>
+    }
+
+    const wierszeProgramu = trescProgramu.split('\n')
+
+    return (
+      <div className="program-kartka-a4__surowy">
+        {wierszeProgramu.map((wiersz, indeks) => (
+          <span key={`${indeks}-${wiersz}`}>
+            {renderujMarkdownInline(wiersz)}
+            {indeks < wierszeProgramu.length - 1 && <br />}
+          </span>
+        ))}
+      </div>
+    )
+  }
+
+  return (
+    <section className="widok program-szkolen">
+      <style>{styleProgramuSzkolenia}</style>
+
+      <header className="program-panel-roboczy program-szkolen__naglowek">
+        <h1>Programy szkoleń</h1>
+        <div className="program-szkolen__akcje">
+          <button className="program-szkolen__przycisk" onClick={() => window.print()} type="button">
+            Drukuj
+          </button>
+          <button className="program-szkolen__przycisk" onClick={zapiszRoboczo} type="button">
+            Zapisz roboczo
+          </button>
+          <button className="program-szkolen__przycisk" onClick={wyczyscProgram} type="button">
+            Wyczyść
+          </button>
+        </div>
+      </header>
+
+      {komunikat && <div className="program-panel-roboczy program-szkolen__komunikat">{komunikat}</div>}
+
+      <div className="program-szkolen__uklad">
+        <div className="program-panel-roboczy program-szkolen__panel">
+          <section className="program-szkolen__sekcja program-szkolen__sekcja--ustawienia">
+            <h2>USTAWIENIA</h2>
+            <div className="program-szkolen__siatka">
+              <div className="program-szkolen__etykieta">
+                Profil firmy
+                <div className="program-szkolen__wybor program-szkolen__wybor-profilu">
+                  {(['semper', 'iist'] as ProfilFirmy[]).map((profilFirmy) => (
+                    <button
+                      className="program-szkolen__przycisk program-szkolen__przycisk-profilu"
+                      key={profilFirmy}
+                      onClick={() => zmienProfilFirmy(profilFirmy)}
+                      style={
+                        ustawienia.profilFirmy === profilFirmy
+                          ? {
+                              backgroundColor: daneProfilowFirmy[profilFirmy].kolor,
+                              borderColor: daneProfilowFirmy[profilFirmy].kolor,
+                              color: '#ffffff',
+                            }
+                          : undefined
+                      }
+                      type="button"
+                    >
+                      {daneProfilowFirmy[profilFirmy].nazwa}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="program-szkolen__siatka program-szkolen__siatka--dwie">
+                <label className="program-szkolen__etykieta">
+                  Kolor separatora
+                  <input
+                    className="program-szkolen__pole"
+                    onChange={(zdarzenie) => zmienKolor(zdarzenie.target.value)}
+                    type="color"
+                    value={kolorAkcentu}
+                  />
+                </label>
+                <label className="program-szkolen__etykieta">
+                  HEX
+                  <input
+                    className="program-szkolen__pole"
+                    onChange={(zdarzenie) => zmienKolor(zdarzenie.target.value)}
+                    pattern="^#[0-9a-fA-F]{6}$"
+                    type="text"
+                    value={ustawienia.kolorAkcentuProgramu}
+                  />
+                </label>
+              </div>
+              {kolorNiepoprawny && <div className="program-szkolen__blad">Wpisz kolor w formacie #RRGGBB.</div>}
+              <button className="program-szkolen__przycisk" onClick={przywrocKolorProfilu} type="button">
+                Przywróć kolor profilu
+              </button>
+
+              <div className="program-szkolen__srodtytul">Tytuł</div>
+
+              <label className="program-szkolen__etykieta">
+                Grubość obramowania tytułu: {etykietaGrubosciObramowaniaTytulu}
+                <input
+                  className="program-szkolen__pole"
+                  min={0.1}
+                  max={20}
+                  onChange={(zdarzenie) => zmienUstawienie('gruboscObramowaniaTytulu', Number(zdarzenie.target.value))}
+                  step={0.1}
+                  type="range"
+                  value={gruboscObramowaniaTytulu}
+                />
+              </label>
+
+              <label className="program-szkolen__etykieta">
+                Format cudzysłowu
+                <select
+                  className="program-szkolen__lista"
+                  onChange={(zdarzenie) => zmienUstawienie('formatCudzyslowu', zdarzenie.target.value as FormatCudzyslowu)}
+                  value={ustawienia.formatCudzyslowu}
+                >
+                  <option value="dolny-gorny">„Tytuł”</option>
+                  <option value="gorny-gorny">"Tytuł"</option>
+                </select>
+              </label>
+
+              <div className="program-szkolen__srodtytul">Treść programu</div>
+
+              <label className="program-szkolen__etykieta">
+                <span>
+                  <input
+                    checked={ustawienia.formatowanieSkryptowe}
+                    onChange={(zdarzenie) => zmienUstawienie('formatowanieSkryptowe', zdarzenie.target.checked)}
+                    type="checkbox"
+                  />{' '}
+                  Formatowanie skryptowe
+                </span>
+              </label>
+
+              <label className="program-szkolen__etykieta">
+                <span>
+                  <input
+                    checked={ustawienia.czyPogrubiacNaglowkiListyProgramu}
+                    onChange={(zdarzenie) =>
+                      zmienUstawienie('czyPogrubiacNaglowkiListyProgramu', zdarzenie.target.checked)
+                    }
+                    type="checkbox"
+                  />{' '}
+                  Pogrubiaj nagłówki listy programu
+                </span>
+                <p className="program-szkolen__opis">
+                  Po włączeniu pogrubiane są tylko główne linie programu. Podpunkty i niższe poziomy listy pozostają
+                  zwykłe.
+                </p>
+              </label>
+
+              <label className="program-szkolen__etykieta">
+                Styl dni
+                <select
+                  className="program-szkolen__lista"
+                  onChange={(zdarzenie) => zmienUstawienie('stylDni', zdarzenie.target.value as StylDni)}
+                  value={ustawienia.stylDni}
+                >
+                  <option value="pasek">Pasek</option>
+                  <option value="naglowek">Nagłówek tekstowy</option>
+                </select>
+              </label>
+
+              <label className="program-szkolen__etykieta">
+                Separacja modułów
+                <select
+                  className="program-szkolen__lista"
+                  onChange={(zdarzenie) => zmienUstawienie('separacjaModulow', zdarzenie.target.value as SeparacjaModulow)}
+                  value={ustawienia.separacjaModulow}
+                >
+                  <option value="brak">Brak</option>
+                  <option value="ramka">Ramka</option>
+                  <option value="linia">Linia pod tytułem</option>
+                  <option value="separator-pytan">Separator kolejnych pytań</option>
+                </select>
+              </label>
+
+              <div className="program-szkolen__siatka program-szkolen__siatka--dwie">
+                <label className="program-szkolen__etykieta">
+                  Styl listy głównej
+                  <select
+                    className="program-szkolen__lista"
+                    onChange={(zdarzenie) => zmienUstawienie('stylListyGlownej', zdarzenie.target.value as StylListyGlownej)}
+                    value={ustawienia.stylListyGlownej}
+                  >
+                    <option value="numeracja">Numeracja</option>
+                    <option value="punktory">Punktory</option>
+                  </select>
+                </label>
+                <label className="program-szkolen__etykieta">
+                  Styl podpunktów
+                  <select
+                    className="program-szkolen__lista"
+                    onChange={(zdarzenie) => zmienUstawienie('stylPodpunktow', zdarzenie.target.value as StylPodpunktow)}
+                    value={ustawienia.stylPodpunktow}
+                  >
+                    <option value="punktory">Punktory</option>
+                    <option value="numeracja">Numeracja</option>
+                  </select>
+                </label>
+              </div>
+
+              <div className="program-szkolen__siatka">
+                {widoczneStylePoziomowListy.map(({ styl, indeks }) => {
+                  const czyPoziomListyGlownejNumerowany = indeks === 0 && czyListaGlownaNumerowana
+
+                  return (
+                    <label className="program-szkolen__etykieta program-szkolen__etykieta--poziom" key={indeks}>
+                      Poziom {indeks + 1}
+                      <select
+                        className="program-szkolen__lista program-szkolen__lista--punktor-poziomu"
+                        disabled={czyPoziomListyGlownejNumerowany}
+                        onChange={(zdarzenie) => zmienStylPoziomu(indeks, zdarzenie.target.value)}
+                        value={czyPoziomListyGlownejNumerowany ? etykietaNumeracjiListyGlownej : styl}
+                      >
+                        {czyPoziomListyGlownejNumerowany ? (
+                          <option value={etykietaNumeracjiListyGlownej}>{etykietaNumeracjiListyGlownej}</option>
+                        ) : (
+                          punktoryDoWyboru.map((punktor) => (
+                            <option key={punktor} value={punktor}>
+                              {punktor}
+                            </option>
+                          ))
+                        )}
+                      </select>
+                    </label>
+                  )
+                })}
+                {czyPokazacPoziomyPodpunktow && (
+                  <button className="program-szkolen__przycisk" onClick={dodajPoziomListy} type="button">
+                    Dodaj poziom
+                  </button>
+                )}
+              </div>
+            </div>
+          </section>
+
+          <section className="program-szkolen__sekcja program-szkolen__sekcja--logotypy">
+            <h2>LOGOTYPY</h2>
+            <div className="program-szkolen__siatka">
+              <div className="program-szkolen__siatka program-szkolen__siatka--logotypy">
+                <div className="program-szkolen__blok-logotypu">
+                  <label className="program-szkolen__etykieta">
+                    Logotyp z pliku graficznego
+                    <input
+                      accept="image/*"
+                      className="program-szkolen__pole"
+                      onChange={(zdarzenie) => importujLogotypZPliku(zdarzenie.target.files?.[0])}
+                      type="file"
+                    />
+                  </label>
+                </div>
+
+                <div className="program-szkolen__blok-logotypu program-szkolen__blok-logotypu--link">
+                  <label className="program-szkolen__etykieta">
+                    Publiczny link do logotypu
+                    <input
+                      className="program-szkolen__pole"
+                      onChange={(zdarzenie) => zmienDane('linkLogotypu', zdarzenie.target.value)}
+                      type="url"
+                      value={linkLogotypu}
+                    />
+                  </label>
+
+                  <div className="program-szkolen__wiersz-przyciskow">
+                    <button className="program-szkolen__przycisk" onClick={zastosujLinkLogotypu} type="button">
+                      Użyj linku
+                    </button>
+                    <button className="program-szkolen__przycisk" onClick={otworzDyskGoogle} type="button">
+                      Otwórz Dysk Google
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="program-szkolen__separator" />
+
+              <label className="program-szkolen__etykieta">
+                Szerokość logotypu: {ustawienia.szerokoscLogotypu}%
+                <input
+                  className="program-szkolen__pole"
+                  max={100}
+                  min={10}
+                  onChange={(zdarzenie) => zmienUstawienie('szerokoscLogotypu', Number(zdarzenie.target.value))}
+                  step={5}
+                  type="range"
+                  value={ustawienia.szerokoscLogotypu}
+                />
+              </label>
+            </div>
+          </section>
+
+          <section className="program-szkolen__sekcja program-szkolen__sekcja--edycja">
+            <h2>EDYCJA</h2>
+            <div className="program-szkolen__siatka">
+              <label className="program-szkolen__etykieta">
+                Tytuł szkolenia
+                <input
+                  className="program-szkolen__pole"
+                  onChange={(zdarzenie) => zmienDane('tytulSzkolenia', zdarzenie.target.value)}
+                  type="text"
+                  value={tytulSzkolenia}
+                />
+              </label>
+
+              <label className="program-szkolen__etykieta">
+                Program z pliku
+                <input
+                  accept=".txt,.md,.csv,.html,.htm,text/*"
+                  className="program-szkolen__pole"
+                  onChange={(zdarzenie) => importujProgramZPliku(zdarzenie.target.files?.[0])}
+                  type="file"
+                />
+              </label>
+
+              <div className="program-szkolen__srodtytul">Treść programu</div>
+
+              <EdytorProgramuWysiwyg
+                onZmianaHtml={(html) => zmienDane('trescProgramuHtml', html)}
+                onZmianaTekstuProgramu={(tekst) => zmienDane('trescProgramu', tekst)}
+                wartoscHtml={trescProgramuHtml}
+              />
+            </div>
+          </section>
+        </div>
+
+        <section className="program-szkolen__podglad">
+          <div className="program-kartka-a4">
+            <header className="program-kartka-a4__naglowek" style={{ borderColor: kolorAkcentu }}>
+              <div className="program-kartka-a4__meta">
+                <div className="program-kartka-a4__profil">{profil.nazwa}</div>
+                <div className="program-kartka-a4__kontakt">{profil.kontakt}</div>
+              </div>
+
+              {logotypProgramu && (
+                <div className="program-kartka-a4__logotyp">
+                  <img alt="Logotyp" src={logotypProgramu} style={{ width: `${ustawienia.szerokoscLogotypu}%` }} />
+                </div>
+              )}
+
+              <div className="program-kartka-a4__etykieta">Program szkolenia</div>
+              <div
+                className="program-kartka-a4__tytul"
+                style={{
+                  borderWidth: `${gruboscObramowaniaTytulu}px`,
+                  color: kolorAkcentu,
+                }}
+              >
+                {tytulZCudzyslowem || '„Program szkolenia”'}
+              </div>
+            </header>
+
+            <main className="program-kartka-a4__tresc">
+              {ustawienia.formatowanieSkryptowe ? renderujProgramSkryptowy() : renderujProgramZachowawczy()}
+            </main>
+
+            <footer className="program-kartka-a4__stopka">{profil.stopka}</footer>
+          </div>
+        </section>
+      </div>
+    </section>
+  )
+}
+
+export default WidokProgramowSzkolen
