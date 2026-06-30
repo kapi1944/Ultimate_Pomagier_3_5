@@ -1,8 +1,9 @@
 import type {
+  DaneFirmy,
   DaneFormularza,
+  FormaSzkolenia,
   GrupaSzkoleniowa,
   OswiadczenieVat,
-  UczestnikGrupy,
   WynikParseraMailaSzczegolow,
 } from '../typy'
 
@@ -27,9 +28,18 @@ function znajdzEmail(tekst: string) {
   return tekst.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i)?.[0] ?? ''
 }
 
+function znajdzTelefon(tekst: string) {
+  return tekst.match(/\+?\d[\d\s-]{6,}/)?.[0]?.trim() ?? ''
+}
+
 function znajdzNumer(tekst: string) {
-  const liczba = tekst.match(/(\d[\d\s.,]*)/)?.[1]?.replace(/\s/g, '').replace(',', '.')
-  return liczba ? Number(liczba) : 0
+  const dopasowanie = tekst.match(/(\d[\d\s.,]*)/)
+
+  if (!dopasowanie) {
+    return Number.NaN
+  }
+
+  return Number(dopasowanie[1].replace(/\s/g, '').replace(',', '.'))
 }
 
 function normalizujDate(wartosc: string) {
@@ -47,40 +57,47 @@ function normalizujDate(wartosc: string) {
   return `${rok}-${dopasowanie[5].padStart(2, '0')}-${dopasowanie[4].padStart(2, '0')}`
 }
 
-function normalizujGodzine(wartosc: string) {
-  const dopasowanie = wartosc.match(/(\d{1,2})[:.](\d{2})/)
-  return dopasowanie ? `${dopasowanie[1].padStart(2, '0')}:${dopasowanie[2]}` : ''
+function znajdzDaty(wartosc: string) {
+  const dopasowania = [...wartosc.matchAll(/(\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[./-]\d{1,2}[./-]\d{2,4})/g)]
+    .map((dopasowanie) => normalizujDate(dopasowanie[1]))
+    .filter(Boolean)
+
+  return {
+    dataOd: dopasowania[0] ?? '',
+    dataDo: dopasowania[1] ?? dopasowania[0] ?? '',
+  }
 }
 
-function pobierzSekcje(tresc: string, naglowki: string[]) {
-  const linie = tresc.split(/\r?\n/)
-  const indeksStartowy = linie.findIndex((linia) => {
-    const liniaNormalna = normalizujTekst(linia)
-    return naglowki.some((naglowek) => liniaNormalna.includes(normalizujTekst(naglowek)))
-  })
+function parsujForme(wartosc: string): FormaSzkolenia | '' {
+  const wartoscNormalna = normalizujTekst(wartosc)
 
-  if (indeksStartowy === -1) {
-    return ''
+  if (wartoscNormalna.includes('online') || wartoscNormalna.includes('zdal')) {
+    return 'Online'
   }
 
-  const zebrane: string[] = []
-
-  for (const linia of linie.slice(indeksStartowy + 1)) {
-    const bezSpacji = linia.trim()
-    const czyNowyNaglowek =
-      bezSpacji.length > 3 &&
-      bezSpacji.length < 80 &&
-      bezSpacji === bezSpacji.toUpperCase() &&
-      !bezSpacji.includes('@')
-
-    if (czyNowyNaglowek) {
-      break
-    }
-
-    zebrane.push(linia)
+  if (wartoscNormalna.includes('stacjon')) {
+    return 'Stacjonarne'
   }
 
-  return zebrane.join('\n').trim()
+  return ''
+}
+
+function parsujVat(wartosc: string): OswiadczenieVat | '' {
+  const wartoscNormalna = normalizujTekst(wartosc)
+
+  if (wartoscNormalna.includes('zw') || wartoscNormalna.includes('100')) {
+    return 'ZW – 100%'
+  }
+
+  if (wartoscNormalna.includes('70')) {
+    return 'Min. 70%'
+  }
+
+  if (wartoscNormalna.includes('23') || wartoscNormalna.includes('nie')) {
+    return 'Nie – 23%'
+  }
+
+  return ''
 }
 
 function dodajRozpoznanie(
@@ -98,42 +115,17 @@ function dodajRozpoznanie(
   }
 }
 
-function parsujVat(wartosc: string): OswiadczenieVat {
-  const wartoscNormalna = normalizujTekst(wartosc)
-
-  if (wartoscNormalna.includes('zw')) {
-    return 'zwolnione'
+function dodajNiepewne(polaNiepewne: string[], pole: string) {
+  if (!polaNiepewne.includes(pole)) {
+    polaNiepewne.push(pole)
   }
-
-  if (wartoscNormalna.includes('8')) {
-    return '8%'
-  }
-
-  if (wartoscNormalna.includes('0')) {
-    return '0%'
-  }
-
-  return '23%'
 }
 
-function parsujUczestnikow(tekst: string): UczestnikGrupy[] {
-  return tekst
-    .split(/\r?\n|;/)
-    .map((wiersz) => wiersz.trim())
-    .filter(Boolean)
-    .filter((wiersz) => !wiersz.includes(':'))
-    .map((wiersz, indeks) => {
-      const email = znajdzEmail(wiersz)
-      const bezEmaila = wiersz.replace(email, '').replace(/[;,]+/g, ' ').trim()
-      const czesci = bezEmaila.split(/\s+/).filter(Boolean)
-
-      return {
-        id: `uczestnik-import-${Date.now()}-${indeks}`,
-        imie: czesci[0] ?? '',
-        nazwisko: czesci.slice(1).join(' '),
-        email,
-      }
-    })
+function uzupelnijDaneFirmy(czesciowe: Partial<DaneFirmy>, wartosci: Partial<DaneFirmy>) {
+  return {
+    ...czesciowe,
+    ...Object.fromEntries(Object.entries(wartosci).filter(([, wartosc]) => Boolean(wartosc))),
+  }
 }
 
 export function parsujMailaSzczegolow(tresc: string): WynikParseraMailaSzczegolow {
@@ -142,214 +134,144 @@ export function parsujMailaSzczegolow(tresc: string): WynikParseraMailaSzczegolo
   const rozpoznaneObszary: string[] = []
   const rozpoznanePola: string[] = []
   const polaNiepewne: string[] = []
-  const trescNormalna = normalizujTekst(tresc)
 
-  const tytul = znajdzPoEtykiecie(tresc, ['Tytuł szkolenia', 'Szkolenie', 'Temat'])
+  const tytul = znajdzPoEtykiecie(tresc, ['Tytuł szkolenia', 'Temat szkolenia', 'Temat'])
   if (tytul) {
     daneFormularza.tytulSzkolenia = tytul
-    dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'tytuł szkolenia', 'tytulSzkolenia')
+    dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'podstawowe informacje', 'tytulSzkolenia')
   }
 
-  const termin = znajdzPoEtykiecie(tresc, ['Termin', 'Data szkolenia', 'Data'])
-  const dataOd = normalizujDate(termin || tresc)
-  if (dataOd) {
-    pierwszaGrupa.dataOd = dataOd
-    pierwszaGrupa.dataDo = dataOd
+  const nazwaKlienta = znajdzPoEtykiecie(tresc, ['Nazwa klienta', 'Klient'])
+  if (nazwaKlienta) {
+    daneFormularza.nazwaKlienta = nazwaKlienta
+    dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'podstawowe informacje', 'nazwaKlienta')
+  }
+
+  const trener = znajdzPoEtykiecie(tresc, ['Trener', 'Prowadzący', 'Prowadząca'])
+  if (trener) {
+    pierwszaGrupa.trenerzy = [
+      {
+        id: `trener-import-${Date.now()}`,
+        imieNazwisko: trener.replace(znajdzEmail(trener), '').trim(),
+        telefon: znajdzTelefon(trener),
+        email: znajdzEmail(trener),
+      },
+    ]
+    dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'grupa szkoleniowa', 'grupy.0.trenerzy')
+  }
+
+  const dataOd = normalizujDate(znajdzPoEtykiecie(tresc, ['Data od']))
+  const dataDo = normalizujDate(znajdzPoEtykiecie(tresc, ['Data do']))
+  const termin = znajdzPoEtykiecie(tresc, ['Termin', 'Data szkolenia'])
+  const datyTerminu = termin ? znajdzDaty(termin) : { dataOd: '', dataDo: '' }
+
+  if (dataOd || datyTerminu.dataOd) {
+    pierwszaGrupa.dataOd = dataOd || datyTerminu.dataOd
     dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'termin', 'grupy.0.dataOd')
   }
 
-  const godziny = tresc.match(/(\d{1,2}[:.]\d{2})\s*[-–]\s*(\d{1,2}[:.]\d{2})/)
-  if (godziny) {
-    pierwszaGrupa.godzinaRozpoczecia = normalizujGodzine(godziny[1])
-    pierwszaGrupa.godzinaZakonczenia = normalizujGodzine(godziny[2])
-    dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'godziny', 'grupy.0.godzinaRozpoczecia')
-    rozpoznanePola.push('grupy.0.godzinaZakonczenia')
+  if (dataDo || datyTerminu.dataDo) {
+    pierwszaGrupa.dataDo = dataDo || datyTerminu.dataDo
+    dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'termin', 'grupy.0.dataDo')
+  }
+
+  if (termin && datyTerminu.dataOd && !dataDo && datyTerminu.dataOd === datyTerminu.dataDo) {
+    dodajNiepewne(polaNiepewne, 'grupy.0.dataDo')
+  }
+
+  const forma = parsujForme(znajdzPoEtykiecie(tresc, ['Forma', 'Forma szkolenia', 'Tryb szkolenia']))
+  if (forma) {
+    pierwszaGrupa.formaSzkolenia = forma
+    if (forma === 'Online') {
+      pierwszaGrupa.miejsce = 'Online'
+    }
+    dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'forma szkolenia', 'grupy.0.formaSzkolenia')
+  }
+
+  const miejsce = znajdzPoEtykiecie(tresc, ['Miejsce', 'Lokalizacja', 'Adres szkolenia'])
+  if (miejsce) {
+    pierwszaGrupa.miejsce = miejsce
+    dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'miejsce', 'grupy.0.miejsce')
+  }
+
+  const liczbaUczestnikow = znajdzPoEtykiecie(tresc, ['Liczba uczestników', 'Liczba osób', 'Uczestników'])
+  if (liczbaUczestnikow) {
+    pierwszaGrupa.liczbaUczestnikow = znajdzNumer(liczbaUczestnikow)
+    dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'grupa szkoleniowa', 'grupy.0.liczbaUczestnikow')
   }
 
   const liczbaGodzin = znajdzPoEtykiecie(tresc, ['Liczba godzin', 'Godziny szkolenia'])
   if (liczbaGodzin) {
     pierwszaGrupa.liczbaGodzin = znajdzNumer(liczbaGodzin)
-    dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'liczba godzin', 'grupy.0.liczbaGodzin')
+    dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'grupa szkoleniowa', 'grupy.0.liczbaGodzin')
   }
 
-  const cena = znajdzPoEtykiecie(tresc, ['Cena netto', 'Cena', 'Wartość netto'])
-  if (cena) {
-    pierwszaGrupa.cenaNetto = znajdzNumer(cena)
+  const cenaNetto = znajdzPoEtykiecie(tresc, ['Cena netto', 'Wartość netto'])
+  if (cenaNetto) {
+    pierwszaGrupa.cenaNetto = znajdzNumer(cenaNetto)
     dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'cena', 'grupy.0.cenaNetto')
   }
 
-  const vat = znajdzPoEtykiecie(tresc, ['VAT', 'Stawka VAT'])
-  if (vat || trescNormalna.includes('vat')) {
-    pierwszaGrupa.vat = parsujVat(vat || tresc)
-    dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'VAT', 'grupy.0.vat')
+  const vat = parsujVat(znajdzPoEtykiecie(tresc, ['VAT', 'Oświadczenie VAT']))
+  if (vat) {
+    pierwszaGrupa.vat = vat
+    dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'cena', 'grupy.0.vat')
   }
 
-  const protokol = znajdzPoEtykiecie(tresc, ['Protokół', 'Protokol'])
-  if (protokol) {
-    daneFormularza.protokol = protokol
-    dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'protokół', 'protokol')
+  const terminPlatnosci = znajdzPoEtykiecie(tresc, ['Termin płatności', 'Termin platnosci'])
+  if (terminPlatnosci) {
+    pierwszaGrupa.terminPlatnosci = znajdzNumer(terminPlatnosci)
+    dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'umowa', 'grupy.0.terminPlatnosci')
   }
 
-  const raport = znajdzPoEtykiecie(tresc, ['Raport'])
-  if (raport) {
-    daneFormularza.raport = raport
-    dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'raport', 'raport')
+  const numerUmowy = znajdzPoEtykiecie(tresc, ['Numer umowy', 'Nr umowy'])
+  if (numerUmowy) {
+    pierwszaGrupa.numerUmowy = numerUmowy
+    dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'umowa', 'grupy.0.numerUmowy')
   }
 
-  const sposobFaktury = znajdzPoEtykiecie(tresc, ['Sposób faktury', 'Faktura'])
-  const emailFaktury = znajdzPoEtykiecie(tresc, ['E-mail do faktury', 'Email do faktury', 'Mail do faktury'])
-  if (sposobFaktury || emailFaktury) {
-    daneFormularza.faktura = {
-      sposob: sposobFaktury,
-      email: emailFaktury || znajdzEmail(sposobFaktury),
-      uwagi: '',
-    }
-    dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'faktura', 'faktura.email')
+  const dataUmowy = normalizujDate(znajdzPoEtykiecie(tresc, ['Data umowy']))
+  if (dataUmowy) {
+    pierwszaGrupa.dataUmowy = dataUmowy
+    dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'umowa', 'grupy.0.dataUmowy')
   }
 
-  const nabywca = znajdzPoEtykiecie(tresc, ['Nabywca'])
-  const nip = znajdzPoEtykiecie(tresc, ['NIP'])
-  const adresNabywcy = znajdzPoEtykiecie(tresc, ['Adres nabywcy'])
-  if (nabywca || nip || adresNabywcy) {
-    daneFormularza.nabywca = {
-      nazwa: nabywca,
-      nip,
-      adres: adresNabywcy,
-    }
+  const nabywca = uzupelnijDaneFirmy({}, {
+    nazwa: znajdzPoEtykiecie(tresc, ['Nabywca', 'Nazwa nabywcy']),
+    nip: znajdzPoEtykiecie(tresc, ['NIP nabywcy', 'NIP']),
+    ulica: znajdzPoEtykiecie(tresc, ['Ulica nabywcy']),
+    nrBudynku: znajdzPoEtykiecie(tresc, ['Nr budynku nabywcy', 'Numer budynku nabywcy']),
+    nrLokalu: znajdzPoEtykiecie(tresc, ['Nr lokalu nabywcy', 'Numer lokalu nabywcy']),
+    kodPocztowy: znajdzPoEtykiecie(tresc, ['Kod pocztowy nabywcy']),
+    miasto: znajdzPoEtykiecie(tresc, ['Miasto nabywcy']),
+    kraj: znajdzPoEtykiecie(tresc, ['Kraj nabywcy']),
+    osobaKontaktowa: znajdzPoEtykiecie(tresc, ['Osoba kontaktowa nabywcy', 'Kontakt nabywcy']),
+    telefon: znajdzPoEtykiecie(tresc, ['Telefon nabywcy']),
+    email: znajdzPoEtykiecie(tresc, ['Email nabywcy', 'E-mail nabywcy']),
+  })
+
+  if (Object.keys(nabywca).length) {
+    daneFormularza.nabywca = nabywca as DaneFirmy
     dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'dane nabywcy', 'nabywca.nazwa')
-    if (nip) {
-      rozpoznanePola.push('nabywca.nip')
-    }
   }
 
-  const odbiorca = znajdzPoEtykiecie(tresc, ['Odbiorca'])
-  const adresOdbiorcy = znajdzPoEtykiecie(tresc, ['Adres odbiorcy'])
-  if (odbiorca || adresOdbiorcy) {
-    daneFormularza.odbiorca = {
-      nazwa: odbiorca,
-      nip,
-      adres: adresOdbiorcy,
-    }
-    daneFormularza.czyNabywcaJestOdbiorca = !odbiorca || odbiorca === nabywca
+  const odbiorca = uzupelnijDaneFirmy({}, {
+    nazwa: znajdzPoEtykiecie(tresc, ['Odbiorca', 'Nazwa odbiorcy', 'Nazwa firmy odbiorcy']),
+    ulica: znajdzPoEtykiecie(tresc, ['Ulica odbiorcy']),
+    nrBudynku: znajdzPoEtykiecie(tresc, ['Nr budynku odbiorcy', 'Numer budynku odbiorcy']),
+    nrLokalu: znajdzPoEtykiecie(tresc, ['Nr lokalu odbiorcy', 'Numer lokalu odbiorcy']),
+    kodPocztowy: znajdzPoEtykiecie(tresc, ['Kod pocztowy odbiorcy']),
+    miasto: znajdzPoEtykiecie(tresc, ['Miasto odbiorcy']),
+    kraj: znajdzPoEtykiecie(tresc, ['Kraj odbiorcy']),
+    imieNazwiskoOdbiorcy: znajdzPoEtykiecie(tresc, ['Imię i nazwisko odbiorcy', 'Imie i nazwisko odbiorcy']),
+    telefon: znajdzPoEtykiecie(tresc, ['Telefon odbiorcy']),
+    email: znajdzPoEtykiecie(tresc, ['Email odbiorcy', 'E-mail odbiorcy']),
+  })
+
+  if (Object.keys(odbiorca).length) {
+    daneFormularza.odbiorca = odbiorca as DaneFirmy
+    daneFormularza.czyNabywcaJestOdbiorca = Boolean(nabywca.nazwa && odbiorca.nazwa && nabywca.nazwa === odbiorca.nazwa)
     dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'dane odbiorcy', 'odbiorca.nazwa')
-  }
-
-  const liczbaUczestnikow = znajdzPoEtykiecie(tresc, ['Liczba uczestników', 'Uczestników', 'Liczba osób'])
-  if (liczbaUczestnikow) {
-    pierwszaGrupa.liczbaUczestnikow = znajdzNumer(liczbaUczestnikow)
-    dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'liczba uczestników', 'grupy.0.liczbaUczestnikow')
-  }
-
-  const trener = znajdzPoEtykiecie(tresc, ['Trener', 'Prowadzący'])
-  if (trener) {
-    pierwszaGrupa.trenerzy = [
-      {
-        id: `trener-import-${Date.now()}`,
-        imieNazwisko: trener,
-        telefon: '',
-        email: znajdzEmail(trener),
-      },
-    ]
-    dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'trener', 'grupy.0.trenerzy')
-  }
-
-  const koordynator = znajdzPoEtykiecie(tresc, ['Koordynator klienta', 'Koordynator', 'Kontakt klienta'])
-  if (koordynator) {
-    daneFormularza.koordynatorKlienta = {
-      imieNazwisko: koordynator.replace(znajdzEmail(koordynator), '').trim(),
-      email: znajdzEmail(koordynator),
-      telefon: koordynator.match(/\+?\d[\d\s-]{6,}/)?.[0]?.trim() ?? '',
-    }
-    dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'koordynator klienta', 'koordynatorKlienta.imieNazwisko')
-  }
-
-  const lokalizacja = znajdzPoEtykiecie(tresc, ['Lokalizacja', 'Miejsce', 'Adres szkolenia'])
-  if (lokalizacja) {
-    pierwszaGrupa.nazwaLokalizacji = lokalizacja
-    pierwszaGrupa.adresLokalizacji = lokalizacja
-    pierwszaGrupa.formaSzkolenia = trescNormalna.includes('online') ? 'Online' : 'Stacjonarne'
-    dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'lokalizacja', 'grupy.0.nazwaLokalizacji')
-  }
-
-  const sekcjaDlaKasi = pobierzSekcje(tresc, ['DLA KASI', 'Dla Kasi'])
-  if (sekcjaDlaKasi) {
-    daneFormularza.materialy = sekcjaDlaKasi
-    daneFormularza.dokumentacja = {
-      listaObecnosci: true,
-      ankiety: /ankiet/i.test(sekcjaDlaKasi),
-      certyfikaty: /certyfikat/i.test(sekcjaDlaKasi),
-      program: /program/i.test(sekcjaDlaKasi),
-      kartaInformacyjna: /karta/i.test(sekcjaDlaKasi),
-      materialyInspekcyjne: /inspek/i.test(sekcjaDlaKasi),
-      podreczniki: /podr[eę]cz/i.test(sekcjaDlaKasi),
-      materialyDodatkowe: /materia/i.test(sekcjaDlaKasi),
-      testPrzedPo: /test/i.test(sekcjaDlaKasi),
-      dostepnoscCyfrowa: /dost[eę]pno/i.test(sekcjaDlaKasi),
-      kompletDlaZamawiajacego: /\+1|komplet/i.test(sekcjaDlaKasi),
-      wzorKlienta: /wz[oó]r klienta/i.test(sekcjaDlaKasi),
-      sposobDokumentu: /online/i.test(sekcjaDlaKasi) ? 'online' : 'druk',
-      uwagi: sekcjaDlaKasi,
-    }
-    dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'dokumentacja i materiały', 'materialy')
-  }
-
-  const sekcjaDlaKacpra = pobierzSekcje(tresc, ['DLA KACPRA', 'Dla Kacpra'])
-  if (sekcjaDlaKacpra) {
-    daneFormularza.adresPaczkiWspolny = sekcjaDlaKacpra
-    dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'adres paczki', 'adresPaczkiWspolny')
-  }
-
-  const uwagiDlaTrenera = pobierzSekcje(tresc, ['UWAGI DLA TRENERA', 'Dla trenera'])
-  if (uwagiDlaTrenera) {
-    daneFormularza.uwagi = {
-      wewnetrzne: '',
-      informacjeNiepewne: '',
-      opiekuna: '',
-      dlaKlienta: '',
-      dlaTrenera: uwagiDlaTrenera,
-      dlaWysylaczy: '',
-    }
-    dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'uwagi dla trenera', 'uwagi.dlaTrenera')
-  }
-
-  const czyWczesniejszyPrzyjazd = /wcze[sś]niejsz(y|ego) przyjazd|przyjazd.*wcze[sś]niej/i.test(tresc)
-  const czyKary = /kar(a|y).*nietermin|nieterminowo/i.test(tresc)
-  if (czyWczesniejszyPrzyjazd || czyKary) {
-    daneFormularza.dodatkoweWymogi = {
-      wczesniejszyPrzyjazdTrenera: czyWczesniejszyPrzyjazd,
-      minutyWczesniej: czyWczesniejszyPrzyjazd ? znajdzNumer(tresc.match(/(\d+)\s*min/i)?.[0] ?? '30') : 0,
-      dokumentacjaZdjęciowa: /zdj[eę]ci/i.test(tresc),
-      karyZaNieterminowosc: czyKary,
-      noweSzkolenieZaOcene: /nowe szkolenie.*ocen/i.test(tresc),
-      kfs: /\bKFS\b/i.test(tresc),
-      uwagi: '',
-    }
-    dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'dodatkowe wymogi', 'dodatkoweWymogi.uwagi')
-  }
-
-  const harmonogram = pobierzSekcje(tresc, ['HARMONOGRAM', 'Harmonogram'])
-  if (harmonogram) {
-    pierwszaGrupa.niestandardowaFormulaGodzin = harmonogram
-    pierwszaGrupa.rodzajGodzin = 'niestandardowe'
-    dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'harmonogram', 'grupy.0.niestandardowaFormulaGodzin')
-  }
-
-  const program = pobierzSekcje(tresc, ['PROGRAM SZKOLENIA', 'Program'])
-  if (program) {
-    daneFormularza.programSzkolenia = program
-    dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'program szkolenia', 'programSzkolenia')
-  }
-
-  const sekcjaUczestnikow = pobierzSekcje(tresc, ['UCZESTNICY', 'Lista uczestników'])
-  if (sekcjaUczestnikow) {
-    const uczestnicy = parsujUczestnikow(sekcjaUczestnikow)
-    pierwszaGrupa.uczestnicy = uczestnicy
-    pierwszaGrupa.liczbaUczestnikow = uczestnicy.length
-    dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'uczestnicy', 'grupy.0.uczestnicy')
-  }
-
-  if (!tytul && tresc.trim()) {
-    polaNiepewne.push('tytulSzkolenia')
   }
 
   return {

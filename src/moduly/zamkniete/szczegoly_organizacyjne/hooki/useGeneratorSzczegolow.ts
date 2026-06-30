@@ -1,69 +1,207 @@
 import { useMemo, useState } from 'react'
-import { poczatkowaGrupa, poczatkoweDaneFormularza, poczatkowiAdresaci, utworzPoczatkowaGrupe } from '../danePoczatkowe'
-import { grupyAdresatow, lokalniUzytkownicy, polaWymaganePoImporcie, trenerzyKartotekiStartowi } from '../stale'
+import {
+  poczatkowaFirma,
+  poczatkowaGrupa,
+  poczatkoweDaneFormularza,
+  poczatkoweWzoryKlienta,
+  poczatkowiAdresaci,
+  utworzPoczatkowaGrupe,
+} from '../danePoczatkowe'
+import { polaWymaganePoImporcie, trenerzyKartotekiStartowi } from '../stale'
 import type {
   DaneAdresatow,
+  DaneDokumentacjiMaterialow,
+  DaneFirmy,
   DaneFormularza,
+  FormaSzkolenia,
   GrupaSzkoleniowa,
-  LokalnyUzytkownik,
+  OswiadczenieVat,
+  ProblemWalidacji,
+  RodzajGodzin,
   StatusyPolImportu,
   TrenerKartoteki,
-  TrenerGrupy,
   WersjaRoboczaGeneratora,
 } from '../typy'
-import { pobierzDokumentSzczegolow, utworzTekstSzczegolow } from '../uslugi/eksportSzczegolow'
+import { utworzTekstSzczegolow } from '../uslugi/eksportSzczegolow'
 import {
   pobierzAktualnaWersjeRobocza,
   pobierzKopieRobocze,
+  wersjaEksportuSzczegolow,
   wyczyscAktualnaWersjeRobocza,
   zapiszWersjeRobocza,
   zbudujWersjeRobocza,
 } from '../uslugi/magazynWersjiRoboczych'
 import { parsujMailaSzczegolow } from '../uslugi/parserMailaSzczegolow'
 
-function klonujDanePoczatkowe(): DaneFormularza {
-  return JSON.parse(JSON.stringify(poczatkoweDaneFormularza)) as DaneFormularza
+const kluczTrenerowKartoteki = 'ultimate-pomagier.kartoteki.trenerzy'
+
+function klonuj<Typ>(wartosc: Typ): Typ {
+  return JSON.parse(JSON.stringify(wartosc)) as Typ
 }
 
-function klonujGrupePoczatkowa(): GrupaSzkoleniowa {
-  return JSON.parse(JSON.stringify(poczatkowaGrupa)) as GrupaSzkoleniowa
+function czyObiekt(wartosc: unknown): wartosc is Record<string, unknown> {
+  return Boolean(wartosc && typeof wartosc === 'object' && !Array.isArray(wartosc))
 }
 
-function policzCenaBrutto(cenaNetto: number, vat: GrupaSzkoleniowa['vat']) {
-  const mnoznik = vat === '23%' ? 1.23 : vat === '8%' ? 1.08 : 1
-  return Math.round(cenaNetto * mnoznik * 100) / 100
+function czyEmailPoprawny(wartosc: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(wartosc.trim())
 }
 
-function scalDaneFormularza(obecne: DaneFormularza, czesciowe: Partial<DaneFormularza>): DaneFormularza {
+function czyKodPocztowyPoprawny(wartosc: string) {
+  return /^\d{2}-?\d{3}$/.test(wartosc.trim())
+}
+
+function podzielAdresatow(wartosc: string) {
+  return wartosc
+    .split(',')
+    .map((adres) => adres.trim())
+    .filter(Boolean)
+}
+
+function scalFirme(obecna: DaneFirmy, czesciowa?: Partial<DaneFirmy>) {
   return {
-    ...obecne,
-    ...czesciowe,
-    nabywca: { ...obecne.nabywca, ...czesciowe.nabywca },
-    odbiorca: { ...obecne.odbiorca, ...czesciowe.odbiorca },
-    faktura: { ...obecne.faktura, ...czesciowe.faktura },
-    koordynatorKlienta: { ...obecne.koordynatorKlienta, ...czesciowe.koordynatorKlienta },
-    odbiorcaPaczki: { ...obecne.odbiorcaPaczki, ...czesciowe.odbiorcaPaczki },
-    dokumentacja: { ...obecne.dokumentacja, ...czesciowe.dokumentacja },
-    logotypy: { ...obecne.logotypy, ...czesciowe.logotypy },
-    dodatkoweWymogi: { ...obecne.dodatkoweWymogi, ...czesciowe.dodatkoweWymogi },
-    uwagi: { ...obecne.uwagi, ...czesciowe.uwagi },
-  }
-}
-
-function scalGrupe(obecna: GrupaSzkoleniowa, czesciowa: Partial<GrupaSzkoleniowa>): GrupaSzkoleniowa {
-  const grupa = {
+    ...poczatkowaFirma,
     ...obecna,
     ...czesciowa,
-    dokumentacja: { ...obecna.dokumentacja, ...czesciowa.dokumentacja },
-    koordynatorKlienta: { ...obecna.koordynatorKlienta, ...czesciowa.koordynatorKlienta },
-    odbiorcaPaczki: { ...obecna.odbiorcaPaczki, ...czesciowa.odbiorcaPaczki },
-    trenerzy: czesciowa.trenerzy ?? obecna.trenerzy,
-    uczestnicy: czesciowa.uczestnicy ?? obecna.uczestnicy,
+    kraj: czesciowa?.kraj || obecna.kraj || 'Polska',
+  }
+}
+
+function scalDokumentacje(obecna: DaneDokumentacjiMaterialow, czesciowa?: Partial<DaneDokumentacjiMaterialow>) {
+  return {
+    ...obecna,
+    ...czesciowa,
+    wzoryKlienta: {
+      ...poczatkoweWzoryKlienta,
+      ...obecna.wzoryKlienta,
+      ...czesciowa?.wzoryKlienta,
+    },
+  }
+}
+
+function mapujVat(wartosc: unknown): OswiadczenieVat {
+  if (wartosc === 'Min. 70%' || wartosc === 'ZW – 100%' || wartosc === 'Nie – 23%') {
+    return wartosc
   }
 
+  if (wartosc === 'zwolnione' || wartosc === '0%' || wartosc === 'ZW - 100%') {
+    return 'ZW – 100%'
+  }
+
+  if (wartosc === '70%' || wartosc === 'Min. 70%') {
+    return 'Min. 70%'
+  }
+
+  return 'Nie – 23%'
+}
+
+function mapujRodzajGodzin(wartosc: unknown): RodzajGodzin {
+  if (wartosc === 'Akademickie (45 min)' || wartosc === 'dydaktyczne') {
+    return 'Akademickie (45 min)'
+  }
+
+  return 'Zajęciowe (60 min)'
+}
+
+function mapujForme(wartosc: unknown): FormaSzkolenia {
+  return wartosc === 'Online' ? 'Online' : 'Stacjonarne'
+}
+
+function normalizujDane(dane?: Partial<DaneFormularza>): DaneFormularza {
+  const obecne = dane ?? {}
+  const nabywca = scalFirme(poczatkoweDaneFormularza.nabywca, obecne.nabywca)
+  const odbiorca = scalFirme(poczatkoweDaneFormularza.odbiorca, obecne.odbiorca)
+  const czyNabywcaJestOdbiorca = Boolean(obecne.czyNabywcaJestOdbiorca)
+
   return {
-    ...grupa,
-    cenaBrutto: policzCenaBrutto(grupa.cenaNetto, grupa.vat),
+    ...klonuj(poczatkoweDaneFormularza),
+    ...obecne,
+    nazwaKlienta: obecne.nazwaKlienta ?? nabywca.nazwa ?? '',
+    nabywca,
+    odbiorca: czyNabywcaJestOdbiorca ? { ...nabywca } : odbiorca,
+    czyNabywcaJestOdbiorca,
+    wysylkaPaczkiDotyczy: Boolean(obecne.wysylkaPaczkiDotyczy),
+    odbiorcaPaczki: {
+      ...poczatkoweDaneFormularza.odbiorcaPaczki,
+      ...obecne.odbiorcaPaczki,
+      kraj: obecne.odbiorcaPaczki?.kraj || 'Polska',
+    },
+    dokumentacja: scalDokumentacje(poczatkoweDaneFormularza.dokumentacja, obecne.dokumentacja),
+    logotypy: {
+      ...poczatkoweDaneFormularza.logotypy,
+      ...obecne.logotypy,
+    },
+    dodatkoweWymogi: {
+      ...poczatkoweDaneFormularza.dodatkoweWymogi,
+      ...obecne.dodatkoweWymogi,
+      wzoryKlienta: {
+        ...poczatkoweWzoryKlienta,
+        ...obecne.dodatkoweWymogi?.wzoryKlienta,
+      },
+    },
+    uwagi: {
+      ...poczatkoweDaneFormularza.uwagi,
+      ...obecne.uwagi,
+    },
+  }
+}
+
+function normalizujGrupe(grupa?: Partial<GrupaSzkoleniowa>, indeks = 0): GrupaSzkoleniowa {
+  const obecna = grupa ?? {}
+  const formaSzkolenia = mapujForme(obecna.formaSzkolenia)
+  const miejsce = formaSzkolenia === 'Online' ? 'Online' : obecna.miejsce === 'Online' ? '' : obecna.miejsce ?? ''
+
+  return {
+    ...klonuj(poczatkowaGrupa),
+    ...obecna,
+    id: obecna.id || `grupa-${indeks + 1}`,
+    nazwa: obecna.nazwa || `Grupa ${indeks + 1}`,
+    trenerzy: Array.isArray(obecna.trenerzy) ? obecna.trenerzy : [],
+    formaSzkolenia,
+    miejsce,
+    liczbaUczestnikow: Number(obecna.liczbaUczestnikow) || 0,
+    liczbaGodzin: Number(obecna.liczbaGodzin) || 0,
+    cenaNetto: Number(obecna.cenaNetto) || 0,
+    terminPlatnosci: Number(obecna.terminPlatnosci) || 0,
+    rodzajGodzin: mapujRodzajGodzin(obecna.rodzajGodzin),
+    trybCeny: String(obecna.trybCeny) === 'za osobę' || String(obecna.trybCeny) === 'za uczestnika' ? 'za osobę' : 'za grupę',
+    vat: mapujVat(obecna.vat),
+    protokol: Boolean(obecna.protokol),
+    mechanizmPodzielonejPlatnosci: Boolean(obecna.mechanizmPodzielonejPlatnosci),
+  }
+}
+
+function normalizujAdresatow(adresaci?: Partial<DaneAdresatow>): DaneAdresatow {
+  const trybTresci = String(adresaci?.trybTresci) === 'Cała treść' || String(adresaci?.trybTresci) === 'cała treść' ? 'Cała treść' : 'Tylko zmiany'
+
+  return {
+    ...poczatkowiAdresaci,
+    ...adresaci,
+    trybTresci,
+    czyPodpis: adresaci?.czyPodpis ?? true,
+  }
+}
+
+function pobierzTrenerowZKartoteki(): TrenerKartoteki[] {
+  try {
+    const zapis = localStorage.getItem(kluczTrenerowKartoteki)
+    const dane = zapis ? JSON.parse(zapis) : null
+
+    if (!Array.isArray(dane)) {
+      return trenerzyKartotekiStartowi
+    }
+
+    return dane
+      .filter((trener) => trener?.status !== 'Nieaktywny')
+      .map((trener) => ({
+        id: String(trener.id),
+        imieNazwisko: `${trener.imie ?? ''} ${trener.nazwisko ?? ''}`.trim() || String(trener.imieNazwisko ?? ''),
+        telefon: String(trener.telefon ?? ''),
+        email: String(trener.email ?? ''),
+      }))
+      .filter((trener) => trener.imieNazwisko)
+  } catch {
+    return trenerzyKartotekiStartowi
   }
 }
 
@@ -72,69 +210,152 @@ function pobierzStanPoczatkowy() {
 
   if (wersja) {
     return {
-      dane: wersja.dane,
-      grupy: wersja.grupy.length ? wersja.grupy : [klonujGrupePoczatkowa()],
-      adresaci: wersja.adresaci,
-      statusyPol: wersja.statusyPol,
+      dane: normalizujDane(wersja.dane),
+      grupy: wersja.grupy.length ? wersja.grupy.map(normalizujGrupe) : [normalizujGrupe()],
+      adresaci: normalizujAdresatow(wersja.adresaci),
+      statusyPol: wersja.statusyPol ?? {},
     }
   }
 
   return {
-    dane: klonujDanePoczatkowe(),
-    grupy: [klonujGrupePoczatkowa()],
+    dane: normalizujDane(),
+    grupy: [normalizujGrupe()],
     adresaci: { ...poczatkowiAdresaci },
     statusyPol: {},
   }
 }
 
-function znajdzAdresatowZGrup(wybraneGrupy: string[]) {
-  return grupyAdresatow
-    .filter((grupa) => wybraneGrupy.includes(grupa.id))
-    .flatMap((grupa) => grupa.adresaci)
+function scalDaneFormularza(obecne: DaneFormularza, czesciowe: Partial<DaneFormularza>): DaneFormularza {
+  return normalizujDane({
+    ...obecne,
+    ...czesciowe,
+    nabywca: scalFirme(obecne.nabywca, czesciowe.nabywca),
+    odbiorca: scalFirme(obecne.odbiorca, czesciowe.odbiorca),
+    dokumentacja: scalDokumentacje(obecne.dokumentacja, czesciowe.dokumentacja),
+    logotypy: { ...obecne.logotypy, ...czesciowe.logotypy },
+    dodatkoweWymogi: {
+      ...obecne.dodatkoweWymogi,
+      ...czesciowe.dodatkoweWymogi,
+      wzoryKlienta: {
+        ...obecne.dodatkoweWymogi.wzoryKlienta,
+        ...czesciowe.dodatkoweWymogi?.wzoryKlienta,
+      },
+    },
+    uwagi: { ...obecne.uwagi, ...czesciowe.uwagi },
+  })
 }
 
-function polaczAdresatow(adresaci: DaneAdresatow, dane: DaneFormularza, grupy: GrupaSzkoleniowa[]) {
-  const reczni = adresaci.reczniAdresaci
-    .split(/[;,\s]+/)
-    .map((adres) => adres.trim())
-    .filter(Boolean)
-  const zGrup = znajdzAdresatowZGrup(adresaci.wybraneGrupy)
-  const zFormularza = [
-    dane.faktura.email,
-    dane.koordynatorKlienta.email,
-    dane.odbiorcaPaczki.email,
-    ...grupy.flatMap((grupa) => grupa.trenerzy.map((trener) => trener.email)),
-  ].filter(Boolean)
-
-  return Array.from(new Set([...reczni, ...zGrup, ...zFormularza]))
+function scalGrupe(obecna: GrupaSzkoleniowa, czesciowa: Partial<GrupaSzkoleniowa>): GrupaSzkoleniowa {
+  return normalizujGrupe({
+    ...obecna,
+    ...czesciowa,
+    trenerzy: czesciowa.trenerzy ?? obecna.trenerzy,
+  })
 }
 
-function czyTrenerPrzypisany(uzytkownik: LokalnyUzytkownik, grupy: GrupaSzkoleniowa[]) {
-  return Boolean(uzytkownik.trenerId && grupy.some((grupa) => grupa.trenerzy.some((trener) => trener.id === uzytkownik.trenerId)))
+function zbudujProblemyWalidacji(dane: DaneFormularza, grupy: GrupaSzkoleniowa[]): ProblemWalidacji[] {
+  const problemy: ProblemWalidacji[] = []
+
+  function dodaj(sekcja: string, pole: string, komunikat: string, czyBlokuje = true, poziom: ProblemWalidacji['poziom'] = 'blad') {
+    problemy.push({ sekcja, pole, komunikat, poziom, czyBlokuje })
+  }
+
+  if (!dane.tytulSzkolenia.trim()) {
+    dodaj('Podstawowe informacje', 'Tytuł szkolenia', 'Tytuł szkolenia: wpisz tytuł szkolenia')
+  }
+
+  if (!dane.nazwaKlienta.trim()) {
+    dodaj('Podstawowe informacje', 'Nazwa klienta', 'Nazwa klienta: wpisz nazwę klienta')
+  }
+
+  if (!grupy.length) {
+    dodaj('Grupy szkoleniowe', 'Grupy', 'Dodaj co najmniej jedną grupę szkoleniową')
+  }
+
+  grupy.forEach((grupa, indeks) => {
+    const nazwaGrupy = `Grupa ${indeks + 1}`
+
+    if (!grupa.trenerzy.length || !grupa.trenerzy[0]?.imieNazwisko.trim()) {
+      dodaj('Grupy szkoleniowe', `${nazwaGrupy}: Trener`, `${nazwaGrupy}: wybierz trenera`)
+    }
+
+    if (!grupa.formaSzkolenia) {
+      dodaj('Grupy szkoleniowe', `${nazwaGrupy}: Forma szkolenia`, `${nazwaGrupy}: wybierz formę szkolenia`)
+    }
+
+    if (!grupa.dataOd) {
+      dodaj('Grupy szkoleniowe', `${nazwaGrupy}: Data od`, `${nazwaGrupy}: wpisz datę od`)
+    }
+
+    if (!grupa.dataDo) {
+      dodaj('Grupy szkoleniowe', `${nazwaGrupy}: Data do`, `${nazwaGrupy}: wpisz datę do`)
+    }
+
+    if (grupa.dataOd && grupa.dataDo && grupa.dataDo < grupa.dataOd) {
+      dodaj('Grupy szkoleniowe', `${nazwaGrupy}: Zakres dat`, `${nazwaGrupy}: data do nie może być wcześniejsza niż data od`)
+    }
+
+    if (!Number.isFinite(grupa.liczbaUczestnikow) || grupa.liczbaUczestnikow < 1) {
+      dodaj('Grupy szkoleniowe', `${nazwaGrupy}: Liczba uczestników`, `${nazwaGrupy}: wpisz liczbę uczestników minimum 1`)
+    }
+
+    if (!Number.isFinite(grupa.liczbaGodzin) || grupa.liczbaGodzin < 0) {
+      dodaj('Grupy szkoleniowe', `${nazwaGrupy}: Liczba godzin`, `${nazwaGrupy}: liczba godzin nie może być ujemna`)
+    }
+
+    if (!Number.isFinite(grupa.cenaNetto)) {
+      dodaj('Grupy szkoleniowe', `${nazwaGrupy}: Cena netto`, `${nazwaGrupy}: cena nie może zawierać liter`)
+    } else if (grupa.cenaNetto <= 0) {
+      dodaj('Grupy szkoleniowe', `${nazwaGrupy}: Cena netto`, `${nazwaGrupy}: wpisz cenę netto`)
+    }
+
+    if (!Number.isFinite(grupa.terminPlatnosci) || grupa.terminPlatnosci < 0) {
+      dodaj('Grupy szkoleniowe', `${nazwaGrupy}: Termin płatności`, `${nazwaGrupy}: termin płatności nie może być ujemny`)
+    }
+  })
+
+  if (dane.dodatkoweWymogi.wczesniejszyPrzyjazdTrenera && dane.dodatkoweWymogi.minutyWczesniej < 0) {
+    dodaj('Dodatkowe wymogi', 'Ile minut wcześniej', 'Wcześniejszy przyjazd trenera: wpisz liczbę minut minimum 0')
+  }
+
+  if (dane.wysylkaPaczkiDotyczy) {
+    if (dane.odbiorcaPaczki.email && !czyEmailPoprawny(dane.odbiorcaPaczki.email)) {
+      dodaj('Wysyłka paczki', 'Email', 'Wysyłka paczki: popraw adres email', false, 'ostrzezenie')
+    }
+
+    if (dane.odbiorcaPaczki.kodPocztowy && !czyKodPocztowyPoprawny(dane.odbiorcaPaczki.kodPocztowy)) {
+      dodaj('Wysyłka paczki', 'Kod pocztowy', 'Wysyłka paczki: popraw kod pocztowy', false, 'ostrzezenie')
+    }
+  }
+
+  return problemy
 }
 
 export function useGeneratorSzczegolow() {
   const stanPoczatkowy = useMemo(() => pobierzStanPoczatkowy(), [])
-  const [daneFormularza, ustawDaneFormularza] = useState(stanPoczatkowy.dane)
-  const [grupy, ustawGrupy] = useState(stanPoczatkowy.grupy)
-  const [adresaci, ustawAdresaci] = useState(stanPoczatkowy.adresaci)
+  const [daneFormularza, ustawDaneFormularza] = useState<DaneFormularza>(stanPoczatkowy.dane)
+  const [grupy, ustawGrupy] = useState<GrupaSzkoleniowa[]>(stanPoczatkowy.grupy)
+  const [adresaci, ustawAdresaci] = useState<DaneAdresatow>(stanPoczatkowy.adresaci)
   const [statusyPol, ustawStatusyPol] = useState<StatusyPolImportu>(stanPoczatkowy.statusyPol)
   const [trescMaila, ustawTrescMaila] = useState('')
   const [rozpoznaneObszary, ustawRozpoznaneObszary] = useState<string[]>([])
   const [komunikat, ustawKomunikat] = useState('Generator gotowy.')
-  const [aktywnyUzytkownikId, ustawAktywnyUzytkownikId] = useState(lokalniUzytkownicy[0].id)
-  const [trenerzyKartoteki, ustawTrenerzyKartoteki] = useState<TrenerKartoteki[]>(trenerzyKartotekiStartowi)
+  const [trenerzyKartoteki, ustawTrenerzyKartoteki] = useState<TrenerKartoteki[]>(pobierzTrenerowZKartoteki)
   const [kopieRobocze, ustawKopieRobocze] = useState(pobierzKopieRobocze)
-  const aktywnyUzytkownik = lokalniUzytkownicy.find((uzytkownik) => uzytkownik.id === aktywnyUzytkownikId) ?? lokalniUzytkownicy[0]
-  const wszyscyAdresaci = useMemo(() => polaczAdresatow(adresaci, daneFormularza, grupy), [adresaci, daneFormularza, grupy])
+  const problemyWalidacji = useMemo(() => zbudujProblemyWalidacji(daneFormularza, grupy), [daneFormularza, grupy])
+  const czyFormularzKompletny = useMemo(() => problemyWalidacji.every((problem) => !problem.czyBlokuje), [problemyWalidacji])
   const podgladSzczegolow = useMemo(() => utworzTekstSzczegolow(daneFormularza, grupy), [daneFormularza, grupy])
+  const czyAdresaciAktualizacjiPoprawni = useMemo(() => {
+    const lista = podzielAdresatow(adresaci.reczniAdresaci)
+    return lista.length > 0 && lista.every(czyEmailPoprawny)
+  }, [adresaci.reczniAdresaci])
 
   function oznaczPoleRecznie(pole: string) {
     ustawStatusyPol((obecne) => ({ ...obecne, [pole]: 'reczne' }))
   }
 
   function aktualizujDane(aktualizacja: (dane: DaneFormularza) => DaneFormularza, pole?: string) {
-    ustawDaneFormularza((obecne) => aktualizacja(obecne))
+    ustawDaneFormularza((obecne) => normalizujDane(aktualizacja(obecne)))
 
     if (pole) {
       oznaczPoleRecznie(pole)
@@ -143,16 +364,12 @@ export function useGeneratorSzczegolow() {
 
   function aktualizujGrupe(id: string, aktualizacja: (grupa: GrupaSzkoleniowa) => GrupaSzkoleniowa, pole?: string) {
     ustawGrupy((obecne) =>
-      obecne.map((grupa) => {
+      obecne.map((grupa, indeks) => {
         if (grupa.id !== id) {
           return grupa
         }
 
-        const nastepna = aktualizacja(grupa)
-        return {
-          ...nastepna,
-          cenaBrutto: policzCenaBrutto(nastepna.cenaNetto, nastepna.vat),
-        }
+        return normalizujGrupe(aktualizacja(grupa), indeks)
       }),
     )
 
@@ -166,64 +383,7 @@ export function useGeneratorSzczegolow() {
   }
 
   function usunGrupe(id: string) {
-    ustawGrupy((obecne) => (obecne.length > 1 ? obecne.filter((grupa) => grupa.id !== id) : obecne))
-  }
-
-  function dodajTreneraDoKartoteki(trener: Omit<TrenerKartoteki, 'id'>) {
-    const nowyTrener = {
-      ...trener,
-      id: `trener-${Date.now()}`,
-    }
-    ustawTrenerzyKartoteki((obecne) => [...obecne, nowyTrener])
-    ustawKomunikat('Dodano trenera do lokalnej kartoteki testowej.')
-    return nowyTrener
-  }
-
-  function dodajTreneraDoGrupy(idGrupy: string, trener: TrenerKartoteki) {
-    const trenerGrupy: TrenerGrupy = {
-      id: trener.id,
-      imieNazwisko: trener.imieNazwisko,
-      telefon: trener.telefon,
-      email: trener.email,
-    }
-
-    aktualizujGrupe(
-      idGrupy,
-      (grupa) => ({
-        ...grupa,
-        trenerzy: grupa.trenerzy.some((obecny) => obecny.id === trener.id)
-          ? grupa.trenerzy
-          : [...grupa.trenerzy, trenerGrupy],
-      }),
-      'grupy.0.trenerzy',
-    )
-  }
-
-  function usunTreneraZGrupy(idGrupy: string, idTrenera: string) {
-    aktualizujGrupe(idGrupy, (grupa) => ({
-      ...grupa,
-      trenerzy: grupa.trenerzy.filter((trener) => trener.id !== idTrenera),
-    }))
-  }
-
-  function zastosujTreneraDoWszystkichGrup(trener: TrenerGrupy) {
-    ustawGrupy((obecne) =>
-      obecne.map((grupa) => ({
-        ...grupa,
-        czyTrenerSzkoliKazdaGrupe: true,
-        trenerzy: grupa.trenerzy.some((obecny) => obecny.id === trener.id) ? grupa.trenerzy : [...grupa.trenerzy, trener],
-      })),
-    )
-  }
-
-  function zastosujDokumentacjeDoKazdejGrupy() {
-    ustawGrupy((obecne) =>
-      obecne.map((grupa) => ({
-        ...grupa,
-        dokumentacja: { ...daneFormularza.dokumentacja },
-      })),
-    )
-    ustawKomunikat('Zastosowano ustawienia dokumentacji do każdej grupy.')
+    ustawGrupy((obecne) => (obecne.length > 1 ? obecne.filter((grupa) => grupa.id !== id).map(normalizujGrupe) : obecne))
   }
 
   function obsluzImportMaila() {
@@ -235,7 +395,7 @@ export function useGeneratorSzczegolow() {
     const wynik = parsujMailaSzczegolow(trescMaila)
     ustawDaneFormularza((obecne) => scalDaneFormularza(obecne, wynik.daneFormularza))
     ustawGrupy((obecne) => {
-      const pierwsza = scalGrupe(obecne[0] ?? klonujGrupePoczatkowa(), wynik.pierwszaGrupa)
+      const pierwsza = scalGrupe(obecne[0] ?? normalizujGrupe(), wynik.pierwszaGrupa)
       return [pierwsza, ...obecne.slice(1)]
     })
     ustawRozpoznaneObszary(wynik.rozpoznaneObszary)
@@ -252,27 +412,31 @@ export function useGeneratorSzczegolow() {
       })
       return statusy
     })
-    ustawKomunikat(`Import zakończony. Rozpoznano obszary: ${wynik.rozpoznaneObszary.length}.`)
+    ustawKomunikat(
+      wynik.rozpoznaneObszary.length
+        ? `Import zakończony. Rozpoznano obszary: ${wynik.rozpoznaneObszary.join(', ')}.`
+        : 'Import zakończony. Nie odnaleziono jawnie opisanych danych.',
+    )
   }
 
   function zapiszWersje() {
     const wersja = zbudujWersjeRobocza(daneFormularza, grupy, adresaci, statusyPol)
     zapiszWersjeRobocza(wersja)
     ustawKopieRobocze(pobierzKopieRobocze())
-    ustawKomunikat('Zapisano wersję roboczą lokalnie.')
+    ustawKomunikat('Zapisano kopię roboczą lokalnie.')
   }
 
   function wczytajWersje(wersja: WersjaRoboczaGeneratora) {
-    ustawDaneFormularza(wersja.dane)
-    ustawGrupy(wersja.grupy.length ? wersja.grupy : [klonujGrupePoczatkowa()])
-    ustawAdresaci(wersja.adresaci)
-    ustawStatusyPol(wersja.statusyPol)
+    ustawDaneFormularza(normalizujDane(wersja.dane))
+    ustawGrupy(wersja.grupy.length ? wersja.grupy.map(normalizujGrupe) : [normalizujGrupe()])
+    ustawAdresaci(normalizujAdresatow(wersja.adresaci))
+    ustawStatusyPol(wersja.statusyPol ?? {})
     ustawKomunikat('Wczytano kopię roboczą.')
   }
 
   function wyczyscFormularz() {
-    ustawDaneFormularza(klonujDanePoczatkowe())
-    ustawGrupy([klonujGrupePoczatkowa()])
+    ustawDaneFormularza(normalizujDane())
+    ustawGrupy([normalizujGrupe()])
     ustawAdresaci({ ...poczatkowiAdresaci })
     ustawStatusyPol({})
     ustawRozpoznaneObszary([])
@@ -283,13 +447,14 @@ export function useGeneratorSzczegolow() {
 
   function importujJson(zawartosc: string) {
     try {
-      const wersja = JSON.parse(zawartosc) as WersjaRoboczaGeneratora
-      if (!wersja.dane || !wersja.grupy) {
-        ustawKomunikat('Plik JSON nie wygląda jak wersja robocza generatora.')
+      const wersja = JSON.parse(zawartosc) as Partial<WersjaRoboczaGeneratora>
+
+      if (wersja.wersja !== wersjaEksportuSzczegolow || !czyObiekt(wersja.dane) || !Array.isArray(wersja.grupy) || !czyObiekt(wersja.adresaci)) {
+        ustawKomunikat('Plik JSON nie pasuje do eksportu generatora szczegółów organizacyjnych.')
         return
       }
 
-      wczytajWersje(wersja)
+      wczytajWersje(wersja as WersjaRoboczaGeneratora)
     } catch {
       ustawKomunikat('Nie udało się odczytać JSON.')
     }
@@ -301,61 +466,41 @@ export function useGeneratorSzczegolow() {
     const adres = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = adres
-    link.download = 'wersja-robocza-szczegolow.json'
+    link.download = 'szczegoly-organizacyjne.json'
     link.click()
     URL.revokeObjectURL(adres)
-  }
-
-  function eksportujDoc() {
-    pobierzDokumentSzczegolow(daneFormularza, grupy)
-    ustawKomunikat('Pobrano plik DOC ze szczegółami.')
-  }
-
-  function drukujPdf() {
-    window.print()
+    ustawKomunikat('Wyeksportowano JSON formularza.')
   }
 
   function wprowadzSzkolenie() {
+    if (!czyFormularzKompletny) {
+      ustawKomunikat('Uzupełnij wymagane pola przed wprowadzeniem szkolenia.')
+      return
+    }
+
     ustawDaneFormularza((obecne) => ({
       ...obecne,
       status: obecne.status === 'NIEPEŁNE' ? 'OCZEKUJĄCE' : obecne.status,
     }))
-    ustawKomunikat('Szkolenie oznaczono lokalnie jako gotowe do wprowadzenia. Backend nie jest jeszcze podłączony.')
+    ustawKomunikat('Szkolenie oznaczono lokalnie jako gotowe do wprowadzenia.')
   }
 
-  function utworzLinkMailto() {
-    const temat = encodeURIComponent(`Szczegóły organizacyjne: ${daneFormularza.tytulSzkolenia || 'szkolenie'}`)
-    const tresc = encodeURIComponent(adresaci.trybTresci === 'tylko zmiany' ? podgladSzczegolow : utworzTekstSzczegolow(daneFormularza, grupy))
-    const adresy = wszyscyAdresaci.join(',')
-    return `mailto:${adresy}?subject=${temat}&body=${tresc}`
+  function przygotujAktualizacje() {
+    if (!czyAdresaciAktualizacjiPoprawni) {
+      ustawKomunikat('Wpisz poprawnych adresatów aktualizacji oddzielonych przecinkiem.')
+      return
+    }
+
+    ustawKomunikat('Wysyłka wymaga podłączenia usługi pocztowej — obecnie przygotowano dane wiadomości.')
   }
 
   function pokazKomunikatImportuDokumentow() {
-    ustawKomunikat('Import Word/PDF czeka na parser dokumentów.')
+    ustawKomunikat('Pełny import Word/PDF wymaga parsera backendowego i obecnie nie jest wykonywany.')
   }
 
-  function czyWidocznaUwaga(typUwagi: keyof DaneFormularza['uwagi']) {
-    if (typUwagi === 'informacjeNiepewne') {
-      return aktywnyUzytkownik.czyPracownik
-    }
-
-    if (typUwagi === 'opiekuna') {
-      return aktywnyUzytkownik.czyOpiekunSzkolenia
-    }
-
-    if (typUwagi === 'dlaKlienta') {
-      return aktywnyUzytkownik.czyPracownik || aktywnyUzytkownik.rola === 'Koordynator klienta'
-    }
-
-    if (typUwagi === 'dlaTrenera') {
-      return aktywnyUzytkownik.czyPracownik || czyTrenerPrzypisany(aktywnyUzytkownik, grupy)
-    }
-
-    if (typUwagi === 'dlaWysylaczy') {
-      return aktywnyUzytkownik.czyOpiekunSzkolenia || aktywnyUzytkownik.odznaki.includes('Wysyłacz')
-    }
-
-    return aktywnyUzytkownik.czyPracownik
+  function odswiezTrenerowZKartoteki() {
+    ustawTrenerzyKartoteki(pobierzTrenerowZKartoteki())
+    ustawKomunikat('Odświeżono lokalną kartotekę trenerów.')
   }
 
   return {
@@ -366,36 +511,27 @@ export function useGeneratorSzczegolow() {
     trescMaila,
     rozpoznaneObszary,
     komunikat,
-    lokalniUzytkownicy,
-    aktywnyUzytkownik,
-    aktywnyUzytkownikId,
     trenerzyKartoteki,
     kopieRobocze,
-    wszyscyAdresaci,
+    problemyWalidacji,
+    czyFormularzKompletny,
+    czyAdresaciAktualizacjiPoprawni,
     podgladSzczegolow,
     ustawTrescMaila,
     ustawAdresaci,
-    ustawAktywnyUzytkownikId,
     aktualizujDane,
     aktualizujGrupe,
     dodajGrupe,
     usunGrupe,
-    dodajTreneraDoKartoteki,
-    dodajTreneraDoGrupy,
-    usunTreneraZGrupy,
-    zastosujTreneraDoWszystkichGrup,
-    zastosujDokumentacjeDoKazdejGrupy,
     obsluzImportMaila,
     zapiszWersje,
     wczytajWersje,
     wyczyscFormularz,
     importujJson,
     eksportujJson,
-    eksportujDoc,
-    drukujPdf,
     wprowadzSzkolenie,
-    utworzLinkMailto,
+    przygotujAktualizacje,
     pokazKomunikatImportuDokumentow,
-    czyWidocznaUwaga,
+    odswiezTrenerowZKartoteki,
   }
 }

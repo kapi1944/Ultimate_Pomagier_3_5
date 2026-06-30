@@ -9,26 +9,29 @@ export type StatusSzczegolow =
   | 'ROZLICZONE'
 
 export type StatusPolaImportu = 'zaimportowane' | 'brak' | 'niepewne' | 'reczne'
-export type OswiadczenieVat = 'brak' | '23%' | '8%' | '0%' | 'zwolnione'
-export type TrybCeny = 'za grupę' | 'za uczestnika'
-export type RodzajGodzin = 'dydaktyczne' | 'zegarowe' | 'niestandardowe'
-export type OrganizatorSzkolenia = 'SEMPER' | 'IIST'
-export type FormaSzkolenia = 'Stacjonarne' | 'Online' | 'Hybrydowe'
-export type StatusTerminu = 'Niepotwierdzony' | 'Potwierdzony' | 'Do ustalenia'
-export type SposobDokumentu = 'druk' | 'online'
-export type TrybTresciMaila = 'cała treść' | 'tylko zmiany'
-export type RolaLokalnegoUzytkownika = 'Administrator' | 'Opiekun' | 'Koordynator klienta' | 'Trener' | 'Gość'
+export type OswiadczenieVat = 'Nie – 23%' | 'Min. 70%' | 'ZW – 100%'
+export type TrybCeny = 'za grupę' | 'za osobę'
+export type RodzajGodzin = 'Zajęciowe (60 min)' | 'Akademickie (45 min)'
+export type OrganizatorSzkolenia = 'SEMPER' | 'IIST' | 'SD' | 'klient' | 'inny'
+export type FormaSzkolenia = 'Stacjonarne' | 'Online'
+export type TrybTresciMaila = 'Tylko zmiany' | 'Cała treść'
+export type StatusLogotypow = 'Tak' | 'Nie' | 'Nie dotyczy'
 
 export type DaneFirmy = {
   nazwa: string
   nip: string
   adres: string
-}
-
-export type DaneFaktury = {
-  sposob: string
+  ulica: string
+  nrBudynku: string
+  nrLokalu: string
+  kodPocztowy: string
+  miasto: string
+  kraj: string
+  osobaKontaktowa: string
+  imieNazwiskoOdbiorcy: string
+  telefon: string
   email: string
-  uwagi: string
+  sposobWysylkiRaportu: string
 }
 
 export type DaneKontaktuOrganizacyjnego = {
@@ -37,40 +40,48 @@ export type DaneKontaktuOrganizacyjnego = {
   telefon: string
 }
 
+export type DaneOdbiorcyPaczki = DaneKontaktuOrganizacyjnego & {
+  nazwaFirmy: string
+  ulica: string
+  nrBudynku: string
+  nrLokalu: string
+  kodPocztowy: string
+  miasto: string
+  kraj: string
+}
+
+export type WzoryKlienta = Record<string, boolean>
+
 export type DaneDokumentacjiMaterialow = {
   listaObecnosci: boolean
   ankiety: boolean
   certyfikaty: boolean
   program: boolean
   kartaInformacyjna: boolean
-  materialyInspekcyjne: boolean
   podreczniki: boolean
   materialyDodatkowe: boolean
-  testPrzedPo: boolean
+  projektTesty: boolean
   dostepnoscCyfrowa: boolean
-  kompletDlaZamawiajacego: boolean
-  wzorKlienta: boolean
-  sposobDokumentu: SposobDokumentu
-  uwagi: string
+  plikZrodlowy: boolean
+  logotypy: StatusLogotypow
+  plusJedenEgzemplarz: boolean
+  wzoryKlienta: WzoryKlienta
 }
 
 export type DaneLogotypow = {
-  czyWymagane: boolean
   nazwaPliku: string
-  link: string
   podglad: string
-  informacjaOFinansowaniu: string
-  zastrzezenie: string
 }
 
 export type DaneDodatkowychWymogow = {
   wczesniejszyPrzyjazdTrenera: boolean
   minutyWczesniej: number
   dokumentacjaZdjęciowa: boolean
-  karyZaNieterminowosc: boolean
+  karyWHarmonogramie: boolean
   noweSzkolenieZaOcene: boolean
   kfs: boolean
   uwagi: string
+  wzoryKlienta: WzoryKlienta
 }
 
 export type DaneUwag = {
@@ -84,24 +95,15 @@ export type DaneUwag = {
 
 export type DaneFormularza = {
   tytulSzkolenia: string
+  nazwaKlienta: string
   organizator: OrganizatorSzkolenia
   status: StatusSzczegolow
   nabywca: DaneFirmy
   odbiorca: DaneFirmy
   czyNabywcaJestOdbiorca: boolean
-  adresPaczkiWspolny: string
-  faktura: DaneFaktury
-  raport: string
-  protokol: string
-  dataUmowy: string
-  numerUmowy: string
-  terminPlatnosci: string
-  kontaktWspolnyDlaGrup: boolean
-  koordynatorKlienta: DaneKontaktuOrganizacyjnego
-  odbiorcaPaczki: DaneKontaktuOrganizacyjnego
-  czyKoordynatorOdbieraPaczki: boolean
+  wysylkaPaczkiDotyczy: boolean
+  odbiorcaPaczki: DaneOdbiorcyPaczki
   dokumentacja: DaneDokumentacjiMaterialow
-  materialy: string
   logotypy: DaneLogotypow
   dodatkoweWymogi: DaneDodatkowychWymogow
   programSzkolenia: string
@@ -140,55 +142,45 @@ export type LokalizacjaKartoteki = {
 export type GrupaSzkoleniowa = {
   id: string
   nazwa: string
-  statusTerminu: StatusTerminu
+  trenerzy: TrenerGrupy[]
+  formaSzkolenia: FormaSzkolenia
   dataOd: string
   dataDo: string
-  godzinaRozpoczecia: string
-  godzinaZakonczenia: string
-  formaSzkolenia: FormaSzkolenia
-  cenaNetto: number
-  vat: OswiadczenieVat
-  cenaBrutto: number
-  trybCeny: TrybCeny
+  liczbaUczestnikow: number
   liczbaGodzin: number
   rodzajGodzin: RodzajGodzin
-  niestandardowaFormulaGodzin: string
-  lokalizacjaId: string
-  miejscownik: string
-  miejscownikPotwierdzony: boolean
   miejsce: string
   ktoZapewniaSale: string
-  nazwaLokalizacji: string
-  adresLokalizacji: string
-  sala: string
-  informacjeDojazdowe: string
-  platformaOnline: 'Zoom' | 'Microsoft Teams' | 'Inna'
-  linkOnline: string
-  kodDostepuOnline: string
-  informacjeTechniczne: string
-  trenerzy: TrenerGrupy[]
-  czyTrenerSzkoliKazdaGrupe: boolean
-  dokumentacja: DaneDokumentacjiMaterialow
-  uczestnicy: UczestnikGrupy[]
-  liczbaUczestnikow: number
-  pustaListaObecnosci: boolean
-  marginesWierszyListy: number
-  koordynatorKlienta: DaneKontaktuOrganizacyjnego
-  odbiorcaPaczki: DaneKontaktuOrganizacyjnego
+  cenaNetto: number
+  trybCeny: TrybCeny
+  vat: OswiadczenieVat
+  terminPlatnosci: number
+  protokol: boolean
+  mechanizmPodzielonejPlatnosci: boolean
+  dataUmowy: string
+  numerUmowy: string
 }
 
 export type DaneAdresatow = {
   reczniAdresaci: string
-  wyszukiwarka: string
-  wybraneGrupy: string[]
   trybTresci: TrybTresciMaila
-  czyPodswietlacZmiany: boolean
+  czyPodpis: boolean
+  wiadomoscWlasna: string
 }
 
 export type StatusyPolImportu = Partial<Record<string, StatusPolaImportu>>
 
+export type ProblemWalidacji = {
+  sekcja: string
+  pole: string
+  komunikat: string
+  poziom: 'blad' | 'ostrzezenie' | 'informacja'
+  czyBlokuje: boolean
+}
+
 export type WersjaRoboczaGeneratora = {
   id: string
+  wersja: string
   nazwa: string
   dataZapisu: string
   dane: DaneFormularza
@@ -198,17 +190,6 @@ export type WersjaRoboczaGeneratora = {
 }
 
 export type KopiaRoboczaSzkolenia = WersjaRoboczaGeneratora
-
-export type LokalnyUzytkownik = {
-  id: string
-  nazwa: string
-  rola: RolaLokalnegoUzytkownika
-  email: string
-  czyPracownik: boolean
-  czyOpiekunSzkolenia: boolean
-  trenerId?: string
-  odznaki: string[]
-}
 
 export type WynikParseraMailaSzczegolow = {
   daneFormularza: Partial<DaneFormularza>

@@ -9,6 +9,7 @@ import type {
 
 const kluczAktualnejWersji = 'ultimatePomagier.szczegolyOrganizacyjne.aktualnaWersja'
 const kluczKopiiRoboczych = 'ultimatePomagier.szczegolyOrganizacyjne.kopieRobocze'
+export const wersjaEksportuSzczegolow = 'ultimate-pomagier-3.5-szczegoly-organizacyjne'
 
 function bezpiecznieParsuj<Typ>(wartosc: string | null, fallback: Typ): Typ {
   if (!wartosc) {
@@ -31,12 +32,16 @@ export function pobierzKopieRobocze() {
 }
 
 export function utworzNazweKopiiRoboczej(dane: DaneFormularza, grupy: GrupaSzkoleniowa[]) {
-  const data = new Date().toLocaleString('pl-PL')
-  const tytul = dane.tytulSzkolenia.trim() || 'bez tytułu'
-  const klient = dane.nabywca.nazwa.trim() || 'bez klienta'
-  const trener = grupy[0]?.trenerzy[0]?.imieNazwisko || 'bez trenera'
+  const data = new Date().toLocaleDateString('pl-PL', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  })
+  const tytul = dane.tytulSzkolenia.trim() || 'Bez tytułu'
+  const klient = dane.nazwaKlienta.trim() || 'Bez klienta'
+  const trener = grupy[0]?.trenerzy[0]?.imieNazwisko || 'Bez trenera'
 
-  return `${data} | ${tytul} | ${trener} | ${klient}`
+  return `[Kopia robocza] ${data} – "${tytul}", ${trener} (${klient})`
 }
 
 export function zbudujWersjeRobocza(
@@ -47,6 +52,7 @@ export function zbudujWersjeRobocza(
 ): WersjaRoboczaGeneratora {
   return {
     id: `wersja-${Date.now()}`,
+    wersja: wersjaEksportuSzczegolow,
     nazwa: utworzNazweKopiiRoboczej(dane, grupy),
     dataZapisu: new Date().toISOString(),
     dane,

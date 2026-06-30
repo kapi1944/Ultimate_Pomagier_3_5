@@ -1,6 +1,5 @@
 import type {
   LokalizacjaKartoteki,
-  LokalnyUzytkownik,
   StatusPolaImportu,
   StatusSzczegolow,
   TrenerKartoteki,
@@ -30,55 +29,6 @@ export const klasyStatusowPol: Record<StatusPolaImportu, string> = {
   niepewne: 'szczegoly-pole--niepewne',
   reczne: 'szczegoly-pole--reczne',
 }
-
-export const lokalniUzytkownicy: LokalnyUzytkownik[] = [
-  {
-    id: 'administrator',
-    nazwa: 'Administrator SEMPER',
-    rola: 'Administrator',
-    email: 'administrator@pomagier.local',
-    czyPracownik: true,
-    czyOpiekunSzkolenia: true,
-    odznaki: ['Wysyłacz'],
-  },
-  {
-    id: 'opiekun',
-    nazwa: 'Opiekun szkolenia',
-    rola: 'Opiekun',
-    email: 'opiekun@pomagier.local',
-    czyPracownik: true,
-    czyOpiekunSzkolenia: true,
-    odznaki: ['Wysyłacz'],
-  },
-  {
-    id: 'koordynator-klienta',
-    nazwa: 'Koordynator klienta',
-    rola: 'Koordynator klienta',
-    email: 'koordynator@klient.local',
-    czyPracownik: false,
-    czyOpiekunSzkolenia: false,
-    odznaki: [],
-  },
-  {
-    id: 'trener',
-    nazwa: 'Trener przypisany',
-    rola: 'Trener',
-    email: 'trener@pomagier.local',
-    czyPracownik: false,
-    czyOpiekunSzkolenia: false,
-    trenerId: 'trener-anna-kowalska',
-    odznaki: [],
-  },
-  {
-    id: 'gosc',
-    nazwa: 'Gość',
-    rola: 'Gość',
-    email: 'gosc@pomagier.local',
-    czyPracownik: false,
-    czyOpiekunSzkolenia: false,
-    odznaki: [],
-  },
-]
 
 export const trenerzyKartotekiStartowi: TrenerKartoteki[] = [
   {
@@ -152,20 +102,23 @@ export const grupyAdresatow = [
 
 export const polaWymaganePoImporcie = [
   'tytulSzkolenia',
+  'nazwaKlienta',
   'nabywca.nazwa',
-  'nabywca.nip',
+  'nabywca.ulica',
+  'nabywca.kodPocztowy',
+  'nabywca.miasto',
   'odbiorca.nazwa',
-  'faktura.email',
-  'protokol',
-  'raport',
-  'programSzkolenia',
+  'odbiorca.email',
   'grupy.0.dataOd',
-  'grupy.0.godzinaRozpoczecia',
-  'grupy.0.godzinaZakonczenia',
+  'grupy.0.dataDo',
+  'grupy.0.formaSzkolenia',
+  'grupy.0.miejsce',
   'grupy.0.liczbaGodzin',
   'grupy.0.cenaNetto',
   'grupy.0.vat',
-  'grupy.0.nazwaLokalizacji',
   'grupy.0.trenerzy',
   'grupy.0.liczbaUczestnikow',
+  'grupy.0.terminPlatnosci',
+  'grupy.0.numerUmowy',
+  'grupy.0.dataUmowy',
 ]
