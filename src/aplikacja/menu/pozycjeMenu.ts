@@ -57,6 +57,10 @@ export const pozycjeMenu: PozycjaMenu[] = [
         etykieta: 'Dyplomy',
       },
       {
+        id: 'karta-na-drzwi',
+        etykieta: 'Karta na drzwi',
+      },
+      {
         id: 'programy_szkolen',
         etykieta: 'Programy szkoleń',
         sciezka: '/dokumenty/programy-szkolen',
@@ -80,6 +84,10 @@ export const pozycjeMenu: PozycjaMenu[] = [
       {
         id: 'kartoteki_lokalizacje',
         etykieta: 'Lokalizacje',
+      },
+      {
+        id: 'kartoteki_szablony_dokumentow',
+        etykieta: 'Szablony dokumentów',
       },
     ],
   },

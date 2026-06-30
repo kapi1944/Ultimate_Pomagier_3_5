@@ -8,6 +8,10 @@ export function rozpoznajTypPliku(plik: File): TypZrodlaDokumentu {
     return 'docx'
   }
 
+  if (nazwa.endsWith('.csv') || typ === 'text/csv') {
+    return 'csv'
+  }
+
   if (nazwa.endsWith('.pdf') || typ === 'application/pdf') {
     return 'pdf'
   }
@@ -16,6 +20,7 @@ export function rozpoznajTypPliku(plik: File): TypZrodlaDokumentu {
     typ.startsWith('image/') ||
     nazwa.endsWith('.jpg') ||
     nazwa.endsWith('.jpeg') ||
+    nazwa.endsWith('.png') ||
     nazwa.endsWith('.svg')
   ) {
     return 'obraz'

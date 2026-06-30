@@ -1,7 +1,12 @@
 import ProstyGeneratorDokumentu from '../../wspolne/ProstyGeneratorDokumentu'
 
-const tekstPrzykladowy = `Tytuł szkolenia: Skuteczna komunikacja w zespole
+const tekstPrzykladowy = `Tryb tytułu: certyfikat
+Tekst tytułu: CERTYFIKAT
+Tytuł szkolenia: Skuteczna komunikacja w zespole
 Data: 2026-07-15
+Druga strona: tak
+Typ drugiej strony: program
+Treść drugiej strony: Cele, korzyści i program szkolenia.
 
 Uczestnicy:
 Anna Kowalska
@@ -30,29 +35,51 @@ function pobierzUczestnikow(daneWejsciowe: string) {
   return wiersze.slice(indeksSekcji + 1)
 }
 
+function generujStroneGlowna(uczestnik: string, tekstTytulu: string, tytulSzkolenia: string, dataSzkolenia: string, numer: number) {
+  return `${tekstTytulu}
+
+Nr z rejestru: ${String(numer).padStart(4, '0')}/2026
+
+${uczestnik}
+
+ukończył/a szkolenie:
+${tytulSzkolenia}
+
+Data: ${dataSzkolenia}
+Podpis: ....................................`
+}
+
+function generujDrugaStrone(uczestnik: string, typDrugiejStrony: string, trescDrugiejStrony: string) {
+  return `DRUGA STRONA DYPLOMU
+Uczestnik: ${uczestnik}
+Typ treści: ${typDrugiejStrony}
+
+${trescDrugiejStrony || 'Cele, korzyści, program albo efekty uczenia się.'}`
+}
+
 function generujDokument(daneWejsciowe: string) {
+  const tekstTytulu = pobierzWartosc(daneWejsciowe, 'Tekst tytułu') || 'CERTYFIKAT'
   const tytulSzkolenia = pobierzWartosc(daneWejsciowe, 'Tytuł szkolenia') || 'wskazanego szkolenia'
   const dataSzkolenia = pobierzWartosc(daneWejsciowe, 'Data') || '....................................'
+  const drugaStronaAktywna = pobierzWartosc(daneWejsciowe, 'Druga strona').toLowerCase() === 'tak'
+  const typDrugiejStrony = pobierzWartosc(daneWejsciowe, 'Typ drugiej strony') || 'inne'
+  const trescDrugiejStrony = pobierzWartosc(daneWejsciowe, 'Treść drugiej strony')
   const uczestnicy = pobierzUczestnikow(daneWejsciowe)
 
   if (!uczestnicy.length) {
-    return `ZAŚWIADCZENIE / DYPLOM
+    return `${tekstTytulu}
 
 Brak uczestników do wygenerowania dyplomów.`
   }
 
   return uczestnicy
-    .map(
-      (uczestnik) => `ZAŚWIADCZENIE / DYPLOM
+    .flatMap((uczestnik, indeks) => {
+      const stronaGlowna = generujStroneGlowna(uczestnik, tekstTytulu, tytulSzkolenia, dataSzkolenia, indeks + 1)
 
-${uczestnik}
-
-ukończył(a) szkolenie:
-${tytulSzkolenia}
-
-Data: ${dataSzkolenia}
-Podpis: ....................................`,
-    )
+      return drugaStronaAktywna
+        ? [stronaGlowna, generujDrugaStrone(uczestnik, typDrugiejStrony, trescDrugiejStrony)]
+        : [stronaGlowna]
+    })
     .join('\n\n----------------------------------------\n\n')
 }
 
@@ -60,7 +87,7 @@ export default function WidokDyplomow() {
   return (
     <ProstyGeneratorDokumentu
       tytul="Dyplomy"
-      opis="Generator dyplomów. Placeholder pod przyszłą implementację."
+      opis="Generator certyfikatów, zaświadczeń i dyplomów."
       etykietaDanychWejsciowych="Dane szkolenia i uczestnicy"
       tekstPrzykladowy={tekstPrzykladowy}
       kluczLocalStorage="ultimate-pomagier.dyplomy.szkic"

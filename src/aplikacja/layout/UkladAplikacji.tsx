@@ -6,6 +6,7 @@ import WidokKartotek from '../../kartoteki/WidokKartotek'
 import WidokDokumentow from '../../moduly/dokumenty/WidokDokumentow'
 import WidokAnkiet from '../../moduly/dokumenty/generatory/ankiety/WidokAnkiet'
 import WidokDyplomow from '../../moduly/dokumenty/generatory/dyplomy/WidokDyplomow'
+import WidokKartNaDrzwi from '../../moduly/dokumenty/generatory/karta_na_drzwi/WidokKartNaDrzwi'
 import WidokListObecnosci from '../../moduly/dokumenty/generatory/listy_obecnosci/WidokListObecnosci'
 import { WidokProgramowSzkolen } from '../../moduly/dokumenty/generatory/programy_szkolen'
 import WidokReplikatoraDokumentow from '../../moduly/dokumenty/replikator_dokumentow/WidokReplikatoraDokumentow'
@@ -28,11 +29,13 @@ const dostepneWidoki: WidokNawigacji[] = [
   'listy-obecnosci',
   'ankiety',
   'dyplomy',
+  'karta-na-drzwi',
   'programy_szkolen',
   'kartoteki',
   'kartoteki_trenerzy',
   'kartoteki_klienci',
   'kartoteki_lokalizacje',
+  'kartoteki_szablony_dokumentow',
   'ustawienia',
 ]
 
@@ -72,6 +75,8 @@ function renderujWidok(widok: WidokNawigacji): ReactNode {
       return <WidokAnkiet />
     case 'dyplomy':
       return <WidokDyplomow />
+    case 'karta-na-drzwi':
+      return <WidokKartNaDrzwi />
     case 'programy_szkolen':
       return <WidokProgramowSzkolen />
     case 'kartoteki':
@@ -82,6 +87,8 @@ function renderujWidok(widok: WidokNawigacji): ReactNode {
       return <WidokKartotek key="kartoteki_klienci" aktywnaZakladkaPoczatkowa="klienci" />
     case 'kartoteki_lokalizacje':
       return <WidokKartotek key="kartoteki_lokalizacje" aktywnaZakladkaPoczatkowa="lokalizacje" />
+    case 'kartoteki_szablony_dokumentow':
+      return <WidokKartotek key="kartoteki_szablony_dokumentow" aktywnaZakladkaPoczatkowa="szablony_dokumentow" />
     case 'ustawienia':
       return <WidokUstawien />
   }

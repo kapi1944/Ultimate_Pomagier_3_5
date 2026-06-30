@@ -1,5 +1,4 @@
-import { parsujMaile } from '../parsery/parserMaili'
-import { parsujNumeryTelefonu } from '../parsery/parserNumerowTelefonu'
+import { uzupelnijAnalizeDokumentu } from './analizaDokumentu'
 import type {
   DokumentPomagiera,
   ElementTekstowyDokumentu,
@@ -36,6 +35,7 @@ function podzielTekstNaElementy(tekst: string): ElementTekstowyDokumentu[] {
     .map<ElementTekstowyDokumentu>((wiersz, indeks) => ({
       id: `tekst-${indeks + 1}`,
       rodzaj: 'tekst',
+      status: 'staly',
       tekst: wiersz,
       pozycja: {
         x: 20,
@@ -54,6 +54,7 @@ function podzielTekstNaElementy(tekst: string): ElementTekstowyDokumentu[] {
     {
       id: 'tekst-1',
       rodzaj: 'tekst',
+      status: 'staly',
       tekst: 'Pusty wzorzec dokumentu',
       pozycja: {
         x: 20,
@@ -67,30 +68,42 @@ function podzielTekstNaElementy(tekst: string): ElementTekstowyDokumentu[] {
 }
 
 export function utworzDokumentZTekstu(nazwa: string, tekst: string): DokumentPomagiera {
-  return {
+  const dokument: DokumentPomagiera = {
     id: utworzIdDokumentu(nazwa),
     nazwa: nazwa.trim() || 'Wzorzec tekstowy',
     zrodlo: {
       typ: 'tekst',
+      podgladTekst: tekst,
     },
     strony: [
       {
         id: 'strona-1',
         numer: 1,
         format: 'A4',
+        jednostka: 'mm',
         szerokoscMm: 210,
         wysokoscMm: 297,
         elementy: podzielTekstNaElementy(tekst),
       },
     ],
+    zasoby: [],
     style: {
       domyslnyTekst: domyslnyStylTekstu,
     },
     polaDynamiczne: [],
     metadane: {
       utworzono: new Date().toISOString(),
-      emaile: parsujMaile(tekst),
-      telefony: parsujNumeryTelefonu(tekst),
+      emaile: [],
+      telefony: [],
+      daneWyekstrahowane: [],
+      branding: {
+        marka: 'SEMPER',
+        kolorGlowny: '#0f766e',
+        kolorDodatkowy: '#dc2626',
+      },
+      ostrzezenia: [],
     },
   }
+
+  return uzupelnijAnalizeDokumentu(dokument, tekst)
 }

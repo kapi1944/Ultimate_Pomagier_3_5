@@ -1,5 +1,8 @@
+import { pobierzPelnyTekstDokumentu, uzupelnijAnalizeDokumentu, utworzDaneZCsv } from '../dokumenty/analizaDokumentu'
 import { utworzDokumentZTekstu } from '../dokumenty/utworzDokumentZTekstu'
+import { rozpoznajObrazLokalnie } from '../ocr/ocr'
 import type {
+  DaneWyekstrahowaneDokumentu,
   DokumentPomagiera,
   ElementObrazuDokumentu,
   ElementOsadzonegoPlikuDokumentu,
@@ -28,12 +31,30 @@ function czyObraz(typ: string) {
   return typ.startsWith('image/')
 }
 
-function utworzDokumentZObrazu(plik: File, adres: string): DokumentPomagiera {
+function utworzMetadane(daneWyekstrahowane: DaneWyekstrahowaneDokumentu[] = [], ostrzezenia: string[] = []) {
+  return {
+    utworzono: new Date().toISOString(),
+    emaile: [],
+    telefony: [],
+    daneWyekstrahowane,
+    branding: {
+      marka: 'SEMPER' as const,
+      kolorGlowny: '#0f766e',
+      kolorDodatkowy: '#dc2626',
+    },
+    ostrzezenia,
+  }
+}
+
+function utworzDokumentZObrazu(plik: File, adres: string, daneWyekstrahowane: DaneWyekstrahowaneDokumentu[]): DokumentPomagiera {
   const obraz: ElementObrazuDokumentu = {
     id: 'obraz-1',
     rodzaj: 'obraz',
+    status: 'niepewny',
     nazwa: plik.name,
     zrodlo: adres,
+    rola: 'dekoracja',
+    zasobId: 'zasob-obraz-1',
     pozycja: {
       x: 15,
       y: 15,
@@ -42,21 +63,34 @@ function utworzDokumentZObrazu(plik: File, adres: string): DokumentPomagiera {
     },
   }
 
-  return {
+  const dokument: DokumentPomagiera = {
     id: `${utworzIdZPliku(plik.name) || 'obraz'}-${Date.now()}`,
     nazwa: plik.name.replace(/\.[^.]+$/, ''),
     zrodlo: {
       typ: 'obraz',
       nazwaPliku: plik.name,
+      typMime: plik.type,
+      podgladOryginalu: adres,
+      wymagaOcr: true,
     },
     strony: [
       {
         id: 'strona-1',
         numer: 1,
         format: 'A4',
+        jednostka: 'mm',
         szerokoscMm: 210,
         wysokoscMm: 297,
         elementy: [obraz],
+      },
+    ],
+    zasoby: [
+      {
+        id: 'zasob-obraz-1',
+        nazwa: plik.name,
+        typ: 'dekoracja',
+        zrodlo: adres,
+        typMime: plik.type,
       },
     ],
     style: {
@@ -71,12 +105,10 @@ function utworzDokumentZObrazu(plik: File, adres: string): DokumentPomagiera {
       },
     },
     polaDynamiczne: [],
-    metadane: {
-      utworzono: new Date().toISOString(),
-      emaile: [],
-      telefony: [],
-    },
+    metadane: utworzMetadane(daneWyekstrahowane, ['Wymaga OCR: obraz zapisano jako oryginał i warstwę roboczą.']),
   }
+
+  return uzupelnijAnalizeDokumentu(dokument)
 }
 
 function utworzDokumentZWizualnegoPliku(
@@ -87,6 +119,7 @@ function utworzDokumentZWizualnegoPliku(
   const plikOsadzony: ElementOsadzonegoPlikuDokumentu = {
     id: 'plik-osadzony-1',
     rodzaj: 'plik_osadzony',
+    status: typZrodla === 'pdf' ? 'niepewny' : 'staly',
     nazwa: plik.name,
     zrodlo: adres,
     typMime: plik.type || 'application/pdf',
@@ -98,23 +131,28 @@ function utworzDokumentZWizualnegoPliku(
     },
   }
 
-  return {
+  const dokument: DokumentPomagiera = {
     id: `${utworzIdZPliku(plik.name) || 'plik'}-${Date.now()}`,
     nazwa: plik.name.replace(/\.[^.]+$/, ''),
     zrodlo: {
       typ: typZrodla,
       nazwaPliku: plik.name,
+      typMime: plik.type || 'application/pdf',
+      podgladOryginalu: adres,
+      czyEdytowalnyDocelowo: typZrodla === 'pdf',
     },
     strony: [
       {
         id: 'strona-1',
         numer: 1,
         format: 'A4',
+        jednostka: 'mm',
         szerokoscMm: 210,
         wysokoscMm: 297,
         elementy: [plikOsadzony],
       },
     ],
+    zasoby: [],
     style: {
       domyslnyTekst: {
         krojCzcionki: 'Arial',
@@ -127,36 +165,71 @@ function utworzDokumentZWizualnegoPliku(
       },
     },
     polaDynamiczne: [],
-    metadane: {
-      utworzono: new Date().toISOString(),
-      emaile: [],
-      telefony: [],
-    },
+    metadane: utworzMetadane([], typZrodla === 'pdf' ? ['PDF zapisano jako źródło porównawcze. Edytowalna warstwa PDF wymaga osobnego importera tekstu i tabel.'] : []),
   }
+
+  return uzupelnijAnalizeDokumentu(dokument)
 }
 
 export async function importujPlikDoDokumentu(plik: File): Promise<WynikImportuDokumentu> {
   const typ = rozpoznajTypPliku(plik)
+
+  if (plik.name.toLowerCase().endsWith('.doc') && !plik.name.toLowerCase().endsWith('.docx')) {
+    return {
+      dokument: utworzDokumentZTekstu(plik.name.replace(/\.[^.]+$/, ''), ''),
+      tekstZrodlowy: '',
+      komunikat: 'Format DOC nie jest obsługiwany. Zapisz plik jako DOCX i zaimportuj ponownie.',
+    }
+  }
 
   if (typ === 'docx') {
     const dokument = await importujDokumentDocx(plik)
 
     return {
       dokument,
-      tekstZrodlowy: dokument.strony
-        .flatMap((strona) => strona.elementy)
-        .filter((element) => element.rodzaj === 'tekst' || element.rodzaj === 'naglowek' || element.rodzaj === 'stopka')
-        .map((element) => (element.rodzaj === 'tekst' || element.rodzaj === 'naglowek' || element.rodzaj === 'stopka' ? element.tekst : ''))
-        .join('\n'),
-      komunikat: 'Zaimportowano DOCX i odtworzono układ stron, teksty, obrazy oraz tabelę.',
+      tekstZrodlowy: pobierzPelnyTekstDokumentu(dokument),
+      komunikat: 'Zaimportowano DOCX i odtworzono roboczy układ stron, teksty, grafiki, kształty oraz tabele.',
+    }
+  }
+
+  if (typ === 'csv') {
+    const tekst = await plik.text()
+    const dokument = utworzDokumentZTekstu(plik.name.replace(/\.[^.]+$/, ''), tekst)
+    const dokumentZCsv: DokumentPomagiera = {
+      ...dokument,
+      zrodlo: {
+        typ: 'csv',
+        nazwaPliku: plik.name,
+        typMime: plik.type || 'text/csv',
+        podgladTekst: tekst,
+      },
+      metadane: {
+        ...dokument.metadane,
+        daneWyekstrahowane: utworzDaneZCsv(tekst),
+      },
+    }
+
+    return {
+      dokument: uzupelnijAnalizeDokumentu(dokumentZCsv, tekst),
+      tekstZrodlowy: tekst,
+      komunikat: 'Zaimportowano CSV jako ogólne dane wyekstrahowane do zatwierdzenia.',
     }
   }
 
   if (typ === 'tekst') {
     const tekst = await plik.text()
+    const dokument = utworzDokumentZTekstu(plik.name.replace(/\.[^.]+$/, ''), tekst)
 
     return {
-      dokument: utworzDokumentZTekstu(plik.name.replace(/\.[^.]+$/, ''), tekst),
+      dokument: {
+        ...dokument,
+        zrodlo: {
+          typ: 'tekst',
+          nazwaPliku: plik.name,
+          typMime: plik.type || 'text/plain',
+          podgladTekst: tekst,
+        },
+      },
       tekstZrodlowy: tekst,
       komunikat: 'Zaimportowano plik tekstowy.',
     }
@@ -164,11 +237,12 @@ export async function importujPlikDoDokumentu(plik: File): Promise<WynikImportuD
 
   if (typ === 'obraz' || czyObraz(plik.type)) {
     const adres = URL.createObjectURL(plik)
+    const wynikOcr = await rozpoznajObrazLokalnie(plik)
 
     return {
-      dokument: utworzDokumentZObrazu(plik, adres),
-      tekstZrodlowy: '',
-      komunikat: 'Zaimportowano obraz jako wizualny wzorzec strony.',
+      dokument: utworzDokumentZObrazu(plik, adres, wynikOcr.daneWyekstrahowane),
+      tekstZrodlowy: wynikOcr.tekst,
+      komunikat: wynikOcr.komunikat,
     }
   }
 
@@ -178,7 +252,7 @@ export async function importujPlikDoDokumentu(plik: File): Promise<WynikImportuD
     return {
       dokument: utworzDokumentZWizualnegoPliku(plik, adres, 'pdf'),
       tekstZrodlowy: '',
-      komunikat: 'Zaimportowano PDF jako wizualny wzorzec strony. Analiza tekstu PDF będzie kolejnym etapem.',
+      komunikat: 'Zaimportowano PDF jako źródło porównawcze. Docelowa edycja PDF wymaga warstwy tekstu i tabel.',
     }
   }
 

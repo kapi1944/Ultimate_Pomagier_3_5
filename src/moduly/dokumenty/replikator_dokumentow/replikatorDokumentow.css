@@ -18,7 +18,9 @@
 
 .replikator-dokumentow__naglowek h1,
 .replikator-dokumentow__panel h2,
-.replikator-dokumentow__dane h3 {
+.replikator-dokumentow__raport h3,
+.replikator-dokumentow__lista h3,
+.replikator-dokumentow__wlasciwosci h3 {
   margin: 0;
 }
 
@@ -40,7 +42,7 @@
 
 .replikator-dokumentow__uklad {
   display: grid;
-  grid-template-columns: minmax(360px, 0.9fr) minmax(460px, 1.1fr);
+  grid-template-columns: minmax(360px, 0.88fr) minmax(520px, 1.12fr);
   gap: 18px;
   align-items: start;
 }
@@ -58,7 +60,9 @@
   justify-items: stretch;
 }
 
-.replikator-dokumentow__pole {
+.replikator-dokumentow__pole,
+.replikator-dokumentow__wlasciwosci label,
+.replikator-dokumentow__tryby label {
   display: grid;
   gap: 6px;
   color: #dcefe5;
@@ -67,7 +71,14 @@
 }
 
 .replikator-dokumentow__pole input,
-.replikator-dokumentow__pole textarea {
+.replikator-dokumentow__pole textarea,
+.replikator-dokumentow__pole select,
+.replikator-dokumentow__wlasciwosci input,
+.replikator-dokumentow__wlasciwosci textarea,
+.replikator-dokumentow__wlasciwosci select,
+.replikator-dokumentow__wiersz-danych input,
+.replikator-dokumentow__wiersz-danych select,
+.replikator-dokumentow__formularz-linia select {
   width: 100%;
   border: 1px solid rgba(148, 163, 184, 0.35);
   border-radius: 6px;
@@ -78,12 +89,36 @@
 }
 
 .replikator-dokumentow__pole textarea {
-  min-height: 260px;
+  min-height: 220px;
   resize: vertical;
 }
 
+.replikator-dokumentow__wlasciwosci textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.replikator-dokumentow button {
+  border: 1px solid rgba(56, 189, 248, 0.42);
+  border-radius: 6px;
+  padding: 9px 12px;
+  background: #0b2d35;
+  color: #e8fbff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.replikator-dokumentow button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 .replikator-dokumentow__pole input:focus,
-.replikator-dokumentow__pole textarea:focus {
+.replikator-dokumentow__pole textarea:focus,
+.replikator-dokumentow__pole select:focus,
+.replikator-dokumentow button:focus,
+.replikator-dokumentow__wiersz-danych input:focus,
+.replikator-dokumentow__wiersz-danych select:focus {
   outline: 2px solid rgba(56, 189, 248, 0.5);
   outline-offset: 2px;
 }
@@ -96,65 +131,230 @@
   color: #dff8ff;
 }
 
-.replikator-dokumentow__dane {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+.replikator-dokumentow__plik-ostatni {
+  align-self: center;
+  margin: 0;
+  color: #b8c8c0;
+  font-size: 0.86rem;
 }
 
-.replikator-dokumentow__dane section {
+.replikator-dokumentow__formularz-linia,
+.replikator-dokumentow__tryby {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 10px;
+}
+
+.replikator-dokumentow__formularz-linia > * {
+  flex: 1 1 160px;
+}
+
+.replikator-dokumentow__raport,
+.replikator-dokumentow__lista,
+.replikator-dokumentow__wlasciwosci {
+  display: grid;
+  gap: 10px;
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 8px;
   padding: 12px;
 }
 
-.replikator-dokumentow__dane h3 {
-  font-size: 0.92rem;
+.replikator-dokumentow__raport dl,
+.replikator-dokumentow__metryka {
+  display: grid;
+  gap: 8px;
+  margin: 0;
 }
 
-.replikator-dokumentow__dane ul,
-.replikator-dokumentow__dane p {
-  margin: 8px 0 0;
-  color: #b8c8c0;
+.replikator-dokumentow__raport dl {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.replikator-dokumentow__dane ul {
-  padding-left: 18px;
+.replikator-dokumentow__raport div,
+.replikator-dokumentow__metryka div {
+  display: grid;
+  grid-template-columns: 118px minmax(0, 1fr);
+  gap: 12px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+  padding-bottom: 8px;
 }
 
-.replikator-dokumentow__pasek span {
+.replikator-dokumentow__raport dt,
+.replikator-dokumentow__metryka dt {
+  color: #9fb8ad;
+  font-weight: 700;
+}
+
+.replikator-dokumentow__raport dd,
+.replikator-dokumentow__metryka dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: #f7fff9;
+}
+
+.replikator-dokumentow__ostrzezenie {
+  margin: 0;
+  border-left: 3px solid #f59e0b;
+  padding: 8px 10px;
+  background: rgba(245, 158, 11, 0.12);
+  color: #fde68a;
+}
+
+.replikator-dokumentow__wiersz-danych,
+.replikator-dokumentow__wiersz-pola {
+  display: grid;
+  grid-template-columns: minmax(90px, 0.8fr) minmax(120px, 1.2fr) minmax(110px, 0.8fr);
+  gap: 8px;
+  align-items: center;
+}
+
+.replikator-dokumentow__wiersz-pola {
+  grid-template-columns: minmax(140px, 1fr) 90px 110px;
+}
+
+.replikator-dokumentow__wiersz-pola span {
+  display: inline-flex;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 4px 8px;
+  background: #dff8ff;
+  color: #08252d;
+  font-weight: 800;
+}
+
+.replikator-dokumentow__chip {
+  display: inline-flex;
+  width: fit-content;
+  margin: 0;
+  border-radius: 999px;
+  padding: 4px 8px;
+  background: #dff8ff;
+  color: #08252d;
+  font-weight: 800;
+}
+
+.replikator-dokumentow__pasek span,
+.replikator-dokumentow__lista p,
+.replikator-dokumentow__wlasciwosci p {
+  margin: 0;
   color: #9fb8ad;
   font-size: 0.86rem;
 }
 
+.replikator-dokumentow__tryby {
+  align-items: center;
+}
+
+.replikator-dokumentow__tryby .replikator-dokumentow__aktywny {
+  background: #dff8ff;
+  color: #08252d;
+}
+
 .replikator-dokumentow__strony {
-  display: grid;
-  gap: 18px;
-  justify-items: center;
-  max-height: calc(100vh - 280px);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  align-items: center;
+  max-height: calc(100vh - 330px);
   overflow: auto;
-  padding: 4px;
+  padding: 8px;
+}
+
+.replikator-dokumentow__porownanie {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(260px, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.replikator-dokumentow__oryginal {
+  display: grid;
+  place-items: center;
+  min-height: 360px;
+  border-radius: 8px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.replikator-dokumentow__porownanie > .replikator-dokumentow__strony {
+  max-height: calc(100vh - 360px);
+}
+
+.replikator-dokumentow__oryginal img,
+.replikator-dokumentow__oryginal object,
+.replikator-dokumentow__oryginal-tlo img,
+.replikator-dokumentow__oryginal-tlo object {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.replikator-dokumentow__oryginal-ramka,
+.replikator-dokumentow__oryginal-plik {
+  width: 100%;
+  min-height: 620px;
+  height: 100%;
+  border: 0;
+  background: #ffffff;
+}
+
+.replikator-dokumentow__oryginal-tekst {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  min-height: 360px;
+  margin: 0;
+  padding: 18px;
+  overflow: auto;
+  background: #ffffff;
+  color: #111827;
+  font: 12px/1.45 Consolas, 'Liberation Mono', monospace;
+  white-space: pre-wrap;
+}
+
+.replikator-dokumentow__brak-oryginalu {
+  padding: 18px;
+  color: #334155;
+  text-align: center;
 }
 
 .replikator-dokumentow__kartka {
+  --skala-mm: 2.45px;
   position: relative;
-  width: min(100%, 520px);
-  aspect-ratio: 210 / 297;
+  flex: 0 0 auto;
+  width: min(100%, calc(var(--szerokosc-mm, 210) * var(--skala-mm)));
+  height: calc(var(--wysokosc-mm, 297) * var(--skala-mm));
   margin: 0 auto;
   border-radius: 4px;
   background: #ffffff;
   color: #111827;
   box-shadow: 0 14px 32px rgba(0, 0, 0, 0.22);
+  overflow: hidden;
+}
+
+.replikator-dokumentow__oryginal-tlo {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
 }
 
 .replikator-dokumentow__element {
   position: absolute;
+  z-index: 1;
+  box-sizing: border-box;
 }
 
 .replikator-dokumentow__tekst {
   margin: 0;
   line-height: 1.35;
   overflow: hidden;
+}
+
+.replikator-dokumentow__tekst:focus {
+  outline: 1px dashed #0284c7;
 }
 
 .replikator-dokumentow__obraz {
@@ -168,6 +368,22 @@
 
 .replikator-dokumentow__linia {
   border-top: 1px solid #a3a3a3;
+}
+
+.replikator-dokumentow__ksztalt {
+  display: block;
+}
+
+.replikator-dokumentow__ksztalt--linia {
+  height: 0 !important;
+}
+
+.replikator-dokumentow__checkbox {
+  display: grid;
+  place-items: center;
+  border: 1px solid #111827;
+  color: #111827;
+  font-weight: 800;
 }
 
 .replikator-dokumentow__tabela {
@@ -194,57 +410,103 @@
 }
 
 .replikator-dokumentow__tabela td:nth-child(2) {
-  width: 45%;
+  width: 42%;
 }
 
 .replikator-dokumentow__tabela td:nth-child(n + 3) {
-  width: 16%;
+  width: 17%;
 }
 
-.replikator-dokumentow__metryka {
+.replikator-dokumentow__element--dynamiczny {
+  border-radius: 4px;
+  background: rgba(14, 165, 233, 0.12);
+  box-shadow: 0 0 0 1px rgba(14, 165, 233, 0.45);
+}
+
+.replikator-dokumentow__element--niepewny {
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.8);
+}
+
+.replikator-dokumentow__element--ignorowany {
+  opacity: 0.35;
+}
+
+.replikator-dokumentow__element--zaznaczony {
+  outline: 2px solid #0284c7;
+  outline-offset: 2px;
+}
+
+.replikator-dokumentow__pozycja {
   display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
-  margin: 0;
 }
 
-.replikator-dokumentow__metryka div {
-  display: grid;
-  grid-template-columns: 130px minmax(0, 1fr);
-  gap: 12px;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
-  padding-bottom: 8px;
-}
-
-.replikator-dokumentow__metryka dt {
-  color: #9fb8ad;
-  font-weight: 700;
-}
-
-.replikator-dokumentow__metryka dd {
-  min-width: 0;
-  margin: 0;
-  overflow-wrap: anywhere;
-  color: #f7fff9;
-}
-
-@media (max-width: 1100px) {
+@media (max-width: 1200px) {
   .replikator-dokumentow__uklad,
-  .replikator-dokumentow__dane {
+  .replikator-dokumentow__porownanie {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 720px) {
   .replikator-dokumentow__naglowek,
-  .replikator-dokumentow__pasek {
+  .replikator-dokumentow__pasek,
+  .replikator-dokumentow__formularz-linia,
+  .replikator-dokumentow__tryby {
     display: grid;
   }
 
   .replikator-dokumentow__kartka {
-    width: min(100%, 420px);
+    --skala-mm: 1.85px;
   }
 
-  .replikator-dokumentow__metryka div {
+  .replikator-dokumentow__raport dl,
+  .replikator-dokumentow__metryka div,
+  .replikator-dokumentow__wiersz-danych,
+  .replikator-dokumentow__wiersz-pola,
+  .replikator-dokumentow__pozycja {
     grid-template-columns: 1fr;
+  }
+}
+
+@page {
+  size: A4;
+  margin: 0;
+}
+
+@media print {
+  body {
+    background: #ffffff;
+  }
+
+  .menu-boczne,
+  .replikator-dokumentow__naglowek,
+  .replikator-dokumentow__uklad > .replikator-dokumentow__panel:first-child,
+  .replikator-dokumentow__pasek,
+  .replikator-dokumentow__tryby,
+  .replikator-dokumentow__wlasciwosci,
+  .replikator-dokumentow__metryka {
+    display: none !important;
+  }
+
+  .uklad-aplikacji__obszar-roboczy,
+  .replikator-dokumentow,
+  .replikator-dokumentow__panel,
+  .replikator-dokumentow__strony {
+    display: block;
+    margin: 0;
+    padding: 0;
+    max-height: none;
+    overflow: visible;
+    background: #ffffff;
+    border: 0;
+  }
+
+  .replikator-dokumentow__kartka {
+    width: 210mm;
+    height: 297mm;
+    box-shadow: none;
+    page-break-after: always;
   }
 }

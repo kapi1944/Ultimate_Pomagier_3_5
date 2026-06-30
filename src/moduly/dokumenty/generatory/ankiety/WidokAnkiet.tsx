@@ -1,37 +1,56 @@
 import ProstyGeneratorDokumentu from '../../wspolne/ProstyGeneratorDokumentu'
 
-const tekstPrzykladowy = `Tytuł szkolenia: Skuteczna komunikacja w zespole
+const tekstPrzykladowy = `Marka: SEMPER
+Tytuł szkolenia: Skuteczna komunikacja w zespole
+Pytania stałe: tak
+Tryb checkboxów: drukowany
 Obszary oceny:
 - organizacja szkolenia
 - praca trenera
 - materiały szkoleniowe
 - przydatność wiedzy w pracy`
 
+function pobierzWartosc(daneWejsciowe: string, etykieta: string) {
+  const wiersz = daneWejsciowe
+    .split('\n')
+    .find((linia) => linia.toLowerCase().startsWith(`${etykieta.toLowerCase()}:`))
+
+  return wiersz?.split(':').slice(1).join(':').trim() || ''
+}
+
 function generujDokument(daneWejsciowe: string) {
-  return `ANKIETA POSZKOLENIOWA
+  const marka = pobierzWartosc(daneWejsciowe, 'Marka') || 'SEMPER'
+  const trybCheckboxow = pobierzWartosc(daneWejsciowe, 'Tryb checkboxów') || 'drukowany'
+
+  return `${marka}
+ANKIETA EWALUACYJNA
 
 Dane szkolenia:
 ${daneWejsciowe.trim() || 'Brak danych szkolenia.'}
 
+PYTANIA/OCENA
+
 Ocena organizacji:
-1  2  3  4  5
+[ ] bardzo dobrze  [ ] dobrze  [ ] do udoskonalenia
 
 Ocena trenera:
-1  2  3  4  5
+[ ] bardzo dobrze  [ ] dobrze  [ ] do udoskonalenia
 
 Ocena materiałów:
-1  2  3  4  5
+[ ] bardzo dobrze  [ ] dobrze  [ ] do udoskonalenia
 
 Uwagi uczestnika:
 ................................................................................
-................................................................................`
+................................................................................
+
+ElementCheckbox.tryb: ${trybCheckboxow}`
 }
 
 export default function WidokAnkiet() {
   return (
     <ProstyGeneratorDokumentu
       tytul="Ankiety"
-      opis="Generator ankiet. Placeholder pod przyszłą implementację."
+      opis="Wspólny generator ankiet dla SEMPER, IIST i klienta."
       etykietaDanychWejsciowych="Dane ankiety"
       tekstPrzykladowy={tekstPrzykladowy}
       kluczLocalStorage="ultimate-pomagier.ankiety.szkic"
