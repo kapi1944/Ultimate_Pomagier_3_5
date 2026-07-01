@@ -16,7 +16,6 @@ export const poczatkoweWzoryKlienta = {
   materialyDodatkowe: false,
   projektTesty: false,
   dostepnoscCyfrowa: false,
-  plikZrodlowy: false,
   logotypy: false,
   plusJedenEgzemplarz: false,
   wczesniejszyPrzyjazdTrenera: false,
@@ -25,6 +24,10 @@ export const poczatkoweWzoryKlienta = {
   noweSzkolenieZaOcene: false,
   kfs: false,
 }
+
+export const poczatkoweSzczegolyWzorowKlienta = Object.fromEntries(
+  Object.keys(poczatkoweWzoryKlienta).map((klucz) => [klucz, { nazwaPliku: '', uwagi: '' }]),
+)
 
 export const poczatkowaFirma: DaneFirmy = {
   nazwa: '',
@@ -53,10 +56,10 @@ export const poczatkowaDokumentacja: DaneDokumentacjiMaterialow = {
   materialyDodatkowe: false,
   projektTesty: false,
   dostepnoscCyfrowa: false,
-  plikZrodlowy: false,
   logotypy: 'Nie dotyczy',
   plusJedenEgzemplarz: false,
   wzoryKlienta: { ...poczatkoweWzoryKlienta },
+  szczegolyWzorowKlienta: { ...poczatkoweSzczegolyWzorowKlienta },
 }
 
 export const poczatkoweDaneFormularza: DaneFormularza = {
@@ -94,6 +97,7 @@ export const poczatkoweDaneFormularza: DaneFormularza = {
     kfs: false,
     uwagi: '',
     wzoryKlienta: { ...poczatkoweWzoryKlienta },
+    szczegolyWzorowKlienta: { ...poczatkoweSzczegolyWzorowKlienta },
   },
   programSzkolenia: '',
   uwagi: {

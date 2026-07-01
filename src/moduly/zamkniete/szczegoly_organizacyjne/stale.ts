@@ -2,8 +2,8 @@ import type {
   LokalizacjaKartoteki,
   StatusPolaImportu,
   StatusSzczegolow,
-  TrenerKartoteki,
 } from './typy'
+export { trenerzyKartotekiStartowi } from './trenerzyKartoteki'
 
 export const statusySzczegolow: StatusSzczegolow[] = [
   'NIEPEŁNE',
@@ -29,27 +29,6 @@ export const klasyStatusowPol: Record<StatusPolaImportu, string> = {
   niepewne: 'szczegoly-pole--niepewne',
   reczne: 'szczegoly-pole--reczne',
 }
-
-export const trenerzyKartotekiStartowi: TrenerKartoteki[] = [
-  {
-    id: 'trener-anna-kowalska',
-    imieNazwisko: 'Anna Kowalska',
-    telefon: '501 111 222',
-    email: 'anna.kowalska@pomagier.local',
-  },
-  {
-    id: 'trener-piotr-nowak',
-    imieNazwisko: 'Piotr Nowak',
-    telefon: '502 333 444',
-    email: 'piotr.nowak@pomagier.local',
-  },
-  {
-    id: 'trener-marta-zielinska',
-    imieNazwisko: 'Marta Zielińska',
-    telefon: '503 555 666',
-    email: 'marta.zielinska@pomagier.local',
-  },
-]
 
 export const lokalizacjeKartoteki: LokalizacjaKartoteki[] = [
   {

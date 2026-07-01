@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import PrzelacznikTakNie from '../moduly/zamkniete/szczegoly_organizacyjne/komponenty/PrzelacznikTakNie'
 import { lokalizacjeKartoteki, trenerzyKartotekiStartowi } from '../moduly/zamkniete/szczegoly_organizacyjne/stale'
 import { pobierzSzablonyDokumentow, type SzablonDokumentu } from '../wspolne/dokumenty/szablonyDokumentow'
 import './widokKartotek.css'
@@ -50,6 +51,32 @@ type LokalizacjaKartoteki = {
 type FormularzTrenera = Omit<TrenerKartoteki, 'id'>
 type FormularzKlienta = Omit<KlientKartoteki, 'id'>
 type FormularzLokalizacji = Omit<LokalizacjaKartoteki, 'id'>
+type TypIkonyAkcji = 'podglad' | 'edycja' | 'duplikuj' | 'usun'
+type TypElementuKartoteki =
+  | 'wszystkie'
+  | 'pola_tekstowe'
+  | 'selecty'
+  | 'checkbox_radio_switch'
+  | 'buttony'
+  | 'linki'
+  | 'textarea'
+  | 'contenteditable'
+  | 'role'
+  | 'tabindex'
+  | 'ukryte'
+
+type DaneElementuKartoteki = {
+  id: string
+  typy: Exclude<TypElementuKartoteki, 'wszystkie'>[]
+  etykieta: string
+  identyfikator: string
+  nazwa: string
+  klasa: string
+  placeholder: string
+  ariaLabel: string
+  selektorCss: string
+  html: string
+}
 
 const zakladkiKartotek: { id: ZakladkaKartotek; etykieta: string }[] = [
   { id: 'trenerzy', etykieta: 'Trenerzy' },
@@ -60,12 +87,254 @@ const zakladkiKartotek: { id: ZakladkaKartotek; etykieta: string }[] = [
 
 const opcjeLiczbyPozycji = [10, 20, 50, 100]
 
+const etykietyTypowElementow: Record<TypElementuKartoteki, string> = {
+  wszystkie: 'Wszystkie',
+  pola_tekstowe: 'Pola tekstowe',
+  selecty: 'Select/listy wyboru',
+  checkbox_radio_switch: 'Checkbox/radio/switch',
+  buttony: 'Buttony',
+  linki: 'Linki',
+  textarea: 'Textarea',
+  contenteditable: 'Contenteditable',
+  role: 'Elementy z role',
+  tabindex: 'Elementy z tabindex',
+  ukryte: 'Niewidoczne/ukryte',
+}
+
+const typyElementowKartoteki = Object.keys(etykietyTypowElementow) as TypElementuKartoteki[]
+
 const pustyFormularzTrenera: FormularzTrenera = {
   imie: '',
   nazwisko: '',
   telefon: '',
   email: '',
   status: 'Aktywny',
+}
+
+function PrzelacznikStatusuTrenera({
+  etykieta,
+  status,
+  ustawStatus,
+}: {
+  etykieta: string
+  status: StatusTrenera
+  ustawStatus: (status: StatusTrenera) => void
+}) {
+  const czyAktywny = status === 'Aktywny'
+
+  return <PrzelacznikTakNie etykieta={etykieta} wariant="aktywny-nieaktywny" wlaczony={czyAktywny} ustawWlaczony={(wlaczony) => ustawStatus(wlaczony ? 'Aktywny' : 'Nieaktywny')} />
+}
+
+function IkonaAkcji({ typ }: { typ: TypIkonyAkcji }) {
+  const sciezkiIkon: Record<TypIkonyAkcji, string[]> = {
+    podglad: [
+      'M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z',
+      'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
+    ],
+    edycja: [
+      'M12 20h9',
+      'M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4 11.5-11.5Z',
+    ],
+    duplikuj: [
+      'M8 8h12v12H8z',
+      'M4 16V4h12',
+    ],
+    usun: [
+      'M3 6h18',
+      'M8 6V4h8v2',
+      'M6 6l1 14h10l1-14',
+      'M10 11v5',
+      'M14 11v5',
+    ],
+  }
+
+  return (
+    <svg aria-hidden="true" className="kartoteki__ikona-przycisku" fill="none" viewBox="0 0 24 24">
+      {sciezkiIkon[typ].map((sciezka) => (
+        <path d={sciezka} key={sciezka} />
+      ))}
+    </svg>
+  )
+}
+
+function przytnijTekst(wartosc: string, limit = 140) {
+  const tekst = wartosc.replace(/\s+/g, ' ').trim()
+
+  return tekst.length > limit ? `${tekst.slice(0, limit)}...` : tekst
+}
+
+function pobierzSelektorCss(element: Element) {
+  const tag = element.tagName.toLowerCase()
+  const identyfikator = element.getAttribute('id')
+  const klasy = (element.getAttribute('class') ?? '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 3)
+    .map((klasa) => `.${CSS.escape(klasa)}`)
+    .join('')
+
+  if (identyfikator) {
+    return `${tag}#${CSS.escape(identyfikator)}`
+  }
+
+  return `${tag}${klasy}`
+}
+
+function czyElementUkryty(element: Element) {
+  if (!(element instanceof HTMLElement)) {
+    return false
+  }
+
+  const styl = window.getComputedStyle(element)
+  const prostokat = element.getBoundingClientRect()
+
+  return element.hidden || styl.display === 'none' || styl.visibility === 'hidden' || Number(styl.opacity) === 0 || prostokat.width === 0 || prostokat.height === 0
+}
+
+function pobierzTypyElementu(element: Element): Exclude<TypElementuKartoteki, 'wszystkie'>[] {
+  const tag = element.tagName.toLowerCase()
+  const typInputa = element.getAttribute('type')?.toLowerCase() ?? ''
+  const typy: Exclude<TypElementuKartoteki, 'wszystkie'>[] = []
+
+  if (tag === 'input' && !['checkbox', 'radio', 'button', 'submit', 'reset', 'hidden'].includes(typInputa)) {
+    typy.push('pola_tekstowe')
+  }
+
+  if (tag === 'select') {
+    typy.push('selecty')
+  }
+
+  if ((tag === 'input' && ['checkbox', 'radio'].includes(typInputa)) || element.getAttribute('role') === 'switch') {
+    typy.push('checkbox_radio_switch')
+  }
+
+  if (tag === 'button' || typInputa === 'button' || typInputa === 'submit' || typInputa === 'reset') {
+    typy.push('buttony')
+  }
+
+  if (tag === 'a') {
+    typy.push('linki')
+  }
+
+  if (tag === 'textarea') {
+    typy.push('textarea')
+  }
+
+  if (element.getAttribute('contenteditable') === 'true') {
+    typy.push('contenteditable')
+  }
+
+  if (element.hasAttribute('role')) {
+    typy.push('role')
+  }
+
+  if (element.hasAttribute('tabindex')) {
+    typy.push('tabindex')
+  }
+
+  if (czyElementUkryty(element)) {
+    typy.push('ukryte')
+  }
+
+  return typy
+}
+
+function pobierzEtykieteElementu(element: Element) {
+  const identyfikator = element.getAttribute('id')
+  const etykietaPoId = identyfikator ? document.querySelector(`label[for="${CSS.escape(identyfikator)}"]`)?.textContent ?? '' : ''
+  const etykietaRodzica = element.closest('label')?.textContent ?? ''
+  const tekst = element.textContent ?? ''
+
+  return przytnijTekst(etykietaPoId || etykietaRodzica || element.getAttribute('aria-label') || element.getAttribute('placeholder') || tekst)
+}
+
+function zbudujDaneElementowKartoteki(korzen: HTMLElement | null): DaneElementuKartoteki[] {
+  if (!korzen) {
+    return []
+  }
+
+  return Array.from(korzen.querySelectorAll('*'))
+    .filter((element) => !element.closest('[data-inspektor-kartoteki]'))
+    .map((element, indeks) => ({
+      id: `element-${indeks}`,
+      typy: pobierzTypyElementu(element),
+      etykieta: pobierzEtykieteElementu(element),
+      identyfikator: element.getAttribute('id') ?? '',
+      nazwa: element.getAttribute('name') ?? '',
+      klasa: element.getAttribute('class') ?? '',
+      placeholder: element.getAttribute('placeholder') ?? '',
+      ariaLabel: element.getAttribute('aria-label') ?? '',
+      selektorCss: pobierzSelektorCss(element),
+      html: przytnijTekst(element.outerHTML, 260),
+    }))
+    .filter((element) => element.typy.length > 0)
+}
+
+function czyElementPasujeDoSzukania(element: DaneElementuKartoteki, szukanaFraza: string) {
+  const fraza = szukanaFraza.trim().toLocaleLowerCase('pl')
+
+  if (!fraza) {
+    return true
+  }
+
+  return [
+    element.etykieta,
+    element.identyfikator,
+    element.nazwa,
+    element.klasa,
+    element.placeholder,
+    element.ariaLabel,
+    element.selektorCss,
+    element.html,
+  ].some((wartosc) => wartosc.toLocaleLowerCase('pl').includes(fraza))
+}
+
+function policzElementyWedlugTypow(elementy: DaneElementuKartoteki[]) {
+  return typyElementowKartoteki.reduce<Record<TypElementuKartoteki, number>>((liczniki, typ) => {
+    liczniki[typ] = typ === 'wszystkie' ? elementy.length : elementy.filter((element) => element.typy.includes(typ)).length
+    return liczniki
+  }, {} as Record<TypElementuKartoteki, number>)
+}
+
+function PanelElementowKartoteki({
+  elementy,
+  filtrTypu,
+  szukanaFraza,
+  ustawFiltrTypu,
+  ustawSzukanaFraza,
+}: {
+  elementy: DaneElementuKartoteki[]
+  filtrTypu: TypElementuKartoteki
+  szukanaFraza: string
+  ustawFiltrTypu: (typ: TypElementuKartoteki) => void
+  ustawSzukanaFraza: (fraza: string) => void
+}) {
+  const elementyPoFiltrach = elementy.filter((element) => (filtrTypu === 'wszystkie' || element.typy.includes(filtrTypu)) && czyElementPasujeDoSzukania(element, szukanaFraza))
+  const liczniki = policzElementyWedlugTypow(elementy)
+
+  return (
+    <section className="kartoteki__panel kartoteki__inspektor" data-inspektor-kartoteki>
+      <div className="kartoteki__formularz kartoteki__formularz--dwa">
+        <select value={filtrTypu} onChange={(zdarzenie) => ustawFiltrTypu(zdarzenie.target.value as TypElementuKartoteki)}>
+          {typyElementowKartoteki.map((typ) => (
+            <option key={typ} value={typ}>
+              {etykietyTypowElementow[typ]}
+            </option>
+          ))}
+        </select>
+        <input placeholder="Szukaj po tekście, id, name, class, placeholder, aria-label, selektorze lub HTML" value={szukanaFraza} onChange={(zdarzenie) => ustawSzukanaFraza(zdarzenie.target.value)} />
+      </div>
+      <div className="kartoteki__liczniki-elementow">
+        <strong>Elementy: {elementy.length}</strong>
+        <strong>Widoczne po filtrach: {elementyPoFiltrach.length}</strong>
+        {typyElementowKartoteki.filter((typ) => typ !== 'wszystkie').map((typ) => (
+          <span key={typ}>
+            {etykietyTypowElementow[typ]}: {liczniki[typ]}
+          </span>
+        ))}
+      </div>
+    </section>
+  )
 }
 
 const pustyFormularzKlienta: FormularzKlienta = {
@@ -161,6 +430,10 @@ function pobierzZMagazynu<T>(klucz: string, wartoscDomyslna: T[]): T[] {
   }
 }
 
+function pobierzKluczTrenera(trener: Pick<TrenerKartoteki, 'imie' | 'nazwisko'>) {
+  return normalizujTekst(`${trener.imie} ${trener.nazwisko}`)
+}
+
 function zapiszWMagazynie<T>(klucz: string, wartosc: T[]) {
   try {
     localStorage.setItem(klucz, JSON.stringify(wartosc))
@@ -187,6 +460,45 @@ function przygotujTrenerowStartowych(): TrenerKartoteki[] {
     email: trener.email,
     status: 'Aktywny',
   }))
+}
+
+function czyStaraBazaTrenerow(trenerzy: TrenerKartoteki[]) {
+  const stareId = new Set(['trener-anna-kowalska', 'trener-piotr-nowak', 'trener-marta-zielinska'])
+
+  return trenerzy.length > 0 && trenerzy.every((trener) => stareId.has(trener.id) || trener.email.endsWith('@pomagier.local'))
+}
+
+function uzupelnijBazeTrenerow(trenerzyZMagazynu: TrenerKartoteki[]) {
+  const trenerzyStartowi = przygotujTrenerowStartowych()
+
+  if (!trenerzyZMagazynu.length || czyStaraBazaTrenerow(trenerzyZMagazynu)) {
+    return trenerzyStartowi
+  }
+
+  const trenerzyWedlugNazwy = new Map(trenerzyZMagazynu.map((trener) => [pobierzKluczTrenera(trener), trener]))
+  const trenerzyScaleni = trenerzyZMagazynu.map((trener) => {
+    const trenerStartowy = trenerzyStartowi.find((pozycja) => pobierzKluczTrenera(pozycja) === pobierzKluczTrenera(trener))
+
+    if (!trenerStartowy) {
+      return trener
+    }
+
+    return {
+      ...trener,
+      id: trener.id || trenerStartowy.id,
+      telefon: trener.telefon || trenerStartowy.telefon,
+      email: trener.email || trenerStartowy.email,
+      status: trener.status || trenerStartowy.status,
+    }
+  })
+
+  trenerzyStartowi.forEach((trener) => {
+    if (!trenerzyWedlugNazwy.has(pobierzKluczTrenera(trener))) {
+      trenerzyScaleni.push(trener)
+    }
+  })
+
+  return trenerzyScaleni
 }
 
 function przygotujLokalizacjeStartowe(): LokalizacjaKartoteki[] {
@@ -223,6 +535,79 @@ function czyPasujeDoWyszukiwania(pola: string[], szukanaFraza: string) {
 
 function policzLiczbeStron(liczbaPozycji: number, liczbaPozycjiNaStronie: number) {
   return Math.max(1, Math.ceil(liczbaPozycji / liczbaPozycjiNaStronie))
+}
+
+function pobierzPozycjeStrony<T>(pozycje: T[], strona: number, liczbaPozycjiNaStronie: number) {
+  const poczatek = (strona - 1) * liczbaPozycjiNaStronie
+
+  return pozycje.slice(poczatek, poczatek + liczbaPozycjiNaStronie)
+}
+
+function pobierzNumeryStron(aktywnaStrona: number, liczbaStron: number) {
+  const poczatek = Math.max(1, aktywnaStrona - 2)
+  const koniec = Math.min(liczbaStron, aktywnaStrona + 2)
+
+  return Array.from({ length: koniec - poczatek + 1 }, (_, indeks) => poczatek + indeks)
+}
+
+function PanelPaginacjiKartoteki({
+  liczbaWszystkichPozycji,
+  liczbaWidocznychPozycji,
+  liczbaPozycjiNaStronie,
+  strona,
+  ustawLiczbePozycjiNaStronie,
+  ustawStrone,
+}: {
+  liczbaWszystkichPozycji: number
+  liczbaWidocznychPozycji: number
+  liczbaPozycjiNaStronie: number
+  strona: number
+  ustawLiczbePozycjiNaStronie: (liczba: number) => void
+  ustawStrone: (strona: number) => void
+}) {
+  const liczbaStron = policzLiczbeStron(liczbaWszystkichPozycji, liczbaPozycjiNaStronie)
+  const bezpiecznaStrona = Math.min(strona, liczbaStron)
+
+  return (
+    <div className="kartoteki__paginacja kartoteki__paginacja--panel">
+      <label className="kartoteki__liczba-pozycji">
+        Pozycji na stronie
+        <select value={liczbaPozycjiNaStronie} onChange={(zdarzenie) => ustawLiczbePozycjiNaStronie(Number(zdarzenie.target.value))}>
+          {opcjeLiczbyPozycji.map((opcja) => (
+            <option key={opcja} value={opcja}>
+              {opcja}
+            </option>
+          ))}
+        </select>
+      </label>
+      <span>
+        Widoczne {liczbaWidocznychPozycji} z {liczbaWszystkichPozycji}
+      </span>
+      <div className="kartoteki__numery-stron">
+        <button className="kartoteki__przycisk" disabled={bezpiecznaStrona <= 1} type="button" onClick={() => ustawStrone(Math.max(1, bezpiecznaStrona - 1))}>
+          &lt;&lt;
+        </button>
+        {pobierzNumeryStron(bezpiecznaStrona, liczbaStron).map((numerStrony) => (
+          <button
+            aria-current={numerStrony === bezpiecznaStrona ? 'page' : undefined}
+            className={`kartoteki__przycisk${numerStrony === bezpiecznaStrona ? ' kartoteki__przycisk--glowny' : ''}`}
+            key={numerStrony}
+            type="button"
+            onClick={() => ustawStrone(numerStrony)}
+          >
+            {numerStrony}
+          </button>
+        ))}
+        <button className="kartoteki__przycisk" disabled={bezpiecznaStrona >= liczbaStron} type="button" onClick={() => ustawStrone(Math.min(liczbaStron, bezpiecznaStrona + 1))}>
+          &gt;&gt;
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function potwierdzUsuniecie(nazwaPozycji: string) {
+  return window.confirm(`Czy na pewno usunąć pozycję: ${nazwaPozycji}?`)
 }
 
 function skopiujFormularzTrenera(trener: TrenerKartoteki): FormularzTrenera {
@@ -264,18 +649,25 @@ function skopiujFormularzLokalizacji(lokalizacja: LokalizacjaKartoteki): Formula
 }
 
 export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy' }: WlasciwosciWidokuKartotek) {
+  const referencjaAktywnejKartoteki = useRef<HTMLElement | null>(null)
   const [aktywnaZakladka, ustawAktywnaZakladke] = useState<ZakladkaKartotek>(aktywnaZakladkaPoczatkowa)
-  const [trenerzy, ustawTrenerow] = useState<TrenerKartoteki[]>(() => pobierzZMagazynu(kluczTrenerow, przygotujTrenerowStartowych()))
+  const [trenerzy, ustawTrenerow] = useState<TrenerKartoteki[]>(() => uzupelnijBazeTrenerow(pobierzZMagazynu(kluczTrenerow, przygotujTrenerowStartowych())))
   const [klienci, ustawKlientow] = useState<KlientKartoteki[]>(() => pobierzZMagazynu(kluczKlientow, klienciStartowi))
   const [lokalizacje, ustawLokalizacje] = useState<LokalizacjaKartoteki[]>(() => pobierzZMagazynu(kluczLokalizacji, przygotujLokalizacjeStartowe()))
   const [szablonyDokumentow, ustawSzablonyDokumentow] = useState<SzablonDokumentu[]>(pobierzSzablonyDokumentow)
+  const [filtrTypuElementu, ustawFiltrTypuElementu] = useState<TypElementuKartoteki>('wszystkie')
+  const [szukanyElementKartoteki, ustawSzukanyElementKartoteki] = useState('')
+  const [elementyKartoteki, ustawElementyKartoteki] = useState<DaneElementuKartoteki[]>([])
+  const [liczbaPozycjiNaStronie, ustawLiczbePozycjiNaStronie] = useState(20)
 
   const [filtrTrenerow, ustawFiltrTrenerow] = useState<FiltrStatusuTrenera>('aktywni')
+  const [stronaTrenerow, ustawStroneTrenerow] = useState(1)
   const [czyFormularzTreneraWidoczny, ustawCzyFormularzTreneraWidoczny] = useState(false)
   const [edytowanyTrenerId, ustawEdytowanyTrenerId] = useState<string | null>(null)
   const [formularzTrenera, ustawFormularzTrenera] = useState<FormularzTrenera>(pustyFormularzTrenera)
 
   const [szukanyKlient, ustawSzukanyKlient] = useState('')
+  const [stronaKlientow, ustawStroneKlientow] = useState(1)
   const [czyFormularzKlientaWidoczny, ustawCzyFormularzKlientaWidoczny] = useState(false)
   const [edytowanyKlientId, ustawEdytowanyKlientId] = useState<string | null>(null)
   const [formularzKlienta, ustawFormularzKlienta] = useState<FormularzKlienta>(pustyFormularzKlienta)
@@ -283,11 +675,11 @@ export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy' }
   const [szukanaLokalizacja, ustawSzukanaLokalizacja] = useState('')
   const [filtrWojewodztwa, ustawFiltrWojewodztwa] = useState('wszystkie')
   const [filtrStatusuOdmiany, ustawFiltrStatusuOdmiany] = useState<FiltrStatusuOdmiany>('wszystkie')
-  const [liczbaPozycjiNaStronie, ustawLiczbePozycjiNaStronie] = useState(20)
   const [stronaLokalizacji, ustawStroneLokalizacji] = useState(1)
   const [czyFormularzLokalizacjiWidoczny, ustawCzyFormularzLokalizacjiWidoczny] = useState(false)
   const [edytowanaLokalizacjaId, ustawEdytowanaLokalizacjaId] = useState<string | null>(null)
   const [formularzLokalizacji, ustawFormularzLokalizacji] = useState<FormularzLokalizacji>(pustyFormularzLokalizacji)
+  const [stronaSzablonow, ustawStroneSzablonow] = useState(1)
   const [komunikat, ustawKomunikat] = useState('')
 
   useEffect(() => {
@@ -301,6 +693,36 @@ export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy' }
   useEffect(() => {
     zapiszWMagazynie(kluczLokalizacji, lokalizacje)
   }, [lokalizacje])
+
+  useEffect(() => {
+    const uchwyt = window.setTimeout(() => {
+      ustawElementyKartoteki(zbudujDaneElementowKartoteki(referencjaAktywnejKartoteki.current))
+    }, 0)
+
+    return () => window.clearTimeout(uchwyt)
+  }, [
+    aktywnaZakladka,
+    czyFormularzTreneraWidoczny,
+    czyFormularzKlientaWidoczny,
+    czyFormularzLokalizacjiWidoczny,
+    edytowanyTrenerId,
+    edytowanyKlientId,
+    edytowanaLokalizacjaId,
+    filtrStatusuOdmiany,
+    filtrTrenerow,
+    filtrWojewodztwa,
+    liczbaPozycjiNaStronie,
+    stronaTrenerow,
+    stronaKlientow,
+    szukanaLokalizacja,
+    szukanyKlient,
+    stronaLokalizacji,
+    stronaSzablonow,
+    trenerzy,
+    klienci,
+    lokalizacje,
+    szablonyDokumentow,
+  ])
 
   const trenerzyFiltrowani = useMemo(
     () =>
@@ -318,12 +740,24 @@ export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy' }
     [filtrTrenerow, trenerzy],
   )
 
+  const bezpiecznaStronaTrenerow = Math.min(stronaTrenerow, policzLiczbeStron(trenerzyFiltrowani.length, liczbaPozycjiNaStronie))
+  const trenerzyNaStronie = useMemo(
+    () => pobierzPozycjeStrony(trenerzyFiltrowani, bezpiecznaStronaTrenerow, liczbaPozycjiNaStronie),
+    [bezpiecznaStronaTrenerow, liczbaPozycjiNaStronie, trenerzyFiltrowani],
+  )
+
   const klienciFiltrowani = useMemo(
     () =>
       klienci.filter((klient) =>
         czyPasujeDoWyszukiwania([klient.nazwa, klient.nip, klient.miasto, klient.kodPocztowy, klient.koordynator], szukanyKlient),
       ),
     [klienci, szukanyKlient],
+  )
+
+  const bezpiecznaStronaKlientow = Math.min(stronaKlientow, policzLiczbeStron(klienciFiltrowani.length, liczbaPozycjiNaStronie))
+  const klienciNaStronie = useMemo(
+    () => pobierzPozycjeStrony(klienciFiltrowani, bezpiecznaStronaKlientow, liczbaPozycjiNaStronie),
+    [bezpiecznaStronaKlientow, klienciFiltrowani, liczbaPozycjiNaStronie],
   )
 
   const dostepneWojewodztwa = useMemo(
@@ -351,10 +785,15 @@ export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy' }
 
   const liczbaStronLokalizacji = policzLiczbeStron(lokalizacjeFiltrowane.length, liczbaPozycjiNaStronie)
   const bezpiecznaStronaLokalizacji = Math.min(stronaLokalizacji, liczbaStronLokalizacji)
-  const poczatekStronyLokalizacji = (bezpiecznaStronaLokalizacji - 1) * liczbaPozycjiNaStronie
   const lokalizacjeNaStronie = useMemo(
-    () => lokalizacjeFiltrowane.slice(poczatekStronyLokalizacji, poczatekStronyLokalizacji + liczbaPozycjiNaStronie),
-    [liczbaPozycjiNaStronie, lokalizacjeFiltrowane, poczatekStronyLokalizacji],
+    () => pobierzPozycjeStrony(lokalizacjeFiltrowane, bezpiecznaStronaLokalizacji, liczbaPozycjiNaStronie),
+    [bezpiecznaStronaLokalizacji, liczbaPozycjiNaStronie, lokalizacjeFiltrowane],
+  )
+
+  const bezpiecznaStronaSzablonow = Math.min(stronaSzablonow, policzLiczbeStron(szablonyDokumentow.length, liczbaPozycjiNaStronie))
+  const szablonyNaStronie = useMemo(
+    () => pobierzPozycjeStrony(szablonyDokumentow, bezpiecznaStronaSzablonow, liczbaPozycjiNaStronie),
+    [bezpiecznaStronaSzablonow, liczbaPozycjiNaStronie, szablonyDokumentow],
   )
 
   function pokazKomunikat(tresc: string) {
@@ -370,7 +809,7 @@ export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy' }
   function edytujTrenera(trener: TrenerKartoteki) {
     ustawEdytowanyTrenerId(trener.id)
     ustawFormularzTrenera(skopiujFormularzTrenera(trener))
-    ustawCzyFormularzTreneraWidoczny(true)
+    ustawCzyFormularzTreneraWidoczny(false)
   }
 
   function zapiszTrenera(zdarzenie: FormEvent<HTMLFormElement>) {
@@ -383,14 +822,14 @@ export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy' }
     if (edytowanyTrenerId) {
       ustawTrenerow((obecni) => obecni.map((trener) => (trener.id === edytowanyTrenerId ? { ...trener, ...formularzTrenera } : trener)))
       pokazKomunikat('Zapisano dane trenera.')
+      ustawEdytowanyTrenerId(null)
+      window.setTimeout(() => ustawFormularzTrenera(pustyFormularzTrenera), 280)
     } else {
       ustawTrenerow((obecni) => [...obecni, { id: utworzId('trener'), ...formularzTrenera }])
       pokazKomunikat('Dodano trenera do kartoteki.')
+      ustawFormularzTrenera(pustyFormularzTrenera)
+      ustawCzyFormularzTreneraWidoczny(false)
     }
-
-    ustawFormularzTrenera(pustyFormularzTrenera)
-    ustawEdytowanyTrenerId(null)
-    ustawCzyFormularzTreneraWidoczny(false)
   }
 
   function duplikujTrenera(trener: TrenerKartoteki) {
@@ -399,12 +838,14 @@ export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy' }
   }
 
   function usunTrenera(id: string) {
+    const trener = trenerzy.find((pozycja) => pozycja.id === id)
+
+    if (!potwierdzUsuniecie(trener ? `${trener.imie} ${trener.nazwisko}`.trim() : 'trener')) {
+      return
+    }
+
     ustawTrenerow((obecni) => obecni.filter((trener) => trener.id !== id))
     pokazKomunikat('Usunięto trenera z kartoteki.')
-  }
-
-  function ustawStatusTrenera(id: string, status: StatusTrenera) {
-    ustawTrenerow((obecni) => obecni.map((trener) => (trener.id === id ? { ...trener, status } : trener)))
   }
 
   function otworzDodawanieKlienta() {
@@ -445,6 +886,12 @@ export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy' }
   }
 
   function usunKlienta(id: string) {
+    const klient = klienci.find((pozycja) => pozycja.id === id)
+
+    if (!potwierdzUsuniecie(klient?.nazwa ?? 'klient')) {
+      return
+    }
+
     ustawKlientow((obecni) => obecni.filter((klient) => klient.id !== id))
     pokazKomunikat('Usunięto klienta z kartoteki.')
   }
@@ -487,13 +934,36 @@ export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy' }
   }
 
   function usunLokalizacje(id: string) {
+    const lokalizacja = lokalizacje.find((pozycja) => pozycja.id === id)
+
+    if (!potwierdzUsuniecie(lokalizacja?.nazwa ?? 'lokalizacja')) {
+      return
+    }
+
     ustawLokalizacje((obecne) => obecne.filter((lokalizacja) => lokalizacja.id !== id))
     pokazKomunikat('Usunięto lokalizację z kartoteki.')
   }
 
   function zmienLiczbePozycjiNaStronie(wartosc: string) {
     ustawLiczbePozycjiNaStronie(Number(wartosc))
+    ustawStroneTrenerow(1)
+    ustawStroneKlientow(1)
     ustawStroneLokalizacji(1)
+    ustawStroneSzablonow(1)
+  }
+
+  function ustawWspolnaLiczbePozycjiNaStronie(liczba: number) {
+    zmienLiczbePozycjiNaStronie(String(liczba))
+  }
+
+  function zmienFiltrTrenerow(filtr: FiltrStatusuTrenera) {
+    ustawFiltrTrenerow(filtr)
+    ustawStroneTrenerow(1)
+  }
+
+  function zmienSzukanaFrazeKlienta(fraza: string) {
+    ustawSzukanyKlient(fraza)
+    ustawStroneKlientow(1)
   }
 
   function zmienFiltrLokalizacji(akcja: () => void) {
@@ -508,6 +978,11 @@ export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy' }
     ustawEdytowanyTrenerId(null)
     ustawEdytowanyKlientId(null)
     ustawEdytowanaLokalizacjaId(null)
+  }
+
+  function anulujEdycjeTrenera() {
+    ustawEdytowanyTrenerId(null)
+    window.setTimeout(() => ustawFormularzTrenera(pustyFormularzTrenera), 280)
   }
 
   function odswiezSzablonyDokumentow() {
@@ -534,7 +1009,7 @@ export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy' }
       {komunikat && <p className="kartoteki__komunikat">{komunikat}</p>}
 
       {aktywnaZakladka === 'trenerzy' && (
-        <section className="kartoteki__widok">
+        <section className="kartoteki__widok" ref={referencjaAktywnejKartoteki}>
           <header className="kartoteki__naglowek">
             <div className="kartoteki__tytul">
               <span className="kartoteki__ikona" aria-hidden="true">
@@ -547,6 +1022,14 @@ export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy' }
             </div>
           </header>
 
+          <PanelElementowKartoteki
+            elementy={elementyKartoteki}
+            filtrTypu={filtrTypuElementu}
+            szukanaFraza={szukanyElementKartoteki}
+            ustawFiltrTypu={ustawFiltrTypuElementu}
+            ustawSzukanaFraza={ustawSzukanyElementKartoteki}
+          />
+
           <section className="kartoteki__panel">
             <div className="kartoteki__pasek">
               <div className="kartoteki__filtry">
@@ -555,7 +1038,7 @@ export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy' }
                     className={`kartoteki__przycisk${filtrTrenerow === filtr ? ' kartoteki__przycisk--glowny' : ''}`}
                     key={filtr}
                     type="button"
-                    onClick={() => ustawFiltrTrenerow(filtr)}
+                    onClick={() => zmienFiltrTrenerow(filtr)}
                   >
                     {filtr === 'aktywni' ? 'Aktywni' : filtr === 'nieaktywni' ? 'Nieaktywni' : 'Wszyscy'}
                   </button>
@@ -572,10 +1055,6 @@ export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy' }
                 <input placeholder="Nazwisko Trenera" value={formularzTrenera.nazwisko} onChange={(zdarzenie) => ustawFormularzTrenera((obecny) => ({ ...obecny, nazwisko: zdarzenie.target.value }))} />
                 <input placeholder="Telefon Trenera" value={formularzTrenera.telefon} onChange={(zdarzenie) => ustawFormularzTrenera((obecny) => ({ ...obecny, telefon: zdarzenie.target.value }))} />
                 <input placeholder="E-mail Trenera" value={formularzTrenera.email} onChange={(zdarzenie) => ustawFormularzTrenera((obecny) => ({ ...obecny, email: zdarzenie.target.value }))} />
-                <select value={formularzTrenera.status} onChange={(zdarzenie) => ustawFormularzTrenera((obecny) => ({ ...obecny, status: zdarzenie.target.value as StatusTrenera }))}>
-                  <option>Aktywny</option>
-                  <option>Nieaktywny</option>
-                </select>
                 <div className="kartoteki__akcje-formularza">
                   <button className="kartoteki__przycisk kartoteki__przycisk--jasny" type="submit">
                     Zapisz
@@ -588,32 +1067,81 @@ export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy' }
             )}
           </section>
 
+          <PanelPaginacjiKartoteki
+            liczbaPozycjiNaStronie={liczbaPozycjiNaStronie}
+            liczbaWidocznychPozycji={trenerzyNaStronie.length}
+            liczbaWszystkichPozycji={trenerzyFiltrowani.length}
+            strona={bezpiecznaStronaTrenerow}
+            ustawLiczbePozycjiNaStronie={ustawWspolnaLiczbePozycjiNaStronie}
+            ustawStrone={ustawStroneTrenerow}
+          />
+
           <div className="kartoteki__lista">
-            {trenerzyFiltrowani.map((trener) => (
+            {trenerzyNaStronie.map((trener) => (
               <article className="kartoteki__wiersz" key={trener.id}>
                 <div>
                   <strong>{`${trener.imie} ${trener.nazwisko}`.trim()}</strong>
                   <span>
-                    {trener.telefon || '-'} | {trener.email || '-'}
+                    {trener.email || '-'} | {trener.telefon || '-'}
                   </span>
                 </div>
                 <div className="kartoteki__akcje">
-                  <select value={trener.status} onChange={(zdarzenie) => ustawStatusTrenera(trener.id, zdarzenie.target.value as StatusTrenera)}>
-                    <option>Aktywny</option>
-                    <option>Nieaktywny</option>
-                  </select>
-                  <button className="kartoteki__przycisk" type="button" onClick={() => pokazKomunikat(`Podgląd trenera: ${trener.imie} ${trener.nazwisko}`)}>
+                  <button className="kartoteki__przycisk kartoteki__przycisk--z-ikona" type="button" onClick={() => pokazKomunikat(`Podgląd trenera: ${trener.imie} ${trener.nazwisko}`)}>
+                    <IkonaAkcji typ="podglad" />
                     Podgląd
                   </button>
-                  <button className="kartoteki__przycisk" type="button" onClick={() => edytujTrenera(trener)}>
+                  <button className="kartoteki__przycisk kartoteki__przycisk--z-ikona" type="button" onClick={() => edytujTrenera(trener)}>
+                    <IkonaAkcji typ="edycja" />
                     Edytuj
                   </button>
-                  <button className="kartoteki__przycisk" type="button" onClick={() => duplikujTrenera(trener)}>
+                  <button className="kartoteki__przycisk kartoteki__przycisk--z-ikona" type="button" onClick={() => duplikujTrenera(trener)}>
+                    <IkonaAkcji typ="duplikuj" />
                     Duplikuj
                   </button>
-                  <button className="kartoteki__przycisk" type="button" onClick={() => usunTrenera(trener.id)}>
+                  <button className="kartoteki__przycisk kartoteki__przycisk--z-ikona" type="button" onClick={() => usunTrenera(trener.id)}>
+                    <IkonaAkcji typ="usun" />
                     Usuń
                   </button>
+                </div>
+                <div className={`kartoteki__edycja-wiersza ${edytowanyTrenerId === trener.id ? 'kartoteki__edycja-wiersza--otwarta' : ''}`}>
+                  <form className="kartoteki__edycja-trenera" onSubmit={zapiszTrenera}>
+                    <div className="kartoteki__kolumna-edycji">
+                      <label>
+                        Imię:
+                        <input value={formularzTrenera.imie} onChange={(zdarzenie) => ustawFormularzTrenera((obecny) => ({ ...obecny, imie: zdarzenie.target.value }))} />
+                      </label>
+                      <label>
+                        Nazwisko:
+                        <input value={formularzTrenera.nazwisko} onChange={(zdarzenie) => ustawFormularzTrenera((obecny) => ({ ...obecny, nazwisko: zdarzenie.target.value }))} />
+                      </label>
+                      <div className="kartoteki__pole-przelacznika">
+                        <span>Status:</span>
+                        <PrzelacznikStatusuTrenera
+                          etykieta={`Status trenera ${trener.imie} ${trener.nazwisko}`}
+                          status={formularzTrenera.status}
+                          ustawStatus={(status) => ustawFormularzTrenera((obecny) => ({ ...obecny, status }))}
+                        />
+                      </div>
+                    </div>
+                    <div className="kartoteki__kolumna-edycji">
+                      <label>
+                        E-mail:
+                        <input value={formularzTrenera.email} onChange={(zdarzenie) => ustawFormularzTrenera((obecny) => ({ ...obecny, email: zdarzenie.target.value }))} />
+                      </label>
+                      <label>
+                        Telefon:
+                        <input value={formularzTrenera.telefon} onChange={(zdarzenie) => ustawFormularzTrenera((obecny) => ({ ...obecny, telefon: zdarzenie.target.value }))} />
+                      </label>
+                      <div className="kartoteki__akcje-formularza">
+                        <button className="kartoteki__przycisk kartoteki__przycisk--jasny" type="submit">
+                          Zapisz
+                        </button>
+                        <button className="kartoteki__przycisk" type="button" onClick={anulujEdycjeTrenera}>
+                          Anuluj
+                        </button>
+                      </div>
+                    </div>
+                  </form>
                 </div>
               </article>
             ))}
@@ -622,7 +1150,7 @@ export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy' }
       )}
 
       {aktywnaZakladka === 'klienci' && (
-        <section className="kartoteki__widok">
+        <section className="kartoteki__widok" ref={referencjaAktywnejKartoteki}>
           <header className="kartoteki__naglowek">
             <div className="kartoteki__tytul">
               <span className="kartoteki__ikona" aria-hidden="true">
@@ -635,9 +1163,17 @@ export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy' }
             </div>
           </header>
 
+          <PanelElementowKartoteki
+            elementy={elementyKartoteki}
+            filtrTypu={filtrTypuElementu}
+            szukanaFraza={szukanyElementKartoteki}
+            ustawFiltrTypu={ustawFiltrTypuElementu}
+            ustawSzukanaFraza={ustawSzukanyElementKartoteki}
+          />
+
           <section className="kartoteki__panel">
             <div className="kartoteki__pasek">
-              <input className="kartoteki__wyszukiwarka" placeholder="Szukaj po nazwie, NIP, mieście lub kodzie" value={szukanyKlient} onChange={(zdarzenie) => ustawSzukanyKlient(zdarzenie.target.value)} />
+              <input className="kartoteki__wyszukiwarka" placeholder="Szukaj po nazwie, NIP, mieście lub kodzie" value={szukanyKlient} onChange={(zdarzenie) => zmienSzukanaFrazeKlienta(zdarzenie.target.value)} />
               <button className="kartoteki__przycisk" type="button" onClick={otworzDodawanieKlienta}>
                 + Dodaj klienta
               </button>
@@ -668,8 +1204,17 @@ export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy' }
             )}
           </section>
 
+          <PanelPaginacjiKartoteki
+            liczbaPozycjiNaStronie={liczbaPozycjiNaStronie}
+            liczbaWidocznychPozycji={klienciNaStronie.length}
+            liczbaWszystkichPozycji={klienciFiltrowani.length}
+            strona={bezpiecznaStronaKlientow}
+            ustawLiczbePozycjiNaStronie={ustawWspolnaLiczbePozycjiNaStronie}
+            ustawStrone={ustawStroneKlientow}
+          />
+
           <div className="kartoteki__lista">
-            {klienciFiltrowani.map((klient) => (
+            {klienciNaStronie.map((klient) => (
               <article className="kartoteki__wiersz" key={klient.id}>
                 <div>
                   <strong>{klient.nazwa}</strong>
@@ -680,16 +1225,20 @@ export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy' }
                   <span>Koordynator: {klient.koordynator || '-'}</span>
                 </div>
                 <div className="kartoteki__akcje">
-                  <button className="kartoteki__przycisk" type="button" onClick={() => pokazKomunikat(`Podgląd klienta: ${klient.nazwa}`)}>
+                  <button className="kartoteki__przycisk kartoteki__przycisk--z-ikona" type="button" onClick={() => pokazKomunikat(`Podgląd klienta: ${klient.nazwa}`)}>
+                    <IkonaAkcji typ="podglad" />
                     Podgląd
                   </button>
-                  <button className="kartoteki__przycisk" type="button" onClick={() => edytujKlienta(klient)}>
+                  <button className="kartoteki__przycisk kartoteki__przycisk--z-ikona" type="button" onClick={() => edytujKlienta(klient)}>
+                    <IkonaAkcji typ="edycja" />
                     Edytuj
                   </button>
-                  <button className="kartoteki__przycisk" type="button" onClick={() => duplikujKlienta(klient)}>
+                  <button className="kartoteki__przycisk kartoteki__przycisk--z-ikona" type="button" onClick={() => duplikujKlienta(klient)}>
+                    <IkonaAkcji typ="duplikuj" />
                     Duplikuj
                   </button>
-                  <button className="kartoteki__przycisk" type="button" onClick={() => usunKlienta(klient.id)}>
+                  <button className="kartoteki__przycisk kartoteki__przycisk--z-ikona" type="button" onClick={() => usunKlienta(klient.id)}>
+                    <IkonaAkcji typ="usun" />
                     Usuń
                   </button>
                 </div>
@@ -700,7 +1249,7 @@ export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy' }
       )}
 
       {aktywnaZakladka === 'lokalizacje' && (
-        <section className="kartoteki__widok">
+        <section className="kartoteki__widok" ref={referencjaAktywnejKartoteki}>
           <header className="kartoteki__naglowek">
             <div className="kartoteki__tytul">
               <span className="kartoteki__ikona kartoteki__ikona--zolty" aria-hidden="true">
@@ -712,6 +1261,14 @@ export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy' }
               </div>
             </div>
           </header>
+
+          <PanelElementowKartoteki
+            elementy={elementyKartoteki}
+            filtrTypu={filtrTypuElementu}
+            szukanaFraza={szukanyElementKartoteki}
+            ustawFiltrTypu={ustawFiltrTypuElementu}
+            ustawSzukanaFraza={ustawSzukanyElementKartoteki}
+          />
 
           <section className="kartoteki__panel">
             <div className="kartoteki__formularz kartoteki__formularz--trzy">
@@ -740,16 +1297,6 @@ export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy' }
                 Załadowano {lokalizacje.length} lokalizacji. Widocznych pozycji: {lokalizacjeNaStronie.length} z {lokalizacjeFiltrowane.length}.
               </span>
               <div className="kartoteki__akcje">
-                <label className="kartoteki__liczba-pozycji">
-                  Pozycji na stronie
-                  <select value={liczbaPozycjiNaStronie} onChange={(zdarzenie) => zmienLiczbePozycjiNaStronie(zdarzenie.target.value)}>
-                    {opcjeLiczbyPozycji.map((opcja) => (
-                      <option key={opcja} value={opcja}>
-                        {opcja}
-                      </option>
-                    ))}
-                  </select>
-                </label>
                 <button className="kartoteki__przycisk" type="button" onClick={otworzDodawanieLokalizacji}>
                   + Dodaj lokalizację
                 </button>
@@ -783,6 +1330,15 @@ export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy' }
             </form>
           )}
 
+          <PanelPaginacjiKartoteki
+            liczbaPozycjiNaStronie={liczbaPozycjiNaStronie}
+            liczbaWidocznychPozycji={lokalizacjeNaStronie.length}
+            liczbaWszystkichPozycji={lokalizacjeFiltrowane.length}
+            strona={bezpiecznaStronaLokalizacji}
+            ustawLiczbePozycjiNaStronie={ustawWspolnaLiczbePozycjiNaStronie}
+            ustawStrone={ustawStroneLokalizacji}
+          />
+
           <div className="kartoteki__tabela-opakowanie">
             <table className="kartoteki__tabela">
               <thead>
@@ -811,16 +1367,20 @@ export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy' }
                     </td>
                     <td>
                       <div className="kartoteki__akcje">
-                        <button className="kartoteki__przycisk" type="button" onClick={() => pokazKomunikat(`Podgląd lokalizacji: ${lokalizacja.nazwa}`)}>
+                        <button className="kartoteki__przycisk kartoteki__przycisk--z-ikona" type="button" onClick={() => pokazKomunikat(`Podgląd lokalizacji: ${lokalizacja.nazwa}`)}>
+                          <IkonaAkcji typ="podglad" />
                           Podgląd
                         </button>
-                        <button className="kartoteki__przycisk" type="button" onClick={() => edytujLokalizacje(lokalizacja)}>
+                        <button className="kartoteki__przycisk kartoteki__przycisk--z-ikona" type="button" onClick={() => edytujLokalizacje(lokalizacja)}>
+                          <IkonaAkcji typ="edycja" />
                           Edytuj
                         </button>
-                        <button className="kartoteki__przycisk" type="button" onClick={() => duplikujLokalizacje(lokalizacja)}>
+                        <button className="kartoteki__przycisk kartoteki__przycisk--z-ikona" type="button" onClick={() => duplikujLokalizacje(lokalizacja)}>
+                          <IkonaAkcji typ="duplikuj" />
                           Duplikuj
                         </button>
-                        <button className="kartoteki__przycisk" type="button" onClick={() => usunLokalizacje(lokalizacja.id)}>
+                        <button className="kartoteki__przycisk kartoteki__przycisk--z-ikona" type="button" onClick={() => usunLokalizacje(lokalizacja.id)}>
+                          <IkonaAkcji typ="usun" />
                           Usuń
                         </button>
                       </div>
@@ -831,22 +1391,11 @@ export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy' }
             </table>
           </div>
 
-          <div className="kartoteki__paginacja">
-            <button className="kartoteki__przycisk" disabled={bezpiecznaStronaLokalizacji <= 1} type="button" onClick={() => ustawStroneLokalizacji((obecna) => Math.max(1, obecna - 1))}>
-              Poprzednia
-            </button>
-            <span>
-              Strona {bezpiecznaStronaLokalizacji} z {liczbaStronLokalizacji}
-            </span>
-            <button className="kartoteki__przycisk" disabled={bezpiecznaStronaLokalizacji >= liczbaStronLokalizacji} type="button" onClick={() => ustawStroneLokalizacji((obecna) => Math.min(liczbaStronLokalizacji, obecna + 1))}>
-              Następna
-            </button>
-          </div>
         </section>
       )}
 
       {aktywnaZakladka === 'szablony_dokumentow' && (
-        <section className="kartoteki__widok">
+        <section className="kartoteki__widok" ref={referencjaAktywnejKartoteki}>
           <header className="kartoteki__naglowek">
             <div className="kartoteki__tytul">
               <span className="kartoteki__ikona" aria-hidden="true">
@@ -862,8 +1411,25 @@ export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy' }
             </button>
           </header>
 
+          <PanelElementowKartoteki
+            elementy={elementyKartoteki}
+            filtrTypu={filtrTypuElementu}
+            szukanaFraza={szukanyElementKartoteki}
+            ustawFiltrTypu={ustawFiltrTypuElementu}
+            ustawSzukanaFraza={ustawSzukanyElementKartoteki}
+          />
+
+          <PanelPaginacjiKartoteki
+            liczbaPozycjiNaStronie={liczbaPozycjiNaStronie}
+            liczbaWidocznychPozycji={szablonyNaStronie.length}
+            liczbaWszystkichPozycji={szablonyDokumentow.length}
+            strona={bezpiecznaStronaSzablonow}
+            ustawLiczbePozycjiNaStronie={ustawWspolnaLiczbePozycjiNaStronie}
+            ustawStrone={ustawStroneSzablonow}
+          />
+
           <div className="kartoteki__lista">
-            {szablonyDokumentow.length ? szablonyDokumentow.map((szablon) => (
+            {szablonyDokumentow.length ? szablonyNaStronie.map((szablon) => (
               <article className="kartoteki__wiersz" key={szablon.id}>
                 <div>
                   <strong>{szablon.nazwa}</strong>
@@ -875,7 +1441,8 @@ export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy' }
                   <span>Oryginał: {szablon.oryginalnyPlik ?? '-'}</span>
                 </div>
                 <div className="kartoteki__akcje">
-                  <button className="kartoteki__przycisk" type="button" onClick={() => pokazKomunikat(`Szablon klienta: ${szablon.klientNazwa ?? 'standardowy'}`)}>
+                  <button className="kartoteki__przycisk kartoteki__przycisk--z-ikona" type="button" onClick={() => pokazKomunikat(`Szablon klienta: ${szablon.klientNazwa ?? 'standardowy'}`)}>
+                    <IkonaAkcji typ="podglad" />
                     Podgląd
                   </button>
                   <button className="kartoteki__przycisk" type="button" onClick={() => pokazKomunikat(`Wersja szablonu: ${szablon.wersja}`)}>

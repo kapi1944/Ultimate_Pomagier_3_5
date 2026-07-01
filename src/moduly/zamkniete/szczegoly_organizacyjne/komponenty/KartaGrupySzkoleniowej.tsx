@@ -17,6 +17,7 @@ type WlasciwosciKartyGrupy = {
   statusyPol: StatusyPolImportu
   trenerzyKartoteki: TrenerKartoteki[]
   aktualizujGrupe: (id: string, aktualizacja: (grupa: GrupaSzkoleniowa) => GrupaSzkoleniowa, pole?: string) => void
+  duplikujGrupe: (id: string) => void
   usunGrupe: (id: string) => void
 }
 
@@ -108,6 +109,7 @@ export default function KartaGrupySzkoleniowej({
   statusyPol,
   trenerzyKartoteki,
   aktualizujGrupe,
+  duplikujGrupe,
   usunGrupe,
 }: WlasciwosciKartyGrupy) {
   const trenerzyDoWyboru = useMemo(() => {
@@ -146,9 +148,14 @@ export default function KartaGrupySzkoleniowej({
           <h3>{grupa.nazwa || `Grupa ${indeks + 1}`}</h3>
           <span>{grupa.formaSzkolenia} · {grupa.dataOd || 'brak daty od'} - {grupa.dataDo || 'brak daty do'}</span>
         </div>
-        <button disabled={indeks === 0} type="button" onClick={() => usunGrupe(grupa.id)}>
-          Usuń grupę
-        </button>
+        <div className="szczegoly-akcje">
+          <button type="button" onClick={() => duplikujGrupe(grupa.id)}>
+            Duplikuj grupę
+          </button>
+          <button disabled={indeks === 0} type="button" onClick={() => usunGrupe(grupa.id)}>
+            Usuń grupę
+          </button>
+        </div>
       </header>
 
       <div className="szczegoly-siatka szczegoly-siatka--trzy">

@@ -52,6 +52,13 @@ export type DaneOdbiorcyPaczki = DaneKontaktuOrganizacyjnego & {
 
 export type WzoryKlienta = Record<string, boolean>
 
+export type SzczegolyWzoruKlienta = {
+  nazwaPliku: string
+  uwagi: string
+}
+
+export type SzczegolyWzorowKlienta = Record<string, SzczegolyWzoruKlienta>
+
 export type DaneDokumentacjiMaterialow = {
   listaObecnosci: boolean
   ankiety: boolean
@@ -62,10 +69,10 @@ export type DaneDokumentacjiMaterialow = {
   materialyDodatkowe: boolean
   projektTesty: boolean
   dostepnoscCyfrowa: boolean
-  plikZrodlowy: boolean
   logotypy: StatusLogotypow
   plusJedenEgzemplarz: boolean
   wzoryKlienta: WzoryKlienta
+  szczegolyWzorowKlienta: SzczegolyWzorowKlienta
 }
 
 export type DaneLogotypow = {
@@ -82,6 +89,7 @@ export type DaneDodatkowychWymogow = {
   kfs: boolean
   uwagi: string
   wzoryKlienta: WzoryKlienta
+  szczegolyWzorowKlienta: SzczegolyWzorowKlienta
 }
 
 export type DaneUwag = {

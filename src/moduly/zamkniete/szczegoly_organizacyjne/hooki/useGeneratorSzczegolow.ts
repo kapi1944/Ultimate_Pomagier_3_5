@@ -3,6 +3,7 @@ import {
   poczatkowaFirma,
   poczatkowaGrupa,
   poczatkoweDaneFormularza,
+  poczatkoweSzczegolyWzorowKlienta,
   poczatkoweWzoryKlienta,
   poczatkowiAdresaci,
   utworzPoczatkowaGrupe,
@@ -76,6 +77,11 @@ function scalDokumentacje(obecna: DaneDokumentacjiMaterialow, czesciowa?: Partia
       ...obecna.wzoryKlienta,
       ...czesciowa?.wzoryKlienta,
     },
+    szczegolyWzorowKlienta: {
+      ...poczatkoweSzczegolyWzorowKlienta,
+      ...obecna.szczegolyWzorowKlienta,
+      ...czesciowa?.szczegolyWzorowKlienta,
+    },
   }
 }
 
@@ -137,6 +143,10 @@ function normalizujDane(dane?: Partial<DaneFormularza>): DaneFormularza {
       wzoryKlienta: {
         ...poczatkoweWzoryKlienta,
         ...obecne.dodatkoweWymogi?.wzoryKlienta,
+      },
+      szczegolyWzorowKlienta: {
+        ...poczatkoweSzczegolyWzorowKlienta,
+        ...obecne.dodatkoweWymogi?.szczegolyWzorowKlienta,
       },
     },
     uwagi: {
@@ -239,6 +249,10 @@ function scalDaneFormularza(obecne: DaneFormularza, czesciowe: Partial<DaneFormu
       wzoryKlienta: {
         ...obecne.dodatkoweWymogi.wzoryKlienta,
         ...czesciowe.dodatkoweWymogi?.wzoryKlienta,
+      },
+      szczegolyWzorowKlienta: {
+        ...obecne.dodatkoweWymogi.szczegolyWzorowKlienta,
+        ...czesciowe.dodatkoweWymogi?.szczegolyWzorowKlienta,
       },
     },
     uwagi: { ...obecne.uwagi, ...czesciowe.uwagi },
@@ -382,6 +396,27 @@ export function useGeneratorSzczegolow() {
     ustawGrupy((obecne) => [...obecne, utworzPoczatkowaGrupe(obecne.length + 1)])
   }
 
+  function duplikujGrupe(id: string) {
+    ustawGrupy((obecne) => {
+      const indeks = obecne.findIndex((grupa) => grupa.id === id)
+
+      if (indeks === -1) {
+        return obecne
+      }
+
+      const kopia = normalizujGrupe(
+        {
+          ...klonuj(obecne[indeks]),
+          id: `grupa-${Date.now()}-${obecne.length + 1}`,
+          nazwa: `${obecne[indeks].nazwa || `Grupa ${indeks + 1}`} kopia`,
+        },
+        obecne.length,
+      )
+
+      return [...obecne.slice(0, indeks + 1), kopia, ...obecne.slice(indeks + 1)].map(normalizujGrupe)
+    })
+  }
+
   function usunGrupe(id: string) {
     ustawGrupy((obecne) => (obecne.length > 1 ? obecne.filter((grupa) => grupa.id !== id).map(normalizujGrupe) : obecne))
   }
@@ -522,6 +557,7 @@ export function useGeneratorSzczegolow() {
     aktualizujDane,
     aktualizujGrupe,
     dodajGrupe,
+    duplikujGrupe,
     usunGrupe,
     obsluzImportMaila,
     zapiszWersje,

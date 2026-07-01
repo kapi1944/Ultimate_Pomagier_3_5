@@ -68,12 +68,11 @@ Program: ${formatujTakNie(dane.dokumentacja.program)}
 Karta informacyjna: ${formatujTakNie(dane.dokumentacja.kartaInformacyjna)}
 Podręczniki: ${formatujTakNie(dane.dokumentacja.podreczniki)}
 Materiały dodatkowe: ${formatujTakNie(dane.dokumentacja.materialyDodatkowe)}
-Projekt testy: ${formatujTakNie(dane.dokumentacja.projektTesty)}
+PRE-/POST-TESTY: ${formatujTakNie(dane.dokumentacja.projektTesty)}
 Dostępność cyfrowa: ${formatujTakNie(dane.dokumentacja.dostepnoscCyfrowa)}
-Plik źródłowy: ${formatujTakNie(dane.dokumentacja.plikZrodlowy)}
 Logotypy: ${dane.dokumentacja.logotypy}
 Plik logotypu: ${dane.logotypy.nazwaPliku || '-'}
-Plus jeden egzemplarz: ${formatujTakNie(dane.dokumentacja.plusJedenEgzemplarz)}
+"+1" Dodatkowy egzemplarz: ${formatujTakNie(dane.dokumentacja.plusJedenEgzemplarz)}
 
 DODATKOWE WYMOGI
 Wcześniejszy przyjazd trenera: ${formatujTakNie(dane.dodatkoweWymogi.wczesniejszyPrzyjazdTrenera)} ${dane.dodatkoweWymogi.minutyWczesniej} min

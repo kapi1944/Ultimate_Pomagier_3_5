@@ -414,47 +414,179 @@
   grid-template-columns: minmax(180px, 1fr) auto minmax(140px, auto) minmax(160px, 220px);
 }
 
+.szczegoly-wiersz-wymogu--przyjazd {
+  grid-template-columns: minmax(180px, 1fr) auto minmax(140px, auto);
+}
+
+.szczegoly-wiersz-wymogu--przyjazd-aktywny {
+  grid-template-columns: minmax(180px, 1fr) minmax(160px, 220px) auto;
+}
+
+.szczegoly-pole-minut {
+  display: grid;
+  grid-template-columns: auto minmax(72px, 1fr);
+  gap: 8px;
+  align-items: center;
+  color: #c7ead0;
+  font-size: 0.86rem;
+}
+
+.szczegoly-pole-minut input {
+  width: 100%;
+  border: 1px solid rgba(156, 207, 171, 0.28);
+  border-radius: 6px;
+  background: #03180c;
+  color: #f4fff7;
+  font: inherit;
+  min-height: 36px;
+  padding: 8px 9px;
+}
+
+.szczegoly-wzor-klienta {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(190px, 260px) minmax(150px, 210px) minmax(280px, 1fr);
+  gap: 14px;
+  align-items: stretch;
+  padding-top: 10px;
+}
+
+.szczegoly-wzor-klienta__plik {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  color: #9ccfab;
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
+}
+
+.szczegoly-wzor-klienta__podglad {
+  display: grid;
+  gap: 7px;
+  color: #c7ead0;
+  font-size: 0.86rem;
+}
+
+.szczegoly-wzor-klienta__strona {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 210 / 297;
+  width: min(100%, 210px);
+  border: 1px solid rgba(156, 207, 171, 0.28);
+  border-radius: 6px;
+  background: #f8fafc;
+  color: #334155;
+  overflow: hidden;
+  padding: 8px;
+}
+
+.szczegoly-wzor-klienta__strona img,
+.szczegoly-wzor-klienta__strona object {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  object-fit: contain;
+}
+
+.szczegoly-wzor-klienta > .szczegoly-pole textarea {
+  min-height: 210px;
+}
+
 .szczegoly-przelacznik-tak-nie {
   display: inline-flex;
   gap: 8px;
   align-items: center;
   justify-content: center;
-  min-width: 94px;
+  min-width: 124px;
 }
 
 .szczegoly-przelacznik-tak-nie__tor {
   position: relative;
-  width: 48px;
-  height: 26px;
-  border: 1px solid rgba(156, 207, 171, 0.34);
+  width: 88px;
+  height: 30px;
+  flex: 0 0 88px;
+  border: 1px solid rgba(156, 207, 171, 0.46);
   border-radius: 999px;
-  background: #7f1d1d;
+  background: linear-gradient(180deg, #dc3545, #b91c1c);
+  box-shadow:
+    inset 0 2px 5px rgba(255, 255, 255, 0.22),
+    inset 0 -4px 7px rgba(0, 0, 0, 0.38);
   transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+.szczegoly-przelacznik-tak-nie__tor::before,
+.szczegoly-przelacznik-tak-nie__tor::after {
+  position: absolute;
+  top: calc(50% - 1px);
+  z-index: 1;
+  transform: translateY(-50%);
+  font-size: 1.18rem;
+  font-weight: 900;
+  line-height: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+.szczegoly-przelacznik-tak-nie__tor::before {
+  left: 18px;
+  color: #0f7a25;
+  content: "✓";
+  opacity: 0;
+}
+
+.szczegoly-przelacznik-tak-nie__tor::after {
+  right: 18px;
+  color: #7f1d1d;
+  content: "×";
+  opacity: 1;
 }
 
 .szczegoly-przelacznik-tak-nie__uchwyt {
   position: absolute;
-  top: 4px;
-  left: 4px;
-  width: 16px;
-  height: 16px;
+  top: 3px;
+  left: 3px;
+  z-index: 2;
+  width: 22px;
+  height: 22px;
+  border: 1px solid rgba(15, 23, 42, 0.35);
   border-radius: 999px;
-  background: #f8fafc;
+  background: linear-gradient(180deg, #ffffff, #d9d9d9);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.9);
   transition: transform 0.18s ease;
 }
 
 .szczegoly-przelacznik-tak-nie--tak .szczegoly-przelacznik-tak-nie__tor {
   border-color: #4ade80;
-  background: #15803d;
+  background: linear-gradient(180deg, #42d62d, #16a34a);
 }
 
 .szczegoly-przelacznik-tak-nie--tak .szczegoly-przelacznik-tak-nie__uchwyt {
-  transform: translateX(22px);
+  transform: translateX(58px);
+}
+
+.szczegoly-przelacznik-tak-nie--tak .szczegoly-przelacznik-tak-nie__tor::before {
+  opacity: 1;
+}
+
+.szczegoly-przelacznik-tak-nie--tak .szczegoly-przelacznik-tak-nie__tor::after {
+  opacity: 0;
 }
 
 .szczegoly-przelacznik-tak-nie__tekst {
   min-width: 28px;
   font-weight: 700;
+}
+
+.szczegoly-przelacznik-Aktywny-Nieaktywny .szczegoly-przelacznik-tak-nie__tekst {
+  min-width: 78px;
+}
+
+.szczegoly-przelacznik-Druk-Online .szczegoly-przelacznik-tak-nie__tor::before,
+.szczegoly-przelacznik-Druk-Online .szczegoly-przelacznik-tak-nie__tor::after {
+  content: "";
+}
+
+.szczegoly-przelacznik-Druk-Online .szczegoly-przelacznik-tak-nie__tekst {
+  min-width: 46px;
 }
 
 .szczegoly-logo-podglad {
@@ -514,7 +646,9 @@
   .szczegoly-siatka--cztery,
   .szczegoly-siatka--trzy,
   .szczegoly-kolumny-danych,
+  .szczegoly-wzor-klienta,
   .szczegoly-wiersz-wymogu,
+  .szczegoly-wiersz-wymogu--przyjazd,
   .szczegoly-wiersz-wymogu--rozszerzony {
     grid-template-columns: 1fr;
   }

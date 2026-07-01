@@ -99,9 +99,25 @@
   justify-content: flex-end;
 }
 
+.kartoteki__paginacja--panel {
+  justify-content: space-between;
+  border: 1px solid rgba(74, 222, 128, 0.18);
+  border-radius: 8px;
+  background: #03180c;
+  padding: 10px;
+}
+
 .kartoteki__paginacja span {
   color: #dff7e6;
   font-weight: 700;
+}
+
+.kartoteki__numery-stron {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .kartoteki__lista {
@@ -123,11 +139,57 @@
   color: #f7fff9;
 }
 
-.kartoteki__wiersz span {
+.kartoteki__wiersz > div:first-child > span {
   display: block;
   margin-top: 3px;
   color: #9ccfab;
   font-size: 0.86rem;
+}
+
+.kartoteki__edycja-wiersza {
+  grid-column: 1 / -1;
+  max-height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  opacity: 0;
+  transition: max-height 0.28s ease, opacity 0.2s ease, visibility 0s linear 0.28s;
+}
+
+.kartoteki__edycja-wiersza--otwarta {
+  max-height: 360px;
+  visibility: visible;
+  opacity: 1;
+  transition: max-height 0.28s ease, opacity 0.2s ease;
+}
+
+.kartoteki__edycja-trenera {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  border-top: 1px solid rgba(74, 222, 128, 0.18);
+  margin-top: 12px;
+  padding-top: 14px;
+}
+
+.kartoteki__kolumna-edycji {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.kartoteki__kolumna-edycji label,
+.kartoteki__pole-przelacznika {
+  display: grid;
+  grid-template-columns: 86px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  color: #dff7e6;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.kartoteki__pole-przelacznika span {
+  color: #dff7e6;
 }
 
 .kartoteki__formularz {
@@ -188,6 +250,22 @@
   white-space: nowrap;
 }
 
+.kartoteki__przycisk--z-ikona {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.kartoteki__ikona-przycisku {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
 .kartoteki__przycisk:hover:not(:disabled) {
   border-color: #4ade80;
   background: #123a20;
@@ -217,6 +295,31 @@
   background: #073018;
   color: #9fffd0;
   padding: 9px 12px;
+}
+
+.kartoteki__inspektor {
+  gap: 12px;
+}
+
+.kartoteki__liczniki-elementow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.kartoteki__liczniki-elementow strong,
+.kartoteki__liczniki-elementow span {
+  border: 1px solid rgba(74, 222, 128, 0.18);
+  border-radius: 6px;
+  background: #03180c;
+  color: #dff7e6;
+  font-size: 0.78rem;
+  padding: 5px 8px;
+}
+
+.kartoteki__liczniki-elementow span {
+  color: #9ccfab;
 }
 
 .kartoteki__tabela-opakowanie {
@@ -258,6 +361,7 @@
 
 @media (max-width: 1180px) {
   .kartoteki__wiersz,
+  .kartoteki__edycja-trenera,
   .kartoteki__formularz--dwa,
   .kartoteki__formularz--trzy {
     grid-template-columns: 1fr;
@@ -273,6 +377,7 @@
   .kartoteki__pasek,
   .kartoteki__wiersz,
   .kartoteki__akcje,
+  .kartoteki__numery-stron,
   .kartoteki__paginacja {
     align-items: stretch;
     justify-content: stretch;
