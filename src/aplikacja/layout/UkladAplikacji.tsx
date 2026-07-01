@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import WidokUstawien from '../ustawienia/WidokUstawien'
 import MenuBoczne from '../menu/MenuBoczne'
 import type { WidokNawigacji } from '../nawigacja/typyNawigacji'
-import WidokKartotek from '../../kartoteki/WidokKartotek'
+import WidokKartotek, { type ZakladkaKartotek } from '../../kartoteki/WidokKartotek'
 import WidokDokumentow from '../../moduly/dokumenty/WidokDokumentow'
 import WidokAnkiet from '../../moduly/dokumenty/generatory/ankiety/WidokAnkiet'
 import WidokDyplomow from '../../moduly/dokumenty/generatory/dyplomy/WidokDyplomow'
@@ -53,7 +53,20 @@ function pobierzPoczatkowyWidok(): WidokNawigacji {
   }
 }
 
-function renderujWidok(widok: WidokNawigacji): ReactNode {
+function pobierzWidokZakladkiKartotek(zakladka: ZakladkaKartotek): WidokNawigacji {
+  switch (zakladka) {
+    case 'trenerzy':
+      return 'kartoteki_trenerzy'
+    case 'klienci':
+      return 'kartoteki_klienci'
+    case 'lokalizacje':
+      return 'kartoteki_lokalizacje'
+    case 'szablony_dokumentow':
+      return 'kartoteki_szablony_dokumentow'
+  }
+}
+
+function renderujWidok(widok: WidokNawigacji, zmienZakladkeKartotek: (zakladka: ZakladkaKartotek) => void): ReactNode {
   switch (widok) {
     case 'pulpit':
       return <WidokPulpitu />
@@ -80,15 +93,15 @@ function renderujWidok(widok: WidokNawigacji): ReactNode {
     case 'programy_szkolen':
       return <WidokProgramowSzkolen />
     case 'kartoteki':
-      return <WidokKartotek />
+      return <WidokKartotek poZmianieZakladki={zmienZakladkeKartotek} />
     case 'kartoteki_trenerzy':
-      return <WidokKartotek key="kartoteki_trenerzy" aktywnaZakladkaPoczatkowa="trenerzy" />
+      return <WidokKartotek key="kartoteki_trenerzy" aktywnaZakladkaPoczatkowa="trenerzy" poZmianieZakladki={zmienZakladkeKartotek} />
     case 'kartoteki_klienci':
-      return <WidokKartotek key="kartoteki_klienci" aktywnaZakladkaPoczatkowa="klienci" />
+      return <WidokKartotek key="kartoteki_klienci" aktywnaZakladkaPoczatkowa="klienci" poZmianieZakladki={zmienZakladkeKartotek} />
     case 'kartoteki_lokalizacje':
-      return <WidokKartotek key="kartoteki_lokalizacje" aktywnaZakladkaPoczatkowa="lokalizacje" />
+      return <WidokKartotek key="kartoteki_lokalizacje" aktywnaZakladkaPoczatkowa="lokalizacje" poZmianieZakladki={zmienZakladkeKartotek} />
     case 'kartoteki_szablony_dokumentow':
-      return <WidokKartotek key="kartoteki_szablony_dokumentow" aktywnaZakladkaPoczatkowa="szablony_dokumentow" />
+      return <WidokKartotek key="kartoteki_szablony_dokumentow" aktywnaZakladkaPoczatkowa="szablony_dokumentow" poZmianieZakladki={zmienZakladkeKartotek} />
     case 'ustawienia':
       return <WidokUstawien />
   }
@@ -96,6 +109,10 @@ function renderujWidok(widok: WidokNawigacji): ReactNode {
 
 export default function UkladAplikacji() {
   const [aktywnyWidok, ustawAktywnyWidok] = useState<WidokNawigacji>(pobierzPoczatkowyWidok)
+
+  function zmienZakladkeKartotek(zakladka: ZakladkaKartotek) {
+    ustawAktywnyWidok(pobierzWidokZakladkiKartotek(zakladka))
+  }
 
   useEffect(() => {
     try {
@@ -108,7 +125,7 @@ export default function UkladAplikacji() {
   return (
     <div className="uklad-aplikacji">
       <MenuBoczne aktywnyWidok={aktywnyWidok} ustawAktywnyWidok={ustawAktywnyWidok} />
-      <main className="uklad-aplikacji__obszar-roboczy">{renderujWidok(aktywnyWidok)}</main>
+      <main className="uklad-aplikacji__obszar-roboczy">{renderujWidok(aktywnyWidok, zmienZakladkeKartotek)}</main>
     </div>
   )
 }

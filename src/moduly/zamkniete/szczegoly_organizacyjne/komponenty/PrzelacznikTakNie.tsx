@@ -1,7 +1,7 @@
 import type { KeyboardEvent } from 'react'
 import '../widoki/widokNowychSzczegolowOrganizacyjnych.css'
 
-type WariantPrzelacznika = 'tak-nie' | 'aktywny-nieaktywny' | 'druk-online'
+type WariantPrzelacznika = 'tak-nie' | 'aktywny-nieaktywny' | 'druk-online' | 'potwierdzony-niepotwierdzony'
 
 type WlasciwosciPrzelacznika = {
   etykieta: string
@@ -15,6 +15,7 @@ const etykietyWariantow: Record<WariantPrzelacznika, { wlaczony: string; wylaczo
   'tak-nie': { wlaczony: 'TAK', wylaczony: 'NIE', klasa: '' },
   'aktywny-nieaktywny': { wlaczony: 'Aktywny', wylaczony: 'Nieaktywny', klasa: 'szczegoly-przelacznik-Aktywny-Nieaktywny' },
   'druk-online': { wlaczony: 'Druk', wylaczony: 'Online', klasa: 'szczegoly-przelacznik-Druk-Online' },
+  'potwierdzony-niepotwierdzony': { wlaczony: '✓ Potwierdzony', wylaczony: '✕ Niepotwierdzony', klasa: 'szczegoly-przelacznik-Potwierdzony-Niepotwierdzony' },
 }
 
 export default function PrzelacznikTakNie({ etykieta, wlaczony, ustawWlaczony, disabled, wariant = 'tak-nie' }: WlasciwosciPrzelacznika) {

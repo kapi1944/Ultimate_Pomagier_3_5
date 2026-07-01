@@ -197,6 +197,14 @@
   gap: 10px;
 }
 
+.kartoteki__formularz > label {
+  display: grid;
+  gap: 5px;
+  color: #dff7e6;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
 .kartoteki__formularz--dwa {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }

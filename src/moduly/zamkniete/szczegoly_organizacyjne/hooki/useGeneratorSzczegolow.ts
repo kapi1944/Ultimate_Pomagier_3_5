@@ -1,5 +1,10 @@
 import { useMemo, useState } from 'react'
 import {
+  pobierzLokalizacjeZMagazynu,
+  pobierzPotwierdzonyMiejscownikLokalizacji,
+  znajdzLokalizacjeDlaMiejsca,
+} from '../../../../kartoteki/lokalizacje/magazynLokalizacji'
+import {
   poczatkowaFirma,
   poczatkowaGrupa,
   poczatkoweDaneFormularza,
@@ -269,6 +274,7 @@ function scalGrupe(obecna: GrupaSzkoleniowa, czesciowa: Partial<GrupaSzkoleniowa
 
 function zbudujProblemyWalidacji(dane: DaneFormularza, grupy: GrupaSzkoleniowa[]): ProblemWalidacji[] {
   const problemy: ProblemWalidacji[] = []
+  const lokalizacje = pobierzLokalizacjeZMagazynu()
 
   function dodaj(sekcja: string, pole: string, komunikat: string, czyBlokuje = true, poziom: ProblemWalidacji['poziom'] = 'blad') {
     problemy.push({ sekcja, pole, komunikat, poziom, czyBlokuje })
@@ -325,6 +331,14 @@ function zbudujProblemyWalidacji(dane: DaneFormularza, grupy: GrupaSzkoleniowa[]
 
     if (!Number.isFinite(grupa.terminPlatnosci) || grupa.terminPlatnosci < 0) {
       dodaj('Grupy szkoleniowe', `${nazwaGrupy}: Termin płatności`, `${nazwaGrupy}: termin płatności nie może być ujemny`)
+    }
+
+
+    const lokalizacja = grupa.formaSzkolenia === 'Online' ? null : znajdzLokalizacjeDlaMiejsca(grupa.miejsce, lokalizacje)
+    const miejscownik = lokalizacja ? pobierzPotwierdzonyMiejscownikLokalizacji(lokalizacja.klucz_lokalizacji) : null
+
+    if (miejscownik?.blad) {
+      dodaj('Grupy szkoleniowe', `${nazwaGrupy}: Miejsce`, miejscownik.blad)
     }
   })
 
@@ -455,6 +469,11 @@ export function useGeneratorSzczegolow() {
   }
 
   function zapiszWersje() {
+    if (problemyWalidacji.some((problem) => problem.komunikat === 'Odmiana nazwy tej lokalizacji nie została jeszcze potwierdzona.')) {
+      ustawKomunikat('Potwierdź odmianę lokalizacji przed zapisaniem formularza.')
+      return
+    }
+
     const wersja = zbudujWersjeRobocza(daneFormularza, grupy, adresaci, statusyPol)
     zapiszWersjeRobocza(wersja)
     ustawKopieRobocze(pobierzKopieRobocze())

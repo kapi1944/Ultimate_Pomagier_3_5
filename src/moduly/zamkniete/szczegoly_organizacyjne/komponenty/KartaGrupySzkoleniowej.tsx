@@ -1,4 +1,9 @@
 import { useMemo, useState } from 'react'
+import {
+  pobierzLokalizacjeZMagazynu,
+  ustawPotwierdzonyMiejscownikLokalizacji,
+  znajdzLokalizacjeDlaMiejsca,
+} from '../../../../kartoteki/lokalizacje/magazynLokalizacji'
 import { etykietyStatusowPol, klasyStatusowPol } from '../stale'
 import type {
   FormaSzkolenia,
@@ -112,10 +117,21 @@ export default function KartaGrupySzkoleniowej({
   duplikujGrupe,
   usunGrupe,
 }: WlasciwosciKartyGrupy) {
+  const [wersjaLokalizacji, ustawWersjeLokalizacji] = useState(0)
+  const [poprawionyMiejscownik, ustawPoprawionyMiejscownik] = useState('')
+  const lokalizacje = useMemo(() => {
+    void wersjaLokalizacji
+    return pobierzLokalizacjeZMagazynu()
+  }, [wersjaLokalizacji])
   const trenerzyDoWyboru = useMemo(() => {
     const trenerzyImportowani = grupa.trenerzy.filter((trener) => !trenerzyKartoteki.some((pozycja) => pozycja.id === trener.id))
     return [...trenerzyKartoteki, ...trenerzyImportowani]
   }, [grupa.trenerzy, trenerzyKartoteki])
+  const wybranaLokalizacja = useMemo(() => znajdzLokalizacjeDlaMiejsca(grupa.miejsce, lokalizacje), [grupa.miejsce, lokalizacje])
+  const lokalizacjeDoPodpowiedzi = useMemo(() => {
+    const fraza = grupa.miejsce.trim().toLocaleLowerCase('pl')
+    return lokalizacje.filter((lokalizacja) => !fraza || lokalizacja.nazwa.toLocaleLowerCase('pl').includes(fraza)).slice(0, 50)
+  }, [grupa.miejsce, lokalizacje])
 
   function ustawTrenera(idTrenera: string) {
     const trener = trenerzyDoWyboru.find((pozycja) => pozycja.id === idTrenera)
@@ -139,6 +155,28 @@ export default function KartaGrupySzkoleniowej({
       }),
       `grupy.${indeks}.formaSzkolenia`,
     )
+  }
+
+  function ustawMiejsce(miejsce: string) {
+    ustawPoprawionyMiejscownik('')
+    aktualizujGrupe(grupa.id, (obecna) => ({ ...obecna, miejsce }), `grupy.${indeks}.miejsce`)
+  }
+
+  function potwierdzMiejscownik(wartosc?: string) {
+    if (!wybranaLokalizacja) {
+      return
+    }
+
+    const miejscownik = (wartosc ?? wybranaLokalizacja.miejscownik_pelny_auto).trim()
+
+    if (!miejscownik) {
+      return
+    }
+
+    ustawPotwierdzonyMiejscownikLokalizacji(wybranaLokalizacja.klucz_lokalizacji, miejscownik)
+    ustawPoprawionyMiejscownik('')
+    ustawWersjeLokalizacji((obecna) => obecna + 1)
+    aktualizujGrupe(grupa.id, (obecna) => ({ ...obecna, miejsce: obecna.miejsce }), `grupy.${indeks}.miejsce`)
   }
 
   return (
@@ -227,14 +265,45 @@ export default function KartaGrupySzkoleniowej({
       </div>
 
       <div className="szczegoly-siatka szczegoly-siatka--dwa">
-        <PoleTekstowe
-          disabled={grupa.formaSzkolenia === 'Online'}
-          etykieta="Miejsce"
-          pole={`grupy.${indeks}.miejsce`}
-          statusyPol={statusyPol}
-          wartosc={grupa.miejsce}
-          ustawWartosc={(wartosc) => aktualizujGrupe(grupa.id, (obecna) => ({ ...obecna, miejsce: wartosc }), `grupy.${indeks}.miejsce`)}
-        />
+        <div
+          className={`szczegoly-pole ${statusyPol[`grupy.${indeks}.miejsce`] ? klasyStatusowPol[statusyPol[`grupy.${indeks}.miejsce`]!] : ''} ${
+            grupa.formaSzkolenia === 'Online' ? 'szczegoly-pole--disabled' : ''
+          }`}
+        >
+          <span className="szczegoly-pole__naglowek">
+            <span>Miejsce</span>
+            <ZnacznikStatusu pole={`grupy.${indeks}.miejsce`} statusyPol={statusyPol} />
+          </span>
+          <input
+            disabled={grupa.formaSzkolenia === 'Online'}
+            list={`lokalizacje-${grupa.id}`}
+            value={grupa.miejsce}
+            onChange={(zdarzenie) => ustawMiejsce(zdarzenie.target.value)}
+          />
+          <datalist id={`lokalizacje-${grupa.id}`}>
+            {lokalizacjeDoPodpowiedzi.map((lokalizacja) => (
+              <option key={lokalizacja.klucz_lokalizacji} value={lokalizacja.nazwa} />
+            ))}
+          </datalist>
+          {wybranaLokalizacja && (
+            <span className="szczegoly-pole__pomoc">Miejscownik: {wybranaLokalizacja.miejscownik_pelny_auto}</span>
+          )}
+          {wybranaLokalizacja && !wybranaLokalizacja.status_odmiany && (
+            <>
+              <span className="szczegoly-pole__blad">Odmiana nazwy tej lokalizacji nie została jeszcze potwierdzona.</span>
+              <span className="szczegoly-pole__pomoc">Czy forma miejscownika jest poprawna?</span>
+              <span className="szczegoly-akcje">
+                <button type="button" onClick={() => potwierdzMiejscownik()}>
+                  Potwierdź
+                </button>
+                <input placeholder="Poprawny miejscownik" value={poprawionyMiejscownik} onChange={(zdarzenie) => ustawPoprawionyMiejscownik(zdarzenie.target.value)} />
+                <button disabled={!poprawionyMiejscownik.trim()} type="button" onClick={() => potwierdzMiejscownik(poprawionyMiejscownik)}>
+                  Zapisz poprawkę
+                </button>
+              </span>
+            </>
+          )}
+        </div>
         <PoleTekstowe
           etykieta={grupa.formaSzkolenia === 'Online' ? 'Kto zapewnia łącze' : 'Kto zapewnia salę'}
           pole={`grupy.${indeks}.ktoZapewniaSale`}
