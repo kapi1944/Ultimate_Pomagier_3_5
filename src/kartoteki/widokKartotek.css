@@ -28,7 +28,8 @@
 }
 
 .kartoteki__tytul {
-  align-items: flex-start;
+  align-items: center;
+  gap: 18px;
 }
 
 .kartoteki__tytul h1 {
@@ -38,18 +39,24 @@
 }
 
 .kartoteki__tytul p {
-  margin: 6px 0 0;
+  margin: 0;
   color: #9ccfab;
   font-size: 0.86rem;
 }
 
 .kartoteki__ikona {
+  font-family: Inter, system-ui, Arial, sans-serif;
+  line-height: normal;
+  font-weight: 400;
+  --szerokosc-menu-bocznego: 280px;
+  box-sizing: border-box;
   display: inline-grid;
-  width: 24px;
-  height: 24px;
+  width: 64px;
+  height: 64px;
   place-items: center;
   color: #38f585;
-  font-size: 1.25rem;
+  font-size: 5rem;
+  transform: translateY(-24px);
 }
 
 .kartoteki__ikona--zolty {
@@ -101,6 +108,8 @@
 
 .kartoteki__paginacja--panel {
   justify-content: space-between;
+  min-height: 100px;
+  max-height: 100px;
   border: 1px solid rgba(74, 222, 128, 0.18);
   border-radius: 8px;
   background: #03180c;
@@ -192,6 +201,25 @@
   color: #dff7e6;
 }
 
+.kartoteki .szczegoly-przelacznik-tak-nie {
+  min-height: 0;
+  border: 0;
+  background: transparent;
+  color: #e9fff0;
+  cursor: pointer;
+  padding: 0;
+}
+
+.kartoteki .szczegoly-przelacznik-tak-nie:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.kartoteki__edycja-trenera .kartoteki__akcje-formularza {
+  justify-content: flex-start;
+  margin-left: 96px;
+}
+
 .kartoteki__formularz {
   display: grid;
   gap: 10px;
@@ -239,9 +267,16 @@
 }
 
 .kartoteki__liczba-pozycji {
-  display: grid;
+  display: inline-flex;
+  align-items: center;
   min-width: 170px;
-  gap: 5px;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.kartoteki__liczba-pozycji select {
+  width: auto;
+  min-width: 82px;
 }
 
 .kartoteki__przycisk {

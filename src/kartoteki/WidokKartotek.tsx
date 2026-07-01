@@ -517,7 +517,7 @@ function PanelPaginacjiKartoteki({
   return (
     <div className="kartoteki__paginacja kartoteki__paginacja--panel">
       <label className="kartoteki__liczba-pozycji">
-        Pozycji na stronie
+        <span>Pozycji na stronie</span>
         <select value={liczbaPozycjiNaStronie} onChange={(zdarzenie) => ustawLiczbePozycjiNaStronie(Number(zdarzenie.target.value))}>
           {opcjeLiczbyPozycji.map((opcja) => (
             <option key={opcja} value={opcja}>
