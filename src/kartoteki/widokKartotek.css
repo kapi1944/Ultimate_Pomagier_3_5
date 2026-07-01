@@ -107,9 +107,9 @@
 }
 
 .kartoteki__paginacja--panel {
+  box-sizing: border-box;
   justify-content: space-between;
-  min-height: 100px;
-  max-height: 100px;
+  height: 100px;
   border: 1px solid rgba(74, 222, 128, 0.18);
   border-radius: 8px;
   background: #03180c;
@@ -171,6 +171,10 @@
   transition: max-height 0.28s ease, opacity 0.2s ease;
 }
 
+.kartoteki__edycja-wiersza--klient.kartoteki__edycja-wiersza--otwarta {
+  max-height: 620px;
+}
+
 .kartoteki__edycja-trenera {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -213,6 +217,11 @@
 .kartoteki .szczegoly-przelacznik-tak-nie:disabled {
   cursor: not-allowed;
   opacity: 0.62;
+}
+
+.kartoteki__edycja-trenera .kartoteki__pole-przelacznika .szczegoly-przelacznik-tak-nie {
+  justify-self: start;
+  margin-left: 5px;
 }
 
 .kartoteki__edycja-trenera .kartoteki__akcje-formularza {
@@ -394,12 +403,25 @@
   font-size: 0.86rem;
 }
 
-.kartoteki__status--ok {
-  color: #38f585;
+.kartoteki__wiersz-tabeli--edytowany td {
+  background: rgba(56, 245, 133, 0.12);
 }
 
-.kartoteki__status--uwaga {
-  color: #facc15;
+.kartoteki__tabela td input,
+.kartoteki__tabela td select {
+  min-width: 150px;
+}
+
+.kartoteki__wiersz-tabeli--edytowany .szczegoly-przelacznik-Potwierdzony-Niepotwierdzony .szczegoly-przelacznik-tak-nie__tekst {
+  display: none;
+}
+
+.kartoteki__tabela td.kartoteki__status--ok {
+  color: #7dffb2;
+}
+
+.kartoteki__tabela td.kartoteki__status--uwaga {
+  color: #ff8f8f;
 }
 
 @media (max-width: 1180px) {

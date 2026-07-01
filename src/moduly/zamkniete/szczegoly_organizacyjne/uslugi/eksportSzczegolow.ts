@@ -24,6 +24,16 @@ function formatujKwote(wartosc: number) {
   }).format(wartosc)
 }
 
+function opiszRodzajGodzin(grupa: GrupaSzkoleniowa) {
+  if (grupa.rodzajGodzin !== 'Niestandardowe') {
+    return grupa.rodzajGodzin
+  }
+
+  const nazwa = grupa.nazwaNiestandardowychGodzin.trim() || 'Niestandardowe'
+  const minuty = grupa.liczbaMinutNiestandardowychGodzin || '-'
+  return `${nazwa} (${minuty} min)`
+}
+
 export function utworzTekstSzczegolow(dane: DaneFormularza, grupy: GrupaSzkoleniowa[]) {
   const opisGrup = grupy
     .map((grupa, indeks) => {
@@ -36,7 +46,7 @@ Forma: ${grupa.formaSzkolenia}
 Miejsce: ${grupa.miejsce || '-'}
 Kto zapewnia ${grupa.formaSzkolenia === 'Online' ? 'łącze' : 'salę'}: ${grupa.ktoZapewniaSale || '-'}
 Uczestnicy: ${grupa.liczbaUczestnikow || '-'}
-Godziny: ${grupa.liczbaGodzin || '-'} ${grupa.rodzajGodzin}
+Godziny: ${grupa.liczbaGodzin || '-'} ${opiszRodzajGodzin(grupa)}
 Cena netto: ${formatujKwote(grupa.cenaNetto)} zł (${grupa.trybCeny})
 Oświadczenie VAT: ${grupa.vat}
 Termin płatności: ${grupa.terminPlatnosci || '-'} dni

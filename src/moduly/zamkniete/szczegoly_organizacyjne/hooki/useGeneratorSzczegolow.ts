@@ -107,11 +107,26 @@ function mapujVat(wartosc: unknown): OswiadczenieVat {
 }
 
 function mapujRodzajGodzin(wartosc: unknown): RodzajGodzin {
-  if (wartosc === 'Akademickie (45 min)' || wartosc === 'dydaktyczne') {
-    return 'Akademickie (45 min)'
+  if (
+    wartosc === 'Dydaktyczne (45 min)' ||
+    wartosc === 'Edukacyjne (45 min)' ||
+    wartosc === 'Szkoleniowe (45 min)' ||
+    wartosc === 'Lekcyjne (45 min)' ||
+    wartosc === 'Zegarowe (60 min)' ||
+    wartosc === 'Niestandardowe'
+  ) {
+    return wartosc
   }
 
-  return 'Zajęciowe (60 min)'
+  if (wartosc === 'Akademickie (45 min)' || wartosc === 'dydaktyczne') {
+    return 'Dydaktyczne (45 min)'
+  }
+
+  if (wartosc === 'Zajęciowe (60 min)' || wartosc === 'zegarowe') {
+    return 'Zegarowe (60 min)'
+  }
+
+  return 'Dydaktyczne (45 min)'
 }
 
 function mapujForme(wartosc: unknown): FormaSzkolenia {
@@ -179,6 +194,8 @@ function normalizujGrupe(grupa?: Partial<GrupaSzkoleniowa>, indeks = 0): GrupaSz
     cenaNetto: Number(obecna.cenaNetto) || 0,
     terminPlatnosci: Number(obecna.terminPlatnosci) || 0,
     rodzajGodzin: mapujRodzajGodzin(obecna.rodzajGodzin),
+    nazwaNiestandardowychGodzin: String(obecna.nazwaNiestandardowychGodzin ?? ''),
+    liczbaMinutNiestandardowychGodzin: Number(obecna.liczbaMinutNiestandardowychGodzin) || 45,
     trybCeny: String(obecna.trybCeny) === 'za osobę' || String(obecna.trybCeny) === 'za uczestnika' ? 'za osobę' : 'za grupę',
     vat: mapujVat(obecna.vat),
     protokol: Boolean(obecna.protokol),
@@ -321,6 +338,10 @@ function zbudujProblemyWalidacji(dane: DaneFormularza, grupy: GrupaSzkoleniowa[]
 
     if (!Number.isFinite(grupa.liczbaGodzin) || grupa.liczbaGodzin < 0) {
       dodaj('Grupy szkoleniowe', `${nazwaGrupy}: Liczba godzin`, `${nazwaGrupy}: liczba godzin nie może być ujemna`)
+    }
+
+    if (grupa.rodzajGodzin === 'Niestandardowe' && (!Number.isFinite(grupa.liczbaMinutNiestandardowychGodzin) || grupa.liczbaMinutNiestandardowychGodzin < 1)) {
+      dodaj('Grupy szkoleniowe', `${nazwaGrupy}: Liczba minut trwania`, `${nazwaGrupy}: wpisz liczbę minut trwania minimum 1`)
     }
 
     if (!Number.isFinite(grupa.cenaNetto)) {

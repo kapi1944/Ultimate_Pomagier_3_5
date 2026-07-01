@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   parsujTekstProgramu,
   type PodpunktProgramu,
@@ -262,6 +262,10 @@ const styleProgramuSzkolenia = `
 .program-szkolen__etykieta--poziom {
   grid-template-columns: 1fr 108px;
   align-items: center;
+}
+
+.program-szkolen__dopisek-etykiety {
+  font-weight: 400;
 }
 
 .program-szkolen__pole,
@@ -810,7 +814,7 @@ export function WidokProgramowSzkolen() {
   const profil = daneProfilowFirmy[ustawienia.profilFirmy]
   const kolorNiepoprawny = !sprawdzHex(ustawienia.kolorAkcentuProgramu)
   const gruboscObramowaniaTytulu = Number.isFinite(ustawienia.gruboscObramowaniaTytulu)
-    ? Math.min(20, Math.max(0.1, ustawienia.gruboscObramowaniaTytulu))
+    ? Math.min(10, Math.max(0, ustawienia.gruboscObramowaniaTytulu))
     : domyslneUstawienia.gruboscObramowaniaTytulu
   const etykietaGrubosciObramowaniaTytulu = gruboscObramowaniaTytulu.toFixed(1).replace('.', ',')
   const czyListaGlownaNumerowana = ustawienia.stylListyGlownej === 'numeracja'
@@ -1252,8 +1256,8 @@ export function WidokProgramowSzkolen() {
                 Grubość obramowania tytułu: {etykietaGrubosciObramowaniaTytulu}
                 <input
                   className="program-szkolen__pole"
-                  min={0.1}
-                  max={20}
+                  min={0}
+                  max={10}
                   onChange={(zdarzenie) => zmienUstawienie('gruboscObramowaniaTytulu', Number(zdarzenie.target.value))}
                   step={0.1}
                   type="range"
@@ -1359,25 +1363,36 @@ export function WidokProgramowSzkolen() {
                   const czyPoziomListyGlownejNumerowany = indeks === 0 && czyListaGlownaNumerowana
 
                   return (
-                    <label className="program-szkolen__etykieta program-szkolen__etykieta--poziom" key={indeks}>
-                      Poziom {indeks + 1}
-                      <select
-                        className="program-szkolen__lista program-szkolen__lista--punktor-poziomu"
-                        disabled={czyPoziomListyGlownejNumerowany}
-                        onChange={(zdarzenie) => zmienStylPoziomu(indeks, zdarzenie.target.value)}
-                        value={czyPoziomListyGlownejNumerowany ? etykietaNumeracjiListyGlownej : styl}
-                      >
-                        {czyPoziomListyGlownejNumerowany ? (
-                          <option value={etykietaNumeracjiListyGlownej}>{etykietaNumeracjiListyGlownej}</option>
-                        ) : (
-                          punktoryDoWyboru.map((punktor) => (
-                            <option key={punktor} value={punktor}>
-                              {punktor}
-                            </option>
-                          ))
-                        )}
-                      </select>
-                    </label>
+                    <Fragment key={indeks}>
+                      <label className="program-szkolen__etykieta program-szkolen__etykieta--poziom">
+                        <span>
+                          Poziom {indeks + 1}
+                          {indeks === 0 && (
+                            <>
+                              {' '}
+                              <span className="program-szkolen__dopisek-etykiety">(nagłówek)</span>
+                            </>
+                          )}
+                        </span>
+                        <select
+                          className="program-szkolen__lista program-szkolen__lista--punktor-poziomu"
+                          disabled={czyPoziomListyGlownejNumerowany}
+                          onChange={(zdarzenie) => zmienStylPoziomu(indeks, zdarzenie.target.value)}
+                          value={czyPoziomListyGlownejNumerowany ? etykietaNumeracjiListyGlownej : styl}
+                        >
+                          {czyPoziomListyGlownejNumerowany ? (
+                            <option value={etykietaNumeracjiListyGlownej}>{etykietaNumeracjiListyGlownej}</option>
+                          ) : (
+                            punktoryDoWyboru.map((punktor) => (
+                              <option key={punktor} value={punktor}>
+                                {punktor}
+                              </option>
+                            ))
+                          )}
+                        </select>
+                      </label>
+                      {indeks === 0 && <div className="program-szkolen__separator" />}
+                    </Fragment>
                   )
                 })}
                 {czyPokazacPoziomyPodpunktow && (

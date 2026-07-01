@@ -1,4 +1,5 @@
-import { useState, type ChangeEvent } from 'react'
+import { useMemo, useState, type ChangeEvent, type ReactNode } from 'react'
+import { pobierzLokalizacjeZMagazynu } from '../../../../kartoteki/lokalizacje/magazynLokalizacji'
 import KartaGrupySzkoleniowej from '../komponenty/KartaGrupySzkoleniowej'
 import PanelWykrytychProblemow from '../komponenty/PanelWykrytychProblemow'
 import PasekStickySzczegolow from '../komponenty/PasekStickySzczegolow'
@@ -58,6 +59,8 @@ type WlasciwosciPolFirmy = {
   disabled?: boolean
   statusyPol: ReturnType<typeof useGeneratorSzczegolow>['statusyPol']
   aktualizujPole: (klucz: KluczFirmy, wartosc: string) => void
+  miejscowosciDoPodpowiedzi: string[]
+  elementNaglowka?: ReactNode
 }
 
 type WlasciwosciWierszaWymogu = {
@@ -79,12 +82,21 @@ type PodgladWzoruKlienta = {
   typ: string
 }
 
-function PolaFirmy({ tytul, prefix, dane, disabled, statusyPol, aktualizujPole }: WlasciwosciPolFirmy) {
+function wybierzPodpowiedziMiejscowosci(miejscowosci: string[], wartosc: string) {
+  const fraza = wartosc.trim().toLocaleLowerCase('pl')
+  return miejscowosci.filter((miejscowosc) => !fraza || miejscowosc.toLocaleLowerCase('pl').includes(fraza)).slice(0, 50)
+}
+
+function PolaFirmy({ tytul, prefix, dane, disabled, statusyPol, aktualizujPole, miejscowosciDoPodpowiedzi, elementNaglowka }: WlasciwosciPolFirmy) {
   const czyNabywca = prefix === 'nabywca'
+  const podpowiedziMiasta = wybierzPodpowiedziMiejscowosci(miejscowosciDoPodpowiedzi, dane.miasto)
 
   return (
     <section className="szczegoly-kolumna-danych">
-      <h3>{tytul}</h3>
+      <div className="szczegoly-kolumna-danych__naglowek">
+        <h3>{tytul}</h3>
+        {elementNaglowka}
+      </div>
       <PoleTekstowe
         disabled={disabled}
         etykieta={czyNabywca ? 'Nazwa nabywcy' : 'Nazwa firmy odbiorcy'}
@@ -100,7 +112,16 @@ function PolaFirmy({ tytul, prefix, dane, disabled, statusyPol, aktualizujPole }
       </div>
       <div className="szczegoly-siatka szczegoly-siatka--trzy">
         <PoleTekstowe disabled={disabled} etykieta="Kod pocztowy" pole={`${prefix}.kodPocztowy`} statusyPol={statusyPol} wartosc={dane.kodPocztowy} ustawWartosc={(wartosc) => aktualizujPole('kodPocztowy', wartosc)} />
-        <PoleTekstowe disabled={disabled} etykieta="Miasto" pole={`${prefix}.miasto`} statusyPol={statusyPol} wartosc={dane.miasto} ustawWartosc={(wartosc) => aktualizujPole('miasto', wartosc)} />
+        <PoleTekstowe
+          disabled={disabled}
+          etykieta="Miasto"
+          listaPodpowiedziId={`miejscowosci-${prefix}`}
+          podpowiedzi={podpowiedziMiasta}
+          pole={`${prefix}.miasto`}
+          statusyPol={statusyPol}
+          wartosc={dane.miasto}
+          ustawWartosc={(wartosc) => aktualizujPole('miasto', wartosc)}
+        />
         <PoleTekstowe disabled={disabled} etykieta="Kraj" pole={`${prefix}.kraj`} statusyPol={statusyPol} wartosc={dane.kraj} ustawWartosc={(wartosc) => aktualizujPole('kraj', wartosc)} />
       </div>
       <div className="szczegoly-siatka szczegoly-siatka--dwa">
@@ -194,6 +215,11 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
   const statusFormularza = generator.czyFormularzKompletny ? 'Kompletny' : `Niepełny (${liczbaProblemowBlokujacych})`
   const bladTytulu = generator.daneFormularza.tytulSzkolenia.trim() ? undefined : 'Pole wymagane'
   const bladKlienta = generator.daneFormularza.nazwaKlienta.trim() ? undefined : 'Pole wymagane'
+  const miejscowosciDoPodpowiedzi = useMemo(
+    () => [...new Set(pobierzLokalizacjeZMagazynu().map((lokalizacja) => lokalizacja.nazwa))].sort((pierwsza, druga) => pierwsza.localeCompare(druga, 'pl')),
+    [],
+  )
+  const podpowiedziMiastaPaczki = wybierzPodpowiedziMiejscowosci(miejscowosciDoPodpowiedzi, generator.daneFormularza.odbiorcaPaczki.miasto)
 
   function aktualizujNabywce(klucz: KluczFirmy, wartosc: string) {
     generator.aktualizujDane(
@@ -486,19 +512,29 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
             wartosc={generator.daneFormularza.organizator}
             ustawWartosc={(wartosc) => generator.aktualizujDane((dane) => ({ ...dane, organizator: wartosc as OrganizatorSzkolenia }), 'organizator')}
           />
-          <PoleCheckbox
-            etykieta="Nabywca jest odbiorcą"
-            pole="czyNabywcaJestOdbiorca"
-            statusyPol={generator.statusyPol}
-            zaznaczone={generator.daneFormularza.czyNabywcaJestOdbiorca}
-            ustawZaznaczone={ustawCzyNabywcaJestOdbiorca}
-          />
           <div className="szczegoly-kolumny-danych">
-            <PolaFirmy aktualizujPole={aktualizujNabywce} dane={generator.daneFormularza.nabywca} prefix="nabywca" statusyPol={generator.statusyPol} tytul="Nabywca" />
+            <PolaFirmy
+              aktualizujPole={aktualizujNabywce}
+              dane={generator.daneFormularza.nabywca}
+              elementNaglowka={
+                <PoleCheckbox
+                  etykieta="Nabywca jest odbiorcą"
+                  pole="czyNabywcaJestOdbiorca"
+                  statusyPol={generator.statusyPol}
+                  zaznaczone={generator.daneFormularza.czyNabywcaJestOdbiorca}
+                  ustawZaznaczone={ustawCzyNabywcaJestOdbiorca}
+                />
+              }
+              miejscowosciDoPodpowiedzi={miejscowosciDoPodpowiedzi}
+              prefix="nabywca"
+              statusyPol={generator.statusyPol}
+              tytul="Nabywca"
+            />
             <PolaFirmy
               aktualizujPole={aktualizujOdbiorce}
               dane={generator.daneFormularza.odbiorca}
               disabled={generator.daneFormularza.czyNabywcaJestOdbiorca}
+              miejscowosciDoPodpowiedzi={miejscowosciDoPodpowiedzi}
               prefix="odbiorca"
               statusyPol={generator.statusyPol}
               tytul="Odbiorca"
@@ -506,127 +542,134 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
           </div>
         </SekcjaFormularza>
 
-        <SekcjaFormularza id="pakiet-podstawowy" tytul="Pakiet podstawowy">
-          <div className="szczegoly-lista-wymogow">
-            {pozycjePakietu.map(([klucz, etykieta]) => (
-              <WierszWymoguRozszerzony
-                etykieta={etykieta}
-                key={klucz}
-                wlaczony={Boolean(generator.daneFormularza.dokumentacja[klucz])}
-                ustawWlaczony={(wartosc) => aktualizujDokumentacje(klucz, wartosc)}
-                wariantPrzelacznika="druk-online"
-                wzorKlienta={Boolean(generator.daneFormularza.dokumentacja.wzoryKlienta[klucz])}
-                ustawWzorKlienta={(wartosc) => aktualizujWzorDokumentacji(klucz, wartosc)}
-                szczegolyWzoruKlienta={generator.daneFormularza.dokumentacja.szczegolyWzorowKlienta[klucz]}
-                podgladWzoruKlienta={podgladyWzorowKlienta[klucz]}
-                ustawPlikWzoruKlienta={(plik) => aktualizujPlikWzoruDokumentacji(klucz, plik)}
-                ustawUwagiWzoruKlienta={(uwagi) => aktualizujSzczegolyWzoruDokumentacji(klucz, 'uwagi', uwagi)}
-              />
-            ))}
-          </div>
-        </SekcjaFormularza>
-
-        <SekcjaFormularza id="materialy-szkoleniowe" tytul="Materiały szkoleniowe">
-          <div className="szczegoly-lista-wymogow">
-            {pozycjeMaterialow.map(([klucz, etykieta]) => (
-              <WierszWymoguRozszerzony
-                etykieta={etykieta}
-                key={klucz}
-                wlaczony={Boolean(generator.daneFormularza.dokumentacja[klucz])}
-                ustawWlaczony={(wartosc) => aktualizujDokumentacje(klucz, wartosc)}
-                wariantPrzelacznika="druk-online"
-                wzorKlienta={Boolean(generator.daneFormularza.dokumentacja.wzoryKlienta[klucz])}
-                ustawWzorKlienta={(wartosc) => aktualizujWzorDokumentacji(klucz, wartosc)}
-                szczegolyWzoruKlienta={generator.daneFormularza.dokumentacja.szczegolyWzorowKlienta[klucz]}
-                podgladWzoruKlienta={podgladyWzorowKlienta[klucz]}
-                ustawPlikWzoruKlienta={(plik) => aktualizujPlikWzoruDokumentacji(klucz, plik)}
-                ustawUwagiWzoruKlienta={(uwagi) => aktualizujSzczegolyWzoruDokumentacji(klucz, 'uwagi', uwagi)}
-              />
-            ))}
-          </div>
-        </SekcjaFormularza>
-
-        <SekcjaFormularza id="wymogi-materialow" tytul="Wymogi dotyczące materiałów">
-          <div className="szczegoly-lista-wymogow">
-            {pozycjeWymogowMaterialow.map(([klucz, etykieta]) => (
-              <WierszWymoguRozszerzony
-                etykieta={etykieta}
-                key={klucz}
-                wlaczony={Boolean(generator.daneFormularza.dokumentacja[klucz])}
-                ustawWlaczony={(wartosc) => aktualizujDokumentacje(klucz, wartosc)}
-                pokazWzorKlienta={false}
-                wzorKlienta={Boolean(generator.daneFormularza.dokumentacja.wzoryKlienta[klucz])}
-                ustawWzorKlienta={(wartosc) => aktualizujWzorDokumentacji(klucz, wartosc)}
-              />
-            ))}
-            <div className="szczegoly-wiersz-wymogu">
-              <span>Logotypy</span>
-              <PrzelacznikTakNie
-                etykieta="Logotypy"
-                wlaczony={generator.daneFormularza.dokumentacja.logotypy === 'Tak'}
-                ustawWlaczony={(wartosc) => aktualizujDokumentacje('logotypy', wartosc ? 'Tak' : 'Nie')}
-              />
+        <div className="szczegoly-uklad-sekcji">
+          <SekcjaFormularza id="pakiet-podstawowy" tytul="Pakiet podstawowy">
+            <div className="szczegoly-lista-wymogow">
+              {pozycjePakietu.map(([klucz, etykieta]) => (
+                <WierszWymoguRozszerzony
+                  etykieta={etykieta}
+                  key={klucz}
+                  wlaczony={Boolean(generator.daneFormularza.dokumentacja[klucz])}
+                  ustawWlaczony={(wartosc) => aktualizujDokumentacje(klucz, wartosc)}
+                  wariantPrzelacznika="druk-online"
+                  wzorKlienta={Boolean(generator.daneFormularza.dokumentacja.wzoryKlienta[klucz])}
+                  ustawWzorKlienta={(wartosc) => aktualizujWzorDokumentacji(klucz, wartosc)}
+                  szczegolyWzoruKlienta={generator.daneFormularza.dokumentacja.szczegolyWzorowKlienta[klucz]}
+                  podgladWzoruKlienta={podgladyWzorowKlienta[klucz]}
+                  ustawPlikWzoruKlienta={(plik) => aktualizujPlikWzoruDokumentacji(klucz, plik)}
+                  ustawUwagiWzoruKlienta={(uwagi) => aktualizujSzczegolyWzoruDokumentacji(klucz, 'uwagi', uwagi)}
+                />
+              ))}
             </div>
-            {generator.daneFormularza.dokumentacja.logotypy === 'Tak' && (
-              <>
-                <label className="szczegoly-pole">
-                  <span className="szczegoly-pole__naglowek">Plik logotypu</span>
-                  <input accept=".png,.jpg,.jpeg,.svg" type="file" onChange={obsluzPlikLogotypu} />
-                </label>
-                {generator.daneFormularza.logotypy.podglad && <img alt="Podgląd logotypu" className="szczegoly-logo-podglad" src={generator.daneFormularza.logotypy.podglad} />}
-              </>
-            )}
-            <hr className="szczegoly-separator" />
-            <WierszWymoguRozszerzony
-              etykieta={'"+1" Dodatkowy egzemplarz'}
-              wlaczony={generator.daneFormularza.dokumentacja.plusJedenEgzemplarz}
-              ustawWlaczony={(wartosc) => aktualizujDokumentacje('plusJedenEgzemplarz', wartosc)}
-              pokazWzorKlienta={false}
-              wzorKlienta={Boolean(generator.daneFormularza.dokumentacja.wzoryKlienta.plusJedenEgzemplarz)}
-              ustawWzorKlienta={(wartosc) => aktualizujWzorDokumentacji('plusJedenEgzemplarz', wartosc)}
-            />
-          </div>
-        </SekcjaFormularza>
+          </SekcjaFormularza>
 
-        <SekcjaFormularza id="dodatkowe-wymogi" tytul="Dodatkowe wymogi">
-          <div className="szczegoly-lista-wymogow">
-            <div
-              className={`szczegoly-wiersz-wymogu szczegoly-wiersz-wymogu--przyjazd ${
-                generator.daneFormularza.dodatkoweWymogi.wczesniejszyPrzyjazdTrenera ? 'szczegoly-wiersz-wymogu--przyjazd-aktywny' : ''
-              }`}
-            >
-              <span>Wcześniejszy przyjazd trenera</span>
-              {generator.daneFormularza.dodatkoweWymogi.wczesniejszyPrzyjazdTrenera && (
-                <label className="szczegoly-pole-minut">
-                  <span>Ile minut:</span>
-                  <input
-                    aria-invalid={false}
-                    min={0}
-                    step={1}
-                    type="number"
-                    value={generator.daneFormularza.dodatkoweWymogi.minutyWczesniej}
-                    onChange={(zdarzenie) => aktualizujDodatkowyWymog('minutyWczesniej', Number(zdarzenie.target.value))}
-                  />
-                </label>
+          <SekcjaFormularza id="dodatkowe-wymogi" tytul="Dodatkowe wymogi">
+            <div className="szczegoly-lista-wymogow">
+              <div
+                className={`szczegoly-wiersz-wymogu szczegoly-wiersz-wymogu--przyjazd ${
+                  generator.daneFormularza.dodatkoweWymogi.wczesniejszyPrzyjazdTrenera ? 'szczegoly-wiersz-wymogu--przyjazd-aktywny' : ''
+                }`}
+              >
+                <span>Wcześniejszy przyjazd trenera</span>
+                {generator.daneFormularza.dodatkoweWymogi.wczesniejszyPrzyjazdTrenera && (
+                  <label className="szczegoly-pole-minut">
+                    <span>Ile minut:</span>
+                    <input
+                      aria-invalid={false}
+                      min={0}
+                      step={1}
+                      type="number"
+                      value={generator.daneFormularza.dodatkoweWymogi.minutyWczesniej}
+                      onChange={(zdarzenie) => aktualizujDodatkowyWymog('minutyWczesniej', Number(zdarzenie.target.value))}
+                    />
+                  </label>
+                )}
+                <PrzelacznikTakNie
+                  etykieta="Wcześniejszy przyjazd trenera"
+                  wlaczony={generator.daneFormularza.dodatkoweWymogi.wczesniejszyPrzyjazdTrenera}
+                  ustawWlaczony={(wartosc) => aktualizujDodatkowyWymog('wczesniejszyPrzyjazdTrenera', wartosc)}
+                />
+              </div>
+              {pozycjeDodatkowychWymogow.map(([klucz, etykieta]) => (
+                <WierszWymoguRozszerzony
+                  etykieta={etykieta}
+                  key={klucz}
+                  wlaczony={Boolean(generator.daneFormularza.dodatkoweWymogi[klucz])}
+                  ustawWlaczony={(wartosc) => aktualizujDodatkowyWymog(klucz, wartosc)}
+                  pokazWzorKlienta={false}
+                  wzorKlienta={Boolean(generator.daneFormularza.dodatkoweWymogi.wzoryKlienta[klucz])}
+                  ustawWzorKlienta={(wartosc) => aktualizujWzorDodatkowegoWymogu(klucz, wartosc)}
+                />
+              ))}
+            </div>
+          </SekcjaFormularza>
+        </div>
+
+        <div className="szczegoly-uklad-sekcji">
+          <SekcjaFormularza id="materialy-szkoleniowe" tytul="Materiały szkoleniowe">
+            <div className="szczegoly-lista-wymogow">
+              {pozycjeMaterialow.map(([klucz, etykieta]) => (
+                <WierszWymoguRozszerzony
+                  etykieta={etykieta}
+                  key={klucz}
+                  wlaczony={Boolean(generator.daneFormularza.dokumentacja[klucz])}
+                  ustawWlaczony={(wartosc) => aktualizujDokumentacje(klucz, wartosc)}
+                  wariantPrzelacznika="druk-online"
+                  wzorKlienta={Boolean(generator.daneFormularza.dokumentacja.wzoryKlienta[klucz])}
+                  ustawWzorKlienta={(wartosc) => aktualizujWzorDokumentacji(klucz, wartosc)}
+                  szczegolyWzoruKlienta={generator.daneFormularza.dokumentacja.szczegolyWzorowKlienta[klucz]}
+                  podgladWzoruKlienta={podgladyWzorowKlienta[klucz]}
+                  ustawPlikWzoruKlienta={(plik) => aktualizujPlikWzoruDokumentacji(klucz, plik)}
+                  ustawUwagiWzoruKlienta={(uwagi) => aktualizujSzczegolyWzoruDokumentacji(klucz, 'uwagi', uwagi)}
+                />
+              ))}
+            </div>
+          </SekcjaFormularza>
+
+          <SekcjaFormularza id="wymogi-materialow" tytul="Wymogi dotyczące materiałów">
+            <div className="szczegoly-lista-wymogow">
+              {pozycjeWymogowMaterialow.map(([klucz, etykieta]) => (
+                <WierszWymoguRozszerzony
+                  etykieta={etykieta}
+                  key={klucz}
+                  wlaczony={Boolean(generator.daneFormularza.dokumentacja[klucz])}
+                  ustawWlaczony={(wartosc) => aktualizujDokumentacje(klucz, wartosc)}
+                  pokazWzorKlienta={false}
+                  wzorKlienta={Boolean(generator.daneFormularza.dokumentacja.wzoryKlienta[klucz])}
+                  ustawWzorKlienta={(wartosc) => aktualizujWzorDokumentacji(klucz, wartosc)}
+                />
+              ))}
+              <div className="szczegoly-wiersz-wymogu">
+                <span>Logotypy</span>
+                <PrzelacznikTakNie
+                  etykieta="Logotypy"
+                  wlaczony={generator.daneFormularza.dokumentacja.logotypy === 'Tak'}
+                  ustawWlaczony={(wartosc) => aktualizujDokumentacje('logotypy', wartosc ? 'Tak' : 'Nie')}
+                />
+              </div>
+              {generator.daneFormularza.dokumentacja.logotypy === 'Tak' && (
+                <>
+                  <label className="szczegoly-pole">
+                    <span className="szczegoly-pole__naglowek">Plik logotypu</span>
+                    <input accept=".png,.jpg,.jpeg,.svg" type="file" onChange={obsluzPlikLogotypu} />
+                  </label>
+                  {generator.daneFormularza.logotypy.podglad && <img alt="Podgląd logotypu" className="szczegoly-logo-podglad" src={generator.daneFormularza.logotypy.podglad} />}
+                </>
               )}
-              <PrzelacznikTakNie
-                etykieta="Wcześniejszy przyjazd trenera"
-                wlaczony={generator.daneFormularza.dodatkoweWymogi.wczesniejszyPrzyjazdTrenera}
-                ustawWlaczony={(wartosc) => aktualizujDodatkowyWymog('wczesniejszyPrzyjazdTrenera', wartosc)}
+              <hr className="szczegoly-separator" />
+              <WierszWymoguRozszerzony
+                etykieta={'"+1" Dodatkowy egzemplarz'}
+                wlaczony={generator.daneFormularza.dokumentacja.plusJedenEgzemplarz}
+                ustawWlaczony={(wartosc) => aktualizujDokumentacje('plusJedenEgzemplarz', wartosc)}
+                pokazWzorKlienta={false}
+                wzorKlienta={Boolean(generator.daneFormularza.dokumentacja.wzoryKlienta.plusJedenEgzemplarz)}
+                ustawWzorKlienta={(wartosc) => aktualizujWzorDokumentacji('plusJedenEgzemplarz', wartosc)}
               />
             </div>
-            {pozycjeDodatkowychWymogow.map(([klucz, etykieta]) => (
-              <WierszWymoguRozszerzony
-                etykieta={etykieta}
-                key={klucz}
-                wlaczony={Boolean(generator.daneFormularza.dodatkoweWymogi[klucz])}
-                ustawWlaczony={(wartosc) => aktualizujDodatkowyWymog(klucz, wartosc)}
-                pokazWzorKlienta={false}
-                wzorKlienta={Boolean(generator.daneFormularza.dodatkoweWymogi.wzoryKlienta[klucz])}
-                ustawWzorKlienta={(wartosc) => aktualizujWzorDodatkowegoWymogu(klucz, wartosc)}
-              />
-            ))}
-          </div>
+          </SekcjaFormularza>
+        </div>
+
+        <div className="szczegoly-uwagi-dodatkowe szczegoly-uwagi-dodatkowe--osobne">
           <PoleTekstoweWielowierszowe
             etykieta="Uwagi dodatkowe"
             pole="dodatkoweWymogi.uwagi"
@@ -634,7 +677,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
             wartosc={generator.daneFormularza.dodatkoweWymogi.uwagi}
             ustawWartosc={(wartosc) => aktualizujDodatkowyWymog('uwagi', wartosc)}
           />
-        </SekcjaFormularza>
+        </div>
 
         <SekcjaFormularza id="wysylka-paczki" tytul="Wysyłka paczki">
           <PrzelacznikTakNie
@@ -658,9 +701,19 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
             </div>
             <div className="szczegoly-siatka szczegoly-siatka--trzy">
               <PoleTekstowe disabled={!generator.daneFormularza.wysylkaPaczkiDotyczy} etykieta="Kod pocztowy" pole="odbiorcaPaczki.kodPocztowy" statusyPol={generator.statusyPol} wartosc={generator.daneFormularza.odbiorcaPaczki.kodPocztowy} ustawWartosc={(wartosc) => generator.aktualizujDane((dane) => ({ ...dane, odbiorcaPaczki: { ...dane.odbiorcaPaczki, kodPocztowy: wartosc } }), 'odbiorcaPaczki.kodPocztowy')} />
-              <PoleTekstowe disabled={!generator.daneFormularza.wysylkaPaczkiDotyczy} etykieta="Miasto" pole="odbiorcaPaczki.miasto" statusyPol={generator.statusyPol} wartosc={generator.daneFormularza.odbiorcaPaczki.miasto} ustawWartosc={(wartosc) => generator.aktualizujDane((dane) => ({ ...dane, odbiorcaPaczki: { ...dane.odbiorcaPaczki, miasto: wartosc } }), 'odbiorcaPaczki.miasto')} />
+              <PoleTekstowe
+                disabled={!generator.daneFormularza.wysylkaPaczkiDotyczy}
+                etykieta="Miasto"
+                listaPodpowiedziId="miejscowosci-odbiorca-paczki"
+                podpowiedzi={podpowiedziMiastaPaczki}
+                pole="odbiorcaPaczki.miasto"
+                statusyPol={generator.statusyPol}
+                wartosc={generator.daneFormularza.odbiorcaPaczki.miasto}
+                ustawWartosc={(wartosc) => generator.aktualizujDane((dane) => ({ ...dane, odbiorcaPaczki: { ...dane.odbiorcaPaczki, miasto: wartosc } }), 'odbiorcaPaczki.miasto')}
+              />
               <PoleTekstowe disabled={!generator.daneFormularza.wysylkaPaczkiDotyczy} etykieta="Kraj" pole="odbiorcaPaczki.kraj" statusyPol={generator.statusyPol} wartosc={generator.daneFormularza.odbiorcaPaczki.kraj} ustawWartosc={(wartosc) => generator.aktualizujDane((dane) => ({ ...dane, odbiorcaPaczki: { ...dane.odbiorcaPaczki, kraj: wartosc } }), 'odbiorcaPaczki.kraj')} />
             </div>
+            <hr className="szczegoly-separator" />
             <div className="szczegoly-siatka szczegoly-siatka--trzy">
               <PoleTekstowe disabled={!generator.daneFormularza.wysylkaPaczkiDotyczy} etykieta="Imię i nazwisko odbiorcy" pole="odbiorcaPaczki.imieNazwisko" statusyPol={generator.statusyPol} wartosc={generator.daneFormularza.odbiorcaPaczki.imieNazwisko} ustawWartosc={(wartosc) => generator.aktualizujDane((dane) => ({ ...dane, odbiorcaPaczki: { ...dane.odbiorcaPaczki, imieNazwisko: wartosc } }), 'odbiorcaPaczki.imieNazwisko')} />
               <PoleTekstowe disabled={!generator.daneFormularza.wysylkaPaczkiDotyczy} etykieta="Telefon" pole="odbiorcaPaczki.telefon" statusyPol={generator.statusyPol} typ="tel" wartosc={generator.daneFormularza.odbiorcaPaczki.telefon} ustawWartosc={(wartosc) => generator.aktualizujDane((dane) => ({ ...dane, odbiorcaPaczki: { ...dane.odbiorcaPaczki, telefon: wartosc } }), 'odbiorcaPaczki.telefon')} />

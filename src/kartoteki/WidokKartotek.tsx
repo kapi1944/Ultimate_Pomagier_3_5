@@ -98,6 +98,25 @@ const etykietyTypowElementow: Record<TypElementuKartoteki, string> = {
 
 const typyElementowKartoteki = Object.keys(etykietyTypowElementow) as TypElementuKartoteki[]
 
+const wojewodztwaPolski = [
+  'dolnośląskie',
+  'kujawsko-pomorskie',
+  'lubelskie',
+  'lubuskie',
+  'łódzkie',
+  'małopolskie',
+  'mazowieckie',
+  'opolskie',
+  'podkarpackie',
+  'podlaskie',
+  'pomorskie',
+  'śląskie',
+  'świętokrzyskie',
+  'warmińsko-mazurskie',
+  'wielkopolskie',
+  'zachodniopomorskie',
+]
+
 const pustyFormularzTrenera: FormularzTrenera = {
   imie: '',
   nazwisko: '',
@@ -854,6 +873,22 @@ export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy', 
     ustawCzyFormularzLokalizacjiWidoczny(false)
   }
 
+  function zapiszEdycjeLokalizacji() {
+    if (!edytowanaLokalizacjaId || !formularzLokalizacji.nazwa.trim() || !formularzLokalizacji.miejscownik_pelny_auto.trim()) {
+      return
+    }
+
+    ustawLokalizacje((obecne) => obecne.map((lokalizacja) => (lokalizacja.klucz_lokalizacji === edytowanaLokalizacjaId ? { ...lokalizacja, ...formularzLokalizacji } : lokalizacja)))
+    pokazKomunikat('Zapisano dane lokalizacji.')
+    ustawFormularzLokalizacji(pustyFormularzLokalizacji)
+    ustawEdytowanaLokalizacjaId(null)
+  }
+
+  function anulujEdycjeLokalizacji() {
+    ustawEdytowanaLokalizacjaId(null)
+    ustawFormularzLokalizacji(pustyFormularzLokalizacji)
+  }
+
   function zapiszLokalizacje(zdarzenie: FormEvent<HTMLFormElement>) {
     zdarzenie.preventDefault()
 
@@ -1238,6 +1273,62 @@ export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy', 
                     Usuń
                   </button>
                 </div>
+                <div className={`kartoteki__edycja-wiersza kartoteki__edycja-wiersza--klient ${edytowanyKlientId === klient.id ? 'kartoteki__edycja-wiersza--otwarta' : ''}`}>
+                  <form className="kartoteki__formularz kartoteki__formularz--trzy" onSubmit={zapiszKlienta}>
+                    <label className="kartoteki__pole-szerokie">
+                      Nazwa klienta
+                      <input placeholder="Nazwa klienta" value={formularzKlienta.nazwa} onChange={(zdarzenie) => ustawFormularzKlienta((obecny) => ({ ...obecny, nazwa: zdarzenie.target.value }))} />
+                    </label>
+                    <label>
+                      NIP
+                      <input placeholder="NIP" value={formularzKlienta.nip} onChange={(zdarzenie) => ustawFormularzKlienta((obecny) => ({ ...obecny, nip: zdarzenie.target.value }))} />
+                    </label>
+                    <label>
+                      Ulica
+                      <input placeholder="Ulica" value={formularzKlienta.ulica} onChange={(zdarzenie) => ustawFormularzKlienta((obecny) => ({ ...obecny, ulica: zdarzenie.target.value }))} />
+                    </label>
+                    <label>
+                      Nr budynku
+                      <input placeholder="Nr budynku" value={formularzKlienta.nrBudynku} onChange={(zdarzenie) => ustawFormularzKlienta((obecny) => ({ ...obecny, nrBudynku: zdarzenie.target.value }))} />
+                    </label>
+                    <label>
+                      Nr lokalu
+                      <input placeholder="Nr lokalu" value={formularzKlienta.nrLokalu} onChange={(zdarzenie) => ustawFormularzKlienta((obecny) => ({ ...obecny, nrLokalu: zdarzenie.target.value }))} />
+                    </label>
+                    <label>
+                      Kod pocztowy
+                      <input placeholder="Kod pocztowy" value={formularzKlienta.kodPocztowy} onChange={(zdarzenie) => ustawFormularzKlienta((obecny) => ({ ...obecny, kodPocztowy: zdarzenie.target.value }))} />
+                    </label>
+                    <label>
+                      Miasto
+                      <input placeholder="Miasto" value={formularzKlienta.miasto} onChange={(zdarzenie) => ustawFormularzKlienta((obecny) => ({ ...obecny, miasto: zdarzenie.target.value }))} />
+                    </label>
+                    <label>
+                      Kraj
+                      <input placeholder="Kraj" value={formularzKlienta.kraj} onChange={(zdarzenie) => ustawFormularzKlienta((obecny) => ({ ...obecny, kraj: zdarzenie.target.value }))} />
+                    </label>
+                    <label>
+                      Koordynator klienta
+                      <input placeholder="Koordynator klienta" value={formularzKlienta.koordynator} onChange={(zdarzenie) => ustawFormularzKlienta((obecny) => ({ ...obecny, koordynator: zdarzenie.target.value }))} />
+                    </label>
+                    <label>
+                      Telefon koordynatora
+                      <input placeholder="Telefon koordynatora" value={formularzKlienta.telefonKoordynatora} onChange={(zdarzenie) => ustawFormularzKlienta((obecny) => ({ ...obecny, telefonKoordynatora: zdarzenie.target.value }))} />
+                    </label>
+                    <label>
+                      E-mail koordynatora
+                      <input placeholder="E-mail koordynatora" value={formularzKlienta.emailKoordynatora} onChange={(zdarzenie) => ustawFormularzKlienta((obecny) => ({ ...obecny, emailKoordynatora: zdarzenie.target.value }))} />
+                    </label>
+                    <div className="kartoteki__akcje-formularza">
+                      <button className="kartoteki__przycisk kartoteki__przycisk--jasny" type="submit">
+                        Zapisz klienta
+                      </button>
+                      <button className="kartoteki__przycisk" type="button" onClick={anulujFormularze}>
+                        Anuluj
+                      </button>
+                    </div>
+                  </form>
+                </div>
               </article>
             ))}
           </div>
@@ -1383,19 +1474,87 @@ export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy', 
                 </tr>
               </thead>
               <tbody>
-                {lokalizacjeNaStronie.map((lokalizacja) => (
-                  <tr key={lokalizacja.klucz_lokalizacji}>
-                    <td>{lokalizacja.nazwa}</td>
-                    <td>{lokalizacja.wojewodztwo || '-'}</td>
-                    <td>{lokalizacja.rodzaj || '-'}</td>
-                    <td>{lokalizacja.gmina || '-'}</td>
-                    <td>{lokalizacja.powiat || '-'}</td>
-                    <td>{lokalizacja.miejscownik_pelny_auto || '-'}</td>
+                {lokalizacjeNaStronie.map((lokalizacja) => {
+                  const czyEdytowana = edytowanaLokalizacjaId === lokalizacja.klucz_lokalizacji
+
+                  return (
+                  <tr className={czyEdytowana ? 'kartoteki__wiersz-tabeli--edytowany' : undefined} key={lokalizacja.klucz_lokalizacji}>
+                    <td>
+                      {czyEdytowana ? (
+                        <input value={formularzLokalizacji.nazwa} onChange={(zdarzenie) => ustawFormularzLokalizacji((obecna) => ({ ...obecna, nazwa: zdarzenie.target.value }))} />
+                      ) : (
+                        lokalizacja.nazwa
+                      )}
+                    </td>
+                    <td>
+                      {czyEdytowana ? (
+                        <select value={formularzLokalizacji.wojewodztwo} onChange={(zdarzenie) => ustawFormularzLokalizacji((obecna) => ({ ...obecna, wojewodztwo: zdarzenie.target.value }))}>
+                          <option value="">Wybierz województwo</option>
+                          {wojewodztwaPolski.map((wojewodztwo) => (
+                            <option key={wojewodztwo} value={wojewodztwo}>
+                              {wojewodztwo}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        lokalizacja.wojewodztwo || '-'
+                      )}
+                    </td>
+                    <td>
+                      {czyEdytowana ? (
+                        <input value={formularzLokalizacji.rodzaj} onChange={(zdarzenie) => ustawFormularzLokalizacji((obecna) => ({ ...obecna, rodzaj: zdarzenie.target.value }))} />
+                      ) : (
+                        lokalizacja.rodzaj || '-'
+                      )}
+                    </td>
+                    <td>
+                      {czyEdytowana ? (
+                        <input value={formularzLokalizacji.gmina} onChange={(zdarzenie) => ustawFormularzLokalizacji((obecna) => ({ ...obecna, gmina: zdarzenie.target.value }))} />
+                      ) : (
+                        lokalizacja.gmina || '-'
+                      )}
+                    </td>
+                    <td>
+                      {czyEdytowana ? (
+                        <input value={formularzLokalizacji.powiat} onChange={(zdarzenie) => ustawFormularzLokalizacji((obecna) => ({ ...obecna, powiat: zdarzenie.target.value }))} />
+                      ) : (
+                        lokalizacja.powiat || '-'
+                      )}
+                    </td>
+                    <td>
+                      {czyEdytowana ? (
+                        <input value={formularzLokalizacji.miejscownik_pelny_auto} onChange={(zdarzenie) => ustawFormularzLokalizacji((obecna) => ({ ...obecna, miejscownik_pelny_auto: zdarzenie.target.value }))} />
+                      ) : (
+                        lokalizacja.miejscownik_pelny_auto || '-'
+                      )}
+                    </td>
                     <td className={lokalizacja.status_odmiany ? 'kartoteki__status kartoteki__status--ok' : 'kartoteki__status kartoteki__status--uwaga'}>
-                      {lokalizacja.status_odmiany ? 'Potwierdzony' : 'Niepotwierdzony'}
+                      {czyEdytowana ? (
+                        <PrzelacznikTakNie
+                          etykieta={`Status odmiany lokalizacji ${lokalizacja.nazwa}`}
+                          wariant="potwierdzony-niepotwierdzony"
+                          wlaczony={formularzLokalizacji.status_odmiany}
+                          ustawWlaczony={(status_odmiany) => ustawFormularzLokalizacji((obecna) => ({ ...obecna, status_odmiany }))}
+                        />
+                      ) : lokalizacja.status_odmiany ? (
+                        '✓ Potwierdzony'
+                      ) : (
+                        '× Niepotwierdzony'
+                      )}
                     </td>
                     <td>
                       <div className="kartoteki__akcje">
+                        {czyEdytowana ? (
+                          <>
+                            <button className="kartoteki__przycisk kartoteki__przycisk--jasny" type="button" onClick={zapiszEdycjeLokalizacji}>
+                              Zapisz
+                            </button>
+                            <button className="kartoteki__przycisk" type="button" onClick={anulujEdycjeLokalizacji}>
+                              Anuluj
+                            </button>
+                          </>
+                        ) : (
+                          <>
                         <button className="kartoteki__przycisk kartoteki__przycisk--z-ikona" type="button" onClick={() => pokazKomunikat(`Podgląd lokalizacji: ${lokalizacja.nazwa}`)}>
                           <IkonaAkcji typ="podglad" />
                           Podgląd
@@ -1412,10 +1571,13 @@ export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy', 
                           <IkonaAkcji typ="usun" />
                           Usuń
                         </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           </div>

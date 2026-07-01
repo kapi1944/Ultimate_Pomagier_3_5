@@ -165,6 +165,24 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.szczegoly-uklad-sekcji {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.szczegoly-uwagi-dodatkowe {
+  display: grid;
+}
+
+.szczegoly-uwagi-dodatkowe--osobne {
+  border: 1px solid rgba(74, 222, 128, 0.18);
+  border-radius: 8px;
+  background: #062313;
+  padding: 16px;
+}
+
 .szczegoly-pole {
   display: grid;
   gap: 7px;
@@ -277,6 +295,66 @@
 .szczegoly-karta-grupy__naglowek span {
   color: #9ccfab;
   font-size: 0.84rem;
+}
+
+.szczegoly-karta-grupy__formularz {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  align-items: stretch;
+}
+
+.szczegoly-karta-grupy__kolumna {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.szczegoly-karta-grupy__kolumna--lewa {
+  padding-right: 12px;
+}
+
+.szczegoly-karta-grupy__kolumna--prawa {
+  border-left: 1px solid rgba(74, 222, 128, 0.26);
+  padding-left: 12px;
+}
+
+.szczegoly-karta-grupy__pola {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.szczegoly-karta-grupy__naliczanie-ceny {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.szczegoly-karta-grupy__stos-pol {
+  display: grid;
+  gap: 12px;
+}
+
+.szczegoly-karta-grupy__flagi {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 36px;
+}
+
+.szczegoly-przelacznik-pole {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  color: #c7ead0;
+  font-size: 0.86rem;
+}
+
+.szczegoly-przelacznik-pole--disabled {
+  opacity: 0.7;
 }
 
 .szczegoly-pole-ceny {
@@ -399,6 +477,18 @@
   align-items: start;
 }
 
+.szczegoly-kolumna-danych__naglowek {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.szczegoly-kolumna-danych__naglowek .szczegoly-checkbox {
+  justify-content: flex-end;
+  text-align: right;
+}
+
 .szczegoly-wiersz-wymogu {
   display: grid;
   grid-template-columns: minmax(180px, 1fr) auto minmax(140px, auto);
@@ -497,7 +587,8 @@
   gap: 8px;
   align-items: center;
   justify-content: center;
-  min-width: 124px;
+  width: 166px;
+  flex: 0 0 166px;
 }
 
 .szczegoly-przelacznik-tak-nie__tor {
@@ -589,6 +680,11 @@
   min-width: 46px;
 }
 
+#wysylka-paczki > div > button {
+  justify-self: start;
+  width: 145px;
+}
+
 .szczegoly-logo-podglad {
   width: min(220px, 100%);
   max-height: 120px;
@@ -649,8 +745,25 @@
   .szczegoly-wzor-klienta,
   .szczegoly-wiersz-wymogu,
   .szczegoly-wiersz-wymogu--przyjazd,
-  .szczegoly-wiersz-wymogu--rozszerzony {
+  .szczegoly-wiersz-wymogu--rozszerzony,
+  .szczegoly-uklad-sekcji {
     grid-template-columns: 1fr;
+  }
+
+  .szczegoly-karta-grupy__formularz {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .szczegoly-karta-grupy__kolumna--lewa {
+    padding-right: 0;
+  }
+
+  .szczegoly-karta-grupy__kolumna--prawa {
+    border-top: 1px solid rgba(74, 222, 128, 0.2);
+    border-left: 0;
+    padding-top: 14px;
+    padding-left: 0;
   }
 }
 
@@ -664,6 +777,22 @@
 
   .szczegoly-siatka--dwa {
     grid-template-columns: 1fr;
+  }
+
+  .szczegoly-karta-grupy__pola,
+  .szczegoly-karta-grupy__naliczanie-ceny,
+  .szczegoly-karta-grupy__flagi {
+    grid-template-columns: 1fr;
+  }
+
+  .szczegoly-kolumna-danych__naglowek {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .szczegoly-kolumna-danych__naglowek .szczegoly-checkbox {
+    justify-content: flex-start;
+    text-align: left;
   }
 }
 

@@ -11,7 +11,13 @@ export type StatusSzczegolow =
 export type StatusPolaImportu = 'zaimportowane' | 'brak' | 'niepewne' | 'reczne'
 export type OswiadczenieVat = 'Nie – 23%' | 'Min. 70%' | 'ZW – 100%'
 export type TrybCeny = 'za grupę' | 'za osobę'
-export type RodzajGodzin = 'Zajęciowe (60 min)' | 'Akademickie (45 min)'
+export type RodzajGodzin =
+  | 'Dydaktyczne (45 min)'
+  | 'Edukacyjne (45 min)'
+  | 'Szkoleniowe (45 min)'
+  | 'Lekcyjne (45 min)'
+  | 'Zegarowe (60 min)'
+  | 'Niestandardowe'
 export type OrganizatorSzkolenia = 'SEMPER' | 'IIST' | 'SD' | 'klient' | 'inny'
 export type FormaSzkolenia = 'Stacjonarne' | 'Online'
 export type TrybTresciMaila = 'Tylko zmiany' | 'Cała treść'
@@ -157,6 +163,8 @@ export type GrupaSzkoleniowa = {
   liczbaUczestnikow: number
   liczbaGodzin: number
   rodzajGodzin: RodzajGodzin
+  nazwaNiestandardowychGodzin: string
+  liczbaMinutNiestandardowychGodzin: number
   miejsce: string
   ktoZapewniaSale: string
   cenaNetto: number

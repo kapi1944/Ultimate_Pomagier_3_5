@@ -17,6 +17,8 @@ type WlasciwosciPolaTekstowego = WspolneWlasciwosciPola & {
   ustawWartosc: (wartosc: string) => void
   typ?: 'text' | 'email' | 'tel' | 'date' | 'time' | 'url'
   placeholder?: string
+  listaPodpowiedziId?: string
+  podpowiedzi?: string[]
 }
 
 type WlasciwosciPolaLiczbowego = WspolneWlasciwosciPola & {
@@ -63,10 +65,6 @@ function pobierzKomunikatStatusu(pole: string, statusyPol: StatusyPolImportu) {
     return 'Dane zaimportowane z treści maila.'
   }
 
-  if (status === 'reczne') {
-    return 'Dane wpisane lub poprawione ręcznie.'
-  }
-
   return ''
 }
 
@@ -96,6 +94,8 @@ export function PoleTekstowe({
   ustawWartosc,
   typ = 'text',
   placeholder,
+  listaPodpowiedziId,
+  podpowiedzi,
   blad,
   disabled,
 }: WlasciwosciPolaTekstowego) {
@@ -104,11 +104,19 @@ export function PoleTekstowe({
       <input
         aria-invalid={Boolean(blad)}
         disabled={disabled}
+        list={listaPodpowiedziId}
         placeholder={placeholder}
         type={typ}
         value={wartosc}
         onChange={(zdarzenie) => ustawWartosc(zdarzenie.target.value)}
       />
+      {listaPodpowiedziId && podpowiedzi && (
+        <datalist id={listaPodpowiedziId}>
+          {podpowiedzi.map((podpowiedz) => (
+            <option key={podpowiedz} value={podpowiedz} />
+          ))}
+        </datalist>
+      )}
     </OpakowaniePola>
   )
 }
