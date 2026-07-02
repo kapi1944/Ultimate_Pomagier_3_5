@@ -222,7 +222,13 @@ export default function KartaGrupySzkoleniowej({
 }: WlasciwosciKartyGrupy) {
   const [wersjaLokalizacji, ustawWersjeLokalizacji] = useState(0)
   const [poprawionyMiejscownik, ustawPoprawionyMiejscownik] = useState('')
-  const [wyszukiwanyTrener, ustawWyszukiwanegoTrenera] = useState(grupa.trenerzy[0]?.imieNazwisko ?? '')
+  const wybranyTrener = grupa.trenerzy[0]
+  const kluczWybranegoTrenera = `${grupa.id}:${wybranyTrener?.id ?? ''}:${wybranyTrener?.imieNazwisko ?? ''}`
+  const [wyszukiwanyTrener, ustawWyszukiwanegoTrenera] = useState({
+    klucz: kluczWybranegoTrenera,
+    wartosc: wybranyTrener?.imieNazwisko ?? '',
+  })
+  const wartoscWyszukiwanegoTrenera = wyszukiwanyTrener.klucz === kluczWybranegoTrenera ? wyszukiwanyTrener.wartosc : wybranyTrener?.imieNazwisko ?? ''
   const lokalizacje = useMemo(() => {
     void wersjaLokalizacji
     return pobierzLokalizacjeZMagazynu()
@@ -237,14 +243,10 @@ export default function KartaGrupySzkoleniowej({
     return lokalizacje.filter((lokalizacja) => !fraza || lokalizacja.nazwa.toLocaleLowerCase('pl').includes(fraza)).slice(0, 50)
   }, [grupa.miejsce, lokalizacje])
   const trenerzyDoPodpowiedzi = useMemo(() => {
-    const fraza = wyszukiwanyTrener.trim().toLocaleLowerCase('pl')
+    const fraza = wartoscWyszukiwanegoTrenera.trim().toLocaleLowerCase('pl')
     return trenerzyDoWyboru.filter((trener) => !fraza || trener.imieNazwisko.toLocaleLowerCase('pl').includes(fraza)).slice(0, 50)
-  }, [trenerzyDoWyboru, wyszukiwanyTrener])
+  }, [trenerzyDoWyboru, wartoscWyszukiwanegoTrenera])
   const czyMechanizmPodzielonejPlatnosci = czyCenaWymagaMpp(grupa)
-
-  useEffect(() => {
-    ustawWyszukiwanegoTrenera(grupa.trenerzy[0]?.imieNazwisko ?? '')
-  }, [grupa.trenerzy])
 
   useEffect(() => {
     if (grupa.mechanizmPodzielonejPlatnosci !== czyMechanizmPodzielonejPlatnosci) {
@@ -264,8 +266,12 @@ export default function KartaGrupySzkoleniowej({
     )
   }
 
+  function ustawWartoscWyszukiwanegoTrenera(wartosc: string) {
+    ustawWyszukiwanegoTrenera({ klucz: kluczWybranegoTrenera, wartosc })
+  }
+
   function ustawTreneraZWyszukiwarki(wartosc: string) {
-    ustawWyszukiwanegoTrenera(wartosc)
+    ustawWartoscWyszukiwanegoTrenera(wartosc)
 
     if (!wartosc.trim()) {
       ustawTrenera('')
@@ -280,7 +286,7 @@ export default function KartaGrupySzkoleniowej({
   }
 
   function zatwierdzWyszukanegoTrenera() {
-    const fraza = wyszukiwanyTrener.trim().toLocaleLowerCase('pl')
+    const fraza = wartoscWyszukiwanegoTrenera.trim().toLocaleLowerCase('pl')
 
     if (!fraza) {
       ustawTrenera('')
@@ -296,7 +302,7 @@ export default function KartaGrupySzkoleniowej({
       return
     }
 
-    ustawWyszukiwanegoTrenera(grupa.trenerzy[0]?.imieNazwisko ?? '')
+    ustawWartoscWyszukiwanegoTrenera(grupa.trenerzy[0]?.imieNazwisko ?? '')
   }
 
   function ustawForme(formaSzkolenia: FormaSzkolenia) {
@@ -504,7 +510,7 @@ export default function KartaGrupySzkoleniowej({
               <input
                 list={`trenerzy-${grupa.id}`}
                 placeholder="Wybierz trenera"
-                value={wyszukiwanyTrener}
+                value={wartoscWyszukiwanegoTrenera}
                 onBlur={zatwierdzWyszukanegoTrenera}
                 onChange={(zdarzenie) => ustawTreneraZWyszukiwarki(zdarzenie.target.value)}
               />

@@ -1,0 +1,943 @@
+.dyplomy {
+  display: grid;
+  gap: 18px;
+  color: #f4fff7;
+}
+
+.dyplomy *,
+.dyplomy *::before,
+.dyplomy *::after {
+  box-sizing: border-box;
+}
+
+.dyplomy__naglowek {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.dyplomy__naglowek h1 {
+  margin: 0;
+  font-size: 2rem;
+  line-height: 1.2;
+}
+
+.dyplomy__akcje,
+.dyplomy__wybor,
+.dyplomy__przypisanie {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.dyplomy__przycisk,
+.dyplomy__przycisk-wyboru {
+  min-height: 38px;
+  border: 1px solid rgba(74, 222, 128, 0.35);
+  border-radius: 6px;
+  padding: 8px 12px;
+  background: #041f0f;
+  color: #f4fff7;
+  cursor: pointer;
+  font: inherit;
+}
+
+.dyplomy__przycisk:hover,
+.dyplomy__przycisk-wyboru:hover,
+.dyplomy__przycisk--glowny,
+.dyplomy__przycisk-wyboru--aktywny {
+  border-color: #4ade80;
+  background: #4ade80;
+  color: #052e12;
+}
+
+.dyplomy__przycisk:disabled,
+.dyplomy__przycisk-wyboru:disabled,
+.dyplomy__przycisk:disabled:hover,
+.dyplomy__przycisk-wyboru:disabled:hover {
+  border-color: rgba(74, 222, 128, 0.22);
+  background: #041f0f;
+  color: #f4fff7;
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.dyplomy__przycisk--maly {
+  min-height: 30px;
+  padding: 5px 8px;
+  font-size: 0.82rem;
+}
+
+.dyplomy__komunikat,
+.dyplomy__status {
+  border: 1px solid rgba(74, 222, 128, 0.28);
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: #082b14;
+  color: #c7ead0;
+  font-size: 0.92rem;
+}
+
+.dyplomy__uklad {
+  display: grid;
+  grid-template-columns: minmax(500px, 1fr) minmax(360px, 680px);
+  gap: 20px;
+  align-items: start;
+}
+
+.dyplomy__panel-pracy,
+.dyplomy__podglad {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.dyplomy__podglad {
+  position: sticky;
+  top: 18px;
+}
+
+.dyplomy__sekcja {
+  border: 1px solid rgba(74, 222, 128, 0.25);
+  border-radius: 8px;
+  padding: 16px;
+  background: #082b14;
+}
+
+.dyplomy__sekcja h2,
+.dyplomy__status h2 {
+  margin: 0 0 14px;
+  color: #e7fff0;
+  font-size: 1rem;
+  letter-spacing: 0;
+}
+
+.dyplomy__siatka {
+  display: grid;
+  gap: 12px;
+}
+
+.dyplomy__siatka--dwie,
+.dyplomy__przypisanie {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.dyplomy__siatka--trzy {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.dyplomy__pole {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  color: #e7fff0;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.dyplomy__pole--pelne {
+  grid-column: 1 / -1;
+}
+
+.dyplomy__pole--checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dyplomy__pole--przycisk {
+  align-content: end;
+}
+
+.dyplomy__pole input,
+.dyplomy__pole select,
+.dyplomy__pole textarea,
+.dyplomy__kalendarz-naglowek input,
+.dyplomy__tabela input,
+.dyplomy__tabela select {
+  width: 100%;
+  border: 1px solid rgba(74, 222, 128, 0.35);
+  border-radius: 6px;
+  padding: 9px 10px;
+  background: #03180c;
+  color: #f4fff7;
+  font: inherit;
+}
+
+.dyplomy__pole input[type='checkbox'],
+.dyplomy__tabela input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  accent-color: #4ade80;
+}
+
+.dyplomy__pole input[type='range'] {
+  padding: 0;
+}
+
+.dyplomy__pole input:disabled {
+  color: #8fb89a;
+  opacity: 0.8;
+}
+
+.dyplomy__pole textarea {
+  resize: vertical;
+}
+
+.dyplomy__pole input:focus,
+.dyplomy__pole select:focus,
+.dyplomy__pole textarea:focus,
+.dyplomy__kalendarz-naglowek input:focus,
+.dyplomy__tabela input:focus,
+.dyplomy__tabela select:focus {
+  outline: 2px solid rgba(74, 222, 128, 0.55);
+  outline-offset: 2px;
+}
+
+.dyplomy__kalendarz-naglowek {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.dyplomy__kalendarz {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.dyplomy__dzien-tygodnia {
+  color: #9ccfab;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.dyplomy__dzien {
+  min-height: 18px;
+  border: 1px solid rgba(74, 222, 128, 0.22);
+  border-radius: 6px;
+  background: #03180c;
+  color: #f4fff7;
+  cursor: pointer;
+  font: inherit;
+}
+
+.dyplomy__dzien:hover,
+.dyplomy__dzien--aktywny {
+  border-color: #4ade80;
+  background: #4ade80;
+  color: #052e12;
+}
+
+.dyplomy__dzien--spoza {
+  color: #6c8d76;
+}
+
+.dyplomy__format-dat {
+  margin-top: 12px;
+}
+
+.dyplomy__daty,
+.dyplomy__numer-podglad {
+  margin-top: 12px;
+  border: 1px solid rgba(74, 222, 128, 0.2);
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: #03180c;
+  color: #c7ead0;
+}
+
+.dyplomy__numer-podglad {
+  margin-bottom: 12px;
+  word-break: break-word;
+}
+
+.dyplomy__numer-fragment--zmienny {
+  border-radius: 4px;
+  padding: 2px 4px;
+  background: rgba(74, 222, 128, 0.22);
+  color: #ffffff;
+}
+
+.dyplomy__tabela-ramka {
+  overflow-x: auto;
+  margin-top: 14px;
+  border: 1px solid rgba(74, 222, 128, 0.22);
+  border-radius: 6px;
+}
+
+.dyplomy__tabela {
+  width: 100%;
+  min-width: 980px;
+  border-collapse: collapse;
+}
+
+.dyplomy__tabela th,
+.dyplomy__tabela td {
+  border-bottom: 1px solid rgba(74, 222, 128, 0.18);
+  padding: 8px;
+  vertical-align: middle;
+}
+
+.dyplomy__tabela th {
+  background: #03180c;
+  color: #e7fff0;
+  font-size: 0.82rem;
+  text-align: left;
+}
+
+.dyplomy__tabela td:first-child,
+.dyplomy__tabela th:first-child {
+  width: 48px;
+  text-align: center;
+}
+
+.dyplomy__biblioteka {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.dyplomy__dodatek {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(74, 222, 128, 0.22);
+  border-radius: 6px;
+  padding: 10px;
+  background: #03180c;
+}
+
+.dyplomy__dodatek img {
+  width: 100%;
+  max-height: 92px;
+  object-fit: contain;
+  border-radius: 4px;
+  background: #ffffff;
+}
+
+.dyplomy__dodatek div {
+  min-height: 60px;
+  white-space: pre-wrap;
+  color: #c7ead0;
+  font-size: 0.84rem;
+}
+
+.dyplomy__status ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+  color: #fecaca;
+}
+
+.dyplomy__status p {
+  color: #bbf7d0;
+}
+
+.dyplomy__kontrola-podgladu {
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(74, 222, 128, 0.22);
+  border-radius: 6px;
+  padding: 10px;
+  background: #082b14;
+}
+
+.dyplomy__nawigacja-uczestnika {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dyplomy__przycisk-strzalka {
+  width: 38px;
+  padding: 8px;
+}
+
+.dyplomy__licznik-uczestnika {
+  color: #c7ead0;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.dyplomy__podglad-kartki {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  overflow: auto;
+  padding-bottom: 16px;
+}
+
+.dyplomy__podglad-kartki--pod-soba {
+  flex-direction: column;
+}
+
+.dyplomy__podglad-kartki--obok {
+  flex-direction: row;
+  justify-content: flex-start;
+}
+
+.dyplomy__podglad-kartki--obok .dyplom-kartka {
+  flex: 0 0 min(100%, 680px);
+}
+
+.dyplomy__druk {
+  display: none;
+}
+
+.dyplom-kartka {
+  --semper-czerwony: #c5000b;
+  --semper-czarny: #000000;
+  --semper-tekst: #000000;
+  --semper-wodny: rgba(0, 0, 0, 0.055);
+  --semper-tlo: #ffffff;
+  --semper-podpis: #4f46a5;
+
+  position: relative;
+  width: min(100%, 680px);
+  aspect-ratio: 210 / 297;
+  overflow: hidden;
+  background: var(--semper-tlo);
+  color: var(--semper-tekst);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+  font-family: "DejaVu Sans Condensed", "Arial Narrow", Arial, sans-serif;
+}
+
+.dyplom-kartka__tlo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+
+.dyplom-kartka__warstwa {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: block;
+  padding: 0;
+}
+
+.dyplom-kartka__pasek {
+  position: absolute;
+  top: 3.37%;
+  height: 2.22%;
+  display: flex;
+  align-items: center;
+  color: #ffffff;
+  font-size: clamp(7px, 1.15vw, 11px);
+  font-weight: 400;
+  line-height: 1;
+}
+
+.dyplom-kartka__pasek--lewy {
+  left: 4.76%;
+  width: 63.32%;
+  justify-content: flex-end;
+  padding-right: 2%;
+  background: var(--semper-czerwony);
+}
+
+.dyplom-kartka__pasek--prawy {
+  left: 68.08%;
+  right: auto;
+  width: 27.16%;
+  justify-content: flex-end;
+  padding-right: 1.2%;
+  background: var(--semper-czarny);
+}
+
+.dyplom-kartka__dodatek {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  z-index: 3;
+}
+
+.dyplom-kartka__dodatek--gora {
+  top: 9.2%;
+  width: var(--szerokosc-dodatku-gornego, 61.6%);
+}
+
+.dyplom-kartka__dodatek--dol {
+  bottom: 7.6%;
+  width: var(--szerokosc-dodatku-dolnego, 61.6%);
+}
+
+.dyplom-kartka__dodatek img {
+  max-width: 100%;
+  max-height: 58px;
+  object-fit: contain;
+}
+
+.dyplom-kartka__dodatek-tekst {
+  white-space: pre-wrap;
+  color: var(--semper-tekst);
+  font-size: clamp(7px, 1.18vw, 11px);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.dyplom-kartka__znak-wodny {
+  position: absolute;
+  left: 4.9%;
+  top: calc(41.4% + var(--przesuniecie-dodatku-gornego, 0%));
+  z-index: 0;
+  display: flex;
+  width: 88.8%;
+  height: 14.9%;
+  align-items: center;
+  justify-content: center;
+  color: var(--semper-wodny);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(76px, 10vw, 128px);
+  font-style: italic;
+  font-weight: 400;
+  line-height: 0.8;
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.dyplom-kartka__znak-wodny--zaswiadczenie {
+  font-size: clamp(54px, 7.5vw, 96px);
+}
+
+.dyplom-kartka__naglowek-ozdobny {
+  position: absolute;
+  left: 6.03%;
+  top: calc(12.51% + var(--przesuniecie-dodatku-gornego, 0%));
+  z-index: 2;
+  width: 87.93%;
+  height: 13.95%;
+  color: var(--semper-czerwony);
+}
+
+.dyplom-kartka__typ {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  color: var(--semper-czerwony);
+  font-family: "Bradley Hand ITC", "Segoe Print", "Comic Sans MS", cursive;
+  font-size: clamp(48px, 7vw, 82px);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 0.9;
+  text-align: right;
+  transform: skew(-4deg);
+  white-space: nowrap;
+}
+
+.dyplom-kartka--zaswiadczenie .dyplom-kartka__typ {
+  font-family: "Segoe Script", "Comic Sans MS", cursive;
+  right: 2%;
+  font-size: clamp(32px, 4.9vw, 56px);
+  font-synthesis: none;
+  font-weight: 400;
+}
+
+.dyplom-kartka--dyplom .dyplom-kartka__typ {
+  text-align: center;
+}
+
+.dyplom-kartka__linia-tytulu {
+  position: absolute;
+  top: 52%;
+  right: 0;
+  left: 0;
+  height: 4px;
+  background: var(--semper-czerwony);
+}
+
+.dyplom-kartka__podtytul {
+  position: absolute;
+  top: 66%;
+  right: 1%;
+  color: var(--semper-czerwony);
+  font-size: clamp(13px, 1.7vw, 21px);
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1;
+}
+
+.dyplom-kartka__glowna {
+  position: absolute;
+  top: calc(28.5% + var(--przesuniecie-dodatku-gornego, 0%));
+  left: 6%;
+  z-index: 2;
+  display: block;
+  width: 88%;
+  margin: 0;
+  text-align: center;
+}
+
+.dyplom-kartka__wstep {
+  margin-bottom: 3px;
+  color: var(--semper-tekst);
+  font-size: clamp(8px, 1.1vw, 12px);
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.dyplom-kartka__osoba {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+  margin-bottom: 3px;
+  color: var(--semper-tekst);
+}
+
+.dyplom-kartka__osoba span {
+  color: var(--semper-tekst);
+  font-size: clamp(8px, 1.1vw, 12px);
+  font-weight: 800;
+}
+
+.dyplom-kartka__osoba strong {
+  color: var(--semper-tekst);
+  font-size: clamp(14px, 1.8vw, 21px);
+  font-style: italic;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.dyplom-kartka__ukonczenie {
+  margin-bottom: 22px;
+  color: var(--semper-tekst);
+  font-size: clamp(8px, 1.1vw, 12px);
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.dyplom-kartka__tytul {
+  max-width: 82%;
+  margin: 0 auto;
+  color: var(--semper-czerwony);
+  font-weight: 800;
+  line-height: 1.18;
+  text-align: center;
+}
+
+.dyplom-kartka__szczegoly {
+  position: relative;
+  z-index: 3;
+  margin-top: 21px;
+  display: grid;
+  gap: 3px;
+  color: #000000 !important;
+  font-weight: 800;
+  opacity: 1;
+  mix-blend-mode: normal;
+  -webkit-text-fill-color: #000000;
+}
+
+.dyplom-kartka__szczegoly p {
+  margin: 0;
+  color: #000000 !important;
+  font-size: clamp(8px, 1.05vw, 12px);
+  line-height: 1.2;
+  opacity: 1;
+  mix-blend-mode: normal;
+  -webkit-text-fill-color: #000000;
+}
+
+.dyplom-kartka__szczegoly p:first-child {
+  font-size: clamp(9px, 1.2vw, 13px);
+}
+
+.dyplom-kartka__stopka {
+  position: absolute;
+  top: calc(70.6% - var(--przesuniecie-dodatku-dolnego, 0%));
+  right: 0;
+  left: 0;
+  z-index: 2;
+  display: block;
+  height: 25.8%;
+  color: var(--semper-tekst);
+  text-align: center;
+}
+
+.dyplom-kartka__logo-semper {
+  position: absolute;
+  top: 0;
+  left: 39.2%;
+  width: 21.6%;
+  height: 22%;
+}
+
+.dyplom-kartka__logo-semper img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.dyplom-kartka__organizator {
+  position: absolute;
+  top: 25%;
+  right: 0;
+  left: 0;
+  color: var(--semper-tekst);
+  font-size: clamp(7px, 1vw, 11px);
+  line-height: 1.2;
+}
+
+.dyplom-kartka__organizator strong {
+  color: var(--semper-czerwony);
+  font-weight: 800;
+}
+
+.dyplom-kartka__pieczec {
+  position: absolute;
+  top: 34%;
+  left: 31%;
+  display: grid;
+  width: 38%;
+  gap: 0;
+  color: rgba(0, 0, 0, 0.72);
+  font-size: clamp(6px, 0.85vw, 10px);
+  line-height: 1.08;
+}
+
+.dyplom-kartka__pieczec em {
+  position: absolute;
+  top: 10%;
+  right: -6%;
+  left: -6%;
+  color: rgba(79, 70, 165, 0.75);
+  font-family: "Segoe Print", "Comic Sans MS", cursive;
+  font-size: clamp(13px, 1.8vw, 24px);
+  font-style: normal;
+  font-weight: 400;
+  line-height: 1;
+  pointer-events: none;
+  transform: rotate(-6deg);
+}
+
+.dyplom-kartka__linia-kropkowana {
+  position: absolute;
+  top: 73.5%;
+  left: 37.9%;
+  width: 24.2%;
+  overflow: hidden;
+  color: var(--semper-tekst);
+  font-size: clamp(7px, 1vw, 10px);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.dyplom-kartka__ekspert {
+  position: absolute;
+  top: 83.5%;
+  right: 0;
+  left: 0;
+  color: var(--semper-tekst);
+  font-size: clamp(7px, 1vw, 10px);
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.dyplom-kartka__gratulacje {
+  position: absolute;
+  top: 94%;
+  right: 0;
+  left: 0;
+  color: var(--semper-tekst);
+  font-size: clamp(7px, 1.05vw, 11px);
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+.dyplom-kartka--druga .dyplom-kartka__warstwa {
+  display: grid;
+  align-content: start;
+  gap: 40px;
+  padding: 12% 10%;
+}
+
+.dyplom-kartka__naglowek-drugiej {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  border-bottom: 4px solid var(--semper-czerwony);
+  padding-bottom: 18px;
+}
+
+.dyplom-kartka__naglowek-drugiej span {
+  color: var(--semper-czerwony);
+  font-family: "Bradley Hand ITC", "Segoe Print", "Comic Sans MS", cursive;
+  font-style: italic;
+  font-weight: 800;
+}
+
+.dyplom-kartka__tresc-drugiej {
+  display: grid;
+  gap: 16px;
+  color: #1f2937;
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.dyplom-kartka__tresc-drugiej h2,
+.dyplom-kartka__tresc-drugiej p {
+  margin: 0;
+}
+
+.dyplom-kartka__tresc-drugiej div {
+  white-space: pre-wrap;
+}
+
+@media (max-width: 1280px) {
+  .dyplomy__uklad {
+    grid-template-columns: 1fr;
+  }
+
+  .dyplomy__podglad {
+    position: static;
+  }
+}
+
+@media (max-width: 760px) {
+  .dyplomy__siatka--dwie,
+  .dyplomy__siatka--trzy,
+  .dyplomy__kalendarz-naglowek,
+  .dyplomy__przypisanie {
+    grid-template-columns: 1fr;
+  }
+
+  .dyplomy__uklad {
+    min-width: 0;
+  }
+
+  .dyplomy__sekcja {
+    padding: 14px;
+  }
+}
+
+@page {
+  size: A4 portrait;
+  margin: 0;
+}
+
+@media print {
+  body {
+    background: #ffffff !important;
+  }
+
+  .menu-boczne,
+  .dyplomy__naglowek,
+  .dyplomy__komunikat,
+  .dyplomy__uklad {
+    display: none !important;
+  }
+
+  .uklad-aplikacji {
+    display: block !important;
+    min-height: auto !important;
+    background: #ffffff !important;
+  }
+
+  .uklad-aplikacji__obszar-roboczy {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .dyplomy__druk {
+    display: block !important;
+  }
+
+  .dyplomy__druk > div {
+    display: contents;
+  }
+
+  .dyplom-kartka {
+    width: 210mm !important;
+    height: 297mm !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    font-family: "DejaVu Sans Condensed", "Arial Narrow", Arial, sans-serif !important;
+    page-break-after: always;
+  }
+
+  .dyplom-kartka__pasek {
+    height: 2.22% !important;
+    color: #ffffff !important;
+    font-size: 9.5px !important;
+    font-weight: 400 !important;
+  }
+
+  .dyplom-kartka__pasek--lewy {
+    background: var(--semper-czerwony) !important;
+  }
+
+  .dyplom-kartka__pasek--prawy {
+    background: #000000 !important;
+  }
+
+  .dyplom-kartka__typ {
+    color: var(--semper-czerwony) !important;
+    font-size: 72px !important;
+  }
+
+  .dyplom-kartka--zaswiadczenie .dyplom-kartka__typ {
+    font-family: "Segoe Script", "Comic Sans MS", cursive !important;
+    right: 2% !important;
+    font-size: 52px !important;
+    font-synthesis: none !important;
+    font-weight: 400 !important;
+  }
+
+  .dyplom-kartka__linia-tytulu {
+    background-color: var(--semper-czerwony) !important;
+  }
+
+  .dyplom-kartka__podtytul {
+    background-color: transparent !important;
+    color: var(--semper-czerwony) !important;
+  }
+
+  .dyplom-kartka__znak-wodny {
+    color: rgba(0, 0, 0, 0.055) !important;
+    font-size: 118px !important;
+  }
+
+  .dyplom-kartka__znak-wodny--zaswiadczenie {
+    font-size: 88px !important;
+  }
+
+  .dyplom-kartka__wstep,
+  .dyplom-kartka__osoba span,
+  .dyplom-kartka__ukonczenie {
+    color: #000000 !important;
+    font-size: 10px !important;
+  }
+
+  .dyplom-kartka__osoba strong {
+    color: #000000 !important;
+    font-size: 16px !important;
+  }
+
+  .dyplom-kartka__tytul {
+    color: var(--semper-czerwony) !important;
+  }
+
+  .dyplom-kartka__szczegoly,
+  .dyplom-kartka__szczegoly p,
+  .dyplom-kartka__stopka {
+    color: #000000 !important;
+  }
+}
