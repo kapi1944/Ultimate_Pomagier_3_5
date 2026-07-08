@@ -154,6 +154,14 @@
   color: #9ccfab;
   font-size: 0.86rem;
 }
+.kartoteki__wiersz--nieaktywny {
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(148, 163, 184, 0.18);
+}
+
+.kartoteki__wiersz--nieaktywny > div:first-child > span {
+  color: #cbd5e1;
+}
 
 .kartoteki__edycja-wiersza {
   grid-column: 1 / -1;

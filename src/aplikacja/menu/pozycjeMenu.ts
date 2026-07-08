@@ -21,12 +21,20 @@ export const pozycjeMenu: PozycjaMenu[] = [
     etykieta: 'Szkolenia Zamknięte',
     dzieci: [
       {
-        id: 'generator-szczegolow',
-        etykieta: 'Generator szczegółów',
+        id: 'zamkniete_szczegoly_organizacyjne_lista',
+        etykieta: 'Szczegóły Organizacyjne',
         dzieci: [
           {
+            id: 'zamkniete_szczegoly_organizacyjne_lista',
+            etykieta: 'Lista szczegółów organizacyjnych',
+          },
+          {
+            id: 'zamkniete_szczegoly_organizacyjne_kopie_robocze',
+            etykieta: 'Kopie robocze',
+          },
+          {
             id: 'zamkniete_szczegoly_organizacyjne_nowe',
-            etykieta: 'Nowe szczegóły organizacyjne',
+            etykieta: 'Nowe Szczegóły Organizacyjne',
           },
         ],
       },

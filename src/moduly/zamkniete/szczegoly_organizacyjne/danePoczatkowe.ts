@@ -66,6 +66,7 @@ export const poczatkoweDaneFormularza: DaneFormularza = {
   tytulSzkolenia: '',
   nazwaKlienta: '',
   organizator: 'SEMPER',
+  opiekunId: '',
   status: 'NIEPEŁNE',
   nabywca: { ...poczatkowaFirma },
   odbiorca: { ...poczatkowaFirma },

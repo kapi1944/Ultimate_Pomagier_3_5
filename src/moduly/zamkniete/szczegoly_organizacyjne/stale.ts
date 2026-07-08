@@ -82,6 +82,7 @@ export const grupyAdresatow = [
 export const polaWymaganePoImporcie = [
   'tytulSzkolenia',
   'nazwaKlienta',
+  'opiekunId',
   'nabywca.nazwa',
   'nabywca.ulica',
   'nabywca.kodPocztowy',

@@ -29,7 +29,7 @@ export default function PasekStickySzczegolow({ tytul, status, sekcje, akcje }: 
     <header className="szczegoly-sticky">
       <div className="szczegoly-sticky__wiersz">
         <div>
-          <p className="szczegoly-sticky__etykieta">Generator szczegółów organizacyjnych</p>
+          <p className="szczegoly-sticky__etykieta">Szczegóły organizacyjne</p>
           <h1>{tytul}</h1>
         </div>
         <div className="szczegoly-sticky__status">

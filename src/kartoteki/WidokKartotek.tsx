@@ -1076,7 +1076,7 @@ export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy', 
 
           <div className="kartoteki__lista">
             {trenerzyNaStronie.map((trener) => (
-              <article className="kartoteki__wiersz" key={trener.id}>
+              <article className={`kartoteki__wiersz${trener.status === 'Nieaktywny' ? ' kartoteki__wiersz--nieaktywny' : ''}`} key={trener.id}>
                 <div>
                   <strong>{`${trener.imie} ${trener.nazwisko}`.trim()}</strong>
                   <span>

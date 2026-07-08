@@ -7,6 +7,7 @@ import { PoleCheckbox, PoleTekstowe, PoleTekstoweWielowierszowe, PoleWyboru } fr
 import PrzelacznikTakNie from '../komponenty/PrzelacznikTakNie'
 import SekcjaFormularza from '../komponenty/SekcjaFormularza'
 import { useGeneratorSzczegolow } from '../hooki/useGeneratorSzczegolow'
+import { opiekunowieSzczegolow } from '../uzytkownicySzczegolow'
 import type { DaneFirmy, DaneFormularza, OrganizatorSzkolenia, StatusLogotypow } from '../typy'
 import './widokNowychSzczegolowOrganizacyjnych.css'
 
@@ -24,6 +25,8 @@ const sekcjeNawigacji = [
   { id: 'wyslij-aktualizacje', etykieta: 'Aktualizacja' },
   { id: 'eksport-import', etykieta: 'JSON' },
 ]
+
+const opcjeOpiekunow = ['', ...opiekunowieSzczegolow.map((opiekun) => opiekun.id)]
 
 const pozycjePakietu = [
   ['listaObecnosci', 'Lista obecności'],
@@ -215,6 +218,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
   const statusFormularza = generator.czyFormularzKompletny ? 'Kompletny' : `Niepełny (${liczbaProblemowBlokujacych})`
   const bladTytulu = generator.daneFormularza.tytulSzkolenia.trim() ? undefined : 'Pole wymagane'
   const bladKlienta = generator.daneFormularza.nazwaKlienta.trim() ? undefined : 'Pole wymagane'
+  const bladOpiekuna = generator.daneFormularza.opiekunId.trim() ? undefined : 'Pole wymagane'
   const miejscowosciDoPodpowiedzi = useMemo(
     () => [...new Set(pobierzLokalizacjeZMagazynu().map((lokalizacja) => lokalizacja.nazwa))].sort((pierwsza, druga) => pierwsza.localeCompare(druga, 'pl')),
     [],
@@ -421,8 +425,8 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
             <button type="button" onClick={generator.zapiszWersje}>
               Zapisz kopię roboczą
             </button>
-            <button disabled={!generator.czyFormularzKompletny} type="button" onClick={generator.wprowadzSzkolenie}>
-              Wprowadź to szkolenie
+            <button disabled={!generator.czyFormularzKompletny} type="button" onClick={generator.opublikujSzczegoly}>
+              Opublikuj
             </button>
           </>
         }
@@ -465,14 +469,25 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
             wartosc={generator.daneFormularza.tytulSzkolenia}
             ustawWartosc={(wartosc) => generator.aktualizujDane((dane) => ({ ...dane, tytulSzkolenia: wartosc }), 'tytulSzkolenia')}
           />
-          <PoleTekstowe
-            blad={bladKlienta}
-            etykieta="Nazwa klienta"
-            pole="nazwaKlienta"
-            statusyPol={generator.statusyPol}
-            wartosc={generator.daneFormularza.nazwaKlienta}
-            ustawWartosc={(wartosc) => generator.aktualizujDane((dane) => ({ ...dane, nazwaKlienta: wartosc }), 'nazwaKlienta')}
-          />
+          <div className="szczegoly-siatka szczegoly-siatka--trzy">
+            <PoleTekstowe
+              blad={bladKlienta}
+              etykieta="Nazwa klienta"
+              pole="nazwaKlienta"
+              statusyPol={generator.statusyPol}
+              wartosc={generator.daneFormularza.nazwaKlienta}
+              ustawWartosc={(wartosc) => generator.aktualizujDane((dane) => ({ ...dane, nazwaKlienta: wartosc }), 'nazwaKlienta')}
+            />
+            <PoleWyboru
+              blad={bladOpiekuna}
+              etykieta="Opiekun"
+              opcje={opcjeOpiekunow}
+              pole="opiekunId"
+              statusyPol={generator.statusyPol}
+              wartosc={generator.daneFormularza.opiekunId}
+              ustawWartosc={(wartosc) => generator.aktualizujDane((dane) => ({ ...dane, opiekunId: wartosc }), 'opiekunId')}
+            />
+          </div>
         </SekcjaFormularza>
 
         <SekcjaFormularza

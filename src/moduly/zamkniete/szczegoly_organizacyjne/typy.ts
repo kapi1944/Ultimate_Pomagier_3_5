@@ -8,6 +8,8 @@ export type StatusSzczegolow =
   | 'NIEZREALIZOWANE'
   | 'ROZLICZONE'
 
+export type StatusOpublikowanychSzczegolow = Exclude<StatusSzczegolow, 'NIEPEŁNE' | 'PEŁNE'>
+
 export type StatusPolaImportu = 'zaimportowane' | 'brak' | 'niepewne' | 'reczne'
 export type OswiadczenieVat = 'Nie – 23%' | 'Min. 70%' | 'ZW – 100%'
 export type TrybCeny = 'za grupę' | 'za osobę'
@@ -111,6 +113,7 @@ export type DaneFormularza = {
   tytulSzkolenia: string
   nazwaKlienta: string
   organizator: OrganizatorSzkolenia
+  opiekunId: string
   status: StatusSzczegolow
   nabywca: DaneFirmy
   odbiorca: DaneFirmy
@@ -199,6 +202,9 @@ export type WersjaRoboczaGeneratora = {
   wersja: string
   nazwa: string
   dataZapisu: string
+  autorId: string
+  autorNazwa: string
+  zrodloOpublikowanegoId?: string
   dane: DaneFormularza
   grupy: GrupaSzkoleniowa[]
   adresaci: DaneAdresatow
@@ -206,6 +212,22 @@ export type WersjaRoboczaGeneratora = {
 }
 
 export type KopiaRoboczaSzkolenia = WersjaRoboczaGeneratora
+
+export type OpublikowaneSzczegolyOrganizacyjne = {
+  id: string
+  wersja: string
+  nazwa: string
+  dataPublikacji: string
+  autorId: string
+  autorNazwa: string
+  opiekunId: string
+  status: StatusOpublikowanychSzczegolow
+  dane: DaneFormularza
+  grupy: GrupaSzkoleniowa[]
+  adresaci: DaneAdresatow
+  statusyPol: StatusyPolImportu
+  zrodloKopiiRoboczejId: string
+}
 
 export type WynikParseraMailaSzczegolow = {
   daneFormularza: Partial<DaneFormularza>

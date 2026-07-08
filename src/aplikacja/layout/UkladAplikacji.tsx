@@ -12,6 +12,9 @@ import { WidokProgramowSzkolen } from '../../moduly/dokumenty/generatory/program
 import WidokReplikatoraDokumentow from '../../moduly/dokumenty/replikator_dokumentow/WidokReplikatoraDokumentow'
 import WidokSzkolenOtwartych from '../../moduly/otwarte/WidokSzkolenOtwartych'
 import WidokPulpitu from '../../moduly/zamkniete/pulpit/WidokPulpitu'
+import WidokKopiiRoboczychSzczegolowOrganizacyjnych from '../../moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokKopiiRoboczychSzczegolowOrganizacyjnych'
+import WidokListySzczegolowOrganizacyjnych from '../../moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokListySzczegolowOrganizacyjnych'
+import WidokNowychSzczegolowOrganizacyjnych from '../../moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokNowychSzczegolowOrganizacyjnych'
 import WidokGeneratoraSzczegolow from '../../moduly/zamkniete/szkolenia/generator_szczegolow/WidokGeneratoraSzczegolow'
 import WidokSzkolenZamknietych from '../../moduly/zamkniete/szkolenia/WidokSzkolenZamknietych'
 import './ukladAplikacji.css'
@@ -22,6 +25,8 @@ const dostepneWidoki: WidokNawigacji[] = [
   'pulpit',
   'szkolenia-zamkniete',
   'generator-szczegolow',
+  'zamkniete_szczegoly_organizacyjne_lista',
+  'zamkniete_szczegoly_organizacyjne_kopie_robocze',
   'zamkniete_szczegoly_organizacyjne_nowe',
   'szkolenia-otwarte',
   'dokumenty',
@@ -66,7 +71,7 @@ function pobierzWidokZakladkiKartotek(zakladka: ZakladkaKartotek): WidokNawigacj
   }
 }
 
-function renderujWidok(widok: WidokNawigacji, zmienZakladkeKartotek: (zakladka: ZakladkaKartotek) => void): ReactNode {
+function renderujWidok(widok: WidokNawigacji, zmienZakladkeKartotek: (zakladka: ZakladkaKartotek) => void, ustawAktywnyWidok: (widok: WidokNawigacji) => void): ReactNode {
   switch (widok) {
     case 'pulpit':
       return <WidokPulpitu />
@@ -74,8 +79,12 @@ function renderujWidok(widok: WidokNawigacji, zmienZakladkeKartotek: (zakladka: 
       return <WidokSzkolenZamknietych />
     case 'generator-szczegolow':
       return <WidokGeneratoraSzczegolow />
+    case 'zamkniete_szczegoly_organizacyjne_lista':
+      return <WidokListySzczegolowOrganizacyjnych otworzNoweSzczegoly={() => ustawAktywnyWidok('zamkniete_szczegoly_organizacyjne_nowe')} />
+    case 'zamkniete_szczegoly_organizacyjne_kopie_robocze':
+      return <WidokKopiiRoboczychSzczegolowOrganizacyjnych otworzNoweSzczegoly={() => ustawAktywnyWidok('zamkniete_szczegoly_organizacyjne_nowe')} />
     case 'zamkniete_szczegoly_organizacyjne_nowe':
-      return <WidokGeneratoraSzczegolow />
+      return <WidokNowychSzczegolowOrganizacyjnych />
     case 'szkolenia-otwarte':
       return <WidokSzkolenOtwartych />
     case 'dokumenty':
@@ -125,7 +134,7 @@ export default function UkladAplikacji() {
   return (
     <div className="uklad-aplikacji">
       <MenuBoczne aktywnyWidok={aktywnyWidok} ustawAktywnyWidok={ustawAktywnyWidok} />
-      <main className="uklad-aplikacji__obszar-roboczy">{renderujWidok(aktywnyWidok, zmienZakladkeKartotek)}</main>
+      <main className="uklad-aplikacji__obszar-roboczy">{renderujWidok(aktywnyWidok, zmienZakladkeKartotek, ustawAktywnyWidok)}</main>
     </div>
   )
 }

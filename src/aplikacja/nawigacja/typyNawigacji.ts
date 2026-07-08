@@ -2,6 +2,8 @@ export type WidokNawigacji =
   | 'pulpit'
   | 'szkolenia-zamkniete'
   | 'generator-szczegolow'
+  | 'zamkniete_szczegoly_organizacyjne_lista'
+  | 'zamkniete_szczegoly_organizacyjne_kopie_robocze'
   | 'zamkniete_szczegoly_organizacyjne_nowe'
   | 'szkolenia-otwarte'
   | 'dokumenty'

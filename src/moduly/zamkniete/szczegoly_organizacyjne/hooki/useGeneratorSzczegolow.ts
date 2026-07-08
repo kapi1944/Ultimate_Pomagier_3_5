@@ -14,6 +14,7 @@ import {
   utworzPoczatkowaGrupe,
 } from '../danePoczatkowe'
 import { polaWymaganePoImporcie, trenerzyKartotekiStartowi } from '../stale'
+import { czyKontoMozeWidziecKopie, pobierzAktywneKontoSzczegolow } from '../uzytkownicySzczegolow'
 import type {
   DaneAdresatow,
   DaneDokumentacjiMaterialow,
@@ -30,8 +31,10 @@ import type {
 } from '../typy'
 import { utworzTekstSzczegolow } from '../uslugi/eksportSzczegolow'
 import {
+  opublikujWersjeRobocza,
   pobierzAktualnaWersjeRobocza,
   pobierzKopieRobocze,
+  ustawAktualnaWersjeRobocza,
   wersjaEksportuSzczegolow,
   wyczyscAktualnaWersjeRobocza,
   zapiszWersjeRobocza,
@@ -143,6 +146,7 @@ function normalizujDane(dane?: Partial<DaneFormularza>): DaneFormularza {
     ...klonuj(poczatkoweDaneFormularza),
     ...obecne,
     nazwaKlienta: obecne.nazwaKlienta ?? nabywca.nazwa ?? '',
+    opiekunId: typeof obecne.opiekunId === 'string' ? obecne.opiekunId : '',
     nabywca,
     odbiorca: czyNabywcaJestOdbiorca ? { ...nabywca } : odbiorca,
     czyNabywcaJestOdbiorca,
@@ -246,6 +250,8 @@ function pobierzStanPoczatkowy() {
       grupy: wersja.grupy.length ? wersja.grupy.map(normalizujGrupe) : [normalizujGrupe()],
       adresaci: normalizujAdresatow(wersja.adresaci),
       statusyPol: wersja.statusyPol ?? {},
+      aktywnaKopiaId: wersja.id,
+      zrodloOpublikowanegoId: wersja.zrodloOpublikowanegoId,
     }
   }
 
@@ -254,6 +260,8 @@ function pobierzStanPoczatkowy() {
     grupy: [normalizujGrupe()],
     adresaci: { ...poczatkowiAdresaci },
     statusyPol: {},
+    aktywnaKopiaId: null,
+    zrodloOpublikowanegoId: undefined,
   }
 }
 
@@ -289,6 +297,10 @@ function scalGrupe(obecna: GrupaSzkoleniowa, czesciowa: Partial<GrupaSzkoleniowa
   })
 }
 
+function pobierzWidoczneKopieRobocze(konto: ReturnType<typeof pobierzAktywneKontoSzczegolow>) {
+  return pobierzKopieRobocze().filter((kopia) => czyKontoMozeWidziecKopie(konto, kopia))
+}
+
 function zbudujProblemyWalidacji(dane: DaneFormularza, grupy: GrupaSzkoleniowa[]): ProblemWalidacji[] {
   const problemy: ProblemWalidacji[] = []
   const lokalizacje = pobierzLokalizacjeZMagazynu()
@@ -303,6 +315,10 @@ function zbudujProblemyWalidacji(dane: DaneFormularza, grupy: GrupaSzkoleniowa[]
 
   if (!dane.nazwaKlienta.trim()) {
     dodaj('Podstawowe informacje', 'Nazwa klienta', 'Nazwa klienta: wpisz nazwę klienta')
+  }
+
+  if (!dane.opiekunId.trim()) {
+    dodaj('Podstawowe informacje', 'Opiekun', 'Opiekun: wybierz opiekuna')
   }
 
   if (!grupy.length) {
@@ -381,16 +397,19 @@ function zbudujProblemyWalidacji(dane: DaneFormularza, grupy: GrupaSzkoleniowa[]
 }
 
 export function useGeneratorSzczegolow() {
+  const aktywneKonto = useMemo(() => pobierzAktywneKontoSzczegolow(), [])
   const stanPoczatkowy = useMemo(() => pobierzStanPoczatkowy(), [])
   const [daneFormularza, ustawDaneFormularza] = useState<DaneFormularza>(stanPoczatkowy.dane)
   const [grupy, ustawGrupy] = useState<GrupaSzkoleniowa[]>(stanPoczatkowy.grupy)
   const [adresaci, ustawAdresaci] = useState<DaneAdresatow>(stanPoczatkowy.adresaci)
   const [statusyPol, ustawStatusyPol] = useState<StatusyPolImportu>(stanPoczatkowy.statusyPol)
+  const [aktywnaKopiaId, ustawAktywnaKopiaId] = useState<string | null>(stanPoczatkowy.aktywnaKopiaId)
+  const [zrodloOpublikowanegoId, ustawZrodloOpublikowanegoId] = useState<string | undefined>(stanPoczatkowy.zrodloOpublikowanegoId)
   const [trescMaila, ustawTrescMaila] = useState('')
   const [rozpoznaneObszary, ustawRozpoznaneObszary] = useState<string[]>([])
   const [komunikat, ustawKomunikat] = useState('Generator gotowy.')
   const [trenerzyKartoteki, ustawTrenerzyKartoteki] = useState<TrenerKartoteki[]>(pobierzTrenerowZKartoteki)
-  const [kopieRobocze, ustawKopieRobocze] = useState(pobierzKopieRobocze)
+  const [kopieRobocze, ustawKopieRobocze] = useState(() => pobierzWidoczneKopieRobocze(aktywneKonto))
   const problemyWalidacji = useMemo(() => zbudujProblemyWalidacji(daneFormularza, grupy), [daneFormularza, grupy])
   const czyFormularzKompletny = useMemo(() => problemyWalidacji.every((problem) => !problem.czyBlokuje), [problemyWalidacji])
   const podgladSzczegolow = useMemo(() => utworzTekstSzczegolow(daneFormularza, grupy), [daneFormularza, grupy])
@@ -495,9 +514,18 @@ export function useGeneratorSzczegolow() {
       return
     }
 
-    const wersja = zbudujWersjeRobocza(daneFormularza, grupy, adresaci, statusyPol)
+    const daneDoZapisu: DaneFormularza = {
+      ...daneFormularza,
+      status: czyFormularzKompletny ? 'PEŁNE' : 'NIEPEŁNE',
+    }
+    const wersja = zbudujWersjeRobocza(daneDoZapisu, grupy, adresaci, statusyPol, aktywneKonto, {
+      id: aktywnaKopiaId,
+      zrodloOpublikowanegoId,
+    })
     zapiszWersjeRobocza(wersja)
-    ustawKopieRobocze(pobierzKopieRobocze())
+    ustawDaneFormularza(normalizujDane(daneDoZapisu))
+    ustawAktywnaKopiaId(wersja.id)
+    ustawKopieRobocze(pobierzWidoczneKopieRobocze(aktywneKonto))
     ustawKomunikat('Zapisano kopię roboczą lokalnie.')
   }
 
@@ -506,6 +534,9 @@ export function useGeneratorSzczegolow() {
     ustawGrupy(wersja.grupy.length ? wersja.grupy.map(normalizujGrupe) : [normalizujGrupe()])
     ustawAdresaci(normalizujAdresatow(wersja.adresaci))
     ustawStatusyPol(wersja.statusyPol ?? {})
+    ustawAktywnaKopiaId(wersja.id)
+    ustawZrodloOpublikowanegoId(wersja.zrodloOpublikowanegoId)
+    ustawAktualnaWersjeRobocza(wersja)
     ustawKomunikat('Wczytano kopię roboczą.')
   }
 
@@ -514,6 +545,8 @@ export function useGeneratorSzczegolow() {
     ustawGrupy([normalizujGrupe()])
     ustawAdresaci({ ...poczatkowiAdresaci })
     ustawStatusyPol({})
+    ustawAktywnaKopiaId(null)
+    ustawZrodloOpublikowanegoId(undefined)
     ustawRozpoznaneObszary([])
     ustawTrescMaila('')
     wyczyscAktualnaWersjeRobocza()
@@ -536,7 +569,10 @@ export function useGeneratorSzczegolow() {
   }
 
   function eksportujJson() {
-    const wersja = zbudujWersjeRobocza(daneFormularza, grupy, adresaci, statusyPol)
+    const wersja = zbudujWersjeRobocza(daneFormularza, grupy, adresaci, statusyPol, aktywneKonto, {
+      id: aktywnaKopiaId,
+      zrodloOpublikowanegoId,
+    })
     const blob = new Blob([JSON.stringify(wersja, null, 2)], { type: 'application/json;charset=utf-8' })
     const adres = URL.createObjectURL(blob)
     const link = document.createElement('a')
@@ -547,17 +583,32 @@ export function useGeneratorSzczegolow() {
     ustawKomunikat('Wyeksportowano JSON formularza.')
   }
 
-  function wprowadzSzkolenie() {
+  function opublikujSzczegoly() {
     if (!czyFormularzKompletny) {
-      ustawKomunikat('Uzupełnij wymagane pola przed wprowadzeniem szkolenia.')
+      ustawKomunikat('Uzupełnij wymagane pola przed publikacją szczegółów organizacyjnych.')
       return
     }
 
-    ustawDaneFormularza((obecne) => ({
-      ...obecne,
-      status: obecne.status === 'NIEPEŁNE' ? 'OCZEKUJĄCE' : obecne.status,
-    }))
-    ustawKomunikat('Szkolenie oznaczono lokalnie jako gotowe do wprowadzenia.')
+    const daneDoPublikacji: DaneFormularza = {
+      ...daneFormularza,
+      status: 'PEŁNE',
+    }
+    const wersja = zbudujWersjeRobocza(daneDoPublikacji, grupy, adresaci, statusyPol, aktywneKonto, {
+      id: aktywnaKopiaId,
+      zrodloOpublikowanegoId,
+    })
+
+    opublikujWersjeRobocza(wersja)
+    ustawDaneFormularza(normalizujDane())
+    ustawGrupy([normalizujGrupe()])
+    ustawAdresaci({ ...poczatkowiAdresaci })
+    ustawStatusyPol({})
+    ustawAktywnaKopiaId(null)
+    ustawZrodloOpublikowanegoId(undefined)
+    ustawRozpoznaneObszary([])
+    ustawTrescMaila('')
+    ustawKopieRobocze(pobierzWidoczneKopieRobocze(aktywneKonto))
+    ustawKomunikat('Opublikowano szczegóły organizacyjne ze statusem OCZEKUJĄCE.')
   }
 
   function przygotujAktualizacje() {
@@ -605,7 +656,7 @@ export function useGeneratorSzczegolow() {
     wyczyscFormularz,
     importujJson,
     eksportujJson,
-    wprowadzSzkolenie,
+    opublikujSzczegoly,
     przygotujAktualizacje,
     pokazKomunikatImportuDokumentow,
     odswiezTrenerowZKartoteki,

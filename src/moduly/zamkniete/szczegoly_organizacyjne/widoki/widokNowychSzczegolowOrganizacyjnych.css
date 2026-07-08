@@ -812,3 +812,54 @@
     padding: 0;
   }
 }
+
+.szczegoly-widok-naglowek h1 {
+  margin: 0;
+}
+
+.szczegoly-lista-rekordow {
+  display: grid;
+  gap: 12px;
+}
+
+.szczegoly-rekord {
+  display: grid;
+  gap: 12px;
+  border: 1px solid rgba(3, 24, 12, 0.26);
+  border-radius: 8px;
+  color: #03180c;
+  padding: 14px;
+}
+
+.szczegoly-rekord h2,
+.szczegoly-rekord p {
+  margin: 0;
+}
+
+.szczegoly-rekord__naglowek {
+  display: flex;
+  gap: 12px;
+  align-items: start;
+  justify-content: space-between;
+}
+
+.szczegoly-rekord__naglowek strong {
+  border: 1px solid rgba(3, 24, 12, 0.24);
+  border-radius: 999px;
+  background: rgba(3, 24, 12, 0.12);
+  padding: 5px 8px;
+  white-space: nowrap;
+}
+
+.szczegoly-rekord__metadane,
+.szczegoly-rekord__akcje {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.szczegoly-rekord__metadane span {
+  border-radius: 999px;
+  background: rgba(3, 24, 12, 0.12);
+  padding: 5px 8px;
+}
