@@ -114,6 +114,37 @@
   letter-spacing: 0;
 }
 
+.dyplomy__sekcje-dwie-kolumny {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.dyplomy__dodaj-tekst {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.dyplomy__dodaj-tekst-pola {
+  display: grid;
+  gap: 12px;
+}
+
+.dyplomy__status-naglowek {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.dyplomy__status-naglowek h2 {
+  margin: 0;
+}
+
 .dyplomy__siatka {
   display: grid;
   gap: 12px;
@@ -348,6 +379,21 @@
   background: #082b14;
 }
 
+.dyplomy__narzedzia-podgladu {
+  display: grid;
+  gap: 12px;
+  border: 1px solid rgba(74, 222, 128, 0.22);
+  border-radius: 6px;
+  padding: 10px;
+  background: #082b14;
+}
+
+.dyplomy__widocznosc-podgladu {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
 .dyplomy__nawigacja-uczestnika {
   display: flex;
   align-items: center;
@@ -463,12 +509,12 @@
 }
 
 .dyplom-kartka__dodatek--gora {
-  top: 9.2%;
+  top: var(--margines-dodatku-gornego, 9.2%);
   width: var(--szerokosc-dodatku-gornego, 61.6%);
 }
 
 .dyplom-kartka__dodatek--dol {
-  bottom: 7.6%;
+  bottom: var(--margines-dodatku-dolnego, 7.6%);
   width: var(--szerokosc-dodatku-dolnego, 61.6%);
 }
 
@@ -812,7 +858,10 @@
   .dyplomy__siatka--dwie,
   .dyplomy__siatka--trzy,
   .dyplomy__kalendarz-naglowek,
-  .dyplomy__przypisanie {
+  .dyplomy__przypisanie,
+  .dyplomy__sekcje-dwie-kolumny,
+  .dyplomy__dodaj-tekst,
+  .dyplomy__widocznosc-podgladu {
     grid-template-columns: 1fr;
   }
 

@@ -90,6 +90,11 @@ type ZapisDyplomow = DaneNumeracji & {
   dodatki: DodatekDyplomu[]
   szerokoscDodatkuGornego: number
   szerokoscDodatkuDolnego: number
+  czyPokazacDodatekGorny: boolean
+  czyPokazacDodatekDolny: boolean
+  czyPokazacDrugaStrone: boolean
+  marginesDodatkuGornego: number
+  marginesDodatkuDolnego: number
   tloSzablonu: string
   drugaStronaAktywna: boolean
   trescDrugiejStrony: string
@@ -225,6 +230,20 @@ function pobierzSzerokoscDodatku(wartosc: number) {
   return `${ograniczProcent(wartosc, 70) * 0.88}%`
 }
 
+function ograniczMarginesDodatku(wartosc: unknown, domyslnaWartosc: number) {
+  const liczba = Number(wartosc)
+
+  if (!Number.isFinite(liczba)) {
+    return domyslnaWartosc
+  }
+
+  return Math.min(24, Math.max(0, Math.round(liczba * 10) / 10))
+}
+
+function pobierzMarginesDodatku(wartosc: number, domyslnaWartosc: number) {
+  return `${ograniczMarginesDodatku(wartosc, domyslnaWartosc)}%`
+}
+
 function pobierzPrzesuniecieDodatku(wartosc: number, czyDodatekWybrany: boolean) {
   if (!czyDodatekWybrany) {
     return '0%'
@@ -237,7 +256,12 @@ function pobierzPrzesuniecieDodatku(wartosc: number, czyDodatekWybrany: boolean)
 function pobierzStylMotywuDyplomu(
   dane: Pick<
     ZapisDyplomow,
-    'motywKoloru' | 'kolorMotywu' | 'szerokoscDodatkuGornego' | 'szerokoscDodatkuDolnego'
+    | 'motywKoloru'
+    | 'kolorMotywu'
+    | 'szerokoscDodatkuGornego'
+    | 'szerokoscDodatkuDolnego'
+    | 'marginesDodatkuGornego'
+    | 'marginesDodatkuDolnego'
   >,
   dodatki: { czyDodatekGorny?: boolean; czyDodatekDolny?: boolean } = {},
 ): CSSProperties {
@@ -245,6 +269,8 @@ function pobierzStylMotywuDyplomu(
     '--semper-czerwony': pobierzKolorMotywuDyplomu(dane),
     '--szerokosc-dodatku-gornego': pobierzSzerokoscDodatku(dane.szerokoscDodatkuGornego),
     '--szerokosc-dodatku-dolnego': pobierzSzerokoscDodatku(dane.szerokoscDodatkuDolnego),
+    '--margines-dodatku-gornego': pobierzMarginesDodatku(dane.marginesDodatkuGornego, 9.2),
+    '--margines-dodatku-dolnego': pobierzMarginesDodatku(dane.marginesDodatkuDolnego, 7.6),
     '--przesuniecie-dodatku-gornego': pobierzPrzesuniecieDodatku(
       dane.szerokoscDodatkuGornego,
       Boolean(dodatki.czyDodatekGorny),
@@ -481,6 +507,11 @@ function utworzDomyslnyZapis(): ZapisDyplomow {
     dodatki: [],
     szerokoscDodatkuGornego: 70,
     szerokoscDodatkuDolnego: 70,
+    czyPokazacDodatekGorny: true,
+    czyPokazacDodatekDolny: true,
+    czyPokazacDrugaStrone: true,
+    marginesDodatkuGornego: 9.2,
+    marginesDodatkuDolnego: 7.6,
     tloSzablonu: '',
     drugaStronaAktywna: false,
     trescDrugiejStrony: 'Cele, korzyści, program szkolenia albo efekty uczenia się.',
@@ -527,6 +558,17 @@ function wczytajZapisDyplomow(): ZapisDyplomow {
       szerokoscDodatkuDolnego: ograniczProcent(
         dane.szerokoscDodatkuDolnego,
         domyslnyZapis.szerokoscDodatkuDolnego,
+      ),
+      czyPokazacDodatekGorny: dane.czyPokazacDodatekGorny ?? domyslnyZapis.czyPokazacDodatekGorny,
+      czyPokazacDodatekDolny: dane.czyPokazacDodatekDolny ?? domyslnyZapis.czyPokazacDodatekDolny,
+      czyPokazacDrugaStrone: dane.czyPokazacDrugaStrone ?? domyslnyZapis.czyPokazacDrugaStrone,
+      marginesDodatkuGornego: ograniczMarginesDodatku(
+        dane.marginesDodatkuGornego,
+        domyslnyZapis.marginesDodatkuGornego,
+      ),
+      marginesDodatkuDolnego: ograniczMarginesDodatku(
+        dane.marginesDodatkuDolnego,
+        domyslnyZapis.marginesDodatkuDolnego,
       ),
       wybraneDaty: Array.isArray(dane.wybraneDaty) ? dane.wybraneDaty : domyslnyZapis.wybraneDaty,
       trybZapisuDat: dane.trybZapisuDat ?? domyslnyZapis.trybZapisuDat,
@@ -810,8 +852,8 @@ function StronaDrugaDyplomu({ dane, uczestnik }: { dane: ZapisDyplomow; uczestni
 }
 
 function StronaDyplomu({ dane, uczestnik }: { dane: ZapisDyplomow; uczestnik: UczestnikDyplomu }) {
-  const dodatekGorny = pobierzDodatek(dane.dodatki, uczestnik.idDodatkuGornego)
-  const dodatekDolny = pobierzDodatek(dane.dodatki, uczestnik.idDodatkuDolnego)
+  const dodatekGorny = dane.czyPokazacDodatekGorny ? pobierzDodatek(dane.dodatki, uczestnik.idDodatkuGornego) : undefined
+  const dodatekDolny = dane.czyPokazacDodatekDolny ? pobierzDodatek(dane.dodatki, uczestnik.idDodatkuDolnego) : undefined
   const miejsceSzkolenia = pobierzMiejsceSzkolenia(dane)
   const dataKonca = pobierzDateKonca(dane.wybraneDaty)
   const trybDat = pobierzSkutecznyTrybZapisuDat(dane.wybraneDaty, dane.trybZapisuDat)
@@ -916,7 +958,8 @@ export default function WidokDyplomow() {
   const indeksPierwszejStrony = uczestnicyDoDruku.length
     ? Math.min(indeksUczestnikaPierwszejStrony, uczestnicyDoDruku.length - 1)
     : 0
-  const uczestnikDrugiejStrony = uczestnicyDoDruku[0] ?? utworzUczestnika('', 0, dane)
+  const uczestnicyDrugiejStrony = uczestnicyDoDruku.filter((uczestnik) => uczestnik.drugaStrona)
+  const uczestnikDrugiejStrony = uczestnicyDrugiejStrony[0] ?? uczestnicyDoDruku[0] ?? utworzUczestnika('', 0, dane)
   const uczestnikPierwszejStrony = uczestnicyDoDruku[indeksPierwszejStrony] ?? uczestnikDrugiejStrony
   const problemy = useMemo(() => sprawdzDane(dane), [dane])
   const miejscowosciDoPodpowiedzi = useMemo(
@@ -938,7 +981,7 @@ export default function WidokDyplomow() {
     () => wybierzPodpowiedziTrenerow(trenerzyDoWyboru, dane.trener),
     [dane.trener, trenerzyDoWyboru],
   )
-  const czyDrugaStronaDostepna = dane.drugaStronaAktywna || Boolean(dane.trescDrugiejStrony.trim())
+  const czyDrugaStronaDostepna = dane.drugaStronaAktywna && dane.czyPokazacDrugaStrone && uczestnicyDrugiejStrony.length > 0
   const czyKontrolaPodgladuDostepna = czyDrugaStronaDostepna || uczestnicyDoDruku.length > 1
   const skutecznyTrybPodgladuStron = czyDrugaStronaDostepna ? trybPodgladuStron : 'pierwsza'
   const czyPokazacPierwszaStrone =
@@ -1284,6 +1327,24 @@ export default function WidokDyplomow() {
     ustawTrybPodgladuStron('pierwsza')
     ustawUkladPodgladuStron('pod_soba')
     ustawKomunikat('Wyczyszczono generator dyplomów.')
+  }
+
+  function resetujFormatowaniePodgladu() {
+    const domyslnyZapis = utworzDomyslnyZapis()
+
+    ustawDane((aktualne) => ({
+      ...aktualne,
+      rozmiarTytulu: domyslnyZapis.rozmiarTytulu,
+      szerokoscDodatkuGornego: domyslnyZapis.szerokoscDodatkuGornego,
+      szerokoscDodatkuDolnego: domyslnyZapis.szerokoscDodatkuDolnego,
+      marginesDodatkuGornego: domyslnyZapis.marginesDodatkuGornego,
+      marginesDodatkuDolnego: domyslnyZapis.marginesDodatkuDolnego,
+      czyPokazacDodatekGorny: false,
+      czyPokazacDodatekDolny: false,
+      czyPokazacDrugaStrone: false,
+    }))
+    ustawTrybPodgladuStron('pierwsza')
+    ustawKomunikat('Zresetowano formatowanie podglądu.')
   }
 
   function pokazPoprzedniegoUczestnikaPierwszejStrony() {
@@ -1703,117 +1764,66 @@ export default function WidokDyplomow() {
             </div>
           </section>
 
-          <section className="dyplomy__sekcja">
-            <h2>Dodatki i szablon</h2>
-            <div className="dyplomy__siatka dyplomy__siatka--dwie">
-              <label className="dyplomy__pole">
-                <span>Tło szablonu PNG / JPG</span>
-                <input accept="image/*" onChange={importujTloSzablonu} type="file" />
-              </label>
+          <div className="dyplomy__sekcje-dwie-kolumny">
+            <section className="dyplomy__sekcja">
+              <h2>Dodatki i szablon</h2>
+              <div className="dyplomy__siatka dyplomy__siatka--dwie">
+                <label className="dyplomy__pole">
+                  <span>Grafika tła</span>
+                  <input accept="image/*" onChange={importujTloSzablonu} type="file" />
+                </label>
 
-              <div className="dyplomy__pole dyplomy__pole--przycisk">
-                <span>Tło</span>
-                <button className="dyplomy__przycisk" onClick={() => zmienPole('tloSzablonu', '')} type="button">
-                  Usuń tło
+                <div className="dyplomy__pole dyplomy__pole--przycisk">
+                  <button className="dyplomy__przycisk" onClick={() => zmienPole('tloSzablonu', '')} type="button">
+                    Usuń tło
+                  </button>
+                </div>
+              </div>
+
+              <div className="dyplomy__dodaj-tekst">
+                <div className="dyplomy__dodaj-tekst-pola">
+                  <label className="dyplomy__pole">
+                    <span>Tekst dodatku</span>
+                    <textarea
+                      onChange={(zdarzenie) => ustawTekstNowegoDodatku(zdarzenie.target.value)}
+                      rows={3}
+                      value={tekstNowegoDodatku}
+                    />
+                  </label>
+
+                  <label className="dyplomy__pole">
+                    <span>Nazwa tekstu</span>
+                    <input
+                      onChange={(zdarzenie) => ustawNazweNowegoDodatku(zdarzenie.target.value)}
+                      type="text"
+                      value={nazwaNowegoDodatku}
+                    />
+                  </label>
+                </div>
+
+                <button className="dyplomy__przycisk" onClick={dodajTekstDodatku} type="button">
+                  Zapisz tekst
                 </button>
               </div>
 
-              <label className="dyplomy__pole">
-                <span>Dodaj grafiki</span>
-                <input accept="image/*" multiple onChange={importujDodatkiGraficzne} type="file" />
-              </label>
+              <div className="dyplomy__biblioteka">
+                {dane.dodatki.map((dodatek) => (
+                  <article className="dyplomy__dodatek" key={dodatek.id}>
+                    {dodatek.typ === 'grafika' && dodatek.daneUrl ? (
+                      <img alt={dodatek.nazwa} src={dodatek.daneUrl} />
+                    ) : (
+                      <div>{dodatek.tekst}</div>
+                    )}
+                    <strong>{dodatek.nazwa}</strong>
+                    <button className="dyplomy__przycisk dyplomy__przycisk--maly" onClick={() => usunDodatek(dodatek.id)} type="button">
+                      Usuń
+                    </button>
+                  </article>
+                ))}
+              </div>
+            </section>
 
-              <label className="dyplomy__pole">
-                <span>Nazwa tekstu</span>
-                <input
-                  onChange={(zdarzenie) => ustawNazweNowegoDodatku(zdarzenie.target.value)}
-                  type="text"
-                  value={nazwaNowegoDodatku}
-                />
-              </label>
-
-              <label className="dyplomy__pole dyplomy__pole--pelne">
-                <span>Tekst dodatku</span>
-                <textarea
-                  onChange={(zdarzenie) => ustawTekstNowegoDodatku(zdarzenie.target.value)}
-                  rows={3}
-                  value={tekstNowegoDodatku}
-                />
-              </label>
-
-              <button className="dyplomy__przycisk" onClick={dodajTekstDodatku} type="button">
-                Dodaj tekst
-              </button>
-            </div>
-
-            <div className="dyplomy__przypisanie">
-              <label className="dyplomy__pole">
-                <span>Góra wszystkim</span>
-                <select onChange={(zdarzenie) => przypiszDodatekWszystkim('gora', zdarzenie.target.value)} value="">
-                  <option value="">Wybierz dodatek</option>
-                  {dane.dodatki.map((dodatek) => (
-                    <option key={dodatek.id} value={dodatek.id}>
-                      {dodatek.nazwa}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="dyplomy__pole">
-                <span>Dół wszystkim</span>
-                <select onChange={(zdarzenie) => przypiszDodatekWszystkim('dol', zdarzenie.target.value)} value="">
-                  <option value="">Wybierz dodatek</option>
-                  {dane.dodatki.map((dodatek) => (
-                    <option key={dodatek.id} value={dodatek.id}>
-                      {dodatek.nazwa}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            <div className="dyplomy__siatka dyplomy__siatka--dwie">
-              <label className="dyplomy__pole">
-                <span>Szerokość górnego logotypu: {dane.szerokoscDodatkuGornego}%</span>
-                <input
-                  max={100}
-                  min={10}
-                  onChange={(zdarzenie) => zmienPole('szerokoscDodatkuGornego', Number(zdarzenie.target.value))}
-                  type="range"
-                  value={dane.szerokoscDodatkuGornego}
-                />
-              </label>
-
-              <label className="dyplomy__pole">
-                <span>Szerokość dolnego logotypu: {dane.szerokoscDodatkuDolnego}%</span>
-                <input
-                  max={100}
-                  min={10}
-                  onChange={(zdarzenie) => zmienPole('szerokoscDodatkuDolnego', Number(zdarzenie.target.value))}
-                  type="range"
-                  value={dane.szerokoscDodatkuDolnego}
-                />
-              </label>
-            </div>
-
-            <div className="dyplomy__biblioteka">
-              {dane.dodatki.map((dodatek) => (
-                <article className="dyplomy__dodatek" key={dodatek.id}>
-                  {dodatek.typ === 'grafika' && dodatek.daneUrl ? (
-                    <img alt={dodatek.nazwa} src={dodatek.daneUrl} />
-                  ) : (
-                    <div>{dodatek.tekst}</div>
-                  )}
-                  <strong>{dodatek.nazwa}</strong>
-                  <button className="dyplomy__przycisk dyplomy__przycisk--maly" onClick={() => usunDodatek(dodatek.id)} type="button">
-                    Usuń
-                  </button>
-                </article>
-              ))}
-            </div>
-          </section>
-
-          <section className="dyplomy__sekcja">
+            <section className="dyplomy__sekcja">
               <h2>Druga strona</h2>
               <label className="dyplomy__pole">
                 <span>Import treści TXT / MD</span>
@@ -1827,12 +1837,18 @@ export default function WidokDyplomow() {
                   value={dane.trescDrugiejStrony}
                 />
               </label>
-          </section>
+            </section>
+          </div>
         </div>
 
         <aside className="dyplomy__podglad">
           <section className="dyplomy__status">
-            <h2>Status</h2>
+            <div className="dyplomy__status-naglowek">
+              <h2>Status</h2>
+              <button className="dyplomy__przycisk dyplomy__przycisk--maly" onClick={resetujFormatowaniePodgladu} type="button">
+                Resetuj formatowanie
+              </button>
+            </div>
             {problemy.length ? (
               <ul>
                 {problemy.map((problem) => (
@@ -1919,6 +1935,116 @@ export default function WidokDyplomow() {
             </section>
           )}
 
+          <section className="dyplomy__narzedzia-podgladu" aria-label="Dodatki i widoczność podglądu">
+            <div className="dyplomy__widocznosc-podgladu">
+              <label className="dyplomy__pole dyplomy__pole--checkbox">
+                <input
+                  checked={dane.czyPokazacDodatekGorny}
+                  onChange={(zdarzenie) => zmienPole('czyPokazacDodatekGorny', zdarzenie.target.checked)}
+                  type="checkbox"
+                />
+                <span>Pokaż górne dodatki</span>
+              </label>
+              <label className="dyplomy__pole dyplomy__pole--checkbox">
+                <input
+                  checked={dane.czyPokazacDodatekDolny}
+                  onChange={(zdarzenie) => zmienPole('czyPokazacDodatekDolny', zdarzenie.target.checked)}
+                  type="checkbox"
+                />
+                <span>Pokaż dolne dodatki</span>
+              </label>
+              <label className="dyplomy__pole dyplomy__pole--checkbox">
+                <input
+                  checked={dane.czyPokazacDrugaStrone}
+                  onChange={(zdarzenie) => zmienPole('czyPokazacDrugaStrone', zdarzenie.target.checked)}
+                  type="checkbox"
+                />
+                <span>Pokaż drugą stronę</span>
+              </label>
+            </div>
+
+            <label className="dyplomy__pole">
+              <span>Dodaj grafiki</span>
+              <input accept="image/*" multiple onChange={importujDodatkiGraficzne} type="file" />
+            </label>
+
+            <div className="dyplomy__przypisanie">
+              <label className="dyplomy__pole">
+                <span>Góra wszystkim</span>
+                <select onChange={(zdarzenie) => przypiszDodatekWszystkim('gora', zdarzenie.target.value)} value="">
+                  <option value="">Wybierz dodatek dla góry</option>
+                  {dane.dodatki.map((dodatek) => (
+                    <option key={dodatek.id} value={dodatek.id}>
+                      {dodatek.nazwa}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="dyplomy__pole">
+                <span>Dół wszystkim</span>
+                <select onChange={(zdarzenie) => przypiszDodatekWszystkim('dol', zdarzenie.target.value)} value="">
+                  <option value="">Wybierz dodatek dla dołu</option>
+                  {dane.dodatki.map((dodatek) => (
+                    <option key={dodatek.id} value={dodatek.id}>
+                      {dodatek.nazwa}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="dyplomy__siatka dyplomy__siatka--dwie">
+              <label className="dyplomy__pole">
+                <span>Szerokość górnego logotypu: {dane.szerokoscDodatkuGornego}%</span>
+                <input
+                  max={100}
+                  min={10}
+                  onChange={(zdarzenie) => zmienPole('szerokoscDodatkuGornego', Number(zdarzenie.target.value))}
+                  type="range"
+                  value={dane.szerokoscDodatkuGornego}
+                />
+              </label>
+
+              <label className="dyplomy__pole">
+                <span>Szerokość dolnego logotypu: {dane.szerokoscDodatkuDolnego}%</span>
+                <input
+                  max={100}
+                  min={10}
+                  onChange={(zdarzenie) => zmienPole('szerokoscDodatkuDolnego', Number(zdarzenie.target.value))}
+                  type="range"
+                  value={dane.szerokoscDodatkuDolnego}
+                />
+              </label>
+            </div>
+
+            <div className="dyplomy__siatka dyplomy__siatka--dwie">
+              <label className="dyplomy__pole">
+                <span>Margines górnego logotypu: {dane.marginesDodatkuGornego}%</span>
+                <input
+                  max={24}
+                  min={0}
+                  onChange={(zdarzenie) => zmienPole('marginesDodatkuGornego', Number(zdarzenie.target.value))}
+                  step={0.1}
+                  type="range"
+                  value={dane.marginesDodatkuGornego}
+                />
+              </label>
+
+              <label className="dyplomy__pole">
+                <span>Margines dolnego logotypu: {dane.marginesDodatkuDolnego}%</span>
+                <input
+                  max={24}
+                  min={0}
+                  onChange={(zdarzenie) => zmienPole('marginesDodatkuDolnego', Number(zdarzenie.target.value))}
+                  step={0.1}
+                  type="range"
+                  value={dane.marginesDodatkuDolnego}
+                />
+              </label>
+            </div>
+          </section>
+
           <section
             className={`dyplomy__podglad-kartki${
               trybPodgladuStron === 'obie' && ukladPodgladuStron === 'obok'
@@ -1936,7 +2062,7 @@ export default function WidokDyplomow() {
         {uczestnicyDoDruku.map((uczestnik) => (
           <div key={uczestnik.id}>
             <StronaDyplomu dane={dane} uczestnik={uczestnik} />
-            {dane.drugaStronaAktywna && uczestnik.drugaStrona && (
+            {dane.drugaStronaAktywna && dane.czyPokazacDrugaStrone && uczestnik.drugaStrona && (
               <StronaDrugaDyplomu dane={dane} uczestnik={uczestnik} />
             )}
           </div>
