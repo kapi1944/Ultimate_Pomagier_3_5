@@ -716,18 +716,18 @@ function zbudujZdanieDat(wybraneDaty: string[], trybZapisuDat: TrybZapisuDat = '
   }
 
   if (daty.length === 1) {
-    return `zrealizowane w terminie: ${formatujKrotkaDate(daty[0])}.`
+    return `zrealizowane w terminie: ${formatujKrotkaDate(daty[0])}`
   }
 
   if (skutecznyTrybZapisuDat === 'zakres_krotki' || skutecznyTrybZapisuDat === 'zakres_pelny') {
-    return `zrealizowane w terminie: ${zbudujZakresDat(datyDyplomu, skutecznyTrybZapisuDat)}.`
+    return `zrealizowane w terminie: ${zbudujZakresDat(datyDyplomu, skutecznyTrybZapisuDat)}`
   }
 
   if (skutecznyTrybZapisuDat === 'lista_pelna_srednik') {
-    return `zrealizowane w terminach: ${formatujListeDat(datyDyplomu, skutecznyTrybZapisuDat)}.`
+    return `zrealizowane w terminach: ${formatujListeDat(datyDyplomu, skutecznyTrybZapisuDat)}`
   }
 
-  return `zrealizowane w terminie: ${formatujListeDat(datyDyplomu, skutecznyTrybZapisuDat)}.`
+  return `zrealizowane w terminie: ${formatujListeDat(datyDyplomu, skutecznyTrybZapisuDat)}`
 }
 
 function pobierzOpcjeZapisuDat(wybraneDaty: string[]): OpcjaZapisuDat[] {
@@ -761,6 +761,16 @@ function pobierzDateKonca(wybraneDaty: string[]) {
 
 function pobierzMiejsceSzkolenia(dane: ZapisDyplomow) {
   return dane.trybSzkolenia === 'online' ? 'Szkolenie online' : dane.miejsceSzkolenia.trim()
+}
+
+function zbudujTekstMiejscaSzkolenia(dane: ZapisDyplomow) {
+  const miejsceSzkolenia = pobierzMiejsceSzkolenia(dane)
+
+  if (dane.trybSzkolenia === 'online') {
+    return miejsceSzkolenia
+  }
+
+  return `Miejsce szkolenia: ${miejsceSzkolenia || '--'}.`
 }
 
 function sprawdzDane(dane: ZapisDyplomow) {
@@ -909,7 +919,7 @@ function StronaDyplomu({ dane, uczestnik }: { dane: ZapisDyplomow; uczestnik: Uc
             <p>
               w wymiarze {dane.liczbaGodzin || '--'} {pobierzZapisGodzin(dane)}.
             </p>
-            <p>Miejsce szkolenia: {miejsceSzkolenia || '--'}.</p>
+            <p>{zbudujTekstMiejscaSzkolenia(dane)}</p>
           </div>
         </main>
 
@@ -948,6 +958,8 @@ export default function WidokDyplomow() {
   const [komunikat, ustawKomunikat] = useState('Szkic zapisywany lokalnie.')
   const [nazwaNowegoDodatku, ustawNazweNowegoDodatku] = useState('')
   const [tekstNowegoDodatku, ustawTekstNowegoDodatku] = useState('')
+  const [idWybranegoDodatkuGornego, ustawIdWybranegoDodatkuGornego] = useState('')
+  const [idWybranegoDodatkuDolnego, ustawIdWybranegoDodatkuDolnego] = useState('')
   const [trybPodgladuStron, ustawTrybPodgladuStron] = useState<TrybPodgladuStron>('pierwsza')
   const [ukladPodgladuStron, ustawUkladPodgladuStron] = useState<UkladPodgladuStron>('pod_soba')
   const [indeksUczestnikaPierwszejStrony, ustawIndeksUczestnikaPierwszejStrony] = useState(0)
@@ -1300,6 +1312,18 @@ export default function WidokDyplomow() {
         [polozenie === 'gora' ? 'idDodatkuGornego' : 'idDodatkuDolnego']: idDodatku,
       })),
     }))
+  }
+
+  function dodajWybranyDodatekWszystkim(polozenie: PolozenieDodatku) {
+    const idDodatku = polozenie === 'gora' ? idWybranegoDodatkuGornego : idWybranegoDodatkuDolnego
+
+    if (!idDodatku) {
+      ustawKomunikat(polozenie === 'gora' ? 'Wybierz górny logotyp.' : 'Wybierz dolny logotyp.')
+      return
+    }
+
+    przypiszDodatekWszystkim(polozenie, idDodatku)
+    ustawKomunikat(polozenie === 'gora' ? 'Dodano górny logotyp wszystkim uczestnikom.' : 'Dodano dolny logotyp wszystkim uczestnikom.')
   }
 
   function zapiszRoboczo() {
@@ -1660,15 +1684,6 @@ export default function WidokDyplomow() {
                 <span>Import TXT / CSV</span>
                 <input accept=".txt,.csv,text/plain,text/csv" onChange={importujUczestnikowZPliku} type="file" />
               </label>
-
-              <label className="dyplomy__pole dyplomy__pole--checkbox">
-                <input
-                  checked={dane.drugaStronaAktywna}
-                  onChange={(zdarzenie) => przelaczDrugaStrone(zdarzenie.target.checked)}
-                  type="checkbox"
-                />
-                <span>Druga strona tekstowa</span>
-              </label>
             </div>
 
             <div className="dyplomy__tabela-ramka">
@@ -1678,9 +1693,9 @@ export default function WidokDyplomow() {
                     <th>#</th>
                     <th>Imię i nazwisko</th>
                     <th>Nr rejestru</th>
-                    <th>2 str.</th>
-                    <th>Góra</th>
-                    <th>Dół</th>
+                    <th>Górny Logotyp</th>
+                    <th>Dolny logotyp</th>
+                    <th>2 strona</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -1705,16 +1720,6 @@ export default function WidokDyplomow() {
                             }
                             type="text"
                             value={uczestnik.numerRejestru}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            checked={dane.drugaStronaAktywna && uczestnik.drugaStrona}
-                            disabled={!dane.drugaStronaAktywna}
-                            onChange={(zdarzenie) =>
-                              zmienUczestnika(uczestnik.id, { drugaStrona: zdarzenie.target.checked })
-                            }
-                            type="checkbox"
                           />
                         </td>
                         <td>
@@ -1746,6 +1751,16 @@ export default function WidokDyplomow() {
                               </option>
                             ))}
                           </select>
+                        </td>
+                        <td>
+                          <input
+                            checked={dane.drugaStronaAktywna && uczestnik.drugaStrona}
+                            disabled={!dane.drugaStronaAktywna}
+                            onChange={(zdarzenie) =>
+                              zmienUczestnika(uczestnik.id, { drugaStrona: zdarzenie.target.checked })
+                            }
+                            type="checkbox"
+                          />
                         </td>
                         <td>
                           <button className="dyplomy__przycisk dyplomy__przycisk--maly" onClick={() => usunUczestnika(uczestnik.id)} type="button">
@@ -1825,18 +1840,45 @@ export default function WidokDyplomow() {
 
             <section className="dyplomy__sekcja">
               <h2>Druga strona</h2>
-              <label className="dyplomy__pole">
-                <span>Import treści TXT / MD</span>
-                <input accept=".txt,.md,text/plain,text/markdown" onChange={importujTrescDrugiejStrony} type="file" />
-              </label>
-              <label className="dyplomy__pole">
-                <span>Treść wspólna</span>
-                <textarea
-                  onChange={(zdarzenie) => zmienTrescDrugiejStrony(zdarzenie.target.value)}
-                  rows={5}
-                  value={dane.trescDrugiejStrony}
-                />
-              </label>
+              <div className="dyplomy__przelacznik-wiersz">
+                <span>Druga strona tekstowa</span>
+                <div className="dyplomy__wybor" role="group" aria-label="Druga strona tekstowa">
+                  <button
+                    className={`dyplomy__przycisk-wyboru${dane.drugaStronaAktywna ? ' dyplomy__przycisk-wyboru--aktywny' : ''}`}
+                    onClick={() => przelaczDrugaStrone(true)}
+                    type="button"
+                  >
+                    TAK
+                  </button>
+                  <button
+                    className={`dyplomy__przycisk-wyboru${!dane.drugaStronaAktywna ? ' dyplomy__przycisk-wyboru--aktywny' : ''}`}
+                    onClick={() => przelaczDrugaStrone(false)}
+                    type="button"
+                  >
+                    NIE
+                  </button>
+                </div>
+              </div>
+              <div className={`dyplomy__pola-drugiej-strony${dane.drugaStronaAktywna ? '' : ' dyplomy__pola-drugiej-strony--nieaktywne'}`}>
+                <label className="dyplomy__pole">
+                  <span>Import treści TXT / MD</span>
+                  <input
+                    accept=".txt,.md,text/plain,text/markdown"
+                    disabled={!dane.drugaStronaAktywna}
+                    onChange={importujTrescDrugiejStrony}
+                    type="file"
+                  />
+                </label>
+                <label className="dyplomy__pole">
+                  <span>Treść wspólna</span>
+                  <textarea
+                    disabled={!dane.drugaStronaAktywna}
+                    onChange={(zdarzenie) => zmienTrescDrugiejStrony(zdarzenie.target.value)}
+                    rows={5}
+                    value={dane.trescDrugiejStrony}
+                  />
+                </label>
+              </div>
             </section>
           </div>
         </div>
@@ -1858,6 +1900,120 @@ export default function WidokDyplomow() {
             ) : (
               <p>Gotowe do druku lub zapisu jako PDF.</p>
             )}
+          </section>
+
+          <section className="dyplomy__narzedzia-podgladu" aria-label="Dodatki i widoczność podglądu">
+            <div className="dyplomy__widocznosc-podgladu">
+              <label className="dyplomy__pole dyplomy__pole--checkbox">
+                <input
+                  checked={dane.czyPokazacDodatekGorny}
+                  onChange={(zdarzenie) => zmienPole('czyPokazacDodatekGorny', zdarzenie.target.checked)}
+                  type="checkbox"
+                />
+                <span>Pokaż górne dodatki</span>
+              </label>
+              <label className="dyplomy__pole dyplomy__pole--checkbox">
+                <input
+                  checked={dane.czyPokazacDodatekDolny}
+                  onChange={(zdarzenie) => zmienPole('czyPokazacDodatekDolny', zdarzenie.target.checked)}
+                  type="checkbox"
+                />
+                <span>Pokaż dolne dodatki</span>
+              </label>
+              <label className="dyplomy__pole dyplomy__pole--checkbox">
+                <input
+                  checked={dane.czyPokazacDrugaStrone}
+                  onChange={(zdarzenie) => zmienPole('czyPokazacDrugaStrone', zdarzenie.target.checked)}
+                  type="checkbox"
+                />
+                <span>Pokaż drugą stronę</span>
+              </label>
+            </div>
+
+            <label className="dyplomy__pole">
+              <span>Dodaj grafiki</span>
+              <input accept="image/*" multiple onChange={importujDodatkiGraficzne} type="file" />
+            </label>
+
+            <div className="dyplomy__logotypy">
+              <div className="dyplomy__logotyp-panel">
+                <strong className="dyplomy__logotyp-naglowek">↑ Górny Logotyp ↑</strong>
+                <label className="dyplomy__pole">
+                  <span>Wybierz górny logotyp</span>
+                  <select onChange={(zdarzenie) => ustawIdWybranegoDodatkuGornego(zdarzenie.target.value)} value={idWybranegoDodatkuGornego}>
+                    <option value="">Wybierz dodatek dla góry</option>
+                    {dane.dodatki.map((dodatek) => (
+                      <option key={dodatek.id} value={dodatek.id}>
+                        {dodatek.nazwa}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="dyplomy__pole">
+                  <span>Szerokość: {dane.szerokoscDodatkuGornego}%</span>
+                  <input
+                    max={100}
+                    min={10}
+                    onChange={(zdarzenie) => zmienPole('szerokoscDodatkuGornego', Number(zdarzenie.target.value))}
+                    type="range"
+                    value={dane.szerokoscDodatkuGornego}
+                  />
+                </label>
+                <label className="dyplomy__pole">
+                  <span>Margines górny: {dane.marginesDodatkuGornego}%</span>
+                  <input
+                    max={24}
+                    min={0}
+                    onChange={(zdarzenie) => zmienPole('marginesDodatkuGornego', Number(zdarzenie.target.value))}
+                    step={0.1}
+                    type="range"
+                    value={dane.marginesDodatkuGornego}
+                  />
+                </label>
+                <button className="dyplomy__przycisk" onClick={() => dodajWybranyDodatekWszystkim('gora')} type="button">
+                  + Dodaj wszystkim
+                </button>
+              </div>
+
+              <div className="dyplomy__logotyp-panel">
+                <strong className="dyplomy__logotyp-naglowek">↓ Dolny Logotyp ↓</strong>
+                <label className="dyplomy__pole">
+                  <span>Wybierz dolny logotyp</span>
+                  <select onChange={(zdarzenie) => ustawIdWybranegoDodatkuDolnego(zdarzenie.target.value)} value={idWybranegoDodatkuDolnego}>
+                    <option value="">Wybierz dodatek dla dołu</option>
+                    {dane.dodatki.map((dodatek) => (
+                      <option key={dodatek.id} value={dodatek.id}>
+                        {dodatek.nazwa}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="dyplomy__pole">
+                  <span>Szerokość: {dane.szerokoscDodatkuDolnego}%</span>
+                  <input
+                    max={100}
+                    min={10}
+                    onChange={(zdarzenie) => zmienPole('szerokoscDodatkuDolnego', Number(zdarzenie.target.value))}
+                    type="range"
+                    value={dane.szerokoscDodatkuDolnego}
+                  />
+                </label>
+                <label className="dyplomy__pole">
+                  <span>Margines dolny: {dane.marginesDodatkuDolnego}%</span>
+                  <input
+                    max={24}
+                    min={0}
+                    onChange={(zdarzenie) => zmienPole('marginesDodatkuDolnego', Number(zdarzenie.target.value))}
+                    step={0.1}
+                    type="range"
+                    value={dane.marginesDodatkuDolnego}
+                  />
+                </label>
+                <button className="dyplomy__przycisk" onClick={() => dodajWybranyDodatekWszystkim('dol')} type="button">
+                  + Dodaj wszystkim
+                </button>
+              </div>
+            </div>
           </section>
 
           {czyKontrolaPodgladuDostepna && (
@@ -1934,116 +2090,6 @@ export default function WidokDyplomow() {
               )}
             </section>
           )}
-
-          <section className="dyplomy__narzedzia-podgladu" aria-label="Dodatki i widoczność podglądu">
-            <div className="dyplomy__widocznosc-podgladu">
-              <label className="dyplomy__pole dyplomy__pole--checkbox">
-                <input
-                  checked={dane.czyPokazacDodatekGorny}
-                  onChange={(zdarzenie) => zmienPole('czyPokazacDodatekGorny', zdarzenie.target.checked)}
-                  type="checkbox"
-                />
-                <span>Pokaż górne dodatki</span>
-              </label>
-              <label className="dyplomy__pole dyplomy__pole--checkbox">
-                <input
-                  checked={dane.czyPokazacDodatekDolny}
-                  onChange={(zdarzenie) => zmienPole('czyPokazacDodatekDolny', zdarzenie.target.checked)}
-                  type="checkbox"
-                />
-                <span>Pokaż dolne dodatki</span>
-              </label>
-              <label className="dyplomy__pole dyplomy__pole--checkbox">
-                <input
-                  checked={dane.czyPokazacDrugaStrone}
-                  onChange={(zdarzenie) => zmienPole('czyPokazacDrugaStrone', zdarzenie.target.checked)}
-                  type="checkbox"
-                />
-                <span>Pokaż drugą stronę</span>
-              </label>
-            </div>
-
-            <label className="dyplomy__pole">
-              <span>Dodaj grafiki</span>
-              <input accept="image/*" multiple onChange={importujDodatkiGraficzne} type="file" />
-            </label>
-
-            <div className="dyplomy__przypisanie">
-              <label className="dyplomy__pole">
-                <span>Góra wszystkim</span>
-                <select onChange={(zdarzenie) => przypiszDodatekWszystkim('gora', zdarzenie.target.value)} value="">
-                  <option value="">Wybierz dodatek dla góry</option>
-                  {dane.dodatki.map((dodatek) => (
-                    <option key={dodatek.id} value={dodatek.id}>
-                      {dodatek.nazwa}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="dyplomy__pole">
-                <span>Dół wszystkim</span>
-                <select onChange={(zdarzenie) => przypiszDodatekWszystkim('dol', zdarzenie.target.value)} value="">
-                  <option value="">Wybierz dodatek dla dołu</option>
-                  {dane.dodatki.map((dodatek) => (
-                    <option key={dodatek.id} value={dodatek.id}>
-                      {dodatek.nazwa}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            <div className="dyplomy__siatka dyplomy__siatka--dwie">
-              <label className="dyplomy__pole">
-                <span>Szerokość górnego logotypu: {dane.szerokoscDodatkuGornego}%</span>
-                <input
-                  max={100}
-                  min={10}
-                  onChange={(zdarzenie) => zmienPole('szerokoscDodatkuGornego', Number(zdarzenie.target.value))}
-                  type="range"
-                  value={dane.szerokoscDodatkuGornego}
-                />
-              </label>
-
-              <label className="dyplomy__pole">
-                <span>Szerokość dolnego logotypu: {dane.szerokoscDodatkuDolnego}%</span>
-                <input
-                  max={100}
-                  min={10}
-                  onChange={(zdarzenie) => zmienPole('szerokoscDodatkuDolnego', Number(zdarzenie.target.value))}
-                  type="range"
-                  value={dane.szerokoscDodatkuDolnego}
-                />
-              </label>
-            </div>
-
-            <div className="dyplomy__siatka dyplomy__siatka--dwie">
-              <label className="dyplomy__pole">
-                <span>Margines górnego logotypu: {dane.marginesDodatkuGornego}%</span>
-                <input
-                  max={24}
-                  min={0}
-                  onChange={(zdarzenie) => zmienPole('marginesDodatkuGornego', Number(zdarzenie.target.value))}
-                  step={0.1}
-                  type="range"
-                  value={dane.marginesDodatkuGornego}
-                />
-              </label>
-
-              <label className="dyplomy__pole">
-                <span>Margines dolnego logotypu: {dane.marginesDodatkuDolnego}%</span>
-                <input
-                  max={24}
-                  min={0}
-                  onChange={(zdarzenie) => zmienPole('marginesDodatkuDolnego', Number(zdarzenie.target.value))}
-                  step={0.1}
-                  type="range"
-                  value={dane.marginesDodatkuDolnego}
-                />
-              </label>
-            </div>
-          </section>
 
           <section
             className={`dyplomy__podglad-kartki${
