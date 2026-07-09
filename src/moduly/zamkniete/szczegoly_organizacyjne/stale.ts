@@ -1,6 +1,7 @@
 import type {
   LokalizacjaKartoteki,
   StatusPolaImportu,
+  StatusSzkolenia,
   StatusSzczegolow,
 } from './typy'
 export { trenerzyKartotekiStartowi } from './trenerzyKartoteki'
@@ -11,6 +12,14 @@ export const statusySzczegolow: StatusSzczegolow[] = [
   'OCZEKUJĄCE',
   'ZAAKCEPTOWANE',
   'GOTOWE',
+]
+
+export const statusySzkolenia: StatusSzkolenia[] = [
+  'W PRZYGOTOWANIACH',
+  'POTWIERDZONE',
+  'PRZYGOTOWANE',
+  'WYSŁANA PACZKA',
+  'TRWA',
   'ZREALIZOWANE',
   'NIEZREALIZOWANE',
   'ROZLICZONE',
@@ -19,7 +28,7 @@ export const statusySzczegolow: StatusSzczegolow[] = [
 export const etykietyStatusowPol: Record<StatusPolaImportu, string> = {
   zaimportowane: 'Zaimportowane',
   brak: 'Brak',
-  niepewne: 'Niepewne',
+  niepewne: '⚠ Niepewne',
   reczne: 'Ręcznie uzupełnione',
 }
 

@@ -58,6 +58,7 @@
 
 .replikator-dokumentow__panel--podglad {
   justify-items: stretch;
+  position: relative;
 }
 
 .replikator-dokumentow__pole,
@@ -214,6 +215,10 @@
   grid-template-columns: minmax(140px, 1fr) 90px 110px;
 }
 
+.replikator-dokumentow__wiersz-pola:has(button + button) {
+  grid-template-columns: minmax(140px, 1fr) minmax(130px, 0.8fr) 100px 100px;
+}
+
 .replikator-dokumentow__wiersz-pola span {
   display: inline-flex;
   width: fit-content;
@@ -233,6 +238,21 @@
   background: #dff8ff;
   color: #08252d;
   font-weight: 800;
+}
+
+.replikator-dokumentow__znak-wodny {
+  position: sticky;
+  top: 10px;
+  z-index: 8;
+  width: fit-content;
+  margin-left: auto;
+  border: 1px solid rgba(220, 38, 38, 0.35);
+  border-radius: 6px;
+  padding: 6px 10px;
+  background: rgba(254, 242, 242, 0.96);
+  color: #991b1b;
+  font-weight: 800;
+  text-transform: uppercase;
 }
 
 .replikator-dokumentow__pasek span,

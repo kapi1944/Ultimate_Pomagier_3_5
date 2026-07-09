@@ -1,13 +1,17 @@
 import { useMemo, useState, type ChangeEvent } from 'react'
 import { uzupelnijAnalizeDokumentu } from '../../../wspolne/dokumenty/analizaDokumentu'
+import PanelKontroliJakosciDokumentu from '../../../wspolne/dokumenty/PanelKontroliJakosciDokumentu'
+import type { ProblemDokumentu } from '../../../wspolne/dokumenty/modelBlokowy'
 import {
   pobierzSzablonyDokumentow,
   zapiszNowySzablonDokumentu,
   zapiszWersjeSzablonuDokumentu,
+  type DaneReplikacjiSzablonu,
   type SzablonDokumentu,
 } from '../../../wspolne/dokumenty/szablonyDokumentow'
 import { utworzDokumentZTekstu } from '../../../wspolne/dokumenty/utworzDokumentZTekstu'
 import { importujPlikDoDokumentu } from '../../../wspolne/import/importujPlikDoDokumentu'
+import { rozpoznajTypPliku } from '../../../wspolne/import/rozpoznajTypPliku'
 import type {
   DaneWyekstrahowaneDokumentu,
   DokumentPomagiera,
@@ -24,20 +28,32 @@ import type {
   StatusElementuDokumentu,
   TypZrodlaDokumentu,
 } from '../../../wspolne/dokumenty/typyDokumentu'
+import { tekstPrzykladowyReplikatora } from './przykladyReplikatora'
+import {
+  aktualizujDokumentBlokowyTekstem,
+  importujDocxReplikatora,
+  ustawOrganizatoraDokumentuBlokowego,
+  ustawTypDokumentuBlokowego,
+  utworzSzablonRoboczyZDokumentu,
+  utworzSzablonRoboczyZTekstu,
+  zatwierdzNiskaZgodnoscSzablonu,
+  zsynchronizujDokumentPomagieraZDokumentemBlokowym,
+} from './parserDocxReplikatora'
+import { importujPdfReplikatora } from './parserPdfReplikatora'
+import { polaczStatusyPlaceholderow, czyPlaceholderySaZatwierdzone } from './placeholderyReplikatora'
+import { opiszPoziomZgodnosci, pobierzBlokiReplikatora, utworzRaportReplikacji } from './raportReplikacji'
+import type {
+  DecyzjaUzytkownikaReplikatora,
+  PlaceholderReplikatora,
+  SzablonRoboczyReplikatora,
+  TypDokumentuReplikatora,
+  WynikImportuReplikatora,
+} from './typyReplikatora'
 import PodgladOryginaluDokumentu from './PodgladOryginaluDokumentu'
 import RenderujDokumentPomagiera from './RenderujDokumentPomagiera'
 import './replikatorDokumentow.css'
 
-const tekstPrzykladowy = `Wzorcowy dokument szkoleniowy
-Kontakt: biuro@pomagier.local
-Telefon: +48 501 234 567
-
-Uczestnicy:
-Jan Kowalski
-Anna Nowak
-
-Szkolenie: Skuteczna komunikacja w zespole
-Data: 2026-07-15`
+const tekstPrzykladowy = tekstPrzykladowyReplikatora
 
 type TrybPorownania = 'normalny' | 'porownanie' | 'nakladka'
 
@@ -47,6 +63,17 @@ const roleGrafik: RolaGrafikiDokumentu[] = ['logo', 'podpis', 'tlo', 'qr', 'deko
 const roleKsztaltow: RolaKsztaltuDokumentu[] = ['tlo_tytulu', 'separator', 'ramka', 'dekoracja', 'inne']
 const statusyElementow: StatusElementuDokumentu[] = ['staly', 'dynamiczny', 'niepewny', 'ignorowany']
 const statusyDanych: StatusDanychWyekstrahowanych[] = ['do_zatwierdzenia', 'zatwierdzone', 'odrzucone']
+const typyDokumentowReplikatora: TypDokumentuReplikatora[] = [
+  'Program szkolenia',
+  'Dyplom',
+  'Certyfikat',
+  'Zaświadczenie',
+  'Lista obecności',
+  'Ankieta',
+  'Protokół',
+  'Materiał dodatkowy',
+  'Inny',
+]
 
 function opiszTypZrodla(typ: TypZrodlaDokumentu) {
   const etykiety: Record<TypZrodlaDokumentu, string> = {
@@ -70,6 +97,17 @@ function pobierzRoleUzytkownika(): RolaDostepu {
     const rola = typeof daneSesji?.rola === 'string' ? daneSesji.rola : zapisRoli
 
     return rola === 'Opiekun' || rola === 'Administrator' || rola === 'Architekt' ? rola : 'Architekt'
+  } catch {
+    return 'Architekt'
+  }
+}
+
+function pobierzNazweUzytkownika() {
+  try {
+    const zapisSesji = localStorage.getItem('ultimate-pomagier.zalogowany-uzytkownik')
+    const daneSesji = zapisSesji ? JSON.parse(zapisSesji) : null
+
+    return typeof daneSesji?.nazwa === 'string' ? daneSesji.nazwa : 'Architekt'
   } catch {
     return 'Architekt'
   }
@@ -125,6 +163,64 @@ function ustawMarkeDokumentu(dokument: DokumentPomagiera, marka: MarkaDokumentu)
   }
 }
 
+function utworzDecyzje(
+  typ: DecyzjaUzytkownikaReplikatora['typ'],
+  komentarz: string,
+  uzytkownik: string,
+  poprzedniWynikZgodnosci?: number,
+): DecyzjaUzytkownikaReplikatora {
+  return {
+    id: `decyzja-${typ}-${Date.now()}`,
+    typ,
+    komentarz,
+    uzytkownik,
+    data: new Date().toISOString(),
+    poprzedniWynikZgodnosci,
+  }
+}
+
+function przygotujDaneReplikacjiDoZapisu(szablon: SzablonRoboczyReplikatora): DaneReplikacjiSzablonu {
+  return {
+    status: szablon.status,
+    zrodloImportu: szablon.zrodloImportu,
+    dataImportu: szablon.dataImportu,
+    uzytkownik: szablon.uzytkownik,
+    wersja: szablon.wersja,
+    procentZgodnosci: szablon.procentZgodnosci,
+    poziomZgodnosci: szablon.poziomZgodnosci,
+    dokumentBlokowy: szablon.dokumentBlokowy,
+    raportImportu: szablon.raportImportu,
+    placeholdery: szablon.placeholdery,
+    elementyNiepewne: szablon.elementyNiepewne,
+    elementyNieobslugiwane: szablon.elementyNieobslugiwane,
+    historiaDecyzji: szablon.historiaDecyzji,
+    czyPokazacZnakWodnyWersjiTestowej: szablon.czyPokazacZnakWodnyWersjiTestowej,
+  }
+}
+
+function utworzNazweBezKonfliktu(nazwa: string, szablony: SzablonDokumentu[]) {
+  const nazwy = new Set(szablony.map((szablon) => szablon.nazwa.trim().toLocaleLowerCase('pl')))
+  const nazwaBazowa = nazwa.trim() || 'Szablon roboczy'
+
+  if (!nazwy.has(nazwaBazowa.toLocaleLowerCase('pl'))) {
+    return nazwaBazowa
+  }
+
+  for (let indeks = 1; indeks < 100; indeks += 1) {
+    const kandydat = `${nazwaBazowa} (${indeks})`
+
+    if (!nazwy.has(kandydat.toLocaleLowerCase('pl'))) {
+      return kandydat
+    }
+  }
+
+  return `${nazwaBazowa} (${Date.now()})`
+}
+
+function policzBlokiDokumentu(szablon: SzablonRoboczyReplikatora) {
+  return pobierzBlokiReplikatora(szablon.dokumentBlokowy).length
+}
+
 function czyElementTekstowy(element: ElementDokumentu | null): element is ElementTekstowyDokumentu {
   return Boolean(element && (element.rodzaj === 'tekst' || element.rodzaj === 'naglowek' || element.rodzaj === 'stopka'))
 }
@@ -170,10 +266,14 @@ function ustawPozycjeElementu(element: ElementDokumentu, pole: keyof PozycjaElem
 
 export default function WidokReplikatoraDokumentow() {
   const [rolaUzytkownika] = useState<RolaDostepu>(pobierzRoleUzytkownika)
+  const [uzytkownik] = useState(pobierzNazweUzytkownika)
   const [nazwaWzorca, ustawNazweWzorca] = useState('Wzorzec tekstowy')
   const [tekstWzorca, ustawTekstWzorca] = useState(tekstPrzykladowy)
   const [dokument, ustawDokument] = useState<DokumentPomagiera>(() =>
     utworzDokumentZTekstu('Wzorzec tekstowy', tekstPrzykladowy),
+  )
+  const [szablonRoboczy, ustawSzablonRoboczy] = useState<SzablonRoboczyReplikatora>(() =>
+    utworzSzablonRoboczyZTekstu('Wzorzec tekstowy', tekstPrzykladowy, pobierzNazweUzytkownika()),
   )
   const [komunikat, ustawKomunikat] = useState('Replikator działa lokalnie na tekście, DOCX, CSV, PDF i obrazach.')
   const [zaznaczonyElementId, ustawZaznaczonyElementId] = useState<string | null>(null)
@@ -182,33 +282,46 @@ export default function WidokReplikatoraDokumentow() {
   const [szablony, ustawSzablony] = useState<SzablonDokumentu[]>(pobierzSzablonyDokumentow)
   const [wybranySzablonId, ustawWybranySzablonId] = useState('')
   const [ostatnioWybranyPlik, ustawOstatnioWybranyPlik] = useState<File | null>(null)
+  const [komentarzNiskiejZgodnosci, ustawKomentarzNiskiejZgodnosci] = useState('')
 
   const raport = dokument.metadane.raportImportu
+  const raportReplikacji = szablonRoboczy.raportImportu
+  const czyPlaceholderyZatwierdzone = czyPlaceholderySaZatwierdzone(szablonRoboczy.placeholdery)
+  const czyMoznaZapisacSzablon = czyPlaceholderyZatwierdzone
+  const czyZatwierdzonoNiskaZgodnosc = szablonRoboczy.dokumentBlokowy.metadane.zatwierdzonyPrzezUzytkownika && szablonRoboczy.procentZgodnosci <= 70
   const zaznaczonyElement = useMemo(() => znajdzElement(dokument, zaznaczonyElementId), [dokument, zaznaczonyElementId])
   const poleZaznaczonegoElementu = useMemo(
     () => dokument.polaDynamiczne.find((pole) => pole.elementId === zaznaczonyElementId),
     [dokument.polaDynamiczne, zaznaczonyElementId],
   )
 
-  if (rolaUzytkownika !== 'Architekt') {
-    return (
-      <section className="widok replikator-dokumentow">
-        <header className="replikator-dokumentow__naglowek">
-          <div>
-            <h1>Replikator dokumentów</h1>
-            <p>Dostęp tylko dla roli Architekt.</p>
-          </div>
-          <span>{rolaUzytkownika}</span>
-        </header>
-        <section className="replikator-dokumentow__panel">
-          <p className="replikator-dokumentow__komunikat">Użyj gotowych generatorów dokumentów albo zaloguj konto Architekta.</p>
-        </section>
-      </section>
-    )
-  }
-
   function przeliczDokument(nowyDokument: DokumentPomagiera, tekstZrodlowy = tekstWzorca) {
-    ustawDokument(uzupelnijAnalizeDokumentu(nowyDokument, tekstZrodlowy))
+    const dokumentZAnaliza = uzupelnijAnalizeDokumentu(nowyDokument, tekstZrodlowy)
+
+    ustawDokument(dokumentZAnaliza)
+    ustawSzablonRoboczy((obecnySzablon) => {
+      const nowySzablon = utworzSzablonRoboczyZDokumentu(
+        dokumentZAnaliza,
+        obecnySzablon.zrodloImportu,
+        uzytkownik,
+        obecnySzablon.raportImportu.ograniczenia,
+        obecnySzablon.historiaDecyzji,
+      )
+
+      return {
+        ...obecnySzablon,
+        nazwa: dokumentZAnaliza.nazwa,
+        organizator: dokumentZAnaliza.metadane.branding.marka,
+        dokumentPodgladu: dokumentZAnaliza,
+        dokumentBlokowy: nowySzablon.dokumentBlokowy,
+        raportImportu: nowySzablon.raportImportu,
+        procentZgodnosci: nowySzablon.procentZgodnosci,
+        poziomZgodnosci: nowySzablon.poziomZgodnosci,
+        placeholdery: polaczStatusyPlaceholderow(nowySzablon.placeholdery, obecnySzablon.placeholdery),
+        elementyNiepewne: nowySzablon.elementyNiepewne,
+        elementyNieobslugiwane: nowySzablon.elementyNieobslugiwane,
+      }
+    })
   }
 
   function aktualizujElement(elementId: string, aktualizuj: (element: ElementDokumentu) => ElementDokumentu) {
@@ -223,6 +336,7 @@ export default function WidokReplikatoraDokumentow() {
 
   function obsluzZmianeNazwy(nazwa: string) {
     ustawNazweWzorca(nazwa)
+    ustawSzablonRoboczy((obecnySzablon) => ({ ...obecnySzablon, nazwa }))
 
     if (dokument.zrodlo.typ === 'tekst') {
       przeliczDokument(utworzDokumentZTekstu(nazwa, tekstWzorca), tekstWzorca)
@@ -233,17 +347,36 @@ export default function WidokReplikatoraDokumentow() {
 
   function obsluzZmianeTekstu(tekst: string) {
     ustawTekstWzorca(tekst)
-    ustawDokument(utworzDokumentZTekstu(nazwaWzorca, tekst))
+    przeliczDokument(utworzDokumentZTekstu(nazwaWzorca, tekst), tekst)
     ustawKomunikat('Zaktualizowano tekstowy wzorzec dokumentu.')
   }
 
   async function importujWybranyPlik(plik: File, czyPonownyImport = false) {
     try {
-      const wynik = await importujPlikDoDokumentu(plik)
+      const typPliku = rozpoznajTypPliku(plik)
+      let wynik: WynikImportuReplikatora
 
-      ustawNazweWzorca(wynik.dokument.nazwa)
+      if (typPliku === 'docx') {
+        wynik = await importujDocxReplikatora(plik, uzytkownik)
+      } else if (typPliku === 'pdf') {
+        wynik = await importujPdfReplikatora(plik, uzytkownik)
+      } else {
+        const wynikImportu = await importujPlikDoDokumentu(plik)
+
+        wynik = {
+          dokumentPodgladu: wynikImportu.dokument,
+          szablonRoboczy: utworzSzablonRoboczyZDokumentu(wynikImportu.dokument, typPliku === 'tekst' ? 'TEKST' : 'DOCX', uzytkownik, [
+            typPliku === 'obraz' ? 'Obrazy wymagają OCR i są oznaczane jako niepewne.' : 'Format nie jest docelowym importem Replikatora DOCX/PDF.',
+          ]),
+          tekstZrodlowy: wynikImportu.tekstZrodlowy,
+          komunikat: wynikImportu.komunikat,
+        }
+      }
+
+      ustawNazweWzorca(wynik.dokumentPodgladu.nazwa)
       ustawTekstWzorca(wynik.tekstZrodlowy)
-      ustawDokument(wynik.dokument)
+      ustawDokument(wynik.dokumentPodgladu)
+      ustawSzablonRoboczy(wynik.szablonRoboczy)
       ustawZaznaczonyElementId(null)
       ustawKomunikat(czyPonownyImport ? `Ponownie zaimportowano plik: ${plik.name}. ${wynik.komunikat}` : wynik.komunikat)
     } catch {
@@ -307,6 +440,20 @@ export default function WidokReplikatoraDokumentow() {
     ustawKomunikat(`Zatwierdzono pole {{${pole.nazwa}}}.`)
   }
 
+  function aktualizujPlaceholder(placeholderId: string, zmiany: Partial<PlaceholderReplikatora>) {
+    ustawSzablonRoboczy((obecnySzablon) => ({
+      ...obecnySzablon,
+      placeholdery: obecnySzablon.placeholdery.map((placeholder) =>
+        placeholder.id === placeholderId ? { ...placeholder, ...zmiany } : placeholder,
+      ),
+    }))
+  }
+
+  function zatwierdzPlaceholder(placeholderId: string) {
+    aktualizujPlaceholder(placeholderId, { status: 'zatwierdzony' })
+    ustawKomunikat('Zatwierdzono placeholder przed zapisem szablonu.')
+  }
+
   function aktualizujDaneWyekstrahowane(id: string, zmiany: Partial<DaneWyekstrahowaneDokumentu>) {
     przeliczDokument({
       ...dokument,
@@ -318,19 +465,138 @@ export default function WidokReplikatoraDokumentow() {
   }
 
   function zapiszNowySzablon() {
-    const szablon = zapiszNowySzablonDokumentu(dokument)
+    if (!czyMoznaZapisacSzablon) {
+      ustawKomunikat('Przed zapisem zatwierdź albo odrzuć wszystkie placeholdery.')
+      return
+    }
+
+    const nazwaBezKonfliktu = utworzNazweBezKonfliktu(nazwaWzorca, szablony)
+    const czyZmianaNazwy = nazwaBezKonfliktu !== nazwaWzorca.trim()
+
+    if (czyZmianaNazwy && !window.confirm(`Istnieje już szablon o nazwie "${nazwaWzorca}". Zapisać jako "${nazwaBezKonfliktu}"?`)) {
+      ustawKomunikat('Anulowano zapis, aby nie nadpisać istniejącego szablonu.')
+      return
+    }
+
+    const historiaDecyzji = [
+      ...szablonRoboczy.historiaDecyzji,
+      ...(czyZmianaNazwy ? [utworzDecyzje('nadpisanie', `Utworzono nowy szablon jako "${nazwaBezKonfliktu}" zamiast nadpisania istniejącego.`, uzytkownik)] : []),
+      utworzDecyzje('zapis', 'Zapisano import jako wersję roboczą szablonu.', uzytkownik),
+    ]
+    const szablonDoZapisuBazowy: SzablonRoboczyReplikatora = {
+      ...szablonRoboczy,
+      nazwa: nazwaBezKonfliktu,
+      historiaDecyzji,
+    }
+    const dokumentDoZapisu = {
+      ...zsynchronizujDokumentPomagieraZDokumentemBlokowym(dokument, szablonDoZapisuBazowy.dokumentBlokowy),
+      nazwa: nazwaBezKonfliktu,
+    }
+    const szablonDoZapisu: SzablonRoboczyReplikatora = {
+      ...szablonDoZapisuBazowy,
+      dokumentPodgladu: dokumentDoZapisu,
+    }
+    const szablon = zapiszNowySzablonDokumentu(dokumentDoZapisu, przygotujDaneReplikacjiDoZapisu(szablonDoZapisu))
 
     ustawSzablony(pobierzSzablonyDokumentow())
     ustawWybranySzablonId(szablon.id)
-    ustawKomunikat('Zapisano dokument jako nowy szablon w Kartotece -> Szablony dokumentów.')
+    ustawSzablonRoboczy(szablonDoZapisu)
+    ustawDokument(dokumentDoZapisu)
+    ustawNazweWzorca(nazwaBezKonfliktu)
+    ustawKomunikat('Zapisano dokument jako roboczy szablon w Kartotece -> Szablony dokumentów.')
   }
 
   function zapiszWersjeSzablonu() {
-    const szablon = zapiszWersjeSzablonuDokumentu(wybranySzablonId, dokument)
+    if (!czyMoznaZapisacSzablon) {
+      ustawKomunikat('Przed zapisem wersji zatwierdź albo odrzuć wszystkie placeholdery.')
+      return
+    }
+
+    const wybranySzablon = szablony.find((szablon) => szablon.id === wybranySzablonId)
+
+    if (wybranySzablon && !window.confirm(`Zapisać import jako nową iterację szablonu "${wybranySzablon.nazwa}"?`)) {
+      ustawKomunikat('Anulowano zapis nowej iteracji szablonu.')
+      return
+    }
+
+    const szablonDoZapisuBazowy: SzablonRoboczyReplikatora = {
+      ...szablonRoboczy,
+      historiaDecyzji: [
+        ...szablonRoboczy.historiaDecyzji,
+        utworzDecyzje('zapis', `Zapisano jako nową iterację szablonu ${wybranySzablon?.nazwa ?? wybranySzablonId}.`, uzytkownik),
+      ],
+    }
+    const dokumentDoZapisu = zsynchronizujDokumentPomagieraZDokumentemBlokowym(dokument, szablonDoZapisuBazowy.dokumentBlokowy)
+    const szablonDoZapisu: SzablonRoboczyReplikatora = {
+      ...szablonDoZapisuBazowy,
+      dokumentPodgladu: dokumentDoZapisu,
+    }
+    const szablon = zapiszWersjeSzablonuDokumentu(wybranySzablonId, dokumentDoZapisu, przygotujDaneReplikacjiDoZapisu(szablonDoZapisu))
 
     ustawSzablony(pobierzSzablonyDokumentow())
     ustawWybranySzablonId(szablon.id)
+    ustawSzablonRoboczy(szablonDoZapisu)
+    ustawDokument(dokumentDoZapisu)
     ustawKomunikat('Zapisano dokument jako nową wersję istniejącego szablonu.')
+  }
+
+  function obsluzZmianeTypuDokumentu(typDokumentu: TypDokumentuReplikatora) {
+    ustawSzablonRoboczy((obecnySzablon) => {
+      const dokumentBlokowy = ustawTypDokumentuBlokowego(obecnySzablon.dokumentBlokowy, typDokumentu)
+      const raportImportu = utworzRaportReplikacji(dokumentBlokowy, obecnySzablon.zrodloImportu, obecnySzablon.raportImportu.ograniczenia)
+
+      return {
+        ...obecnySzablon,
+        typDokumentu,
+        pewnoscTypuDokumentu: 1,
+        dokumentBlokowy,
+        raportImportu,
+        procentZgodnosci: raportImportu.procentZgodnosci,
+        poziomZgodnosci: raportImportu.poziomZgodnosci,
+      }
+    })
+  }
+
+  function obsluzZmianeOrganizatora(organizator: MarkaDokumentu) {
+    const nowyDokument = ustawMarkeDokumentu(dokument, organizator)
+
+    ustawDokument(nowyDokument)
+    ustawSzablonRoboczy((obecnySzablon) => ({
+      ...obecnySzablon,
+      organizator,
+      dokumentPodgladu: nowyDokument,
+      dokumentBlokowy: ustawOrganizatoraDokumentuBlokowego(obecnySzablon.dokumentBlokowy, organizator),
+    }))
+  }
+
+  function oznaczJakoPoprawnyMimoNiskiejZgodnosci() {
+    const komentarz = komentarzNiskiejZgodnosci.trim()
+
+    if (!komentarz) {
+      ustawKomunikat('Podaj komentarz decyzji dla niskiej zgodności.')
+      return
+    }
+
+    ustawSzablonRoboczy((obecnySzablon) => zatwierdzNiskaZgodnoscSzablonu(obecnySzablon, komentarz, uzytkownik))
+    ustawKomentarzNiskiejZgodnosci('')
+    ustawKomunikat('Zapisano świadomą decyzję użytkownika dla niskiej zgodności.')
+  }
+
+  function ustawWidocznoscZnakuWodnego(czyWidoczny: boolean) {
+    ustawSzablonRoboczy((obecnySzablon) => ({
+      ...obecnySzablon,
+      czyPokazacZnakWodnyWersjiTestowej: czyWidoczny,
+      historiaDecyzji: [
+        ...obecnySzablon.historiaDecyzji,
+        utworzDecyzje('znak_wodny', czyWidoczny ? 'Pokazano oznaczenie wersji testowej.' : 'Ukryto oznaczenie wersji testowej po świadomej decyzji.', uzytkownik),
+      ],
+    }))
+  }
+
+  function przejdzDoProblemu(problem: ProblemDokumentu) {
+    const idElementuZrodlowego = problem.blokId?.replace(/^blok-/, '') ?? null
+
+    ustawZaznaczonyElementId(idElementuZrodlowego)
   }
 
   function drukujPodglad() {
@@ -345,9 +611,21 @@ export default function WidokReplikatoraDokumentow() {
         przezroczystoscOryginalu={przezroczystoscOryginalu}
         zaznaczonyElementId={zaznaczonyElementId}
         onZaznaczElement={ustawZaznaczonyElementId}
-        onZmienTekst={(elementId, tekst) =>
+        onZmienTekst={(elementId, tekst) => {
           aktualizujElement(elementId, (element) => (czyElementTekstowy(element) ? { ...element, tekst } : element))
-        }
+          ustawSzablonRoboczy((obecnySzablon) => {
+            const dokumentBlokowy = aktualizujDokumentBlokowyTekstem(obecnySzablon.dokumentBlokowy, elementId, tekst)
+            const raportImportu = utworzRaportReplikacji(dokumentBlokowy, obecnySzablon.zrodloImportu, obecnySzablon.raportImportu.ograniczenia)
+
+            return {
+              ...obecnySzablon,
+              dokumentBlokowy,
+              raportImportu,
+              procentZgodnosci: raportImportu.procentZgodnosci,
+              poziomZgodnosci: raportImportu.poziomZgodnosci,
+            }
+          })
+        }}
       />
     )
   }
@@ -359,7 +637,7 @@ export default function WidokReplikatoraDokumentow() {
           <h1>Replikator dokumentów</h1>
           <p>Import wzorca, korekta modelu i zapis szablonu dla generatorów.</p>
         </div>
-        <span>{opiszTypZrodla(dokument.zrodlo.typ)}</span>
+        <span>{`${rolaUzytkownika} | ${opiszTypZrodla(dokument.zrodlo.typ)}`}</span>
       </header>
 
       <div className="replikator-dokumentow__uklad">
@@ -372,8 +650,15 @@ export default function WidokReplikatoraDokumentow() {
           </label>
 
           <label className="replikator-dokumentow__pole">
-            Plik źródłowy
-            <input accept=".txt,.csv,.docx,.pdf,.jpg,.jpeg,.png,.svg,image/*" onChange={obsluzWyborPliku} type="file" />
+            Typ dokumentu
+            <select value={szablonRoboczy.typDokumentu} onChange={(zdarzenie) => obsluzZmianeTypuDokumentu(zdarzenie.target.value as TypDokumentuReplikatora)}>
+              {typyDokumentowReplikatora.map((typ) => <option key={typ} value={typ}>{typ}</option>)}
+            </select>
+          </label>
+
+          <label className="replikator-dokumentow__pole">
+            Plik źródłowy DOCX/PDF
+            <input accept=".docx,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={obsluzWyborPliku} type="file" />
           </label>
 
           <div className="replikator-dokumentow__formularz-linia">
@@ -393,7 +678,7 @@ export default function WidokReplikatoraDokumentow() {
           <div className="replikator-dokumentow__formularz-linia">
             <label className="replikator-dokumentow__pole">
               Marka
-              <select value={dokument.metadane.branding.marka} onChange={(zdarzenie) => przeliczDokument(ustawMarkeDokumentu(dokument, zdarzenie.target.value as MarkaDokumentu))}>
+              <select value={szablonRoboczy.organizator} onChange={(zdarzenie) => obsluzZmianeOrganizatora(zdarzenie.target.value as MarkaDokumentu)}>
                 <option value="SEMPER">SEMPER</option>
                 <option value="IIST">IIST</option>
                 <option value="klient">Klient</option>
@@ -416,11 +701,36 @@ export default function WidokReplikatoraDokumentow() {
               <div><dt>Pola</dt><dd>{raport?.liczbaPolDynamicznych ?? dokument.polaDynamiczne.length}</dd></div>
               <div><dt>Niepewne</dt><dd>{raport?.liczbaNiepewnych ?? 0}</dd></div>
               <div><dt>Typ</dt><dd>{raport?.mozliwyTypDokumentu ?? '-'}</dd></div>
+              <div><dt>Zgodność</dt><dd>{raportReplikacji.procentZgodnosci}%</dd></div>
+              <div><dt>Poziom</dt><dd>{opiszPoziomZgodnosci(raportReplikacji.poziomZgodnosci)}</dd></div>
             </dl>
+            <p>{raportReplikacji.opisHeurystyki}</p>
             {raport?.ostrzezenia.map((ostrzezenie) => (
               <p className="replikator-dokumentow__ostrzezenie" key={ostrzezenie}>{ostrzezenie}</p>
             ))}
+            {szablonRoboczy.pewnoscTypuDokumentu < 0.7 && (
+              <p className="replikator-dokumentow__ostrzezenie">Typ dokumentu rozpoznany z niską pewnością. Wybierz typ ręcznie przed dalszym użyciem.</p>
+            )}
+            {czyZatwierdzonoNiskaZgodnosc && (
+              <p className="replikator-dokumentow__ostrzezenie">Szablon został ręcznie zatwierdzony, ale pierwotny wynik zgodności nadal oznacza tylko wersję roboczą.</p>
+            )}
           </section>
+
+          <PanelKontroliJakosciDokumentu
+            problemy={[...szablonRoboczy.dokumentBlokowy.problemy, ...raportReplikacji.problemyJakosci]}
+            czyZatwierdzony={szablonRoboczy.dokumentBlokowy.metadane.zatwierdzonyPrzezUzytkownika}
+            liczbaBlokow={policzBlokiDokumentu(szablonRoboczy)}
+            raportReplikacji={{
+              procentZgodnosci: raportReplikacji.procentZgodnosci,
+              poziomZgodnosci: opiszPoziomZgodnosci(raportReplikacji.poziomZgodnosci),
+              odtworzono: raportReplikacji.odtworzono,
+              nieOdtworzono: raportReplikacji.nieOdtworzono,
+              wymagaPoprawy: raportReplikacji.wymagaPoprawy,
+              ograniczenia: raportReplikacji.ograniczenia,
+            }}
+            statusSzablonu={szablonRoboczy.status}
+            onPrzejdzDoProblemu={przejdzDoProblemu}
+          />
 
           <section className="replikator-dokumentow__lista">
             <h3>Dane wyekstrahowane</h3>
@@ -436,7 +746,24 @@ export default function WidokReplikatoraDokumentow() {
           </section>
 
           <section className="replikator-dokumentow__lista">
-            <h3>Pola dynamiczne</h3>
+            <h3>Placeholdery do zatwierdzenia</h3>
+            {szablonRoboczy.placeholdery.length ? szablonRoboczy.placeholdery.map((placeholder) => (
+              <div className="replikator-dokumentow__wiersz-pola" key={placeholder.id}>
+                <span>{`{{${placeholder.nazwa}}}`}</span>
+                <small>{placeholder.rodzaj} | {placeholder.powiazanie} | {placeholder.status}</small>
+                <button type="button" disabled={placeholder.status === 'zatwierdzony'} onClick={() => zatwierdzPlaceholder(placeholder.id)}>
+                  Zatwierdź
+                </button>
+                <button type="button" disabled={placeholder.status === 'odrzucony'} onClick={() => aktualizujPlaceholder(placeholder.id, { status: 'odrzucony' })}>
+                  Odrzuć
+                </button>
+              </div>
+            )) : <p>Brak propozycji placeholderów.</p>}
+            {!czyPlaceholderyZatwierdzone && <p className="replikator-dokumentow__ostrzezenie">Zapis jest zablokowany do czasu zatwierdzenia albo odrzucenia placeholderów.</p>}
+          </section>
+
+          <section className="replikator-dokumentow__lista">
+            <h3>Pola dynamiczne podglądu</h3>
             {dokument.polaDynamiczne.length ? dokument.polaDynamiczne.map((pole) => (
               <div className="replikator-dokumentow__wiersz-pola" key={pole.id}>
                 <span>{`{{${pole.nazwa}}}`}</span>
@@ -450,13 +777,22 @@ export default function WidokReplikatoraDokumentow() {
 
           <section className="replikator-dokumentow__lista">
             <h3>Zapis szablonu</h3>
+            {szablonRoboczy.procentZgodnosci <= 70 && (
+              <label className="replikator-dokumentow__pole">
+                Komentarz użytkownika dla niskiej zgodności
+                <textarea value={komentarzNiskiejZgodnosci} onChange={(zdarzenie) => ustawKomentarzNiskiejZgodnosci(zdarzenie.target.value)} />
+                <button type="button" onClick={oznaczJakoPoprawnyMimoNiskiejZgodnosci}>
+                  Oznacz jako poprawny mimo niższego wyniku
+                </button>
+              </label>
+            )}
             <div className="replikator-dokumentow__formularz-linia">
-              <button type="button" onClick={zapiszNowySzablon}>Zapisz jako nowy szablon</button>
+              <button type="button" disabled={!czyMoznaZapisacSzablon} onClick={zapiszNowySzablon}>Zapisz jako nowy szablon</button>
               <select value={wybranySzablonId} onChange={(zdarzenie) => ustawWybranySzablonId(zdarzenie.target.value)}>
                 <option value="">Wybierz szablon</option>
                 {szablony.map((szablon) => <option key={szablon.id} value={szablon.id}>{`${szablon.nazwa} v${szablon.wersja}`}</option>)}
               </select>
-              <button type="button" disabled={!wybranySzablonId} onClick={zapiszWersjeSzablonu}>Zapisz jako wersję</button>
+              <button type="button" disabled={!wybranySzablonId || !czyMoznaZapisacSzablon} onClick={zapiszWersjeSzablonu}>Zapisz jako wersję</button>
             </div>
           </section>
         </section>
@@ -478,7 +814,15 @@ export default function WidokReplikatoraDokumentow() {
               Oryginał
               <input min="0" max="90" type="range" value={przezroczystoscOryginalu} onChange={(zdarzenie) => ustawPrzezroczystoscOryginalu(Number(zdarzenie.target.value))} />
             </label>
+            <label>
+              Wersja testowa
+              <input checked={szablonRoboczy.czyPokazacZnakWodnyWersjiTestowej} type="checkbox" onChange={(zdarzenie) => ustawWidocznoscZnakuWodnego(zdarzenie.target.checked)} />
+            </label>
           </div>
+
+          {szablonRoboczy.status === 'Roboczy' && szablonRoboczy.czyPokazacZnakWodnyWersjiTestowej && (
+            <div className="replikator-dokumentow__znak-wodny">wersja testowa</div>
+          )}
 
           {trybPorownania === 'porownanie' ? (
             <div className="replikator-dokumentow__porownanie">

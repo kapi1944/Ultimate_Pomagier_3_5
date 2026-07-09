@@ -103,6 +103,38 @@
   gap: 16px;
 }
 
+.szczegoly-uklad-generatora {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+  gap: 16px;
+  align-items: start;
+}
+
+.szczegoly-panel-jakosci {
+  position: sticky;
+  top: 158px;
+  display: grid;
+  gap: 12px;
+  max-height: calc(100vh - 176px);
+  overflow: auto;
+}
+
+.szczegoly-autosave {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid rgba(250, 204, 21, 0.36);
+  border-radius: 8px;
+  background: #2b2205;
+  color: #fef3c7;
+  padding: 12px;
+}
+
+.szczegoly-autosave span {
+  color: #fde68a;
+}
+
 .szczegoly-sekcja,
 .szczegoly-karta-grupy,
 .szczegoly-kolumna-danych {
@@ -419,6 +451,23 @@
   gap: 10px;
 }
 
+.szczegoly-problemy__sekcja p {
+  margin: 0;
+  color: #b9d7c2;
+}
+
+.szczegoly-problemy__sekcja a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.szczegoly-problemy__sekcja--niepewne {
+  border: 1px solid rgba(217, 119, 6, 0.4);
+  border-radius: 8px;
+  background: rgba(217, 119, 6, 0.08);
+  padding: 10px;
+}
+
 .szczegoly-problemy ul {
   display: grid;
   gap: 7px;
@@ -727,6 +776,34 @@
   text-align: center;
 }
 
+.szczegoly-historia {
+  display: grid;
+  gap: 10px;
+}
+
+.szczegoly-historia__wpis {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(156, 207, 171, 0.18);
+  border-radius: 8px;
+  background: #03180c;
+  padding: 10px;
+}
+
+.szczegoly-historia__wpis div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.szczegoly-historia__wpis span,
+.szczegoly-historia__wpis p {
+  margin: 0;
+  color: #b9d7c2;
+}
+
 .szczegoly-kopie button {
   justify-self: start;
   text-align: left;
@@ -746,8 +823,14 @@
   .szczegoly-wiersz-wymogu,
   .szczegoly-wiersz-wymogu--przyjazd,
   .szczegoly-wiersz-wymogu--rozszerzony,
+  .szczegoly-uklad-generatora,
   .szczegoly-uklad-sekcji {
     grid-template-columns: 1fr;
+  }
+
+  .szczegoly-panel-jakosci {
+    position: static;
+    max-height: none;
   }
 
   .szczegoly-karta-grupy__formularz {
@@ -856,6 +939,23 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.szczegoly-rekord__status-szkolenia {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  color: #03180c;
+}
+
+.szczegoly-rekord__status-szkolenia select {
+  border: 1px solid rgba(3, 24, 12, 0.24);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.58);
+  color: #03180c;
+  font: inherit;
+  min-height: 34px;
+  padding: 6px 8px;
 }
 
 .szczegoly-rekord__metadane span {

@@ -23,6 +23,7 @@ const sekcjeNawigacji = [
   { id: 'dodatkowe-wymogi', etykieta: 'Dodatkowe' },
   { id: 'wysylka-paczki', etykieta: 'Wysyłka' },
   { id: 'wyslij-aktualizacje', etykieta: 'Aktualizacja' },
+  { id: 'historia-wersji', etykieta: 'Historia' },
   { id: 'eksport-import', etykieta: 'JSON' },
 ]
 
@@ -88,6 +89,17 @@ type PodgladWzoruKlienta = {
 function wybierzPodpowiedziMiejscowosci(miejscowosci: string[], wartosc: string) {
   const fraza = wartosc.trim().toLocaleLowerCase('pl')
   return miejscowosci.filter((miejscowosc) => !fraza || miejscowosc.toLocaleLowerCase('pl').includes(fraza)).slice(0, 50)
+}
+
+function pobierzRozniceWersji(poprzednia: unknown, aktualna: unknown) {
+  const poprzedniTekst = JSON.stringify(poprzednia, null, 2)
+  const aktualnyTekst = JSON.stringify(aktualna, null, 2)
+
+  if (poprzedniTekst === aktualnyTekst) {
+    return ['Brak różnic w danych formularza.']
+  }
+
+  return ['Dane formularza różnią się od poprzedniej zapisanej wersji.']
 }
 
 function PolaFirmy({ tytul, prefix, dane, disabled, statusyPol, aktualizujPole, miejscowosciDoPodpowiedzi, elementNaglowka }: WlasciwosciPolFirmy) {
@@ -214,8 +226,9 @@ function WierszWymoguRozszerzony({
 export default function WidokNowychSzczegolowOrganizacyjnych() {
   const generator = useGeneratorSzczegolow()
   const [podgladyWzorowKlienta, ustawPodgladyWzorowKlienta] = useState<Record<string, PodgladWzoruKlienta>>({})
+  const [porownywanaWersjaId, ustawPorownywanaWersjaId] = useState<string | null>(null)
   const liczbaProblemowBlokujacych = generator.problemyWalidacji.filter((problem) => problem.czyBlokuje).length
-  const statusFormularza = generator.czyFormularzKompletny ? 'Kompletny' : `Niepełny (${liczbaProblemowBlokujacych})`
+  const statusFormularza = `${generator.daneFormularza.status} | ${generator.czyFormularzKompletny ? 'Kompletny' : `Niepełny (${liczbaProblemowBlokujacych})`}`
   const bladTytulu = generator.daneFormularza.tytulSzkolenia.trim() ? undefined : 'Pole wymagane'
   const bladKlienta = generator.daneFormularza.nazwaKlienta.trim() ? undefined : 'Pole wymagane'
   const bladOpiekuna = generator.daneFormularza.opiekunId.trim() ? undefined : 'Pole wymagane'
@@ -224,6 +237,9 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
     [],
   )
   const podpowiedziMiastaPaczki = wybierzPodpowiedziMiejscowosci(miejscowosciDoPodpowiedzi, generator.daneFormularza.odbiorcaPaczki.miasto)
+  const wersjeHistorii = generator.historiaSzczegolow.filter((wpis) => wpis.typ === 'wersja')
+  const porownywanaWersja = wersjeHistorii.find((wpis) => wpis.id === porownywanaWersjaId)
+  const poprzedniaWersja = porownywanaWersja ? wersjeHistorii[wersjeHistorii.findIndex((wpis) => wpis.id === porownywanaWersja.id) + 1] : undefined
 
   function aktualizujNabywce(klucz: KluczFirmy, wartosc: string) {
     generator.aktualizujDane(
@@ -422,22 +438,56 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
         tytul="Nowe szczegóły organizacyjne"
         akcje={
           <>
-            <button type="button" onClick={generator.zapiszWersje}>
-              Zapisz kopię roboczą
-            </button>
-            <button disabled={!generator.czyFormularzKompletny} type="button" onClick={generator.opublikujSzczegoly}>
-              Opublikuj
-            </button>
+            {generator.daneFormularza.status === 'NIEPEŁNE' && (
+              <button disabled={generator.czyTylkoPodglad} type="button" onClick={generator.zapiszWersje}>
+                Zapisz wersję roboczą
+              </button>
+            )}
+            {generator.daneFormularza.status === 'PEŁNE' && (
+              <button disabled={!generator.czyFormularzKompletny || generator.czyTylkoPodglad} type="button" onClick={generator.opublikujSzczegoly}>
+                Opublikuj
+              </button>
+            )}
+            {(generator.daneFormularza.status === 'OCZEKUJĄCE' || generator.daneFormularza.status === 'ZAAKCEPTOWANE') && (
+              <button disabled={generator.czyTylkoPodglad} type="button" onClick={generator.zapiszWersje}>
+                Utwórz aktualizację
+              </button>
+            )}
+            {generator.daneFormularza.status === 'GOTOWE' && (
+              <button disabled={generator.czyTylkoPodglad} type="button" onClick={generator.zapiszWersje}>
+                Zapisz zmianę workflow
+              </button>
+            )}
           </>
         }
       />
 
       <p className="szczegoly-komunikat">{generator.komunikat}</p>
+      {generator.autosaveDoDecyzji && (
+        <div className="szczegoly-autosave">
+          <strong>Znaleziono niezapisaną wersję roboczą</strong>
+          <span>{new Date(generator.autosaveDoDecyzji.dataZapisu).toLocaleString('pl-PL')}</span>
+          <button type="button" onClick={generator.przywrocAutosave}>
+            Przywróć draft
+          </button>
+          <button type="button" onClick={generator.odrzucAutosave}>
+            Odrzuć draft
+          </button>
+        </div>
+      )}
 
-      <div className="szczegoly-formularz">
-        <SekcjaFormularza id="wykryte-problemy" tytul="Wykryte problemy">
-          <PanelWykrytychProblemow problemy={generator.problemyWalidacji} />
-        </SekcjaFormularza>
+      <div className="szczegoly-uklad-generatora">
+        <div className="szczegoly-formularz">
+          <SekcjaFormularza id="wykryte-problemy" tytul="Wykryte problemy">
+            <PanelWykrytychProblemow
+              komunikatySystemowe={[generator.komunikat]}
+              modelSekcyjny={generator.modelSekcyjny}
+              ostatniAutosave={generator.ostatniAutosave}
+              polaNiepewne={generator.polaNiepewne}
+              problemy={generator.problemyWalidacji}
+              zaakceptujPolaNiepewne={generator.zaakceptujWszystkiePolaNiepewne}
+            />
+          </SekcjaFormularza>
 
         <SekcjaFormularza id="importuj-szczegoly" tytul="Importuj szczegóły">
           <label className="szczegoly-pole szczegoly-import-maila">
@@ -778,6 +828,35 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
           </button>
         </SekcjaFormularza>
 
+        <SekcjaFormularza id="historia-wersji" tytul="Historia wersji i zdarzeń">
+          <div className="szczegoly-historia">
+            {generator.historiaSzczegolow.length === 0 && <p>Brak zapisanych wersji i zdarzeń.</p>}
+            {generator.historiaSzczegolow.map((wpis) => (
+              <article className="szczegoly-historia__wpis" key={wpis.id}>
+                <div>
+                  <strong>{wpis.etykietaWersji ?? wpis.typ}</strong>
+                  <span>{new Date(wpis.data).toLocaleString('pl-PL')} | {wpis.autorNazwa}</span>
+                </div>
+                <p>{wpis.komentarz}</p>
+                {wpis.zmianaStatusu && <p>Status: {wpis.zmianaStatusu.z ?? 'brak'} → {wpis.zmianaStatusu.na}</p>}
+                {wpis.zdarzenieSpecjalne && <p>{wpis.zdarzenieSpecjalne}</p>}
+                {wpis.typ === 'wersja' && (
+                  <button type="button" onClick={() => ustawPorownywanaWersjaId(porownywanaWersjaId === wpis.id ? null : wpis.id)}>
+                    {porownywanaWersjaId === wpis.id ? 'Ukryj porównanie' : 'Porównaj'}
+                  </button>
+                )}
+                {porownywanaWersjaId === wpis.id && (
+                  <ul>
+                    {pobierzRozniceWersji(poprzedniaWersja?.dane, porownywanaWersja?.dane).map((roznica) => (
+                      <li key={roznica}>{roznica}</li>
+                    ))}
+                  </ul>
+                )}
+              </article>
+            ))}
+          </div>
+        </SekcjaFormularza>
+
         <SekcjaFormularza id="eksport-import" tytul="Eksport / Import">
           <div className="szczegoly-akcje szczegoly-akcje--pelne">
             <button type="button" onClick={generator.eksportujJson}>
@@ -799,6 +878,17 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
             ))}
           </div>
         </SekcjaFormularza>
+        </div>
+        <aside className="szczegoly-panel-jakosci" aria-label="Panel kontroli jakości">
+          <PanelWykrytychProblemow
+            komunikatySystemowe={[generator.komunikat]}
+            modelSekcyjny={generator.modelSekcyjny}
+            ostatniAutosave={generator.ostatniAutosave}
+            polaNiepewne={generator.polaNiepewne}
+            problemy={generator.problemyWalidacji}
+            zaakceptujPolaNiepewne={generator.zaakceptujWszystkiePolaNiepewne}
+          />
+        </aside>
       </div>
     </section>
   )

@@ -1,9 +1,14 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import PanelKontroliJakosciDokumentu from '../../../../wspolne/dokumenty/PanelKontroliJakosciDokumentu'
 import {
-  parsujTekstProgramu,
-  type PodpunktProgramu,
-  type PozycjaListyProgramu,
-} from './ParserTekstu'
+  przygotujRaportEksportuDokumentu,
+  sprawdzDokumentBlokowy,
+  type BlokDokumentu,
+  type DokumentBlokowy,
+  type ProblemDokumentu,
+} from '../../../../wspolne/dokumenty/modelBlokowy'
+import { parsujTekstProgramu } from './ParserTekstu'
+import RendererPodgladuProgramu from './RendererPodgladuProgramu'
 import { EdytorProgramuWysiwyg } from './komponenty/EdytorProgramuWysiwyg'
 import {
   konwertujHtmlNaTekstProgramu,
@@ -38,6 +43,7 @@ type ZapisProgramuRoboczego = {
   tytulSzkolenia: string
   trescProgramu: string
   trescProgramuHtml: string
+  czyWynikParsowaniaZatwierdzony: boolean
   ustawienia: UstawieniaProgramu
   logotypProgramu: string
   linkLogotypu: string
@@ -91,6 +97,7 @@ const domyslnyZapisProgramu: ZapisProgramuRoboczego = {
   tytulSzkolenia: '',
   trescProgramu: '',
   trescProgramuHtml: '',
+  czyWynikParsowaniaZatwierdzony: false,
   ustawienia: domyslneUstawienia,
   logotypProgramu: '',
   linkLogotypu: '',
@@ -209,6 +216,12 @@ const styleProgramuSzkolenia = `
   color: #e7fff0;
   font-size: 1rem;
   letter-spacing: 0;
+}
+
+.program-szkolen__akcje-parsowania {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .program-szkolen__siatka {
@@ -584,6 +597,13 @@ const styleProgramuSzkolenia = `
   color: #374151;
   font-size: 0.9rem;
   line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.program-kartka-a4__pozycja--niepewna,
+.program-kartka-a4__modul--niepewny {
+  outline: 1px dashed #f59e0b;
+  outline-offset: 3px;
 }
 
 .program-kartka-a4__marker {
@@ -770,6 +790,7 @@ function wczytajZapisRoboczy(): ZapisProgramuRoboczego {
       tytulSzkolenia: dane.tytulSzkolenia ?? '',
       trescProgramu,
       trescProgramuHtml: dane.trescProgramuHtml ?? konwertujTekstProgramuNaHtml(trescProgramu),
+      czyWynikParsowaniaZatwierdzony: dane.czyWynikParsowaniaZatwierdzony ?? false,
       ustawienia: {
         ...domyslneUstawienia,
         ...dane.ustawienia,
@@ -801,18 +822,130 @@ function czyPlikTekstowy(plik: File) {
   return plik.type.startsWith('text/') || /\.(txt|md|csv|html?)$/i.test(plik.name)
 }
 
+function splaszczBloki(bloki: BlokDokumentu[]): BlokDokumentu[] {
+  return bloki.flatMap((blok) => [blok, ...splaszczBloki(blok.dzieci)])
+}
+
+function czyUzytkownikJestArchitektem() {
+  try {
+    const rola = localStorage.getItem('ultimate-pomagier-rola-uzytkownika') ?? localStorage.getItem('rolaUzytkownika')
+
+    return rola === 'Architekt'
+  } catch {
+    return false
+  }
+}
+
+function zapiszLogWymuszeniaEksportu(raport: ReturnType<typeof przygotujRaportEksportuDokumentu>) {
+  try {
+    const klucz = 'ultimate-pomagier.log-wymuszen-eksportu'
+    const obecnyLog = JSON.parse(localStorage.getItem(klucz) ?? '[]') as unknown[]
+
+    localStorage.setItem(
+      klucz,
+      JSON.stringify([
+        ...obecnyLog,
+        {
+          data: new Date().toISOString(),
+          format: raport.format,
+          problemy: raport.problemy.map((problem) => problem.komunikat),
+        },
+      ]),
+    )
+  } catch {
+    return
+  }
+}
+
 export function WidokProgramowSzkolen() {
   const pomijajZapisRef = useRef(false)
   const [daneProgramu, ustawDaneProgramu] = useState<ZapisProgramuRoboczego>(wczytajZapisRoboczy)
   const [komunikat, ustawKomunikat] = useState('')
-  const { tytulSzkolenia, trescProgramu, trescProgramuHtml, ustawienia, logotypProgramu, linkLogotypu } = daneProgramu
+  const { tytulSzkolenia, trescProgramu, trescProgramuHtml, czyWynikParsowaniaZatwierdzony, ustawienia, logotypProgramu, linkLogotypu } = daneProgramu
 
   const program = useMemo(() => parsujTekstProgramu(trescProgramu), [trescProgramu])
   const tytulDokumentu = tytulSzkolenia.trim() || program.tytul
+  const kolorNiepoprawny = !sprawdzHex(ustawienia.kolorAkcentuProgramu)
+  const dokumentProgramu = useMemo<DokumentBlokowy>(() => {
+    const organizator = ustawienia.profilFirmy === 'iist' ? 'IIST' : 'SEMPER'
+
+    return {
+      ...program.dokumentBlokowy,
+      dane: {
+        ...program.dokumentBlokowy.dane,
+        tytulSzkolenia: tytulDokumentu,
+        organizator,
+      },
+      strona: {
+        ...program.dokumentBlokowy.strona,
+        naglowek: {
+          ...program.dokumentBlokowy.strona.naglowek,
+          organizator,
+        },
+        stopka: {
+          ...program.dokumentBlokowy.strona.stopka,
+          organizator,
+        },
+        logotyp: {
+          ...program.dokumentBlokowy.strona.logotyp,
+          aktywny: Boolean(logotypProgramu),
+          zrodlo: logotypProgramu || undefined,
+          szerokoscProcent: ustawienia.szerokoscLogotypu,
+        },
+      },
+      metadane: {
+        ...program.dokumentBlokowy.metadane,
+        zatwierdzonyPrzezUzytkownika: czyWynikParsowaniaZatwierdzony,
+      },
+    }
+  }, [czyWynikParsowaniaZatwierdzony, logotypProgramu, program.dokumentBlokowy, tytulDokumentu, ustawienia.profilFirmy, ustawienia.szerokoscLogotypu])
+  const problemyDokumentu = useMemo<ProblemDokumentu[]>(() => {
+    const problemy = [
+      ...sprawdzDokumentBlokowy(dokumentProgramu),
+      ...program.dokumentBlokowy.problemy,
+    ]
+
+    if (!czyWynikParsowaniaZatwierdzony && trescProgramu.trim()) {
+      problemy.push({
+        id: 'wynik-parsowania-niezatwierdzony',
+        poziom: 'ostrzezenie',
+        kategoria: 'parser',
+        komunikat: 'Wynik parsowania nie został jeszcze zatwierdzony.',
+        czyBlokujeEksport: false,
+      })
+    }
+
+    if (kolorNiepoprawny) {
+      problemy.push({
+        id: 'kolor-akcentu-niepoprawny',
+        poziom: 'ostrzezenie',
+        kategoria: 'formatowanie',
+        komunikat: 'Kolor akcentu ma niepoprawny format i zostanie zastąpiony kolorem profilu.',
+        czyBlokujeEksport: false,
+      })
+    }
+
+    const unikalne = new Map<string, ProblemDokumentu>()
+    problemy.forEach((problem) => unikalne.set(`${problem.kategoria}-${problem.blokId ?? ''}-${problem.komunikat}`, problem))
+
+    return Array.from(unikalne.values())
+  }, [czyWynikParsowaniaZatwierdzony, dokumentProgramu, kolorNiepoprawny, program.dokumentBlokowy.problemy, trescProgramu])
   const tytulZCudzyslowem = formatujTytulSzkolenia(tytulDokumentu, ustawienia.formatCudzyslowu)
   const kolorAkcentu = pobierzKolorAkcentu(ustawienia)
   const profil = daneProfilowFirmy[ustawienia.profilFirmy]
-  const kolorNiepoprawny = !sprawdzHex(ustawienia.kolorAkcentuProgramu)
+  const blokiDokumentu = useMemo(() => splaszczBloki(dokumentProgramu.struktura), [dokumentProgramu.struktura])
+  const diagnostykaParsera = useMemo(
+    () =>
+      blokiDokumentu.map((blok) => {
+        const opis = blok.metadane.opisDiagnostyczny ? ` - ${blok.metadane.opisDiagnostyczny}` : ''
+
+        return `${blok.typ}: ${blok.tresc ?? '(bez treści)'}${opis}`
+      }),
+    [blokiDokumentu],
+  )
+  const liczbaModulow = blokiDokumentu.filter((blok) => blok.typ === 'Modul').length
+  const liczbaPunktow = blokiDokumentu.filter((blok) => blok.typ === 'Punkt' || blok.typ === 'Podpunkt').length
+  const czyArchitekt = czyUzytkownikJestArchitektem()
   const gruboscObramowaniaTytulu = Number.isFinite(ustawienia.gruboscObramowaniaTytulu)
     ? Math.min(10, Math.max(0, ustawienia.gruboscObramowaniaTytulu))
     : domyslneUstawienia.gruboscObramowaniaTytulu
@@ -848,7 +981,16 @@ export function WidokProgramowSzkolen() {
       ...aktualne,
       trescProgramuHtml: html,
       trescProgramu: tekst,
+      czyWynikParsowaniaZatwierdzony: false,
     }))
+  }
+
+  function zatwierdzWynikParsowania() {
+    ustawDaneProgramu((aktualne) => ({
+      ...aktualne,
+      czyWynikParsowaniaZatwierdzony: true,
+    }))
+    ustawKomunikat('Wynik parsowania programu zatwierdzony.')
   }
 
   function zmienUstawienie<Nazwa extends keyof UstawieniaProgramu>(nazwa: Nazwa, wartosc: UstawieniaProgramu[Nazwa]) {
@@ -875,6 +1017,34 @@ export function WidokProgramowSzkolen() {
     ustawDaneProgramu(domyslnyZapisProgramu)
     localStorage.removeItem(kluczProgramuRoboczego)
     ustawKomunikat('Program wyczyszczony.')
+  }
+
+  function drukujProgram() {
+    const raport = przygotujRaportEksportuDokumentu(dokumentProgramu, 'PDF')
+
+    if (!raport.czyDozwolony) {
+      if (!czyArchitekt) {
+        ustawKomunikat(`Eksport zablokowany: ${raport.problemy.filter((problem) => problem.czyBlokujeEksport).map((problem) => problem.komunikat).join(' ')}`)
+        return
+      }
+
+      const czyPotwierdzono = window.confirm('Dokument ma błędy krytyczne. Czy jako Architekt wymuszasz eksport PDF?')
+
+      if (!czyPotwierdzono) {
+        ustawKomunikat('Eksport przerwany.')
+        return
+      }
+
+      const raportWymuszony = przygotujRaportEksportuDokumentu(dokumentProgramu, 'PDF', true)
+
+      zapiszLogWymuszeniaEksportu(raportWymuszony)
+      ustawKomunikat('Architekt wymusił eksport mimo błędów krytycznych. Zapisano wpis w logu lokalnym.')
+      window.print()
+      return
+    }
+
+    ustawKomunikat('Otwieram drukowanie. PDF jest formatem referencyjnym.')
+    window.print()
   }
 
   function zmienProfilFirmy(profilFirmy: ProfilFirmy) {
@@ -1001,156 +1171,18 @@ export function WidokProgramowSzkolen() {
     window.open('https://drive.google.com', '_blank', 'noopener,noreferrer')
   }
 
-  function pobierzMarkerListy(pozycja: PozycjaListyProgramu, liczniki: number[]) {
-    const poziom = Math.max(0, pozycja.poziom)
-
-    liczniki[poziom] = (liczniki[poziom] ?? 0) + 1
-    liczniki.length = poziom + 1
-
-    if (poziom === 0 && ustawienia.stylListyGlownej === 'numeracja') {
-      return `${liczniki[0]}.`
-    }
-
-    return ustawienia.stylePoziomowListy[Math.min(poziom, ustawienia.stylePoziomowListy.length - 1)] ?? '•'
-  }
-
-  function pobierzMarkerPodpunktu(podpunkt: PodpunktProgramu, liczniki: number[]) {
-    const poziom = Math.max(0, podpunkt.poziom)
-
-    liczniki[poziom] = (liczniki[poziom] ?? 0) + 1
-    liczniki.length = poziom + 1
-
-    if (poziom === 0 && ustawienia.stylPodpunktow === 'numeracja') {
-      return `${liczniki[0]}.`
-    }
-
-    return ustawienia.stylePoziomowListy[Math.min(poziom, ustawienia.stylePoziomowListy.length - 1)] ?? '•'
-  }
-
-  function czyPogrubicNaglowekListyProgramu(poziom: number, typ?: PodpunktProgramu['typ'] | PozycjaListyProgramu['typ']) {
-    return ustawienia.czyPogrubiacNaglowkiListyProgramu && (typ === 'naglowekListyProgramu' || (poziom === 0 && !typ))
-  }
-
-  function renderujTekstFormatowany(tekst: string) {
-    return renderujMarkdownInline(tekst)
-  }
-
-  function renderujListeProsta() {
-    const liczniki: number[] = []
-
-    if (!program.listaProsta.length) {
-      return <div className="program-kartka-a4__pusty">Brak treści programu.</div>
-    }
-
-    return (
-      <div className="program-kartka-a4__lista">
-        {program.listaProsta.map((pozycja) => {
-          const poziom = Math.max(0, pozycja.poziom)
-          const stylPozycji = {
-            marginLeft: `${Math.min(poziom, 8) * 22}px`,
-            fontWeight: czyPogrubicNaglowekListyProgramu(poziom, pozycja.typ) ? 700 : 400,
-          }
-
-          return (
-            <div className="program-kartka-a4__pozycja" key={pozycja.id} style={stylPozycji}>
-              <span className="program-kartka-a4__marker">{pobierzMarkerListy(pozycja, liczniki)}</span>
-              <span>{renderujTekstFormatowany(pozycja.tresc)}</span>
-            </div>
-          )
-        })}
-      </div>
-    )
-  }
-
-  function renderujPodpunkty(podpunkty: PodpunktProgramu[]) {
-    const liczniki: number[] = []
-
-    if (!podpunkty.length) {
-      return <div className="program-kartka-a4__pusty">Brak podpunktów.</div>
-    }
-
-    return (
-      <div className="program-kartka-a4__lista">
-        {podpunkty.map((podpunkt) => {
-          const poziom = Math.max(0, podpunkt.poziom)
-          const stylPodpunktu = {
-            marginLeft: `${Math.min(poziom, 8) * 22}px`,
-            fontWeight: czyPogrubicNaglowekListyProgramu(poziom, podpunkt.typ) ? 700 : 400,
-          }
-
-          return (
-            <div
-              className="program-kartka-a4__pozycja"
-              key={podpunkt.id}
-              style={stylPodpunktu}
-            >
-              <span className="program-kartka-a4__marker">{pobierzMarkerPodpunktu(podpunkt, liczniki)}</span>
-              <span>{renderujTekstFormatowany(podpunkt.tresc)}</span>
-            </div>
-          )
-        })}
-      </div>
-    )
-  }
-
   function renderujProgramSkryptowy() {
-    if (!program.dni.length) {
-      return renderujListeProsta()
-    }
-
     return (
-      <>
-        {program.dni.map((dzien) => (
-          <section className="program-kartka-a4__dzien" key={dzien.id}>
-            {!dzien.czyDomyslny && (
-              <h2
-                className={`program-kartka-a4__dzien-tytul program-kartka-a4__dzien-tytul--${ustawienia.stylDni}`}
-                style={{
-                  backgroundColor: ustawienia.stylDni === 'pasek' ? kolorAkcentu : 'transparent',
-                  borderColor: kolorAkcentu,
-                }}
-              >
-                {dzien.tytul}
-                {dzien.tytulDnia && (
-                  <span className="program-kartka-a4__temat-dnia">{renderujTekstFormatowany(dzien.tytulDnia)}</span>
-                )}
-              </h2>
-            )}
-
-            <div className="program-kartka-a4__moduly">
-              {dzien.moduly.map((modul, indeksModulu) => (
-                <article
-                  className={`program-kartka-a4__modul${
-                    ustawienia.separacjaModulow === 'ramka' ? ' program-kartka-a4__modul--ramka' : ''
-                  }${
-                    ustawienia.separacjaModulow === 'separator-pytan' && indeksModulu > 0
-                      ? ' program-kartka-a4__modul--separator-pytan'
-                      : ''
-                  }`}
-                  style={
-                    ustawienia.separacjaModulow === 'separator-pytan' && indeksModulu > 0
-                      ? { borderColor: kolorAkcentu }
-                      : undefined
-                  }
-                  key={modul.id}
-                >
-                  <h3
-                    className={`program-kartka-a4__modul-tytul${
-                      ustawienia.separacjaModulow === 'linia' ? ' program-kartka-a4__modul-tytul--linia' : ''
-                    }`}
-                    style={{
-                      fontWeight: ustawienia.czyPogrubiacNaglowkiListyProgramu && !modul.typ ? 700 : 400,
-                    }}
-                  >
-                    {renderujTekstFormatowany(modul.tytul)}
-                  </h3>
-                  {renderujPodpunkty(modul.podpunkty)}
-                </article>
-              ))}
-            </div>
-          </section>
-        ))}
-      </>
+      <RendererPodgladuProgramu
+        czyPogrubiacNaglowkiListyProgramu={ustawienia.czyPogrubiacNaglowkiListyProgramu}
+        dokument={dokumentProgramu}
+        kolorAkcentu={kolorAkcentu}
+        separacjaModulow={ustawienia.separacjaModulow}
+        stylDni={ustawienia.stylDni}
+        stylListyGlownej={ustawienia.stylListyGlownej}
+        stylPodpunktow={ustawienia.stylPodpunktow}
+        stylePoziomowListy={ustawienia.stylePoziomowListy}
+      />
     )
   }
 
@@ -1180,7 +1212,7 @@ export function WidokProgramowSzkolen() {
       <header className="program-panel-roboczy program-szkolen__naglowek">
         <h1>Programy szkoleń</h1>
         <div className="program-szkolen__akcje">
-          <button className="program-szkolen__przycisk" onClick={() => window.print()} type="button">
+          <button className="program-szkolen__przycisk" onClick={drukujProgram} type="button">
             Drukuj
           </button>
           <button className="program-szkolen__przycisk" onClick={zapiszRoboczo} type="button">
@@ -1199,6 +1231,17 @@ export function WidokProgramowSzkolen() {
           <section className="program-szkolen__sekcja program-szkolen__sekcja--ustawienia">
             <h2>USTAWIENIA</h2>
             <div className="program-szkolen__siatka">
+              <PanelKontroliJakosciDokumentu
+                czyZatwierdzony={czyWynikParsowaniaZatwierdzony}
+                diagnostykaParsera={diagnostykaParsera}
+                liczbaBlokow={blokiDokumentu.length}
+                liczbaDni={program.dni.length}
+                liczbaModulow={liczbaModulow}
+                liczbaPunktow={liczbaPunktow}
+                pokazDiagnostykeParsera={czyArchitekt}
+                problemy={problemyDokumentu}
+              />
+
               <div className="program-szkolen__etykieta">
                 Profil firmy
                 <div className="program-szkolen__wybor program-szkolen__wybor-profilu">
@@ -1278,6 +1321,12 @@ export function WidokProgramowSzkolen() {
               </label>
 
               <div className="program-szkolen__srodtytul">Treść programu</div>
+
+              <div className="program-szkolen__akcje-parsowania">
+                <button className="program-szkolen__przycisk" disabled={!trescProgramu.trim()} onClick={zatwierdzWynikParsowania} type="button">
+                  Zatwierdź wynik parsowania
+                </button>
+              </div>
 
               <label className="program-szkolen__etykieta">
                 <span>
@@ -1485,8 +1534,8 @@ export function WidokProgramowSzkolen() {
               <div className="program-szkolen__srodtytul">Treść programu</div>
 
               <EdytorProgramuWysiwyg
-                onZmianaHtml={(html) => zmienDane('trescProgramuHtml', html)}
-                onZmianaTekstuProgramu={(tekst) => zmienDane('trescProgramu', tekst)}
+                onZmianaHtml={(html) => zmienTrescProgramuHtml(html)}
+                onZmianaTekstuProgramu={() => undefined}
                 wartoscHtml={trescProgramuHtml}
               />
             </div>

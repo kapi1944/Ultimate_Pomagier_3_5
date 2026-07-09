@@ -1,3 +1,5 @@
+import type { BlokDokumentu, DokumentBlokowy, ProblemDokumentu } from '../../../../wspolne/dokumenty/modelBlokowy'
+
 export type TypElementuProgramu = 'naglowekListyProgramu' | 'cwiczenie' | 'warsztat' | 'przyklad'
 
 export interface PodpunktProgramu {
@@ -51,6 +53,7 @@ export interface ProgramSzkolenia {
   listaProsta: PozycjaListyProgramu[]
   blokiStandardowe: BlokiStandardoweProgramu
   ostrzezenia: OstrzezenieParsera[]
+  dokumentBlokowy: DokumentBlokowy
 }
 
 type WierszProgramu = {
@@ -83,6 +86,175 @@ const wzorzecNotatkiOnline = /w przypadku szkolenia w formule on-?line/i
 const wzorzecZakonczeniaZdania = /[.;:?]$/
 const skrotyChronione = ['m.in.', 'np.', 'tj.', 'tzn.', 'art.', 'ust.', 'pkt.', 'dz.u.']
 const znacznikiFormatowaniaLinii = ['**', '++', '*']
+
+function utworzModelStronyA4Programu(): DokumentBlokowy['strona'] {
+  const marginesy = {
+    goraMm: 14,
+    prawoMm: 14,
+    dolMm: 14,
+    lewoMm: 14,
+  }
+
+  return {
+    format: 'A4',
+    orientacja: 'pionowa',
+    szerokoscMm: 210,
+    wysokoscMm: 297,
+    marginesy,
+    obszarRoboczy: {
+      xMm: marginesy.lewoMm,
+      yMm: marginesy.goraMm,
+      szerokoscMm: 210 - marginesy.lewoMm - marginesy.prawoMm,
+      wysokoscMm: 297 - marginesy.goraMm - marginesy.dolMm,
+    },
+    naglowek: {
+      aktywny: true,
+      wysokoscMm: 28,
+      organizator: 'SEMPER',
+    },
+    stopka: {
+      aktywna: true,
+      wysokoscMm: 12,
+      organizator: 'SEMPER',
+    },
+    logotyp: {
+      aktywny: false,
+      szerokoscProcent: 90,
+    },
+    numeracjaStron: {
+      aktywna: true,
+      format: '1_z_n',
+    },
+    lamanieStron: {
+      unikajDzieleniaNaglowkow: true,
+      minimalnaLiczbaWierszyPoNaglowku: 2,
+    },
+    minimalneOdstepyOdKrawedziMm: 5,
+    skalowaniePodgladu: 1,
+    ustawieniaWydruku: {
+      drukujTlo: true,
+    },
+    ustawieniaEksportu: {
+      pdfReferencyjny: true,
+      docxZTejSamejStruktury: true,
+    },
+  }
+}
+
+function utworzBlok(
+  id: string,
+  typ: BlokDokumentu['typ'],
+  tresc: string | undefined,
+  dzieci: BlokDokumentu[],
+  czyNiepewne = false,
+  poziom = 0,
+): BlokDokumentu {
+  return {
+    id,
+    typ,
+    tresc,
+    dzieci,
+    metadane: {
+      zrodlo: 'parser',
+      poziom,
+      opisDiagnostyczny: czyNiepewne ? 'Parser nie ma pewności co do roli tego fragmentu.' : undefined,
+    },
+    stylLokalny: {
+      wciecie: poziom,
+    },
+    statusDiagnostyczny: czyNiepewne ? 'do_sprawdzenia' : 'poprawny',
+  }
+}
+
+function utworzProblemParsera(ostrzezenie: OstrzezenieParsera, indeks: number): ProblemDokumentu {
+  return {
+    id: `parser-${indeks + 1}`,
+    poziom: 'ostrzezenie',
+    kategoria: 'parser',
+    komunikat: ostrzezenie.tresc,
+    czyBlokujeEksport: false,
+  }
+}
+
+function zbudujDokumentBlokowyProgramu(program: Omit<ProgramSzkolenia, 'dokumentBlokowy'>): DokumentBlokowy {
+  const struktura: BlokDokumentu[] = [
+    utworzBlok('tytul-programu', 'Tytul', program.tytul, []),
+    ...program.dni.map((dzien) =>
+      utworzBlok(
+        dzien.id,
+        'Dzien',
+        dzien.czyDomyslny ? undefined : dzien.tytul,
+        [
+          ...(dzien.tytulDnia ? [utworzBlok(`${dzien.id}-temat`, 'Sekcja', dzien.tytulDnia, [])] : []),
+          ...dzien.moduly.map((modul) =>
+            utworzBlok(
+              modul.id,
+              'Modul',
+              modul.tytul,
+              modul.podpunkty.map((podpunkt) =>
+                utworzBlok(
+                  podpunkt.id,
+                  podpunkt.poziom > 0 ? 'Podpunkt' : 'Punkt',
+                  podpunkt.tresc,
+                  [],
+                  podpunkt.czyNiepewne,
+                  podpunkt.poziom,
+                ),
+              ),
+              modul.czyNiepewne,
+            ),
+          ),
+        ],
+        dzien.moduly.some((modul) => modul.czyNiepewne || modul.podpunkty.some((podpunkt) => podpunkt.czyNiepewne)),
+      ),
+    ),
+    ...program.listaProsta.map((pozycja) =>
+      utworzBlok(
+        pozycja.id,
+        pozycja.poziom > 0 ? 'Podpunkt' : 'Punkt',
+        pozycja.tresc,
+        [],
+        pozycja.czyNiepewne,
+        pozycja.poziom,
+      ),
+    ),
+  ]
+
+  return {
+    id: 'program-szkolenia-z-parsera',
+    typ: 'program_szkolenia',
+    dane: {
+      tytulSzkolenia: program.tytul,
+      organizator: 'SEMPER',
+    },
+    struktura,
+    strona: utworzModelStronyA4Programu(),
+    wyglad: {
+      marginesy: utworzModelStronyA4Programu().marginesy,
+      styleBlokow: {
+        Tytul: { pogrubienie: true, rozmiarCzcionki: 16, interlinia: 1.15 },
+        Dzien: { pogrubienie: true, rozmiarCzcionki: 12, interlinia: 1.15 },
+        Modul: { pogrubienie: true, rozmiarCzcionki: 11, interlinia: 1.3 },
+        Punkt: { rozmiarCzcionki: 10, interlinia: 1.3 },
+        Podpunkt: { rozmiarCzcionki: 10, interlinia: 1.3 },
+      },
+    },
+    problemy: program.ostrzezenia.map(utworzProblemParsera),
+    raportyEksportu: [],
+    metadane: {
+      wersjaModelu: 1,
+      zrodlo: 'parser',
+      zatwierdzonyPrzezUzytkownika: false,
+    },
+  }
+}
+
+function zakonczProgram(program: Omit<ProgramSzkolenia, 'dokumentBlokowy'>): ProgramSzkolenia {
+  return {
+    ...program,
+    dokumentBlokowy: zbudujDokumentBlokowyProgramu(program),
+  }
+}
 
 function utworzId(prefiks: string, licznik: number) {
   return `${prefiks}-${licznik}`
@@ -289,7 +461,7 @@ function czyKandydatNaNaglowek(wiersz: WierszProgramu, nastepny?: WierszProgramu
   )
 }
 
-function utworzProgram(): ProgramSzkolenia {
+function utworzProgram(): Omit<ProgramSzkolenia, 'dokumentBlokowy'> {
   return {
     tytul: 'Program szkolenia',
     dni: [],
@@ -412,7 +584,7 @@ export function parsujTekstProgramu(tresc: string): ProgramSzkolenia {
   }
 
   if (!wiersze.length) {
-    return program
+    return zakonczProgram(program)
   }
 
   for (let indeks = 0; indeks < wiersze.length; indeks += 1) {
@@ -550,5 +722,5 @@ export function parsujTekstProgramu(tresc: string): ProgramSzkolenia {
     dodajOstrzezenie('Wykryto numerację mieszaną: arabska + rzymska.')
   }
 
-  return program
+  return zakonczProgram(program)
 }

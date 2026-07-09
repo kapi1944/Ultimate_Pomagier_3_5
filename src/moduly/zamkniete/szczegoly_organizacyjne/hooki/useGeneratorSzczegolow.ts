@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   pobierzLokalizacjeZMagazynu,
   pobierzPotwierdzonyMiejscownikLokalizacji,
@@ -16,33 +16,83 @@ import {
 import { polaWymaganePoImporcie, trenerzyKartotekiStartowi } from '../stale'
 import { czyKontoMozeWidziecKopie, pobierzAktywneKontoSzczegolow } from '../uzytkownicySzczegolow'
 import type {
+  AutosaveSzczegolow,
   DaneAdresatow,
   DaneDokumentacjiMaterialow,
   DaneFirmy,
   DaneFormularza,
   FormaSzkolenia,
   GrupaSzkoleniowa,
+  KluczSekcjiSzczegolow,
+  ModelSekcyjnySzczegolow,
   OswiadczenieVat,
   ProblemWalidacji,
   RodzajGodzin,
+  StatusKompletnosciSekcji,
   StatusyPolImportu,
   TrenerKartoteki,
   WersjaRoboczaGeneratora,
 } from '../typy'
 import { utworzTekstSzczegolow } from '../uslugi/eksportSzczegolow'
 import {
+  dodajWpisHistoriiSzczegolow,
   opublikujWersjeRobocza,
   pobierzAktualnaWersjeRobocza,
+  pobierzAutosaveSzczegolow,
+  pobierzHistorieSzczegolow,
   pobierzKopieRobocze,
   ustawAktualnaWersjeRobocza,
+  usunAutosaveSzczegolow,
   wersjaEksportuSzczegolow,
   wyczyscAktualnaWersjeRobocza,
+  zapiszAutosaveSzczegolow,
   zapiszWersjeRobocza,
   zbudujWersjeRobocza,
 } from '../uslugi/magazynWersjiRoboczych'
 import { parsujMailaSzczegolow } from '../uslugi/parserMailaSzczegolow'
+import { czyKontoMozeEdytowacSzczegoly } from '../uzytkownicySzczegolow'
 
 const kluczTrenerowKartoteki = 'ultimate-pomagier.kartoteki.trenerzy'
+
+const etykietySekcji: Record<KluczSekcjiSzczegolow, string> = {
+  podstawoweInformacje: 'Podstawowe informacje',
+  klient: 'Klient',
+  opiekun: 'Opiekun',
+  trenerzy: 'Trenerzy',
+  lokalizacja: 'Lokalizacja',
+  grupySzkoleniowe: 'Grupy szkoleniowe',
+  harmonogram: 'Harmonogram',
+  wysylka: 'Wysyłka',
+  dokumenty: 'Dokumenty',
+  rozliczenia: 'Rozliczenia',
+  uwagi: 'Uwagi',
+  metadane: 'Metadane',
+}
+
+const wymaganeSekcjeDoPublikacji: KluczSekcjiSzczegolow[] = [
+  'podstawoweInformacje',
+  'opiekun',
+  'trenerzy',
+  'lokalizacja',
+  'grupySzkoleniowe',
+  'harmonogram',
+  'rozliczenia',
+]
+
+const polaSekcji: Record<KluczSekcjiSzczegolow, string[]> = {
+  podstawoweInformacje: ['tytulSzkolenia', 'nazwaKlienta', 'organizator'],
+  klient: ['nabywca.', 'odbiorca.', 'czyNabywcaJestOdbiorca'],
+  opiekun: ['opiekunId'],
+  trenerzy: ['grupy.trenerzy', 'grupy.0.trenerzy'],
+  lokalizacja: ['grupy.miejsce', 'grupy.0.miejsce', 'grupy.formaSzkolenia', 'grupy.0.formaSzkolenia'],
+  grupySzkoleniowe: ['grupy.', 'grupy.0.liczbaUczestnikow'],
+  harmonogram: ['grupy.dataOd', 'grupy.0.dataOd', 'grupy.dataDo', 'grupy.0.dataDo', 'grupy.liczbaGodzin', 'grupy.0.liczbaGodzin'],
+  wysylka: ['wysylkaPaczkiDotyczy', 'odbiorcaPaczki.'],
+  dokumenty: ['dokumentacja.', 'logotypy.', 'programSzkolenia'],
+  rozliczenia: ['grupy.cenaNetto', 'grupy.0.cenaNetto', 'grupy.vat', 'grupy.0.vat', 'grupy.terminPlatnosci', 'grupy.0.terminPlatnosci'],
+  uwagi: ['uwagi.', 'dodatkoweWymogi.uwagi'],
+  metadane: ['status', 'statusSzkolenia', 'powodNiezrealizowania'],
+}
 
 function klonuj<Typ>(wartosc: Typ): Typ {
   return JSON.parse(JSON.stringify(wartosc)) as Typ
@@ -147,6 +197,9 @@ function normalizujDane(dane?: Partial<DaneFormularza>): DaneFormularza {
     ...obecne,
     nazwaKlienta: obecne.nazwaKlienta ?? nabywca.nazwa ?? '',
     opiekunId: typeof obecne.opiekunId === 'string' ? obecne.opiekunId : '',
+    status: obecne.status ?? 'NIEPEŁNE',
+    statusSzkolenia: obecne.statusSzkolenia ?? 'W PRZYGOTOWANIACH',
+    powodNiezrealizowania: obecne.powodNiezrealizowania ?? '',
     nabywca,
     odbiorca: czyNabywcaJestOdbiorca ? { ...nabywca } : odbiorca,
     czyNabywcaJestOdbiorca,
@@ -396,6 +449,104 @@ function zbudujProblemyWalidacji(dane: DaneFormularza, grupy: GrupaSzkoleniowa[]
   return problemy
 }
 
+function czyPoleNalezyDoSekcji(pole: string, klucz: KluczSekcjiSzczegolow) {
+  return polaSekcji[klucz].some((wzorzec) => pole === wzorzec || pole.startsWith(wzorzec))
+}
+
+function pobierzKluczSekcjiZProblemu(problem: ProblemWalidacji): KluczSekcjiSzczegolow {
+  const wpis = Object.entries(etykietySekcji).find(([, etykieta]) => etykieta === problem.sekcja)
+  return (wpis?.[0] as KluczSekcjiSzczegolow | undefined) ?? 'metadane'
+}
+
+function zbudujProblemyPolNiepewnych(statusyPol: StatusyPolImportu): ProblemWalidacji[] {
+  return Object.entries(statusyPol)
+    .filter(([, status]) => status === 'niepewne')
+    .map(([pole]) => {
+      const kluczSekcji = Object.entries(polaSekcji).find(([klucz]) => czyPoleNalezyDoSekcji(pole, klucz as KluczSekcjiSzczegolow))?.[0] as
+        | KluczSekcjiSzczegolow
+        | undefined
+
+      return {
+        sekcja: kluczSekcji ? etykietySekcji[kluczSekcji] : 'Import',
+        pole,
+        komunikat: `Pole "${pole}" jest niepewne po imporcie i wymaga akceptacji.`,
+        poziom: 'blad' as const,
+        czyBlokuje: true,
+      }
+    })
+}
+
+function zbudujModelSekcyjny(
+  dane: DaneFormularza,
+  grupy: GrupaSzkoleniowa[],
+  adresaci: DaneAdresatow,
+  statusyPol: StatusyPolImportu,
+  problemyPodstawowe: ProblemWalidacji[],
+): ModelSekcyjnySzczegolow {
+  const problemyNiepewnychPol = zbudujProblemyPolNiepewnych(statusyPol)
+  const wszystkieProblemy = [...problemyPodstawowe, ...problemyNiepewnychPol]
+
+  function problemySekcji(klucz: KluczSekcjiSzczegolow) {
+    return wszystkieProblemy.filter((problem) => pobierzKluczSekcjiZProblemu(problem) === klucz || czyPoleNalezyDoSekcji(problem.pole, klucz))
+  }
+
+  function polaNiepewneSekcji(klucz: KluczSekcjiSzczegolow) {
+    return Object.entries(statusyPol)
+      .filter(([pole, status]) => status === 'niepewne' && czyPoleNalezyDoSekcji(pole, klucz))
+      .map(([pole]) => pole)
+  }
+
+  function utworzSekcje(klucz: KluczSekcjiSzczegolow, daneSekcji: unknown) {
+    const problemy = problemySekcji(klucz)
+    const bledyKrytyczne = problemy.filter((problem) => problem.czyBlokuje)
+    const ostrzezenia = problemy.filter((problem) => !problem.czyBlokuje)
+    const polaNiepewne = polaNiepewneSekcji(klucz)
+    const wymaganaDoPublikacji = wymaganeSekcjeDoPublikacji.includes(klucz)
+    const wynikWalidacji = bledyKrytyczne.length === 0
+    const statusKompletnosci: StatusKompletnosciSekcji =
+      wynikWalidacji && (!wymaganaDoPublikacji || polaNiepewne.length === 0) ? 'kompletna' : 'niekompletna'
+
+    return {
+      klucz,
+      etykieta: etykietySekcji[klucz],
+      dane: daneSekcji,
+      wynikWalidacji,
+      statusKompletnosci,
+      bledyKrytyczne,
+      ostrzezenia,
+      polaNiepewne,
+      wymaganaDoPublikacji,
+    }
+  }
+
+  return {
+    podstawoweInformacje: utworzSekcje('podstawoweInformacje', {
+      tytulSzkolenia: dane.tytulSzkolenia,
+      nazwaKlienta: dane.nazwaKlienta,
+      organizator: dane.organizator,
+    }),
+    klient: utworzSekcje('klient', { nabywca: dane.nabywca, odbiorca: dane.odbiorca, czyNabywcaJestOdbiorca: dane.czyNabywcaJestOdbiorca }),
+    opiekun: utworzSekcje('opiekun', { opiekunId: dane.opiekunId }),
+    trenerzy: utworzSekcje('trenerzy', grupy.map((grupa) => grupa.trenerzy)),
+    lokalizacja: utworzSekcje('lokalizacja', grupy.map((grupa) => ({ formaSzkolenia: grupa.formaSzkolenia, miejsce: grupa.miejsce }))),
+    grupySzkoleniowe: utworzSekcje('grupySzkoleniowe', grupy),
+    harmonogram: utworzSekcje('harmonogram', grupy.map((grupa) => ({ dataOd: grupa.dataOd, dataDo: grupa.dataDo, liczbaGodzin: grupa.liczbaGodzin }))),
+    wysylka: utworzSekcje('wysylka', { wysylkaPaczkiDotyczy: dane.wysylkaPaczkiDotyczy, odbiorcaPaczki: dane.odbiorcaPaczki }),
+    dokumenty: utworzSekcje('dokumenty', { dokumentacja: dane.dokumentacja, logotypy: dane.logotypy, programSzkolenia: dane.programSzkolenia }),
+    rozliczenia: utworzSekcje('rozliczenia', grupy.map((grupa) => ({ cenaNetto: grupa.cenaNetto, vat: grupa.vat, terminPlatnosci: grupa.terminPlatnosci }))),
+    uwagi: utworzSekcje('uwagi', { uwagi: dane.uwagi, dodatkoweWymogi: dane.dodatkoweWymogi, adresaci }),
+    metadane: utworzSekcje('metadane', {
+      status: dane.status,
+      statusSzkolenia: dane.statusSzkolenia,
+      powodNiezrealizowania: dane.powodNiezrealizowania,
+    }),
+  }
+}
+
+function czySekcjeWymaganeKompletne(modelSekcyjny: ModelSekcyjnySzczegolow) {
+  return wymaganeSekcjeDoPublikacji.every((klucz) => modelSekcyjny[klucz].wynikWalidacji && modelSekcyjny[klucz].statusKompletnosci === 'kompletna')
+}
+
 export function useGeneratorSzczegolow() {
   const aktywneKonto = useMemo(() => pobierzAktywneKontoSzczegolow(), [])
   const stanPoczatkowy = useMemo(() => pobierzStanPoczatkowy(), [])
@@ -407,23 +558,72 @@ export function useGeneratorSzczegolow() {
   const [zrodloOpublikowanegoId, ustawZrodloOpublikowanegoId] = useState<string | undefined>(stanPoczatkowy.zrodloOpublikowanegoId)
   const [trescMaila, ustawTrescMaila] = useState('')
   const [rozpoznaneObszary, ustawRozpoznaneObszary] = useState<string[]>([])
-  const [komunikat, ustawKomunikat] = useState('Generator gotowy.')
+  const [komunikat, ustawKomunikat] = useState(() => (pobierzAutosaveSzczegolow() ? 'Znaleziono niezapisaną wersję roboczą.' : 'Generator gotowy.'))
   const [trenerzyKartoteki, ustawTrenerzyKartoteki] = useState<TrenerKartoteki[]>(pobierzTrenerowZKartoteki)
   const [kopieRobocze, ustawKopieRobocze] = useState(() => pobierzWidoczneKopieRobocze(aktywneKonto))
-  const problemyWalidacji = useMemo(() => zbudujProblemyWalidacji(daneFormularza, grupy), [daneFormularza, grupy])
-  const czyFormularzKompletny = useMemo(() => problemyWalidacji.every((problem) => !problem.czyBlokuje), [problemyWalidacji])
+  const [historiaSzczegolow, ustawHistorieSzczegolow] = useState(() => pobierzHistorieSzczegolow())
+  const [autosaveDoDecyzji, ustawAutosaveDoDecyzji] = useState<AutosaveSzczegolow | null>(() => pobierzAutosaveSzczegolow())
+  const [czyAutosaveAktywny, ustawCzyAutosaveAktywny] = useState(() => !pobierzAutosaveSzczegolow())
+  const podstawoweProblemyWalidacji = useMemo(() => zbudujProblemyWalidacji(daneFormularza, grupy), [daneFormularza, grupy])
+  const modelSekcyjny = useMemo(
+    () => zbudujModelSekcyjny(daneFormularza, grupy, adresaci, statusyPol, podstawoweProblemyWalidacji),
+    [daneFormularza, grupy, adresaci, statusyPol, podstawoweProblemyWalidacji],
+  )
+  const problemyWalidacji = useMemo(
+    () => Object.values(modelSekcyjny).flatMap((sekcja) => [...sekcja.bledyKrytyczne, ...sekcja.ostrzezenia]),
+    [modelSekcyjny],
+  )
+  const polaNiepewne = useMemo(() => Object.entries(statusyPol).filter(([, status]) => status === 'niepewne').map(([pole]) => pole), [statusyPol])
+  const ostrzezeniaWalidacji = useMemo(() => problemyWalidacji.filter((problem) => !problem.czyBlokuje), [problemyWalidacji])
+  const bledyKrytyczne = useMemo(() => problemyWalidacji.filter((problem) => problem.czyBlokuje), [problemyWalidacji])
+  const czyFormularzKompletny = useMemo(() => czySekcjeWymaganeKompletne(modelSekcyjny), [modelSekcyjny])
   const podgladSzczegolow = useMemo(() => utworzTekstSzczegolow(daneFormularza, grupy), [daneFormularza, grupy])
+  const czyMoznaEdytowac = useMemo(() => czyKontoMozeEdytowacSzczegoly(aktywneKonto, daneFormularza.opiekunId), [aktywneKonto, daneFormularza.opiekunId])
+  const ostatniAutosave = pobierzAutosaveSzczegolow()?.dataZapisu
   const czyAdresaciAktualizacjiPoprawni = useMemo(() => {
     const lista = podzielAdresatow(adresaci.reczniAdresaci)
     return lista.length > 0 && lista.every(czyEmailPoprawny)
   }, [adresaci.reczniAdresaci])
 
+  useEffect(() => {
+    if (!czyAutosaveAktywny) {
+      return
+    }
+
+    zapiszAutosaveSzczegolow({
+      id: `autosave-${Date.now()}`,
+      dataZapisu: new Date().toISOString(),
+      dane: daneFormularza,
+      grupy,
+      adresaci,
+      statusyPol,
+      aktywnaKopiaId,
+      zrodloOpublikowanegoId,
+    })
+  }, [czyAutosaveAktywny, daneFormularza, grupy, adresaci, statusyPol, aktywnaKopiaId, zrodloOpublikowanegoId])
+
   function oznaczPoleRecznie(pole: string) {
     ustawStatusyPol((obecne) => ({ ...obecne, [pole]: 'reczne' }))
   }
 
+  function cofnijStatusJesliNiekompletne(dane: DaneFormularza, grupyDoSprawdzenia: GrupaSzkoleniowa[], statusyDoSprawdzenia: StatusyPolImportu) {
+    if (dane.status !== 'PEŁNE') {
+      return dane
+    }
+
+    const problemy = zbudujProblemyWalidacji(dane, grupyDoSprawdzenia)
+    const model = zbudujModelSekcyjny(dane, grupyDoSprawdzenia, adresaci, statusyDoSprawdzenia, problemy)
+
+    return czySekcjeWymaganeKompletne(model) ? dane : { ...dane, status: 'NIEPEŁNE' as const }
+  }
+
   function aktualizujDane(aktualizacja: (dane: DaneFormularza) => DaneFormularza, pole?: string) {
-    ustawDaneFormularza((obecne) => normalizujDane(aktualizacja(obecne)))
+    if (!czyMoznaEdytowac) {
+      ustawKomunikat('Ten formularz jest dostępny tylko do podglądu dla bieżącego konta.')
+      return
+    }
+
+    ustawDaneFormularza((obecne) => cofnijStatusJesliNiekompletne(normalizujDane(aktualizacja(obecne)), grupy, statusyPol))
 
     if (pole) {
       oznaczPoleRecznie(pole)
@@ -431,15 +631,23 @@ export function useGeneratorSzczegolow() {
   }
 
   function aktualizujGrupe(id: string, aktualizacja: (grupa: GrupaSzkoleniowa) => GrupaSzkoleniowa, pole?: string) {
-    ustawGrupy((obecne) =>
-      obecne.map((grupa, indeks) => {
+    if (!czyMoznaEdytowac) {
+      ustawKomunikat('Ten formularz jest dostępny tylko do podglądu dla bieżącego konta.')
+      return
+    }
+
+    ustawGrupy((obecne) => {
+      const nastepneGrupy = obecne.map((grupa, indeks) => {
         if (grupa.id !== id) {
           return grupa
         }
 
         return normalizujGrupe(aktualizacja(grupa), indeks)
-      }),
-    )
+      })
+
+      ustawDaneFormularza((dane) => cofnijStatusJesliNiekompletne(dane, nastepneGrupy, statusyPol))
+      return nastepneGrupy
+    })
 
     if (pole) {
       oznaczPoleRecznie(pole)
@@ -447,10 +655,20 @@ export function useGeneratorSzczegolow() {
   }
 
   function dodajGrupe() {
+    if (!czyMoznaEdytowac) {
+      ustawKomunikat('Ten formularz jest dostępny tylko do podglądu dla bieżącego konta.')
+      return
+    }
+
     ustawGrupy((obecne) => [...obecne, utworzPoczatkowaGrupe(obecne.length + 1)])
   }
 
   function duplikujGrupe(id: string) {
+    if (!czyMoznaEdytowac) {
+      ustawKomunikat('Ten formularz jest dostępny tylko do podglądu dla bieżącego konta.')
+      return
+    }
+
     ustawGrupy((obecne) => {
       const indeks = obecne.findIndex((grupa) => grupa.id === id)
 
@@ -472,10 +690,20 @@ export function useGeneratorSzczegolow() {
   }
 
   function usunGrupe(id: string) {
+    if (!czyMoznaEdytowac) {
+      ustawKomunikat('Ten formularz jest dostępny tylko do podglądu dla bieżącego konta.')
+      return
+    }
+
     ustawGrupy((obecne) => (obecne.length > 1 ? obecne.filter((grupa) => grupa.id !== id).map(normalizujGrupe) : obecne))
   }
 
   function obsluzImportMaila() {
+    if (!czyMoznaEdytowac) {
+      ustawKomunikat('Ten formularz jest dostępny tylko do podglądu dla bieżącego konta.')
+      return
+    }
+
     if (!trescMaila.trim()) {
       ustawKomunikat('Wklej treść maila przed importem.')
       return
@@ -506,9 +734,21 @@ export function useGeneratorSzczegolow() {
         ? `Import zakończony. Rozpoznano obszary: ${wynik.rozpoznaneObszary.join(', ')}.`
         : 'Import zakończony. Nie odnaleziono jawnie opisanych danych.',
     )
+    dodajWpisHistoriiSzczegolow({
+      typ: 'import',
+      autorId: aktywneKonto.id,
+      autorNazwa: aktywneKonto.nazwa,
+      komentarz: `Zaimportowano dane z maila. Pola niepewne: ${wynik.polaNiepewne.length || 0}.`,
+    })
+    ustawHistorieSzczegolow(pobierzHistorieSzczegolow())
   }
 
   function zapiszWersje() {
+    if (!czyMoznaEdytowac) {
+      ustawKomunikat('Ten formularz jest dostępny tylko do podglądu dla bieżącego konta.')
+      return
+    }
+
     if (problemyWalidacji.some((problem) => problem.komunikat === 'Odmiana nazwy tej lokalizacji nie została jeszcze potwierdzona.')) {
       ustawKomunikat('Potwierdź odmianę lokalizacji przed zapisaniem formularza.')
       return
@@ -519,14 +759,14 @@ export function useGeneratorSzczegolow() {
       status: czyFormularzKompletny ? 'PEŁNE' : 'NIEPEŁNE',
     }
     const wersja = zbudujWersjeRobocza(daneDoZapisu, grupy, adresaci, statusyPol, aktywneKonto, {
-      id: aktywnaKopiaId,
       zrodloOpublikowanegoId,
     })
     zapiszWersjeRobocza(wersja)
     ustawDaneFormularza(normalizujDane(daneDoZapisu))
     ustawAktywnaKopiaId(wersja.id)
     ustawKopieRobocze(pobierzWidoczneKopieRobocze(aktywneKonto))
-    ustawKomunikat('Zapisano kopię roboczą lokalnie.')
+    ustawHistorieSzczegolow(pobierzHistorieSzczegolow())
+    ustawKomunikat(`Zapisano wersję roboczą ${wersja.etykietaWersji}.`)
   }
 
   function wczytajWersje(wersja: WersjaRoboczaGeneratora) {
@@ -541,6 +781,11 @@ export function useGeneratorSzczegolow() {
   }
 
   function wyczyscFormularz() {
+    if (!czyMoznaEdytowac) {
+      ustawKomunikat('Ten formularz jest dostępny tylko do podglądu dla bieżącego konta.')
+      return
+    }
+
     ustawDaneFormularza(normalizujDane())
     ustawGrupy([normalizujGrupe()])
     ustawAdresaci({ ...poczatkowiAdresaci })
@@ -550,6 +795,9 @@ export function useGeneratorSzczegolow() {
     ustawRozpoznaneObszary([])
     ustawTrescMaila('')
     wyczyscAktualnaWersjeRobocza()
+    usunAutosaveSzczegolow()
+    ustawAutosaveDoDecyzji(null)
+    ustawCzyAutosaveAktywny(true)
     ustawKomunikat('Wyczyszczono formularz i aktualny szkic.')
   }
 
@@ -569,6 +817,11 @@ export function useGeneratorSzczegolow() {
   }
 
   function eksportujJson() {
+    if (bledyKrytyczne.length || polaNiepewne.length) {
+      ustawKomunikat('Eksport zablokowany: usuń błędy krytyczne i zaakceptuj pola niepewne.')
+      return
+    }
+
     const wersja = zbudujWersjeRobocza(daneFormularza, grupy, adresaci, statusyPol, aktywneKonto, {
       id: aktywnaKopiaId,
       zrodloOpublikowanegoId,
@@ -584,8 +837,23 @@ export function useGeneratorSzczegolow() {
   }
 
   function opublikujSzczegoly() {
+    if (!czyMoznaEdytowac) {
+      ustawKomunikat('Ten formularz jest dostępny tylko do podglądu dla bieżącego konta.')
+      return
+    }
+
+    if (polaNiepewne.length) {
+      ustawKomunikat('Publikacja zablokowana: zaakceptuj pola niepewne po imporcie.')
+      return
+    }
+
     if (!czyFormularzKompletny) {
       ustawKomunikat('Uzupełnij wymagane pola przed publikacją szczegółów organizacyjnych.')
+      return
+    }
+
+    if (ostrzezeniaWalidacji.length && !window.confirm(`Wykryto ostrzeżenia: ${ostrzezeniaWalidacji.length}. Czy mimo to opublikować szczegóły?`)) {
+      ustawKomunikat('Publikacja przerwana przez użytkownika po ostrzeżeniach.')
       return
     }
 
@@ -608,6 +876,7 @@ export function useGeneratorSzczegolow() {
     ustawRozpoznaneObszary([])
     ustawTrescMaila('')
     ustawKopieRobocze(pobierzWidoczneKopieRobocze(aktywneKonto))
+    ustawHistorieSzczegolow(pobierzHistorieSzczegolow())
     ustawKomunikat('Opublikowano szczegóły organizacyjne ze statusem OCZEKUJĄCE.')
   }
 
@@ -629,6 +898,60 @@ export function useGeneratorSzczegolow() {
     ustawKomunikat('Odświeżono lokalną kartotekę trenerów.')
   }
 
+  function ustawAdresaciBezpiecznie(aktualizacja: (adresaci: DaneAdresatow) => DaneAdresatow) {
+    if (!czyMoznaEdytowac) {
+      ustawKomunikat('Ten formularz jest dostępny tylko do podglądu dla bieżącego konta.')
+      return
+    }
+
+    ustawAdresaci(aktualizacja)
+  }
+
+  function przywrocAutosave() {
+    if (!autosaveDoDecyzji) {
+      return
+    }
+
+    ustawDaneFormularza(normalizujDane(autosaveDoDecyzji.dane))
+    ustawGrupy(autosaveDoDecyzji.grupy.length ? autosaveDoDecyzji.grupy.map(normalizujGrupe) : [normalizujGrupe()])
+    ustawAdresaci(normalizujAdresatow(autosaveDoDecyzji.adresaci))
+    ustawStatusyPol(autosaveDoDecyzji.statusyPol)
+    ustawAktywnaKopiaId(autosaveDoDecyzji.aktywnaKopiaId)
+    ustawZrodloOpublikowanegoId(autosaveDoDecyzji.zrodloOpublikowanegoId)
+    ustawAutosaveDoDecyzji(null)
+    ustawCzyAutosaveAktywny(true)
+    ustawKomunikat('Przywrócono niezapisaną wersję roboczą.')
+  }
+
+  function odrzucAutosave() {
+    usunAutosaveSzczegolow()
+    ustawAutosaveDoDecyzji(null)
+    ustawCzyAutosaveAktywny(true)
+    ustawKomunikat('Odrzucono niezapisaną wersję roboczą.')
+  }
+
+  function zaakceptujWszystkiePolaNiepewne() {
+    if (!polaNiepewne.length) {
+      return
+    }
+
+    ustawStatusyPol((obecne) => {
+      const nastepne = { ...obecne }
+      polaNiepewne.forEach((pole) => {
+        nastepne[pole] = 'zaimportowane'
+      })
+      return nastepne
+    })
+    dodajWpisHistoriiSzczegolow({
+      typ: 'import',
+      autorId: aktywneKonto.id,
+      autorNazwa: aktywneKonto.nazwa,
+      komentarz: `Zaakceptowano pola niepewne po imporcie: ${polaNiepewne.join(', ')}.`,
+    })
+    ustawHistorieSzczegolow(pobierzHistorieSzczegolow())
+    ustawKomunikat('Zaakceptowano wszystkie pola niepewne po imporcie.')
+  }
+
   return {
     daneFormularza,
     grupy,
@@ -639,12 +962,21 @@ export function useGeneratorSzczegolow() {
     komunikat,
     trenerzyKartoteki,
     kopieRobocze,
+    historiaSzczegolow,
+    autosaveDoDecyzji,
+    ostatniAutosave,
+    modelSekcyjny,
     problemyWalidacji,
+    bledyKrytyczne,
+    ostrzezeniaWalidacji,
+    polaNiepewne,
     czyFormularzKompletny,
+    czyMoznaEdytowac,
+    czyTylkoPodglad: !czyMoznaEdytowac,
     czyAdresaciAktualizacjiPoprawni,
     podgladSzczegolow,
     ustawTrescMaila,
-    ustawAdresaci,
+    ustawAdresaci: ustawAdresaciBezpiecznie,
     aktualizujDane,
     aktualizujGrupe,
     dodajGrupe,
@@ -660,5 +992,8 @@ export function useGeneratorSzczegolow() {
     przygotujAktualizacje,
     pokazKomunikatImportuDokumentow,
     odswiezTrenerowZKartoteki,
+    przywrocAutosave,
+    odrzucAutosave,
+    zaakceptujWszystkiePolaNiepewne,
   }
 }

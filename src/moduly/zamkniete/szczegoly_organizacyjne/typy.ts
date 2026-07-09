@@ -4,11 +4,32 @@ export type StatusSzczegolow =
   | 'OCZEKUJĄCE'
   | 'ZAAKCEPTOWANE'
   | 'GOTOWE'
+
+export type StatusSzkolenia =
+  | 'W PRZYGOTOWANIACH'
+  | 'POTWIERDZONE'
+  | 'PRZYGOTOWANE'
+  | 'WYSŁANA PACZKA'
+  | 'TRWA'
   | 'ZREALIZOWANE'
   | 'NIEZREALIZOWANE'
   | 'ROZLICZONE'
 
 export type StatusOpublikowanychSzczegolow = Exclude<StatusSzczegolow, 'NIEPEŁNE' | 'PEŁNE'>
+export type StatusKompletnosciSekcji = 'pusta' | 'niekompletna' | 'kompletna'
+export type KluczSekcjiSzczegolow =
+  | 'podstawoweInformacje'
+  | 'klient'
+  | 'opiekun'
+  | 'trenerzy'
+  | 'lokalizacja'
+  | 'grupySzkoleniowe'
+  | 'harmonogram'
+  | 'wysylka'
+  | 'dokumenty'
+  | 'rozliczenia'
+  | 'uwagi'
+  | 'metadane'
 
 export type StatusPolaImportu = 'zaimportowane' | 'brak' | 'niepewne' | 'reczne'
 export type OswiadczenieVat = 'Nie – 23%' | 'Min. 70%' | 'ZW – 100%'
@@ -115,6 +136,8 @@ export type DaneFormularza = {
   organizator: OrganizatorSzkolenia
   opiekunId: string
   status: StatusSzczegolow
+  statusSzkolenia: StatusSzkolenia
+  powodNiezrealizowania: string
   nabywca: DaneFirmy
   odbiorca: DaneFirmy
   czyNabywcaJestOdbiorca: boolean
@@ -197,9 +220,54 @@ export type ProblemWalidacji = {
   czyBlokuje: boolean
 }
 
+export type WynikSekcjiSzczegolow<DaneSekcji> = {
+  klucz: KluczSekcjiSzczegolow
+  etykieta: string
+  dane: DaneSekcji
+  wynikWalidacji: boolean
+  statusKompletnosci: StatusKompletnosciSekcji
+  bledyKrytyczne: ProblemWalidacji[]
+  ostrzezenia: ProblemWalidacji[]
+  polaNiepewne: string[]
+  wymaganaDoPublikacji: boolean
+}
+
+export type ModelSekcyjnySzczegolow = Record<KluczSekcjiSzczegolow, WynikSekcjiSzczegolow<unknown>>
+
+export type AutosaveSzczegolow = {
+  id: string
+  dataZapisu: string
+  dane: DaneFormularza
+  grupy: GrupaSzkoleniowa[]
+  adresaci: DaneAdresatow
+  statusyPol: StatusyPolImportu
+  aktywnaKopiaId: string | null
+  zrodloOpublikowanegoId?: string
+}
+
+export type WpisHistoriiSzczegolow = {
+  id: string
+  typ: 'wersja' | 'status' | 'import' | 'autosave' | 'zdarzenie'
+  etykietaWersji?: string
+  data: string
+  autorId: string
+  autorNazwa: string
+  komentarz: string
+  zmianaStatusu?: {
+    z?: StatusSzczegolow | StatusSzkolenia
+    na: StatusSzczegolow | StatusSzkolenia
+  }
+  zdarzenieSpecjalne?: string
+  dane?: DaneFormularza
+  grupy?: GrupaSzkoleniowa[]
+  adresaci?: DaneAdresatow
+  statusyPol?: StatusyPolImportu
+}
+
 export type WersjaRoboczaGeneratora = {
   id: string
   wersja: string
+  etykietaWersji: string
   nazwa: string
   dataZapisu: string
   autorId: string
@@ -222,6 +290,7 @@ export type OpublikowaneSzczegolyOrganizacyjne = {
   autorNazwa: string
   opiekunId: string
   status: StatusOpublikowanychSzczegolow
+  statusSzkolenia: StatusSzkolenia
   dane: DaneFormularza
   grupy: GrupaSzkoleniowa[]
   adresaci: DaneAdresatow

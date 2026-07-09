@@ -68,6 +68,8 @@ export const poczatkoweDaneFormularza: DaneFormularza = {
   organizator: 'SEMPER',
   opiekunId: '',
   status: 'NIEPEŁNE',
+  statusSzkolenia: 'W PRZYGOTOWANIACH',
+  powodNiezrealizowania: '',
   nabywca: { ...poczatkowaFirma },
   odbiorca: { ...poczatkowaFirma },
   czyNabywcaJestOdbiorca: false,

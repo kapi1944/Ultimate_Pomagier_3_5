@@ -1,6 +1,24 @@
 import type { DokumentPomagiera, MarkaDokumentu, TypRozpoznanegoDokumentu } from './typyDokumentu'
+import type { DokumentBlokowy } from './modelBlokowy'
 
 export type StatusSzablonuDokumentu = 'szkic' | 'aktualny' | 'archiwalny'
+
+export type DaneReplikacjiSzablonu = {
+  status: 'Roboczy' | 'Aktywny' | 'Archiwalny'
+  zrodloImportu: 'DOCX' | 'PDF' | 'TEKST'
+  dataImportu: string
+  uzytkownik: string
+  wersja: number
+  procentZgodnosci: number
+  poziomZgodnosci: string
+  dokumentBlokowy: DokumentBlokowy
+  raportImportu: unknown
+  placeholdery: unknown[]
+  elementyNiepewne: string[]
+  elementyNieobslugiwane: string[]
+  historiaDecyzji: unknown[]
+  czyPokazacZnakWodnyWersjiTestowej: boolean
+}
 
 export type SzablonDokumentu = {
   id: string
@@ -17,6 +35,7 @@ export type SzablonDokumentu = {
   dataAktualizacji: string
   oryginalnyPlik?: string
   dokument: DokumentPomagiera
+  daneReplikacji?: DaneReplikacjiSzablonu
 }
 
 export const kluczSzablonowDokumentow = 'ultimate-pomagier.kartoteki.szablony-dokumentow'
@@ -74,7 +93,7 @@ function utworzMiniature(dokument: DokumentPomagiera) {
   return `Podgląd: ${dokument.strony.length} str. / ${dokument.metadane.raportImportu?.liczbaTekstow ?? 0} tekstów`
 }
 
-export function utworzSzablonZDokumentu(dokument: DokumentPomagiera): SzablonDokumentu {
+export function utworzSzablonZDokumentu(dokument: DokumentPomagiera, daneReplikacji?: DaneReplikacjiSzablonu): SzablonDokumentu {
   const teraz = new Date().toISOString()
 
   return {
@@ -90,11 +109,12 @@ export function utworzSzablonZDokumentu(dokument: DokumentPomagiera): SzablonDok
     dataAktualizacji: teraz,
     oryginalnyPlik: dokument.zrodlo.nazwaPliku,
     dokument,
+    daneReplikacji,
   }
 }
 
-export function zapiszNowySzablonDokumentu(dokument: DokumentPomagiera) {
-  const szablon = utworzSzablonZDokumentu(dokument)
+export function zapiszNowySzablonDokumentu(dokument: DokumentPomagiera, daneReplikacji?: DaneReplikacjiSzablonu) {
+  const szablon = utworzSzablonZDokumentu(dokument, daneReplikacji)
   const obecneSzablony = pobierzSzablonyDokumentow()
 
   zapiszSzablonyDokumentow([szablon, ...obecneSzablony])
@@ -102,12 +122,12 @@ export function zapiszNowySzablonDokumentu(dokument: DokumentPomagiera) {
   return szablon
 }
 
-export function zapiszWersjeSzablonuDokumentu(idSzablonu: string, dokument: DokumentPomagiera) {
+export function zapiszWersjeSzablonuDokumentu(idSzablonu: string, dokument: DokumentPomagiera, daneReplikacji?: DaneReplikacjiSzablonu) {
   const obecneSzablony = pobierzSzablonyDokumentow()
   const istniejacySzablon = obecneSzablony.find((szablon) => szablon.id === idSzablonu)
 
   if (!istniejacySzablon) {
-    return zapiszNowySzablonDokumentu(dokument)
+    return zapiszNowySzablonDokumentu(dokument, daneReplikacji)
   }
 
   const zaktualizowanySzablon: SzablonDokumentu = {
@@ -122,6 +142,7 @@ export function zapiszWersjeSzablonuDokumentu(idSzablonu: string, dokument: Doku
     dataAktualizacji: new Date().toISOString(),
     oryginalnyPlik: dokument.zrodlo.nazwaPliku,
     dokument,
+    daneReplikacji,
   }
 
   zapiszSzablonyDokumentow(obecneSzablony.map((szablon) => (szablon.id === idSzablonu ? zaktualizowanySzablon : szablon)))

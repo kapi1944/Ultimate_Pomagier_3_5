@@ -76,13 +76,21 @@ export function czyKontoArchitekta(konto: KontoSzczegolow) {
 }
 
 export function czyKontoMozeWidziecKopie(konto: KontoSzczegolow, kopia: WersjaRoboczaGeneratora) {
-  return czyKontoArchitekta(konto) || kopia.autorId === konto.id
+  return czyKontoArchitekta(konto) || kopia.autorId === konto.id || kopia.dane.opiekunId === konto.id
 }
 
 export function czyKontoMozeEdytowacKopie(konto: KontoSzczegolow, kopia: WersjaRoboczaGeneratora) {
-  return czyKontoMozeWidziecKopie(konto, kopia)
+  return czyKontoArchitekta(konto) || kopia.dane.opiekunId === konto.id
 }
 
 export function czyKontoMozeZaakceptowacSzczegoly(konto: KontoSzczegolow, rekord: OpublikowaneSzczegolyOrganizacyjne) {
   return czyKontoArchitekta(konto) || rekord.opiekunId === konto.id
+}
+
+export function czyKontoMozeCofnacStatus(konto: KontoSzczegolow, rekord: OpublikowaneSzczegolyOrganizacyjne) {
+  return czyKontoArchitekta(konto) || rekord.opiekunId === konto.id
+}
+
+export function czyKontoMozeEdytowacSzczegoly(konto: KontoSzczegolow, opiekunId: string) {
+  return czyKontoArchitekta(konto) || opiekunId === konto.id || !opiekunId
 }
