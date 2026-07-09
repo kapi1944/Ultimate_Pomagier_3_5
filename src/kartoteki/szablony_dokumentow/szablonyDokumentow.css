@@ -1,0 +1,180 @@
+.szablony-dokumentow {
+  color: #f4fff7;
+}
+
+.szablony-dokumentow__licznik {
+  color: #9ccfab;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.szablony-dokumentow__tabela-listy {
+  min-width: 1380px;
+}
+
+.szablony-dokumentow__tabela-listy tbody tr {
+  cursor: pointer;
+}
+
+.szablony-dokumentow__wiersz-aktywny td {
+  background: rgba(74, 222, 128, 0.14);
+}
+
+.szablony-dokumentow__szczegoly,
+.szablony-dokumentow__sekcja {
+  display: grid;
+  gap: 12px;
+  border: 1px solid rgba(74, 222, 128, 0.24);
+  border-radius: 8px;
+  background: #062313;
+  padding: 16px;
+}
+
+.szablony-dokumentow__szczegoly {
+  gap: 16px;
+}
+
+.szablony-dokumentow__naglowek-szczegolow,
+.szablony-dokumentow__porownanie {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.szablony-dokumentow__naglowek-szczegolow h2,
+.szablony-dokumentow__sekcja h3 {
+  margin: 0;
+}
+
+.szablony-dokumentow__naglowek-szczegolow p,
+.szablony-dokumentow__sekcja p {
+  margin: 0;
+  color: #9ccfab;
+}
+
+.szablony-dokumentow__metryki {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.szablony-dokumentow__metryki span,
+.szablony-dokumentow__wersja {
+  border: 1px solid rgba(74, 222, 128, 0.18);
+  border-radius: 6px;
+  background: #03180c;
+}
+
+.szablony-dokumentow__metryki span {
+  color: #dff7e6;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 6px 8px;
+}
+
+.szablony-dokumentow__siatka {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.szablony-dokumentow__sekcja dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.szablony-dokumentow__sekcja dl div {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 10px;
+}
+
+.szablony-dokumentow__sekcja dt {
+  color: #9ccfab;
+  font-weight: 700;
+}
+
+.szablony-dokumentow__sekcja dd {
+  margin: 0;
+  color: #f7fff9;
+  overflow-wrap: anywhere;
+}
+
+.szablony-dokumentow__sekcja ul {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.szablony-dokumentow__podglad-blokow {
+  display: grid;
+  gap: 8px;
+}
+
+.szablony-dokumentow__blok {
+  display: grid;
+  gap: 4px;
+  border-left: 3px solid rgba(74, 222, 128, 0.5);
+  border-radius: 6px;
+  background: #03180c;
+  padding: 9px 10px;
+}
+
+.szablony-dokumentow__blok--do_sprawdzenia {
+  border-left-color: #fbbf24;
+}
+
+.szablony-dokumentow__blok--blad {
+  border-left-color: #f87171;
+}
+
+.szablony-dokumentow__blok span {
+  color: #c9ead2;
+  overflow-wrap: anywhere;
+}
+
+.szablony-dokumentow__tabela {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.szablony-dokumentow__tabela th,
+.szablony-dokumentow__tabela td {
+  border-bottom: 1px solid rgba(74, 222, 128, 0.18);
+  padding: 9px;
+  text-align: left;
+}
+
+.szablony-dokumentow__wiersz-roznicy td {
+  background: rgba(251, 191, 36, 0.13);
+}
+
+.szablony-dokumentow__lista-wersji {
+  display: grid;
+  gap: 10px;
+}
+
+.szablony-dokumentow__wersja {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+}
+
+.szablony-dokumentow__wersja span {
+  color: #9ccfab;
+  font-size: 0.84rem;
+}
+
+.szablony-dokumentow__wersja .kartoteki__przycisk {
+  justify-self: start;
+}
+
+@media (max-width: 1180px) {
+  .szablony-dokumentow__siatka {
+    grid-template-columns: 1fr;
+  }
+}

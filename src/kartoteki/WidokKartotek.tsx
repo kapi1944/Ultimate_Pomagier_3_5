@@ -6,7 +6,7 @@ import {
 import type { Lokalizacja } from './lokalizacje/typyLokalizacji'
 import PrzelacznikTakNie from '../moduly/zamkniete/szczegoly_organizacyjne/komponenty/PrzelacznikTakNie'
 import { trenerzyKartotekiStartowi } from '../moduly/zamkniete/szczegoly_organizacyjne/stale'
-import { pobierzSzablonyDokumentow, type SzablonDokumentu } from '../wspolne/dokumenty/szablonyDokumentow'
+import WidokSzablonowDokumentow from './szablony_dokumentow/WidokSzablonowDokumentow'
 import './widokKartotek.css'
 
 export type ZakladkaKartotek = 'trenerzy' | 'klienci' | 'lokalizacje' | 'szablony_dokumentow'
@@ -619,7 +619,6 @@ export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy', 
   const [trenerzy, ustawTrenerow] = useState<TrenerKartoteki[]>(() => uzupelnijBazeTrenerow(pobierzZMagazynu(kluczTrenerow, przygotujTrenerowStartowych())))
   const [klienci, ustawKlientow] = useState<KlientKartoteki[]>(() => pobierzZMagazynu(kluczKlientow, klienciStartowi))
   const [lokalizacje, ustawLokalizacje] = useState<Lokalizacja[]>(pobierzLokalizacjeZMagazynu)
-  const [szablonyDokumentow, ustawSzablonyDokumentow] = useState<SzablonDokumentu[]>(pobierzSzablonyDokumentow)
   const [filtrTypuElementu, ustawFiltrTypuElementu] = useState<TypElementuKartoteki>('wszystkie')
   const [szukanyElementKartoteki, ustawSzukanyElementKartoteki] = useState('')
   const [elementyKartoteki, ustawElementyKartoteki] = useState<DaneElementuKartoteki[]>([])
@@ -644,7 +643,6 @@ export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy', 
   const [czyFormularzLokalizacjiWidoczny, ustawCzyFormularzLokalizacjiWidoczny] = useState(false)
   const [edytowanaLokalizacjaId, ustawEdytowanaLokalizacjaId] = useState<string | null>(null)
   const [formularzLokalizacji, ustawFormularzLokalizacji] = useState<FormularzLokalizacji>(pustyFormularzLokalizacji)
-  const [stronaSzablonow, ustawStroneSzablonow] = useState(1)
   const [komunikat, ustawKomunikat] = useState('')
 
   useEffect(() => {
@@ -682,11 +680,9 @@ export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy', 
     szukanaLokalizacja,
     szukanyKlient,
     stronaLokalizacji,
-    stronaSzablonow,
     trenerzy,
     klienci,
     lokalizacje,
-    szablonyDokumentow,
   ])
 
   const trenerzyFiltrowani = useMemo(
@@ -753,12 +749,6 @@ export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy', 
   const lokalizacjeNaStronie = useMemo(
     () => pobierzPozycjeStrony(lokalizacjeFiltrowane, bezpiecznaStronaLokalizacji, liczbaPozycjiNaStronie),
     [bezpiecznaStronaLokalizacji, liczbaPozycjiNaStronie, lokalizacjeFiltrowane],
-  )
-
-  const bezpiecznaStronaSzablonow = Math.min(stronaSzablonow, policzLiczbeStron(szablonyDokumentow.length, liczbaPozycjiNaStronie))
-  const szablonyNaStronie = useMemo(
-    () => pobierzPozycjeStrony(szablonyDokumentow, bezpiecznaStronaSzablonow, liczbaPozycjiNaStronie),
-    [bezpiecznaStronaSzablonow, liczbaPozycjiNaStronie, szablonyDokumentow],
   )
 
   function pokazKomunikat(tresc: string) {
@@ -930,7 +920,6 @@ export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy', 
     ustawStroneTrenerow(1)
     ustawStroneKlientow(1)
     ustawStroneLokalizacji(1)
-    ustawStroneSzablonow(1)
   }
 
   function ustawWspolnaLiczbePozycjiNaStronie(liczba: number) {
@@ -964,11 +953,6 @@ export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy', 
   function anulujEdycjeTrenera() {
     ustawEdytowanyTrenerId(null)
     window.setTimeout(() => ustawFormularzTrenera(pustyFormularzTrenera), 280)
-  }
-
-  function odswiezSzablonyDokumentow() {
-    ustawSzablonyDokumentow(pobierzSzablonyDokumentow())
-    pokazKomunikat('Odświeżono szablony dokumentów.')
   }
 
   function zmienZakladke(zakladka: ZakladkaKartotek) {
@@ -1585,70 +1569,7 @@ export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy', 
         </section>
       )}
 
-      {aktywnaZakladka === 'szablony_dokumentow' && (
-        <section className="kartoteki__widok" ref={referencjaAktywnejKartoteki}>
-          <header className="kartoteki__naglowek">
-            <div className="kartoteki__tytul">
-              <span className="kartoteki__ikona" aria-hidden="true">
-                §
-              </span>
-              <div>
-                <h1>Szablony dokumentów</h1>
-                <p>Wzorce zapisane z Replikatora dokumentów.</p>
-              </div>
-            </div>
-            <button className="kartoteki__przycisk" type="button" onClick={odswiezSzablonyDokumentow}>
-              Odśwież
-            </button>
-          </header>
-
-          <PanelElementowKartoteki
-            elementy={elementyKartoteki}
-            filtrTypu={filtrTypuElementu}
-            szukanaFraza={szukanyElementKartoteki}
-            ustawFiltrTypu={ustawFiltrTypuElementu}
-            ustawSzukanaFraza={ustawSzukanyElementKartoteki}
-          />
-
-          <PanelPaginacjiKartoteki
-            liczbaPozycjiNaStronie={liczbaPozycjiNaStronie}
-            liczbaWidocznychPozycji={szablonyNaStronie.length}
-            liczbaWszystkichPozycji={szablonyDokumentow.length}
-            strona={bezpiecznaStronaSzablonow}
-            ustawLiczbePozycjiNaStronie={ustawWspolnaLiczbePozycjiNaStronie}
-            ustawStrone={ustawStroneSzablonow}
-          />
-
-          <div className="kartoteki__lista">
-            {szablonyDokumentow.length ? szablonyNaStronie.map((szablon) => (
-              <article className="kartoteki__wiersz" key={szablon.id}>
-                <div>
-                  <strong>{szablon.nazwa}</strong>
-                  <span>
-                    {szablon.typDokumentu ?? 'typ nieokreślony'} | {szablon.marka} | wersja {szablon.wersja} | {szablon.status}
-                  </span>
-                  <span>{szablon.miniatura}</span>
-                  <span>Tagi: {szablon.tagi.join(', ') || '-'}</span>
-                  <span>Oryginał: {szablon.oryginalnyPlik ?? '-'}</span>
-                </div>
-                <div className="kartoteki__akcje">
-                  <button className="kartoteki__przycisk kartoteki__przycisk--z-ikona" type="button" onClick={() => pokazKomunikat(`Szablon klienta: ${szablon.klientNazwa ?? 'standardowy'}`)}>
-                    <IkonaAkcji typ="podglad" />
-                    Podgląd
-                  </button>
-                  <button className="kartoteki__przycisk" type="button" onClick={() => pokazKomunikat(`Wersja szablonu: ${szablon.wersja}`)}>
-                    Wersje
-                  </button>
-                </div>
-              </article>
-            )) : (
-              <section className="kartoteki__panel">
-                <p>Brak zapisanych szablonów dokumentów.</p>
-              </section>
-            )}
-          </div>
-        </section>
-      )}
+      {aktywnaZakladka === 'szablony_dokumentow' && <WidokSzablonowDokumentow />}
     </section>
   )
 }

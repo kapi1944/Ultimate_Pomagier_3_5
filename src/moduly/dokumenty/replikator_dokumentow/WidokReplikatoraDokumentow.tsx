@@ -3,12 +3,13 @@ import { uzupelnijAnalizeDokumentu } from '../../../wspolne/dokumenty/analizaDok
 import PanelKontroliJakosciDokumentu from '../../../wspolne/dokumenty/PanelKontroliJakosciDokumentu'
 import type { ProblemDokumentu } from '../../../wspolne/dokumenty/modelBlokowy'
 import {
-  pobierzSzablonyDokumentow,
-  zapiszNowySzablonDokumentu,
-  zapiszWersjeSzablonuDokumentu,
-  type DaneReplikacjiSzablonu,
-  type SzablonDokumentu,
-} from '../../../wspolne/dokumenty/szablonyDokumentow'
+  pobierzSzablonyDokumentowZKartoteki,
+  utworzNazweSzablonuZDopiskiem,
+  wykryjKonfliktNazwySzablonu,
+  zapiszNowaWersjeSzablonu,
+  zapiszNowySzablonZReplikatora,
+} from '../../../kartoteki/szablony_dokumentow/magazynSzablonowDokumentow'
+import type { SzablonDokumentuKartoteki } from '../../../kartoteki/szablony_dokumentow/typySzablonowDokumentow'
 import { utworzDokumentZTekstu } from '../../../wspolne/dokumenty/utworzDokumentZTekstu'
 import { importujPlikDoDokumentu } from '../../../wspolne/import/importujPlikDoDokumentu'
 import { rozpoznajTypPliku } from '../../../wspolne/import/rozpoznajTypPliku'
@@ -179,44 +180,6 @@ function utworzDecyzje(
   }
 }
 
-function przygotujDaneReplikacjiDoZapisu(szablon: SzablonRoboczyReplikatora): DaneReplikacjiSzablonu {
-  return {
-    status: szablon.status,
-    zrodloImportu: szablon.zrodloImportu,
-    dataImportu: szablon.dataImportu,
-    uzytkownik: szablon.uzytkownik,
-    wersja: szablon.wersja,
-    procentZgodnosci: szablon.procentZgodnosci,
-    poziomZgodnosci: szablon.poziomZgodnosci,
-    dokumentBlokowy: szablon.dokumentBlokowy,
-    raportImportu: szablon.raportImportu,
-    placeholdery: szablon.placeholdery,
-    elementyNiepewne: szablon.elementyNiepewne,
-    elementyNieobslugiwane: szablon.elementyNieobslugiwane,
-    historiaDecyzji: szablon.historiaDecyzji,
-    czyPokazacZnakWodnyWersjiTestowej: szablon.czyPokazacZnakWodnyWersjiTestowej,
-  }
-}
-
-function utworzNazweBezKonfliktu(nazwa: string, szablony: SzablonDokumentu[]) {
-  const nazwy = new Set(szablony.map((szablon) => szablon.nazwa.trim().toLocaleLowerCase('pl')))
-  const nazwaBazowa = nazwa.trim() || 'Szablon roboczy'
-
-  if (!nazwy.has(nazwaBazowa.toLocaleLowerCase('pl'))) {
-    return nazwaBazowa
-  }
-
-  for (let indeks = 1; indeks < 100; indeks += 1) {
-    const kandydat = `${nazwaBazowa} (${indeks})`
-
-    if (!nazwy.has(kandydat.toLocaleLowerCase('pl'))) {
-      return kandydat
-    }
-  }
-
-  return `${nazwaBazowa} (${Date.now()})`
-}
-
 function policzBlokiDokumentu(szablon: SzablonRoboczyReplikatora) {
   return pobierzBlokiReplikatora(szablon.dokumentBlokowy).length
 }
@@ -279,7 +242,7 @@ export default function WidokReplikatoraDokumentow() {
   const [zaznaczonyElementId, ustawZaznaczonyElementId] = useState<string | null>(null)
   const [trybPorownania, ustawTrybPorownania] = useState<TrybPorownania>('normalny')
   const [przezroczystoscOryginalu, ustawPrzezroczystoscOryginalu] = useState(45)
-  const [szablony, ustawSzablony] = useState<SzablonDokumentu[]>(pobierzSzablonyDokumentow)
+  const [szablony, ustawSzablony] = useState<SzablonDokumentuKartoteki[]>(pobierzSzablonyDokumentowZKartoteki)
   const [wybranySzablonId, ustawWybranySzablonId] = useState('')
   const [ostatnioWybranyPlik, ustawOstatnioWybranyPlik] = useState<File | null>(null)
   const [komentarzNiskiejZgodnosci, ustawKomentarzNiskiejZgodnosci] = useState('')
@@ -470,12 +433,39 @@ export default function WidokReplikatoraDokumentow() {
       return
     }
 
-    const nazwaBezKonfliktu = utworzNazweBezKonfliktu(nazwaWzorca, szablony)
-    const czyZmianaNazwy = nazwaBezKonfliktu !== nazwaWzorca.trim()
+    const istniejacySzablon = wykryjKonfliktNazwySzablonu(nazwaWzorca, szablony)
+    const nazwaBezKonfliktu = utworzNazweSzablonuZDopiskiem(nazwaWzorca, szablony)
+    const czyZmianaNazwy = Boolean(istniejacySzablon)
 
-    if (czyZmianaNazwy && !window.confirm(`Istnieje już szablon o nazwie "${nazwaWzorca}". Zapisać jako "${nazwaBezKonfliktu}"?`)) {
-      ustawKomunikat('Anulowano zapis, aby nie nadpisać istniejącego szablonu.')
-      return
+    if (istniejacySzablon) {
+      const czyNowyZDopiskiem = window.confirm(`Istnieje już szablon o nazwie "${nazwaWzorca}". Utworzyć nowy szablon jako "${nazwaBezKonfliktu}"? Wybierz Anuluj, aby zapisać jako nową wersję istniejącego szablonu.`)
+
+      if (!czyNowyZDopiskiem) {
+        const czyWersja = window.confirm(`Zapisać wynik jako nową wersję szablonu "${istniejacySzablon.nazwa}"?`)
+
+        if (!czyWersja) {
+          ustawKomunikat('Anulowano zapis, aby nie nadpisać istniejącego szablonu.')
+          return
+        }
+
+        const historiaDecyzji = [
+          ...szablonRoboczy.historiaDecyzji,
+          utworzDecyzje('zapis', `Zapisano jako nową wersję szablonu ${istniejacySzablon.nazwa}.`, uzytkownik),
+        ]
+        const szablonDoZapisu = {
+          ...szablonRoboczy,
+          historiaDecyzji,
+        }
+        const dokumentDoZapisu = zsynchronizujDokumentPomagieraZDokumentemBlokowym(dokument, szablonDoZapisu.dokumentBlokowy)
+        const szablon = zapiszNowaWersjeSzablonu(istniejacySzablon.id, szablonDoZapisu, dokumentDoZapisu, uzytkownik)
+
+        ustawSzablony(pobierzSzablonyDokumentowZKartoteki())
+        ustawWybranySzablonId(szablon.id)
+        ustawSzablonRoboczy(szablonDoZapisu)
+        ustawDokument(dokumentDoZapisu)
+        ustawKomunikat('Zapisano wynik jako nową wersję istniejącego szablonu w Kartotece.')
+        return
+      }
     }
 
     const historiaDecyzji = [
@@ -496,9 +486,9 @@ export default function WidokReplikatoraDokumentow() {
       ...szablonDoZapisuBazowy,
       dokumentPodgladu: dokumentDoZapisu,
     }
-    const szablon = zapiszNowySzablonDokumentu(dokumentDoZapisu, przygotujDaneReplikacjiDoZapisu(szablonDoZapisu))
+    const szablon = zapiszNowySzablonZReplikatora(szablonDoZapisu, dokumentDoZapisu, uzytkownik, nazwaBezKonfliktu)
 
-    ustawSzablony(pobierzSzablonyDokumentow())
+    ustawSzablony(pobierzSzablonyDokumentowZKartoteki())
     ustawWybranySzablonId(szablon.id)
     ustawSzablonRoboczy(szablonDoZapisu)
     ustawDokument(dokumentDoZapisu)
@@ -531,9 +521,9 @@ export default function WidokReplikatoraDokumentow() {
       ...szablonDoZapisuBazowy,
       dokumentPodgladu: dokumentDoZapisu,
     }
-    const szablon = zapiszWersjeSzablonuDokumentu(wybranySzablonId, dokumentDoZapisu, przygotujDaneReplikacjiDoZapisu(szablonDoZapisu))
+    const szablon = zapiszNowaWersjeSzablonu(wybranySzablonId, szablonDoZapisu, dokumentDoZapisu, uzytkownik)
 
-    ustawSzablony(pobierzSzablonyDokumentow())
+    ustawSzablony(pobierzSzablonyDokumentowZKartoteki())
     ustawWybranySzablonId(szablon.id)
     ustawSzablonRoboczy(szablonDoZapisu)
     ustawDokument(dokumentDoZapisu)
