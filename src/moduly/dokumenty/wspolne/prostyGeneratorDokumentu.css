@@ -1,10 +1,16 @@
-.prosty-generator {
+﻿.prosty-generator {
   width: 100%;
   max-width: none;
 }
 
 .prosty-generator__naglowek {
-  margin-bottom: 24px;
+  display: grid;
+  gap: 6px;
+}
+
+.prosty-generator__naglowek h1,
+.prosty-generator__naglowek p {
+  margin: 0;
 }
 
 .prosty-generator__siatka {
@@ -68,6 +74,10 @@
   color: #f4fff7;
   cursor: pointer;
   font: inherit;
+}
+
+.prosty-generator__akcje--panel {
+  margin-top: 0;
 }
 
 .prosty-generator__akcje button:hover {

@@ -1,14 +1,16 @@
-import { useMemo, useState, type ChangeEvent, type ReactNode } from 'react'
+﻿import { useMemo, useState, type ChangeEvent, type ReactNode } from 'react'
 import { pobierzLokalizacjeZMagazynu } from '../../../../kartoteki/lokalizacje/magazynLokalizacji'
 import KartaGrupySzkoleniowej from '../komponenty/KartaGrupySzkoleniowej'
 import PanelWykrytychProblemow from '../komponenty/PanelWykrytychProblemow'
 import PasekStickySzczegolow from '../komponenty/PasekStickySzczegolow'
 import { PoleCheckbox, PoleTekstowe, PoleTekstoweWielowierszowe, PoleWyboru } from '../komponenty/PolaSzczegolow'
 import PrzelacznikTakNie from '../komponenty/PrzelacznikTakNie'
+import PrawyPanelGeneratora, { type PozycjaKontroliJakosci } from '../../../dokumenty/wspolne/komponenty/PrawyPanelGeneratora'
+import UkladGeneratoraDokumentu from '../../../dokumenty/wspolne/komponenty/UkladGeneratoraDokumentu'
 import SekcjaFormularza from '../komponenty/SekcjaFormularza'
 import { useGeneratorSzczegolow } from '../hooki/useGeneratorSzczegolow'
 import { opiekunowieSzczegolow } from '../uzytkownicySzczegolow'
-import type { DaneFirmy, DaneFormularza, OrganizatorSzkolenia, StatusLogotypow } from '../typy'
+import type { DaneFirmy, DaneFormularza, OrganizatorSzkolenia, ProblemWalidacji, StatusLogotypow } from '../typy'
 import './widokNowychSzczegolowOrganizacyjnych.css'
 
 const sekcjeNawigacji = [
@@ -18,10 +20,10 @@ const sekcjeNawigacji = [
   { id: 'grupy-szkoleniowe', etykieta: 'Grupy' },
   { id: 'dane-klienta', etykieta: 'Klient' },
   { id: 'pakiet-podstawowy', etykieta: 'Pakiet' },
-  { id: 'materialy-szkoleniowe', etykieta: 'Materiały' },
+  { id: 'materialy-szkoleniowe', etykieta: 'MateriaĹ‚y' },
   { id: 'wymogi-materialow', etykieta: 'Wymogi' },
   { id: 'dodatkowe-wymogi', etykieta: 'Dodatkowe' },
-  { id: 'wysylka-paczki', etykieta: 'Wysyłka' },
+  { id: 'wysylka-paczki', etykieta: 'WysyĹ‚ka' },
   { id: 'wyslij-aktualizacje', etykieta: 'Aktualizacja' },
   { id: 'historia-wersji', etykieta: 'Historia' },
   { id: 'eksport-import', etykieta: 'JSON' },
@@ -30,7 +32,7 @@ const sekcjeNawigacji = [
 const opcjeOpiekunow = ['', ...opiekunowieSzczegolow.map((opiekun) => opiekun.id)]
 
 const pozycjePakietu = [
-  ['listaObecnosci', 'Lista obecności'],
+  ['listaObecnosci', 'Lista obecnoĹ›ci'],
   ['ankiety', 'Ankiety'],
   ['certyfikaty', 'Certyfikaty'],
   ['program', 'Program'],
@@ -38,17 +40,17 @@ const pozycjePakietu = [
 ] as const
 
 const pozycjeMaterialow = [
-  ['podreczniki', 'Podręczniki'],
-  ['materialyDodatkowe', 'Materiały dodatkowe'],
+  ['podreczniki', 'PodrÄ™czniki'],
+  ['materialyDodatkowe', 'MateriaĹ‚y dodatkowe'],
   ['projektTesty', 'PRE-/POST-TESTY'],
 ] as const
 
 const pozycjeWymogowMaterialow = [
-  ['dostepnoscCyfrowa', 'Dostępność cyfrowa'],
+  ['dostepnoscCyfrowa', 'DostÄ™pnoĹ›Ä‡ cyfrowa'],
 ] as const
 
 const pozycjeDodatkowychWymogow = [
-  ['dokumentacjaZdjęciowa', 'Dokumentacja zdjęciowa'],
+  ['dokumentacjaZdjÄ™ciowa', 'Dokumentacja zdjÄ™ciowa'],
   ['karyWHarmonogramie', 'Kary w harmonogramie'],
   ['noweSzkolenieZaOcene', 'Nowe szkolenie za oceny'],
   ['kfs', 'KFS'],
@@ -91,15 +93,48 @@ function wybierzPodpowiedziMiejscowosci(miejscowosci: string[], wartosc: string)
   return miejscowosci.filter((miejscowosc) => !fraza || miejscowosc.toLocaleLowerCase('pl').includes(fraza)).slice(0, 50)
 }
 
+function pobierzCelProblemuSzczegolow(problem: ProblemWalidacji) {
+  const tekst = `${problem.sekcja} ${problem.pole}`.toLocaleLowerCase('pl')
+
+  if (tekst.includes('grup')) return { grupa: 'Grupy', idPola: 'grupy-szkoleniowe' }
+  if (tekst.includes('klient') || tekst.includes('nabywca') || tekst.includes('odbiorca')) return { grupa: 'Klient', idPola: 'dane-klienta' }
+  if (tekst.includes('pakiet')) return { grupa: 'Pakiet', idPola: 'pakiet-podstawowy' }
+  if (tekst.includes('material')) return { grupa: 'Materiały', idPola: 'materialy-szkoleniowe' }
+  if (tekst.includes('wymog')) return { grupa: 'Wymogi', idPola: 'wymogi-materialow' }
+  if (tekst.includes('wysyl') || tekst.includes('paczk')) return { grupa: 'Wysyłka', idPola: 'wysylka-paczki' }
+  if (tekst.includes('adresat') || tekst.includes('aktualiz')) return { grupa: 'Aktualizacja', idPola: 'wyslij-aktualizacje' }
+  if (tekst.includes('histori')) return { grupa: 'Historia', idPola: 'historia-wersji' }
+  if (tekst.includes('json') || tekst.includes('eksport')) return { grupa: 'JSON', idPola: 'eksport-import' }
+
+  return { grupa: 'Podstawowe', idPola: 'podstawowe-informacje' }
+}
+
+function mapujProblemSzczegolowNaPozycjeJakosci(problem: ProblemWalidacji, indeks: number): PozycjaKontroliJakosci {
+  const cel = pobierzCelProblemuSzczegolow(problem)
+  const poziom = problem.czyBlokuje ? 'krytyczne' : problem.poziom === 'ostrzezenie' ? 'ostrzezenie' : 'podpowiedz'
+
+  return {
+    id: `szczegoly-${problem.pole}-${indeks}`,
+    tytul: problem.komunikat,
+    opis: problem.pole,
+    poziom,
+    grupa: cel.grupa,
+    zakladka: cel.grupa,
+    idPola: cel.idPola,
+    czyBlokujePublikacje: problem.czyBlokuje,
+    czyBlokujeEksport: problem.czyBlokuje,
+    kolejnosc: indeks,
+  }
+}
 function pobierzRozniceWersji(poprzednia: unknown, aktualna: unknown) {
   const poprzedniTekst = JSON.stringify(poprzednia, null, 2)
   const aktualnyTekst = JSON.stringify(aktualna, null, 2)
 
   if (poprzedniTekst === aktualnyTekst) {
-    return ['Brak różnic w danych formularza.']
+    return ['Brak rĂłĹĽnic w danych formularza.']
   }
 
-  return ['Dane formularza różnią się od poprzedniej zapisanej wersji.']
+  return ['Dane formularza rĂłĹĽniÄ… siÄ™ od poprzedniej zapisanej wersji.']
 }
 
 function PolaFirmy({ tytul, prefix, dane, disabled, statusyPol, aktualizujPole, miejscowosciDoPodpowiedzi, elementNaglowka }: WlasciwosciPolFirmy) {
@@ -142,7 +177,7 @@ function PolaFirmy({ tytul, prefix, dane, disabled, statusyPol, aktualizujPole, 
       <div className="szczegoly-siatka szczegoly-siatka--dwa">
         <PoleTekstowe
           disabled={disabled}
-          etykieta={czyNabywca ? 'Osoba kontaktowa' : 'Imię i nazwisko odbiorcy'}
+          etykieta={czyNabywca ? 'Osoba kontaktowa' : 'ImiÄ™ i nazwisko odbiorcy'}
           pole={czyNabywca ? `${prefix}.osobaKontaktowa` : `${prefix}.imieNazwiskoOdbiorcy`}
           statusyPol={statusyPol}
           wartosc={czyNabywca ? dane.osobaKontaktowa : dane.imieNazwiskoOdbiorcy}
@@ -154,7 +189,7 @@ function PolaFirmy({ tytul, prefix, dane, disabled, statusyPol, aktualizujPole, 
       {czyNabywca && (
         <PoleTekstowe
           disabled={disabled}
-          etykieta="Sposób wysyłki raportu"
+          etykieta="SposĂłb wysyĹ‚ki raportu"
           pole={`${prefix}.sposobWysylkiRaportu`}
           statusyPol={statusyPol}
           wartosc={dane.sposobWysylkiRaportu}
@@ -185,7 +220,7 @@ function WierszWymoguRozszerzony({
       {pokazWzorKlienta && (
         <label className="szczegoly-checkbox">
           <input checked={wzorKlienta} type="checkbox" onChange={(zdarzenie) => ustawWzorKlienta(zdarzenie.target.checked)} />
-          <span>Wzór klienta</span>
+          <span>WzĂłr klienta</span>
         </label>
       )}
       {pokazWzorKlienta && wzorKlienta && szczegolyWzoruKlienta && (
@@ -202,12 +237,12 @@ function WierszWymoguRozszerzony({
             <span>{szczegolyWzoruKlienta.nazwaPliku || 'Nie wybrano pliku'}</span>
           </div>
           <div className="szczegoly-wzor-klienta__podglad">
-            <span className="szczegoly-pole__naglowek">Podgląd:</span>
+            <span className="szczegoly-pole__naglowek">PodglÄ…d:</span>
             <div className="szczegoly-wzor-klienta__strona">
-              {!podgladWzoruKlienta && <span>Brak podglądu</span>}
-              {podgladWzoruKlienta?.typ.startsWith('image/') && <img alt={`Podgląd pliku ${szczegolyWzoruKlienta.nazwaPliku}`} src={podgladWzoruKlienta.adres} />}
-              {podgladWzoruKlienta?.typ === 'application/pdf' && <object aria-label={`Podgląd pliku ${szczegolyWzoruKlienta.nazwaPliku}`} data={`${podgladWzoruKlienta.adres}#page=1&view=FitH`} type="application/pdf" />}
-              {podgladWzoruKlienta && !podgladWzoruKlienta.typ.startsWith('image/') && podgladWzoruKlienta.typ !== 'application/pdf' && <span>Podgląd niedostępny</span>}
+              {!podgladWzoruKlienta && <span>Brak podglÄ…du</span>}
+              {podgladWzoruKlienta?.typ.startsWith('image/') && <img alt={`PodglÄ…d pliku ${szczegolyWzoruKlienta.nazwaPliku}`} src={podgladWzoruKlienta.adres} />}
+              {podgladWzoruKlienta?.typ === 'application/pdf' && <object aria-label={`PodglÄ…d pliku ${szczegolyWzoruKlienta.nazwaPliku}`} data={`${podgladWzoruKlienta.adres}#page=1&view=FitH`} type="application/pdf" />}
+              {podgladWzoruKlienta && !podgladWzoruKlienta.typ.startsWith('image/') && podgladWzoruKlienta.typ !== 'application/pdf' && <span>PodglÄ…d niedostÄ™pny</span>}
             </div>
           </div>
           <PoleTekstoweWielowierszowe
@@ -228,7 +263,28 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
   const [podgladyWzorowKlienta, ustawPodgladyWzorowKlienta] = useState<Record<string, PodgladWzoruKlienta>>({})
   const [porownywanaWersjaId, ustawPorownywanaWersjaId] = useState<string | null>(null)
   const liczbaProblemowBlokujacych = generator.problemyWalidacji.filter((problem) => problem.czyBlokuje).length
-  const statusFormularza = `${generator.daneFormularza.status} | ${generator.czyFormularzKompletny ? 'Kompletny' : `Niepełny (${liczbaProblemowBlokujacych})`}`
+  const statusFormularza = `${generator.daneFormularza.status} | ${generator.czyFormularzKompletny ? 'Kompletny' : `NiepeĹ‚ny (${liczbaProblemowBlokujacych})`}`
+  const pozycjeJakosciSzczegolow = useMemo<PozycjaKontroliJakosci[]>(() => {
+    const pozycje = generator.problemyWalidacji.map(mapujProblemSzczegolowNaPozycjeJakosci)
+
+    Object.values(generator.modelSekcyjny).forEach((sekcja, indeks) => {
+      if (sekcja.statusKompletnosci === 'kompletna') {
+        pozycje.push({
+          id: `szczegoly-sekcja-${sekcja.klucz}`,
+          tytul: `${sekcja.etykieta}: kompletna`,
+          poziom: 'poprawne',
+          grupa: sekcja.etykieta,
+          zakladka: sekcja.etykieta,
+          idPola: sekcja.klucz === 'podstawoweInformacje' ? 'podstawowe-informacje' : sekcja.klucz === 'grupySzkoleniowe' ? 'grupy-szkoleniowe' : 'wykryte-problemy',
+          czyBlokujePublikacje: false,
+          czyBlokujeEksport: false,
+          kolejnosc: 200 + indeks,
+        })
+      }
+    })
+
+    return pozycje
+  }, [generator.modelSekcyjny, generator.problemyWalidacji])
   const bladTytulu = generator.daneFormularza.tytulSzkolenia.trim() ? undefined : 'Pole wymagane'
   const bladKlienta = generator.daneFormularza.nazwaKlienta.trim() ? undefined : 'Pole wymagane'
   const bladOpiekuna = generator.daneFormularza.opiekunId.trim() ? undefined : 'Pole wymagane'
@@ -425,7 +481,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
   }
 
   function wyczyscPoPotwierdzeniu() {
-    if (window.confirm('Wyczyścić formularz i aktualną kopię roboczą?')) {
+    if (window.confirm('WyczyĹ›ciÄ‡ formularz i aktualnÄ… kopiÄ™ roboczÄ…?')) {
       generator.wyczyscFormularz()
     }
   }
@@ -435,27 +491,27 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
       <PasekStickySzczegolow
         sekcje={sekcjeNawigacji}
         status={statusFormularza}
-        tytul="Nowe szczegóły organizacyjne"
+        tytul="Nowe szczegĂłĹ‚y organizacyjne"
         akcje={
           <>
-            {generator.daneFormularza.status === 'NIEPEŁNE' && (
+            {generator.daneFormularza.status === 'NIEPEĹNE' && (
               <button disabled={generator.czyTylkoPodglad} type="button" onClick={generator.zapiszWersje}>
-                Zapisz wersję roboczą
+                Zapisz wersjÄ™ roboczÄ…
               </button>
             )}
-            {generator.daneFormularza.status === 'PEŁNE' && (
+            {generator.daneFormularza.status === 'PEĹNE' && (
               <button disabled={!generator.czyFormularzKompletny || generator.czyTylkoPodglad} type="button" onClick={generator.opublikujSzczegoly}>
                 Opublikuj
               </button>
             )}
-            {(generator.daneFormularza.status === 'OCZEKUJĄCE' || generator.daneFormularza.status === 'ZAAKCEPTOWANE') && (
+            {(generator.daneFormularza.status === 'OCZEKUJÄ„CE' || generator.daneFormularza.status === 'ZAAKCEPTOWANE') && (
               <button disabled={generator.czyTylkoPodglad} type="button" onClick={generator.zapiszWersje}>
-                Utwórz aktualizację
+                UtwĂłrz aktualizacjÄ™
               </button>
             )}
             {generator.daneFormularza.status === 'GOTOWE' && (
               <button disabled={generator.czyTylkoPodglad} type="button" onClick={generator.zapiszWersje}>
-                Zapisz zmianę workflow
+                Zapisz zmianÄ™ workflow
               </button>
             )}
           </>
@@ -465,18 +521,42 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
       <p className="szczegoly-komunikat">{generator.komunikat}</p>
       {generator.autosaveDoDecyzji && (
         <div className="szczegoly-autosave">
-          <strong>Znaleziono niezapisaną wersję roboczą</strong>
+          <strong>Znaleziono niezapisanÄ… wersjÄ™ roboczÄ…</strong>
           <span>{new Date(generator.autosaveDoDecyzji.dataZapisu).toLocaleString('pl-PL')}</span>
           <button type="button" onClick={generator.przywrocAutosave}>
-            Przywróć draft
+            PrzywrĂłÄ‡ draft
           </button>
           <button type="button" onClick={generator.odrzucAutosave}>
-            Odrzuć draft
+            OdrzuÄ‡ draft
           </button>
         </div>
       )}
 
-      <div className="szczegoly-uklad-generatora">
+      <UkladGeneratoraDokumentu
+        nazwaKlasy="szczegoly-uklad-generatora"
+        naglowek={<></>}
+        prawyPanel={(stanPanelu) => (
+          <PrawyPanelGeneratora
+            akcjeGlowne={
+              generator.daneFormularza.status === 'NIEPEŁNE' ? (
+                <button disabled={generator.czyTylkoPodglad} type="button" onClick={generator.zapiszWersje}>
+                  Zapisz wersję roboczą
+                </button>
+              ) : undefined
+            }
+            komunikaty={<p>{generator.komunikat}</p>}
+            licznikProblemow={liczbaProblemowBlokujacych}
+            pozycjeJakosci={pozycjeJakosciSzczegolow}
+            aktywnaGrupaJakosci="Podstawowe"
+            etykietaAktywnejGrupy="Aktywna sekcja"
+            stanPanelu={stanPanelu}
+            status={statusFormularza}
+            statusJakosci={generator.czyFormularzKompletny ? 'GOTOWE' : 'NIEPEŁNE'}
+            tytul="Skrót kontroli jakości"
+          />
+        )}
+        licznikProblemow={liczbaProblemowBlokujacych}
+      >
         <div className="szczegoly-formularz">
           <SekcjaFormularza id="wykryte-problemy" tytul="Wykryte problemy">
             <PanelWykrytychProblemow
@@ -489,12 +569,12 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
             />
           </SekcjaFormularza>
 
-        <SekcjaFormularza id="importuj-szczegoly" tytul="Importuj szczegóły">
+        <SekcjaFormularza id="importuj-szczegoly" tytul="Importuj szczegĂłĹ‚y">
           <label className="szczegoly-pole szczegoly-import-maila">
-            <span className="szczegoly-pole__naglowek">Wklej treść maila ze szczegółami</span>
+            <span className="szczegoly-pole__naglowek">Wklej treĹ›Ä‡ maila ze szczegĂłĹ‚ami</span>
             <textarea value={generator.trescMaila} onChange={(zdarzenie) => generator.ustawTrescMaila(zdarzenie.target.value)} />
             <button className="szczegoly-przycisk-pelny" type="button" onClick={generator.obsluzImportMaila}>
-              Zastosuj treść maila
+              Zastosuj treĹ›Ä‡ maila
             </button>
           </label>
           <label className="szczegoly-przycisk-pliku">
@@ -513,7 +593,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
         <SekcjaFormularza id="podstawowe-informacje" tytul="Podstawowe informacje">
           <PoleTekstowe
             blad={bladTytulu}
-            etykieta="Tytuł szkolenia"
+            etykieta="TytuĹ‚ szkolenia"
             pole="tytulSzkolenia"
             statusyPol={generator.statusyPol}
             wartosc={generator.daneFormularza.tytulSzkolenia}
@@ -545,7 +625,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
           tytul="Grupy szkoleniowe"
           akcje={
             <button type="button" onClick={generator.dodajGrupe}>
-              Dodaj grupę
+              Dodaj grupÄ™
             </button>
           }
         >
@@ -564,7 +644,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
             ))}
           </div>
           <button type="button" onClick={generator.odswiezTrenerowZKartoteki}>
-            Odśwież trenerów z kartoteki
+            OdĹ›wieĹĽ trenerĂłw z kartoteki
           </button>
         </SekcjaFormularza>
 
@@ -583,7 +663,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
               dane={generator.daneFormularza.nabywca}
               elementNaglowka={
                 <PoleCheckbox
-                  etykieta="Nabywca jest odbiorcą"
+                  etykieta="Nabywca jest odbiorcÄ…"
                   pole="czyNabywcaJestOdbiorca"
                   statusyPol={generator.statusyPol}
                   zaznaczone={generator.daneFormularza.czyNabywcaJestOdbiorca}
@@ -635,7 +715,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
                   generator.daneFormularza.dodatkoweWymogi.wczesniejszyPrzyjazdTrenera ? 'szczegoly-wiersz-wymogu--przyjazd-aktywny' : ''
                 }`}
               >
-                <span>Wcześniejszy przyjazd trenera</span>
+                <span>WczeĹ›niejszy przyjazd trenera</span>
                 {generator.daneFormularza.dodatkoweWymogi.wczesniejszyPrzyjazdTrenera && (
                   <label className="szczegoly-pole-minut">
                     <span>Ile minut:</span>
@@ -650,7 +730,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
                   </label>
                 )}
                 <PrzelacznikTakNie
-                  etykieta="Wcześniejszy przyjazd trenera"
+                  etykieta="WczeĹ›niejszy przyjazd trenera"
                   wlaczony={generator.daneFormularza.dodatkoweWymogi.wczesniejszyPrzyjazdTrenera}
                   ustawWlaczony={(wartosc) => aktualizujDodatkowyWymog('wczesniejszyPrzyjazdTrenera', wartosc)}
                 />
@@ -671,7 +751,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
         </div>
 
         <div className="szczegoly-uklad-sekcji">
-          <SekcjaFormularza id="materialy-szkoleniowe" tytul="Materiały szkoleniowe">
+          <SekcjaFormularza id="materialy-szkoleniowe" tytul="MateriaĹ‚y szkoleniowe">
             <div className="szczegoly-lista-wymogow">
               {pozycjeMaterialow.map(([klucz, etykieta]) => (
                 <WierszWymoguRozszerzony
@@ -691,7 +771,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
             </div>
           </SekcjaFormularza>
 
-          <SekcjaFormularza id="wymogi-materialow" tytul="Wymogi dotyczące materiałów">
+          <SekcjaFormularza id="wymogi-materialow" tytul="Wymogi dotyczÄ…ce materiaĹ‚Ăłw">
             <div className="szczegoly-lista-wymogow">
               {pozycjeWymogowMaterialow.map(([klucz, etykieta]) => (
                 <WierszWymoguRozszerzony
@@ -718,7 +798,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
                     <span className="szczegoly-pole__naglowek">Plik logotypu</span>
                     <input accept=".png,.jpg,.jpeg,.svg" type="file" onChange={obsluzPlikLogotypu} />
                   </label>
-                  {generator.daneFormularza.logotypy.podglad && <img alt="Podgląd logotypu" className="szczegoly-logo-podglad" src={generator.daneFormularza.logotypy.podglad} />}
+                  {generator.daneFormularza.logotypy.podglad && <img alt="PodglÄ…d logotypu" className="szczegoly-logo-podglad" src={generator.daneFormularza.logotypy.podglad} />}
                 </>
               )}
               <hr className="szczegoly-separator" />
@@ -744,9 +824,9 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
           />
         </div>
 
-        <SekcjaFormularza id="wysylka-paczki" tytul="Wysyłka paczki">
+        <SekcjaFormularza id="wysylka-paczki" tytul="WysyĹ‚ka paczki">
           <PrzelacznikTakNie
-            etykieta="Wysyłka paczki dotyczy"
+            etykieta="WysyĹ‚ka paczki dotyczy"
             wlaczony={generator.daneFormularza.wysylkaPaczkiDotyczy}
             ustawWlaczony={(wartosc) => generator.aktualizujDane((dane) => ({ ...dane, wysylkaPaczkiDotyczy: wartosc }), 'wysylkaPaczkiDotyczy')}
           />
@@ -780,14 +860,14 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
             </div>
             <hr className="szczegoly-separator" />
             <div className="szczegoly-siatka szczegoly-siatka--trzy">
-              <PoleTekstowe disabled={!generator.daneFormularza.wysylkaPaczkiDotyczy} etykieta="Imię i nazwisko odbiorcy" pole="odbiorcaPaczki.imieNazwisko" statusyPol={generator.statusyPol} wartosc={generator.daneFormularza.odbiorcaPaczki.imieNazwisko} ustawWartosc={(wartosc) => generator.aktualizujDane((dane) => ({ ...dane, odbiorcaPaczki: { ...dane.odbiorcaPaczki, imieNazwisko: wartosc } }), 'odbiorcaPaczki.imieNazwisko')} />
+              <PoleTekstowe disabled={!generator.daneFormularza.wysylkaPaczkiDotyczy} etykieta="ImiÄ™ i nazwisko odbiorcy" pole="odbiorcaPaczki.imieNazwisko" statusyPol={generator.statusyPol} wartosc={generator.daneFormularza.odbiorcaPaczki.imieNazwisko} ustawWartosc={(wartosc) => generator.aktualizujDane((dane) => ({ ...dane, odbiorcaPaczki: { ...dane.odbiorcaPaczki, imieNazwisko: wartosc } }), 'odbiorcaPaczki.imieNazwisko')} />
               <PoleTekstowe disabled={!generator.daneFormularza.wysylkaPaczkiDotyczy} etykieta="Telefon" pole="odbiorcaPaczki.telefon" statusyPol={generator.statusyPol} typ="tel" wartosc={generator.daneFormularza.odbiorcaPaczki.telefon} ustawWartosc={(wartosc) => generator.aktualizujDane((dane) => ({ ...dane, odbiorcaPaczki: { ...dane.odbiorcaPaczki, telefon: wartosc } }), 'odbiorcaPaczki.telefon')} />
               <PoleTekstowe disabled={!generator.daneFormularza.wysylkaPaczkiDotyczy} etykieta="Email" pole="odbiorcaPaczki.email" statusyPol={generator.statusyPol} typ="email" wartosc={generator.daneFormularza.odbiorcaPaczki.email} ustawWartosc={(wartosc) => generator.aktualizujDane((dane) => ({ ...dane, odbiorcaPaczki: { ...dane.odbiorcaPaczki, email: wartosc } }), 'odbiorcaPaczki.email')} />
             </div>
           </div>
         </SekcjaFormularza>
 
-        <SekcjaFormularza id="wyslij-aktualizacje" tytul="Wyślij aktualizację">
+        <SekcjaFormularza id="wyslij-aktualizacje" tytul="WyĹ›lij aktualizacjÄ™">
           <PoleTekstowe
             etykieta="Adresaci oddzieleni przecinkiem"
             pole="adresaci.reczniAdresaci"
@@ -796,8 +876,8 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
             wartosc={generator.adresaci.reczniAdresaci}
             ustawWartosc={(wartosc) => generator.ustawAdresaci((obecne) => ({ ...obecne, reczniAdresaci: wartosc }))}
           />
-          <div className="szczegoly-segmenty" role="group" aria-label="Opcje zawartości">
-            {(['Tylko zmiany', 'Cała treść'] as const).map((opcja) => (
+          <div className="szczegoly-segmenty" role="group" aria-label="Opcje zawartoĹ›ci">
+            {(['Tylko zmiany', 'CaĹ‚a treĹ›Ä‡'] as const).map((opcja) => (
               <button
                 aria-pressed={generator.adresaci.trybTresci === opcja}
                 className={generator.adresaci.trybTresci === opcja ? 'szczegoly-segmenty__aktywny' : ''}
@@ -817,20 +897,20 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
             ustawZaznaczone={(wartosc) => generator.ustawAdresaci((obecne) => ({ ...obecne, czyPodpis: wartosc }))}
           />
           <PoleTekstoweWielowierszowe
-            etykieta="Wiadomość własna"
+            etykieta="WiadomoĹ›Ä‡ wĹ‚asna"
             pole="adresaci.wiadomoscWlasna"
             statusyPol={generator.statusyPol}
             wartosc={generator.adresaci.wiadomoscWlasna}
             ustawWartosc={(wartosc) => generator.ustawAdresaci((obecne) => ({ ...obecne, wiadomoscWlasna: wartosc }))}
           />
           <button disabled={!generator.czyAdresaciAktualizacjiPoprawni} type="button" onClick={generator.przygotujAktualizacje}>
-            Wyślij aktualizację
+            WyĹ›lij aktualizacjÄ™
           </button>
         </SekcjaFormularza>
 
-        <SekcjaFormularza id="historia-wersji" tytul="Historia wersji i zdarzeń">
+        <SekcjaFormularza id="historia-wersji" tytul="Historia wersji i zdarzeĹ„">
           <div className="szczegoly-historia">
-            {generator.historiaSzczegolow.length === 0 && <p>Brak zapisanych wersji i zdarzeń.</p>}
+            {generator.historiaSzczegolow.length === 0 && <p>Brak zapisanych wersji i zdarzeĹ„.</p>}
             {generator.historiaSzczegolow.map((wpis) => (
               <article className="szczegoly-historia__wpis" key={wpis.id}>
                 <div>
@@ -838,11 +918,11 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
                   <span>{new Date(wpis.data).toLocaleString('pl-PL')} | {wpis.autorNazwa}</span>
                 </div>
                 <p>{wpis.komentarz}</p>
-                {wpis.zmianaStatusu && <p>Status: {wpis.zmianaStatusu.z ?? 'brak'} → {wpis.zmianaStatusu.na}</p>}
+                {wpis.zmianaStatusu && <p>Status: {wpis.zmianaStatusu.z ?? 'brak'} â†’ {wpis.zmianaStatusu.na}</p>}
                 {wpis.zdarzenieSpecjalne && <p>{wpis.zdarzenieSpecjalne}</p>}
                 {wpis.typ === 'wersja' && (
                   <button type="button" onClick={() => ustawPorownywanaWersjaId(porownywanaWersjaId === wpis.id ? null : wpis.id)}>
-                    {porownywanaWersjaId === wpis.id ? 'Ukryj porównanie' : 'Porównaj'}
+                    {porownywanaWersjaId === wpis.id ? 'Ukryj porĂłwnanie' : 'PorĂłwnaj'}
                   </button>
                 )}
                 {porownywanaWersjaId === wpis.id && (
@@ -879,17 +959,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
           </div>
         </SekcjaFormularza>
         </div>
-        <aside className="szczegoly-panel-jakosci" aria-label="Panel kontroli jakości">
-          <PanelWykrytychProblemow
-            komunikatySystemowe={[generator.komunikat]}
-            modelSekcyjny={generator.modelSekcyjny}
-            ostatniAutosave={generator.ostatniAutosave}
-            polaNiepewne={generator.polaNiepewne}
-            problemy={generator.problemyWalidacji}
-            zaakceptujPolaNiepewne={generator.zaakceptujWszystkiePolaNiepewne}
-          />
-        </aside>
-      </div>
+      </UkladGeneratoraDokumentu>
     </section>
   )
 }

@@ -1,0 +1,380 @@
+﻿.uklad-generatora-dokumentu {
+  --szerokosc-prawego-panelu: 380px;
+  display: grid;
+  gap: 18px;
+  width: 100%;
+  min-width: 0;
+}
+
+.uklad-generatora-dokumentu__naglowek {
+  min-width: 0;
+}
+
+.uklad-generatora-dokumentu__akcje {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.uklad-generatora-dokumentu__obszar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+  min-width: 0;
+}
+
+.uklad-generatora-dokumentu--panel-przypiety .uklad-generatora-dokumentu__obszar {
+  grid-template-columns: minmax(0, 1fr) minmax(320px, var(--szerokosc-prawego-panelu));
+}
+
+.uklad-generatora-dokumentu__tresc {
+  min-width: 0;
+}
+
+.prawy-panel-generatora {
+  position: sticky;
+  top: 18px;
+  z-index: 8;
+  display: grid;
+  gap: 14px;
+  width: min(100%, var(--szerokosc-prawego-panelu));
+  min-width: 320px;
+  max-width: 460px;
+  max-height: calc(100vh - 36px);
+  overflow: auto;
+  border: 1px solid rgba(74, 222, 128, 0.28);
+  border-radius: 8px;
+  padding: 14px;
+  background: #061f10;
+  color: #f4fff7;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.28);
+}
+
+.uklad-generatora-dokumentu--panel-otwarty:not(.uklad-generatora-dokumentu--panel-przypiety) .prawy-panel-generatora {
+  position: fixed;
+  top: 18px;
+  right: 16px;
+  bottom: 18px;
+  max-height: none;
+}
+
+.prawy-panel-generatora__naglowek {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.prawy-panel-generatora__naglowek h2,
+.prawy-panel-generatora__sekcja h3 {
+  margin: 0;
+  color: #e7fff0;
+  letter-spacing: 0;
+}
+
+.prawy-panel-generatora__naglowek h2 {
+  font-size: 1.05rem;
+}
+
+.prawy-panel-generatora__status,
+.prawy-panel-generatora__sekcja p,
+.prawy-panel-generatora__komunikaty {
+  margin: 6px 0 0;
+  color: #b9d7c2;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.prawy-panel-generatora__licznik {
+  min-width: 30px;
+  border-radius: 999px;
+  padding: 4px 8px;
+  background: #f59e0b;
+  color: #082b14;
+  font-weight: 800;
+  text-align: center;
+}
+
+.prawy-panel-generatora__sterowanie,
+.prawy-panel-generatora__akcje {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.prawy-panel-generatora button,
+.prawy-panel-generatora__akcje button {
+  min-height: 34px;
+  border: 1px solid rgba(74, 222, 128, 0.35);
+  border-radius: 6px;
+  padding: 7px 10px;
+  background: #041f0f;
+  color: #f4fff7;
+  cursor: pointer;
+  font: inherit;
+}
+
+.prawy-panel-generatora button:hover,
+.prawy-panel-generatora__akcje button:hover {
+  border-color: #4ade80;
+  background: #0d3b1b;
+}
+
+.prawy-panel-generatora__szerokosc {
+  display: grid;
+  gap: 6px;
+  color: #e7fff0;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.prawy-panel-generatora__szerokosc input {
+  width: 100%;
+}
+
+.prawy-panel-generatora__komunikaty,
+.prawy-panel-generatora__sekcja {
+  border: 1px solid rgba(74, 222, 128, 0.22);
+  border-radius: 8px;
+  padding: 12px;
+  background: #082b14;
+}
+
+.prawy-panel-generatora__sekcja {
+  display: grid;
+  gap: 10px;
+}
+
+.uklad-generatora-dokumentu__uchwyt {
+  position: fixed;
+  top: 50%;
+  right: 0;
+  z-index: 9;
+  min-width: 34px;
+  border: 1px solid rgba(74, 222, 128, 0.35);
+  border-right: 0;
+  border-radius: 8px 0 0 8px;
+  padding: 10px 6px;
+  background: #041f0f;
+  color: #f4fff7;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.uklad-generatora-dokumentu__uchwyt span {
+  display: inline-block;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+
+@media (max-width: 960px) {
+  .uklad-generatora-dokumentu--panel-przypiety .uklad-generatora-dokumentu__obszar {
+    grid-template-columns: 1fr;
+  }
+
+  .uklad-generatora-dokumentu--panel-otwarty .prawy-panel-generatora,
+  .uklad-generatora-dokumentu--panel-otwarty:not(.uklad-generatora-dokumentu--panel-przypiety) .prawy-panel-generatora {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(92vw, 460px);
+    max-height: none;
+    border-radius: 8px 0 0 8px;
+  }
+}
+
+@media print {
+  .prawy-panel-generatora,
+  .uklad-generatora-dokumentu__uchwyt,
+  .uklad-generatora-dokumentu__naglowek,
+  .uklad-generatora-dokumentu__akcje {
+    display: none !important;
+  }
+
+  .uklad-generatora-dokumentu,
+  .uklad-generatora-dokumentu__obszar,
+  .uklad-generatora-dokumentu__tresc {
+    display: block !important;
+  }
+}
+
+.prawy-panel-generatora__podsumowanie {
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(74, 222, 128, 0.22);
+  border-radius: 8px;
+  padding: 12px;
+  background: #082b14;
+}
+
+.prawy-panel-generatora__status-jakosci {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: #c7ead0;
+  font-size: 0.86rem;
+}
+
+.prawy-panel-generatora__status-jakosci strong {
+  color: #f4fff7;
+  letter-spacing: 0;
+}
+
+.prawy-panel-generatora__podsumowanie dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.prawy-panel-generatora__metryka {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-left: 3px solid rgba(185, 215, 194, 0.5);
+  border-radius: 6px;
+  padding: 7px 8px;
+  background: rgba(3, 24, 12, 0.8);
+}
+
+.prawy-panel-generatora__metryka dt,
+.prawy-panel-generatora__metryka dd {
+  margin: 0;
+}
+
+.prawy-panel-generatora__metryka dt {
+  color: #c7ead0;
+  font-size: 0.78rem;
+}
+
+.prawy-panel-generatora__metryka dd {
+  color: #ffffff;
+  font-weight: 800;
+}
+
+.prawy-panel-generatora__metryka--krytyczne,
+.prawy-panel-generatora__pozycja--krytyczne {
+  border-left-color: #ef4444;
+}
+
+.prawy-panel-generatora__metryka--ostrzezenie,
+.prawy-panel-generatora__pozycja--ostrzezenie {
+  border-left-color: #f97316;
+}
+
+.prawy-panel-generatora__metryka--sugestia,
+.prawy-panel-generatora__pozycja--sugestia {
+  border-left-color: #eab308;
+}
+
+.prawy-panel-generatora__metryka--podpowiedz,
+.prawy-panel-generatora__pozycja--podpowiedz {
+  border-left-color: #38bdf8;
+}
+
+.prawy-panel-generatora__metryka--poprawne,
+.prawy-panel-generatora__pozycja--poprawne {
+  border-left-color: #4ade80;
+}
+
+.prawy-panel-generatora__blokady {
+  margin: 0;
+  color: #b9d7c2;
+  font-size: 0.82rem;
+}
+
+.prawy-panel-generatora__filtry {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.prawy-panel-generatora__filtry button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.prawy-panel-generatora__filtr--aktywny {
+  border-color: #4ade80 !important;
+  background: #0d3b1b !important;
+}
+
+.prawy-panel-generatora__lista-jakosci,
+.prawy-panel-generatora__grupa,
+.prawy-panel-generatora__grupa ul {
+  display: grid;
+  gap: 10px;
+}
+
+.prawy-panel-generatora__grupa {
+  border: 1px solid rgba(74, 222, 128, 0.18);
+  border-radius: 8px;
+  padding: 10px;
+  background: rgba(8, 43, 20, 0.7);
+}
+
+.prawy-panel-generatora__grupa h3 {
+  margin: 0;
+  color: #e7fff0;
+  font-size: 0.94rem;
+}
+
+.prawy-panel-generatora__grupa ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.prawy-panel-generatora__pozycja {
+  border-left: 3px solid rgba(185, 215, 194, 0.5);
+  border-radius: 6px;
+  background: rgba(3, 24, 12, 0.74);
+}
+
+.prawy-panel-generatora__pozycja button {
+  display: grid;
+  gap: 5px;
+  width: 100%;
+  min-height: 0;
+  border: 0;
+  padding: 9px 10px;
+  background: transparent;
+  text-align: left;
+}
+
+.prawy-panel-generatora__pozycja button:hover {
+  background: rgba(74, 222, 128, 0.08);
+}
+
+.prawy-panel-generatora__pozycja strong {
+  color: #f4fff7;
+  font-size: 0.88rem;
+}
+
+.prawy-panel-generatora__pozycja span:not(.prawy-panel-generatora__badge) {
+  color: #b9d7c2;
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.prawy-panel-generatora__badge {
+  justify-self: start;
+  border: 1px solid rgba(244, 255, 247, 0.16);
+  border-radius: 999px;
+  padding: 2px 7px;
+  background: rgba(4, 31, 15, 0.85);
+  color: #dffbea;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.prawy-panel-generatora__cel--aktywny,
+.prawy-panel-generatora__cel--aktywny:focus-within {
+  outline: 3px solid rgba(74, 222, 128, 0.75) !important;
+  outline-offset: 4px;
+  transition: outline-color 180ms ease;
+}

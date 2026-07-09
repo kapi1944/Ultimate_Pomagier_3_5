@@ -1,4 +1,4 @@
-.szczegoly-organizacyjne {
+﻿.szczegoly-organizacyjne {
   display: grid;
   gap: 18px;
   padding-bottom: 48px;
@@ -669,14 +669,14 @@
 .szczegoly-przelacznik-tak-nie__tor::before {
   left: 18px;
   color: #0f7a25;
-  content: "✓";
+  content: "âś“";
   opacity: 0;
 }
 
 .szczegoly-przelacznik-tak-nie__tor::after {
   right: 18px;
   color: #7f1d1d;
-  content: "×";
+  content: "Ă—";
   opacity: 1;
 }
 

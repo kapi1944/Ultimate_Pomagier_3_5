@@ -1,4 +1,4 @@
-.dyplomy {
+﻿.dyplomy {
   display: grid;
   gap: 18px;
   color: #f4fff7;
@@ -1051,4 +1051,23 @@
   .dyplom-kartka__stopka {
     color: #000000 !important;
   }
+}
+
+.prawy-panel-generatora .dyplomy__podglad--panel {
+  position: static;
+  display: grid;
+  gap: 14px;
+}
+
+.prawy-panel-generatora .dyplomy__status,
+.prawy-panel-generatora .dyplomy__narzedzia-podgladu,
+.prawy-panel-generatora .dyplomy__kontrola-podgladu {
+  background: #082b14;
+}
+
+.prawy-panel-generatora .dyplomy__widocznosc-podgladu,
+.prawy-panel-generatora .dyplomy__logotypy,
+.prawy-panel-generatora .dyplomy__wybor,
+.prawy-panel-generatora .dyplomy__nawigacja-uczestnika {
+  grid-template-columns: 1fr;
 }

@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+﻿import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import PanelKontroliJakosciDokumentu from '../../../../wspolne/dokumenty/PanelKontroliJakosciDokumentu'
 import {
   przygotujRaportEksportuDokumentu,
@@ -9,6 +9,8 @@ import {
 } from '../../../../wspolne/dokumenty/modelBlokowy'
 import { parsujTekstProgramu } from './ParserTekstu'
 import RendererPodgladuProgramu from './RendererPodgladuProgramu'
+import PrawyPanelGeneratora, { type PozycjaKontroliJakosci } from '../../wspolne/komponenty/PrawyPanelGeneratora'
+import UkladGeneratoraDokumentu from '../../wspolne/komponenty/UkladGeneratoraDokumentu'
 import { EdytorProgramuWysiwyg } from './komponenty/EdytorProgramuWysiwyg'
 import {
   konwertujHtmlNaTekstProgramu,
@@ -58,21 +60,21 @@ type DaneProfiluFirmy = {
 
 const kluczProgramuRoboczego = 'ultimate-pomagier-program-szkolenia-roboczy'
 const wzorzecHex = /^#[0-9a-f]{6}$/i
-const punktoryDoWyboru = ['•', '◦', '▪', '-', '–', '*']
+const punktoryDoWyboru = ['â€˘', 'â—¦', 'â–Ş', '-', 'â€“', '*']
 const etykietaNumeracjiListyGlownej = '1,2,3'
 
 const daneProfilowFirmy: Record<ProfilFirmy, DaneProfiluFirmy> = {
   semper: {
     nazwa: 'SEMPER',
     kolor: '#DE1914',
-    kontakt: 'Centrum Organizacji Szkoleń i Konferencji SEMPER',
+    kontakt: 'Centrum Organizacji SzkoleĹ„ i Konferencji SEMPER',
     stopka:
-      'Centrum Organizacji Szkoleń i Konferencji SEMPER | ul. Libelta 1a/2, 61-706 Poznań | NIP 7772616176 | REGON 301265926 | biuro@szkolenia-semper.pl',
+      'Centrum Organizacji SzkoleĹ„ i Konferencji SEMPER | ul. Libelta 1a/2, 61-706 PoznaĹ„ | NIP 7772616176 | REGON 301265926 | biuro@szkolenia-semper.pl',
   },
   iist: {
     nazwa: 'IIST',
     kolor: '#2E89BE',
-    kontakt: 'Międzynarodowy Instytut Szkoleń Specjalistycznych IIST',
+    kontakt: 'MiÄ™dzynarodowy Instytut SzkoleĹ„ Specjalistycznych IIST',
     stopka: 'IIST - robocza stopka dokumentu programu szkolenia',
   },
 }
@@ -86,7 +88,7 @@ const domyslneUstawienia: UstawieniaProgramu = {
   separacjaModulow: 'ramka',
   stylPodpunktow: 'punktory',
   stylListyGlownej: 'numeracja',
-  stylePoziomowListy: ['•', '◦', '▪'],
+  stylePoziomowListy: ['â€˘', 'â—¦', 'â–Ş'],
   gruboscObramowaniaTytulu: 1,
   formatCudzyslowu: 'dolny-gorny',
   szerokoscLogotypu: 90,
@@ -167,7 +169,7 @@ const styleProgramuSzkolenia = `
 
 .program-szkolen__uklad {
   display: grid;
-  grid-template-columns: minmax(710px, 1fr) minmax(800px, 800px) minmax(260px, 420px);
+  grid-template-columns: minmax(420px, 1fr) minmax(0, 800px);
   justify-content: stretch;
   gap: 20px;
   align-items: start;
@@ -176,6 +178,37 @@ const styleProgramuSzkolenia = `
 
 .program-szkolen__panel {
   display: contents;
+}
+
+.program-szkolen__panel-boczny {
+  display: grid;
+  gap: 14px;
+}
+
+.prawy-panel-generatora .program-szkolen__sekcja {
+  padding: 12px;
+}
+
+.prawy-panel-generatora .program-szkolen__sekcja--ustawienia,
+.prawy-panel-generatora .program-szkolen__sekcja--logotypy {
+  grid-column: auto;
+  grid-row: auto;
+  width: 100%;
+  justify-self: stretch;
+}
+
+.prawy-panel-generatora .program-szkolen__siatka--dwie,
+.prawy-panel-generatora .program-szkolen__siatka--logotypy,
+.prawy-panel-generatora .program-szkolen__wybor,
+.prawy-panel-generatora .program-szkolen__wybor--trzy {
+  grid-template-columns: 1fr;
+}
+
+.prawy-panel-generatora .program-szkolen__blok-logotypu--link {
+  border-left: 0;
+  border-top: 1px solid rgba(74, 222, 128, 0.22);
+  padding-top: 14px;
+  padding-left: 0;
 }
 
 .program-szkolen__sekcja {
@@ -738,7 +771,7 @@ function formatujTytulSzkolenia(tytul: string, formatCudzyslowu: FormatCudzyslow
     return tekst
   }
 
-  return formatCudzyslowu === 'gorny-gorny' ? `"${tekst}"` : `„${tekst}”`
+  return formatCudzyslowu === 'gorny-gorny' ? `"${tekst}"` : `â€ž${tekst}â€ť`
 }
 
 function renderujMarkdownInline(tekst: string): ReactNode[] {
@@ -836,6 +869,22 @@ function czyUzytkownikJestArchitektem() {
   }
 }
 
+function mapujProblemProgramuNaPozycjeJakosci(problem: ProblemDokumentu, indeks: number): PozycjaKontroliJakosci {
+  const poziom = problem.poziom === 'blad_krytyczny' ? 'krytyczne' : problem.poziom === 'ostrzezenie' ? 'ostrzezenie' : 'podpowiedz'
+  const grupa = problem.kategoria === 'parser' ? 'Dane wejściowe' : problem.kategoria === 'formatowanie' ? 'Ustawienia' : 'Dokument'
+
+  return {
+    id: problem.id || `problem-programu-${indeks}`,
+    tytul: problem.komunikat,
+    poziom,
+    grupa,
+    zakladka: grupa,
+    idPola: grupa === 'Dane wejściowe' ? 'program-edycja' : 'program-podglad',
+    czyBlokujePublikacje: problem.poziom === 'blad_krytyczny',
+    czyBlokujeEksport: problem.czyBlokujeEksport,
+    kolejnosc: indeks,
+  }
+}
 function zapiszLogWymuszeniaEksportu(raport: ReturnType<typeof przygotujRaportEksportuDokumentu>) {
   try {
     const klucz = 'ultimate-pomagier.log-wymuszen-eksportu'
@@ -910,7 +959,7 @@ export function WidokProgramowSzkolen() {
         id: 'wynik-parsowania-niezatwierdzony',
         poziom: 'ostrzezenie',
         kategoria: 'parser',
-        komunikat: 'Wynik parsowania nie został jeszcze zatwierdzony.',
+        komunikat: 'Wynik parsowania nie zostaĹ‚ jeszcze zatwierdzony.',
         czyBlokujeEksport: false,
       })
     }
@@ -920,7 +969,7 @@ export function WidokProgramowSzkolen() {
         id: 'kolor-akcentu-niepoprawny',
         poziom: 'ostrzezenie',
         kategoria: 'formatowanie',
-        komunikat: 'Kolor akcentu ma niepoprawny format i zostanie zastąpiony kolorem profilu.',
+        komunikat: 'Kolor akcentu ma niepoprawny format i zostanie zastÄ…piony kolorem profilu.',
         czyBlokujeEksport: false,
       })
     }
@@ -930,6 +979,57 @@ export function WidokProgramowSzkolen() {
 
     return Array.from(unikalne.values())
   }, [czyWynikParsowaniaZatwierdzony, dokumentProgramu, kolorNiepoprawny, program.dokumentBlokowy.problemy, trescProgramu])
+  const pozycjeJakosciProgramu = useMemo<PozycjaKontroliJakosci[]>(() => {
+    const pozycje = problemyDokumentu.map(mapujProblemProgramuNaPozycjeJakosci)
+
+    pozycje.push(
+      {
+        id: 'program-tytul',
+        tytul: tytulDokumentu ? 'Tytuł programu jest uzupełniony' : 'Brak tytułu programu',
+        poziom: tytulDokumentu ? 'poprawne' : 'krytyczne',
+        grupa: 'Dane wejściowe',
+        zakladka: 'Dane wejściowe',
+        idPola: 'program-edycja',
+        czyBlokujePublikacje: !tytulDokumentu,
+        czyBlokujeEksport: !tytulDokumentu,
+        kolejnosc: 100,
+      },
+      {
+        id: 'program-tresc',
+        tytul: trescProgramu.trim() ? 'Treść programu jest dostępna' : 'Brak treści programu',
+        poziom: trescProgramu.trim() ? 'poprawne' : 'krytyczne',
+        grupa: 'Dane wejściowe',
+        zakladka: 'Dane wejściowe',
+        idPola: 'program-edycja',
+        czyBlokujePublikacje: !trescProgramu.trim(),
+        czyBlokujeEksport: !trescProgramu.trim(),
+        kolejnosc: 101,
+      },
+      {
+        id: 'program-parser',
+        tytul: czyWynikParsowaniaZatwierdzony ? 'Parser zatwierdzony' : 'Parser wymaga zatwierdzenia',
+        poziom: czyWynikParsowaniaZatwierdzony ? 'poprawne' : 'ostrzezenie',
+        grupa: 'Dane wejściowe',
+        zakladka: 'Dane wejściowe',
+        idPola: 'program-edycja',
+        czyBlokujePublikacje: false,
+        czyBlokujeEksport: false,
+        kolejnosc: 102,
+      },
+      {
+        id: 'program-logotyp',
+        tytul: logotypProgramu ? 'Logotyp jest ustawiony' : 'Brak logotypu',
+        poziom: logotypProgramu ? 'poprawne' : 'podpowiedz',
+        grupa: 'Ustawienia',
+        zakladka: 'Ustawienia',
+        czyBlokujePublikacje: false,
+        czyBlokujeEksport: false,
+        kolejnosc: 103,
+      },
+    )
+
+    return pozycje
+  }, [czyWynikParsowaniaZatwierdzony, logotypProgramu, problemyDokumentu, trescProgramu, tytulDokumentu])
   const tytulZCudzyslowem = formatujTytulSzkolenia(tytulDokumentu, ustawienia.formatCudzyslowu)
   const kolorAkcentu = pobierzKolorAkcentu(ustawienia)
   const profil = daneProfilowFirmy[ustawienia.profilFirmy]
@@ -939,7 +1039,7 @@ export function WidokProgramowSzkolen() {
       blokiDokumentu.map((blok) => {
         const opis = blok.metadane.opisDiagnostyczny ? ` - ${blok.metadane.opisDiagnostyczny}` : ''
 
-        return `${blok.typ}: ${blok.tresc ?? '(bez treści)'}${opis}`
+        return `${blok.typ}: ${blok.tresc ?? '(bez treĹ›ci)'}${opis}`
       }),
     [blokiDokumentu],
   )
@@ -1008,7 +1108,7 @@ export function WidokProgramowSzkolen() {
       zapiszProgramRoboczo(daneProgramu)
       ustawKomunikat('Program zapisany roboczo lokalnie.')
     } catch {
-      ustawKomunikat('Nie udało się zapisać programu roboczo.')
+      ustawKomunikat('Nie udaĹ‚o siÄ™ zapisaÄ‡ programu roboczo.')
     }
   }
 
@@ -1028,7 +1128,7 @@ export function WidokProgramowSzkolen() {
         return
       }
 
-      const czyPotwierdzono = window.confirm('Dokument ma błędy krytyczne. Czy jako Architekt wymuszasz eksport PDF?')
+      const czyPotwierdzono = window.confirm('Dokument ma bĹ‚Ä™dy krytyczne. Czy jako Architekt wymuszasz eksport PDF?')
 
       if (!czyPotwierdzono) {
         ustawKomunikat('Eksport przerwany.')
@@ -1038,7 +1138,7 @@ export function WidokProgramowSzkolen() {
       const raportWymuszony = przygotujRaportEksportuDokumentu(dokumentProgramu, 'PDF', true)
 
       zapiszLogWymuszeniaEksportu(raportWymuszony)
-      ustawKomunikat('Architekt wymusił eksport mimo błędów krytycznych. Zapisano wpis w logu lokalnym.')
+      ustawKomunikat('Architekt wymusiĹ‚ eksport mimo bĹ‚Ä™dĂłw krytycznych. Zapisano wpis w logu lokalnym.')
       window.print()
       return
     }
@@ -1119,7 +1219,7 @@ export function WidokProgramowSzkolen() {
     }
 
     if (!czyPlikTekstowy(plik)) {
-      ustawKomunikat('DOC/DOCX/PDF wymagają wcześniejszej konwersji treści.')
+      ustawKomunikat('DOC/DOCX/PDF wymagajÄ… wczeĹ›niejszej konwersji treĹ›ci.')
       return
     }
 
@@ -1133,7 +1233,7 @@ export function WidokProgramowSzkolen() {
       zmienTrescProgramuHtml(htmlProgramu, tekstProgramu)
       ustawKomunikat(`Zaimportowano program z pliku: ${plik.name}.`)
     }
-    czytnik.onerror = () => ustawKomunikat('Nie udało się odczytać pliku programu.')
+    czytnik.onerror = () => ustawKomunikat('Nie udaĹ‚o siÄ™ odczytaÄ‡ pliku programu.')
     czytnik.readAsText(plik)
   }
 
@@ -1152,7 +1252,7 @@ export function WidokProgramowSzkolen() {
       zmienDane('logotypProgramu', String(czytnik.result ?? ''))
       ustawKomunikat(`Dodano logotyp z pliku: ${plik.name}.`)
     }
-    czytnik.onerror = () => ustawKomunikat('Nie udało się odczytać pliku logotypu.')
+    czytnik.onerror = () => ustawKomunikat('Nie udaĹ‚o siÄ™ odczytaÄ‡ pliku logotypu.')
     czytnik.readAsDataURL(plik)
   }
 
@@ -1188,7 +1288,7 @@ export function WidokProgramowSzkolen() {
 
   function renderujProgramZachowawczy() {
     if (!trescProgramu.trim()) {
-      return <div className="program-kartka-a4__pusty">Brak treści programu.</div>
+      return <div className="program-kartka-a4__pusty">Brak treĹ›ci programu.</div>
     }
 
     const wierszeProgramu = trescProgramu.split('\n')
@@ -1206,11 +1306,14 @@ export function WidokProgramowSzkolen() {
   }
 
   return (
-    <section className="widok program-szkolen">
-      <style>{styleProgramuSzkolenia}</style>
-
-      <header className="program-panel-roboczy program-szkolen__naglowek">
-        <h1>Programy szkoleń</h1>
+    <UkladGeneratoraDokumentu
+      nazwaKlasy="widok program-szkolen"
+      naglowek={
+        <div className="program-szkolen__naglowek">
+          <h1>Programy szkoleń</h1>
+        </div>
+      }
+      pasekAkcji={
         <div className="program-szkolen__akcje">
           <button className="program-szkolen__przycisk" onClick={drukujProgram} type="button">
             Drukuj
@@ -1222,12 +1325,25 @@ export function WidokProgramowSzkolen() {
             Wyczyść
           </button>
         </div>
-      </header>
-
-      {komunikat && <div className="program-panel-roboczy program-szkolen__komunikat">{komunikat}</div>}
-
-      <div className="program-szkolen__uklad">
-        <div className="program-panel-roboczy program-szkolen__panel">
+      }
+      prawyPanel={(stanPanelu) => (
+        <PrawyPanelGeneratora
+          akcjeGlowne={
+            <button className="program-szkolen__przycisk" onClick={zapiszRoboczo} type="button">
+              Zapisz wersję roboczą
+            </button>
+          }
+          komunikaty={komunikat ? <p>{komunikat}</p> : undefined}
+          licznikProblemow={pozycjeJakosciProgramu.filter((pozycja) => pozycja.poziom === 'krytyczne' || pozycja.poziom === 'ostrzezenie').length}
+          pozycjeJakosci={pozycjeJakosciProgramu}
+          aktywnaGrupaJakosci="Dane wejściowe"
+          etykietaAktywnejGrupy="Aktywna sekcja"
+          stanPanelu={stanPanelu}
+          status={czyWynikParsowaniaZatwierdzony ? 'Wynik parsowania zatwierdzony.' : 'Wynik parsowania wymaga zatwierdzenia.'}
+          statusJakosci={pozycjeJakosciProgramu.some((pozycja) => pozycja.czyBlokujeEksport) ? 'NIEPEŁNE' : 'GOTOWE'}
+          tytul="Panel programu szkolenia"
+        >
+          <div className="program-szkolen__panel-boczny">
           <section className="program-szkolen__sekcja program-szkolen__sekcja--ustawienia">
             <h2>USTAWIENIA</h2>
             <div className="program-szkolen__siatka">
@@ -1290,13 +1406,13 @@ export function WidokProgramowSzkolen() {
               </div>
               {kolorNiepoprawny && <div className="program-szkolen__blad">Wpisz kolor w formacie #RRGGBB.</div>}
               <button className="program-szkolen__przycisk" onClick={przywrocKolorProfilu} type="button">
-                Przywróć kolor profilu
+                PrzywrĂłÄ‡ kolor profilu
               </button>
 
-              <div className="program-szkolen__srodtytul">Tytuł</div>
+              <div className="program-szkolen__srodtytul">TytuĹ‚</div>
 
               <label className="program-szkolen__etykieta">
-                Grubość obramowania tytułu: {etykietaGrubosciObramowaniaTytulu}
+                GruboĹ›Ä‡ obramowania tytuĹ‚u: {etykietaGrubosciObramowaniaTytulu}
                 <input
                   className="program-szkolen__pole"
                   min={0}
@@ -1309,22 +1425,22 @@ export function WidokProgramowSzkolen() {
               </label>
 
               <label className="program-szkolen__etykieta">
-                Format cudzysłowu
+                Format cudzysĹ‚owu
                 <select
                   className="program-szkolen__lista"
                   onChange={(zdarzenie) => zmienUstawienie('formatCudzyslowu', zdarzenie.target.value as FormatCudzyslowu)}
                   value={ustawienia.formatCudzyslowu}
                 >
-                  <option value="dolny-gorny">„Tytuł”</option>
-                  <option value="gorny-gorny">"Tytuł"</option>
+                  <option value="dolny-gorny">â€žTytuĹ‚â€ť</option>
+                  <option value="gorny-gorny">"TytuĹ‚"</option>
                 </select>
               </label>
 
-              <div className="program-szkolen__srodtytul">Treść programu</div>
+              <div className="program-szkolen__srodtytul">TreĹ›Ä‡ programu</div>
 
               <div className="program-szkolen__akcje-parsowania">
                 <button className="program-szkolen__przycisk" disabled={!trescProgramu.trim()} onClick={zatwierdzWynikParsowania} type="button">
-                  Zatwierdź wynik parsowania
+                  ZatwierdĹş wynik parsowania
                 </button>
               </div>
 
@@ -1348,11 +1464,11 @@ export function WidokProgramowSzkolen() {
                     }
                     type="checkbox"
                   />{' '}
-                  Pogrubiaj nagłówki listy programu
+                  Pogrubiaj nagĹ‚Ăłwki listy programu
                 </span>
                 <p className="program-szkolen__opis">
-                  Po włączeniu pogrubiane są tylko główne linie programu. Podpunkty i niższe poziomy listy pozostają
-                  zwykłe.
+                  Po wĹ‚Ä…czeniu pogrubiane sÄ… tylko gĹ‚Ăłwne linie programu. Podpunkty i niĹĽsze poziomy listy pozostajÄ…
+                  zwykĹ‚e.
                 </p>
               </label>
 
@@ -1364,12 +1480,12 @@ export function WidokProgramowSzkolen() {
                   value={ustawienia.stylDni}
                 >
                   <option value="pasek">Pasek</option>
-                  <option value="naglowek">Nagłówek tekstowy</option>
+                  <option value="naglowek">NagĹ‚Ăłwek tekstowy</option>
                 </select>
               </label>
 
               <label className="program-szkolen__etykieta">
-                Separacja modułów
+                Separacja moduĹ‚Ăłw
                 <select
                   className="program-szkolen__lista"
                   onChange={(zdarzenie) => zmienUstawienie('separacjaModulow', zdarzenie.target.value as SeparacjaModulow)}
@@ -1377,14 +1493,14 @@ export function WidokProgramowSzkolen() {
                 >
                   <option value="brak">Brak</option>
                   <option value="ramka">Ramka</option>
-                  <option value="linia">Linia pod tytułem</option>
-                  <option value="separator-pytan">Separator kolejnych pytań</option>
+                  <option value="linia">Linia pod tytuĹ‚em</option>
+                  <option value="separator-pytan">Separator kolejnych pytaĹ„</option>
                 </select>
               </label>
 
               <div className="program-szkolen__siatka program-szkolen__siatka--dwie">
                 <label className="program-szkolen__etykieta">
-                  Styl listy głównej
+                  Styl listy gĹ‚Ăłwnej
                   <select
                     className="program-szkolen__lista"
                     onChange={(zdarzenie) => zmienUstawienie('stylListyGlownej', zdarzenie.target.value as StylListyGlownej)}
@@ -1395,7 +1511,7 @@ export function WidokProgramowSzkolen() {
                   </select>
                 </label>
                 <label className="program-szkolen__etykieta">
-                  Styl podpunktów
+                  Styl podpunktĂłw
                   <select
                     className="program-szkolen__lista"
                     onChange={(zdarzenie) => zmienUstawienie('stylPodpunktow', zdarzenie.target.value as StylPodpunktow)}
@@ -1419,7 +1535,7 @@ export function WidokProgramowSzkolen() {
                           {indeks === 0 && (
                             <>
                               {' '}
-                              <span className="program-szkolen__dopisek-etykiety">(nagłówek)</span>
+                              <span className="program-szkolen__dopisek-etykiety">(nagĹ‚Ăłwek)</span>
                             </>
                           )}
                         </span>
@@ -1453,6 +1569,7 @@ export function WidokProgramowSzkolen() {
             </div>
           </section>
 
+
           <section className="program-szkolen__sekcja program-szkolen__sekcja--logotypy">
             <h2>LOGOTYPY</h2>
             <div className="program-szkolen__siatka">
@@ -1482,10 +1599,10 @@ export function WidokProgramowSzkolen() {
 
                   <div className="program-szkolen__wiersz-przyciskow">
                     <button className="program-szkolen__przycisk" onClick={zastosujLinkLogotypu} type="button">
-                      Użyj linku
+                      UĹĽyj linku
                     </button>
                     <button className="program-szkolen__przycisk" onClick={otworzDyskGoogle} type="button">
-                      Otwórz Dysk Google
+                      OtwĂłrz Dysk Google
                     </button>
                   </div>
                 </div>
@@ -1494,7 +1611,7 @@ export function WidokProgramowSzkolen() {
               <div className="program-szkolen__separator" />
 
               <label className="program-szkolen__etykieta">
-                Szerokość logotypu: {ustawienia.szerokoscLogotypu}%
+                SzerokoĹ›Ä‡ logotypu: {ustawienia.szerokoscLogotypu}%
                 <input
                   className="program-szkolen__pole"
                   max={100}
@@ -1508,11 +1625,25 @@ export function WidokProgramowSzkolen() {
             </div>
           </section>
 
-          <section className="program-szkolen__sekcja program-szkolen__sekcja--edycja">
+
+          </div>
+        </PrawyPanelGeneratora>
+      )}
+      licznikProblemow={pozycjeJakosciProgramu.filter((pozycja) => pozycja.poziom === 'krytyczne' || pozycja.poziom === 'ostrzezenie').length}
+    >
+      <style>{styleProgramuSzkolenia}</style>
+
+
+
+      {komunikat && <div className="program-panel-roboczy program-szkolen__komunikat">{komunikat}</div>}
+
+      <div className="program-szkolen__uklad">
+        <div className="program-panel-roboczy program-szkolen__panel">
+          <section className="program-szkolen__sekcja program-szkolen__sekcja--edycja" id="program-edycja">
             <h2>EDYCJA</h2>
             <div className="program-szkolen__siatka">
               <label className="program-szkolen__etykieta">
-                Tytuł szkolenia
+                TytuĹ‚ szkolenia
                 <input
                   className="program-szkolen__pole"
                   onChange={(zdarzenie) => zmienDane('tytulSzkolenia', zdarzenie.target.value)}
@@ -1531,7 +1662,7 @@ export function WidokProgramowSzkolen() {
                 />
               </label>
 
-              <div className="program-szkolen__srodtytul">Treść programu</div>
+              <div className="program-szkolen__srodtytul">TreĹ›Ä‡ programu</div>
 
               <EdytorProgramuWysiwyg
                 onZmianaHtml={(html) => zmienTrescProgramuHtml(html)}
@@ -1542,7 +1673,7 @@ export function WidokProgramowSzkolen() {
           </section>
         </div>
 
-        <section className="program-szkolen__podglad">
+        <section className="program-szkolen__podglad" id="program-podglad">
           <div className="program-kartka-a4">
             <header className="program-kartka-a4__naglowek" style={{ borderColor: kolorAkcentu }}>
               <div className="program-kartka-a4__meta">
@@ -1564,7 +1695,7 @@ export function WidokProgramowSzkolen() {
                   color: kolorAkcentu,
                 }}
               >
-                {tytulZCudzyslowem || '„Program szkolenia”'}
+                {tytulZCudzyslowem || 'â€žProgram szkoleniaâ€ť'}
               </div>
             </header>
 
@@ -1576,7 +1707,7 @@ export function WidokProgramowSzkolen() {
           </div>
         </section>
       </div>
-    </section>
+    </UkladGeneratoraDokumentu>
   )
 }
 
