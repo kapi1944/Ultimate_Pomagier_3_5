@@ -1,4 +1,4 @@
-﻿import ProstyGeneratorDokumentu from '../../wspolne/ProstyGeneratorDokumentu'
+import ProstyGeneratorDokumentu from '../../wspolne/ProstyGeneratorDokumentu'
 
 const tekstPrzykladowy = `Tytuł szkolenia: Skuteczna komunikacja w zespole
 Data od: 2026-07-15
@@ -94,52 +94,6 @@ export default function WidokListObecnosci() {
       tekstPrzykladowy={tekstPrzykladowy}
       kluczLocalStorage="ultimate-pomagier.listy-obecnosci.szkic"
       generujDokument={generujDokument}
-      statusPanelu={({ daneWejsciowe }) => {
-        const uczestnicy = pobierzUczestnikow(daneWejsciowe)
-        return uczestnicy.length ? `Dane kompletne roboczo. Uczestnicy: ${uczestnicy.length}.` : 'Brak uczestników.'
-      }}
-      licznikProblemowPanelu={({ daneWejsciowe }) => (pobierzUczestnikow(daneWejsciowe).length ? 0 : 1)}
-      pozycjeJakosciPanelu={({ daneWejsciowe, wygenerowanyDokument }) => {
-        const uczestnicy = pobierzUczestnikow(daneWejsciowe)
-        const liczbaDni = pobierzLiczbeDni(daneWejsciowe)
-        const trybListy = pobierzWartosc(daneWejsciowe, 'Tryb listy') || 'pusta'
-        const orientacja = pobierzWartosc(daneWejsciowe, 'Orientacja') || (liczbaDni > 3 ? 'pozioma sugerowana' : 'pionowa')
-
-        return [
-          {
-            id: 'uczestnicy-listy',
-            tytul: uczestnicy.length ? `Uczestnicy: ${uczestnicy.length}` : 'Brak uczestników',
-            poziom: uczestnicy.length ? 'poprawne' : 'krytyczne',
-            grupa: 'Dane wejściowe',
-            zakladka: 'Dane wejściowe',
-            idPola: 'ultimate-pomagier.listy-obecnosci.szkic-dane',
-            czyBlokujePublikacje: !uczestnicy.length,
-            czyBlokujeEksport: !uczestnicy.length,
-            kolejnosc: 1,
-          },
-          {
-            id: 'ustawienia-listy',
-            tytul: `Tryb: ${trybListy}`,
-            opis: `Liczba dni: ${liczbaDni}. Orientacja: ${orientacja}.`,
-            poziom: liczbaDni > 3 ? 'ostrzezenie' : 'poprawne',
-            grupa: 'Ustawienia',
-            zakladka: 'Ustawienia',
-            czyBlokujePublikacje: false,
-            czyBlokujeEksport: false,
-            kolejnosc: 2,
-          },
-          {
-            id: 'wynik-listy',
-            tytul: wygenerowanyDokument.trim() ? 'Dokument jest wygenerowany' : 'Brak wygenerowanego dokumentu',
-            poziom: wygenerowanyDokument.trim() ? 'poprawne' : 'ostrzezenie',
-            grupa: 'Podgląd',
-            zakladka: 'Podgląd',
-            czyBlokujePublikacje: false,
-            czyBlokujeEksport: !wygenerowanyDokument.trim(),
-            kolejnosc: 3,
-          },
-        ]
-      }}
     />
   )
 }

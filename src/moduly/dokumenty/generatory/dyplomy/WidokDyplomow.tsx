@@ -1,11 +1,9 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties, ChangeEvent } from 'react'
 import { pobierzLokalizacjeZMagazynu } from '../../../../kartoteki/lokalizacje/magazynLokalizacji'
 import type { TrybTytuluDyplomu } from '../../../../wspolne/dokumenty/typyDokumentu'
 import { trenerzyKartotekiStartowi } from '../../../zamkniete/szczegoly_organizacyjne/stale'
 import type { TrenerKartoteki } from '../../../zamkniete/szczegoly_organizacyjne/typy'
-import PrawyPanelGeneratora, { type PozycjaKontroliJakosci } from '../../wspolne/komponenty/PrawyPanelGeneratora'
-import UkladGeneratoraDokumentu from '../../wspolne/komponenty/UkladGeneratoraDokumentu'
 import './widokDyplomow.css'
 
 type TrybSzkolenia = 'stacjonarne' | 'online'
@@ -106,7 +104,7 @@ const kluczZapisuDyplomow = 'ultimate-pomagier.dyplomy.generator-pawla'
 const kluczTrenerowKartoteki = 'ultimate-pomagier.kartoteki.trenerzy'
 const domyslnyNumerRejestru = '88754867/106061/2026'
 const domyslnaDataSzkolenia = '2026-05-18'
-const domyslniUczestnicy = 'Agnieszka Walo-ZagĂłrska\nKatarzyna Szymaniak-Kalata'
+const domyslniUczestnicy = 'Agnieszka Walo-Zagórska\nKatarzyna Szymaniak-Kalata'
 const koloryFirmoweDyplomu: Record<Exclude<MotywKoloruDyplomu, 'dowolny'>, string> = {
   semper: '#c5000b',
   iist: '#2E89BE',
@@ -131,8 +129,8 @@ const nazwyMiesiecy = [
   'czerwca',
   'lipca',
   'sierpnia',
-  'wrzeĹ›nia',
-  'paĹşdziernika',
+  'września',
+  'października',
   'listopada',
   'grudnia',
 ]
@@ -156,7 +154,7 @@ function pobierzDzisiejszaDateIso() {
 
 function pobierzTekstTytulu(trybTytulu: TrybTytuluDyplomu) {
   if (trybTytulu === 'zaswiadczenie') {
-    return 'ZAĹšWIADCZENIE'
+    return 'ZAŚWIADCZENIE'
   }
 
   if (trybTytulu === 'dyplom') {
@@ -168,7 +166,7 @@ function pobierzTekstTytulu(trybTytulu: TrybTytuluDyplomu) {
 
 function pobierzEtykieteTrybu(trybTytulu: TrybTytuluDyplomu) {
   if (trybTytulu === 'zaswiadczenie') {
-    return 'ZaĹ›wiadczenie'
+    return 'Zaświadczenie'
   }
 
   if (trybTytulu === 'dyplom') {
@@ -192,7 +190,7 @@ function wybierzPodpowiedziTrenerow(trenerzy: TrenerKartoteki[], wartosc: string
 
 function pobierzTekstZnakuWodnego(trybTytulu: TrybTytuluDyplomu) {
   if (trybTytulu === 'zaswiadczenie') {
-    return 'ZaĹ›wiadczenie'
+    return 'Zaświadczenie'
   }
 
   if (trybTytulu === 'dyplom') {
@@ -344,24 +342,24 @@ function pobierzTrenerowZKartoteki(): TrenerKartoteki[] {
 
 function pobierzZdanieUkonczenia(trybTytulu: TrybTytuluDyplomu) {
   if (trybTytulu === 'dyplom') {
-    return 'otrzymuje dyplom za udziaĹ‚ w szkoleniu:'
+    return 'otrzymuje dyplom za udział w szkoleniu:'
   }
 
   if (trybTytulu === 'zaswiadczenie') {
-    return 'uczestniczyĹ‚/a w szkoleniu:'
+    return 'uczestniczył/a w szkoleniu:'
   }
 
-  return 'ukoĹ„czyĹ‚/a szkolenie:'
+  return 'ukończył/a szkolenie:'
 }
 
 function oczyscTytulSzkolenia(tytul: string) {
-  return tytul.trim().replace(/^[\s"'â€žâ€ť]+|[\s"'â€žâ€ť]+$/g, '')
+  return tytul.trim().replace(/^[\s"'„”]+|[\s"'„”]+$/g, '')
 }
 
 function formatujTytulSzkolenia(tytul: string) {
   const czystyTytul = oczyscTytulSzkolenia(tytul)
 
-  return czystyTytul ? `"${czystyTytul}"` : '"TytuĹ‚ szkolenia"'
+  return czystyTytul ? `"${czystyTytul}"` : '"Tytuł szkolenia"'
 }
 
 function parsujListeUczestnikow(wartosc: string) {
@@ -491,7 +489,7 @@ function utworzDomyslnyZapis(): ZapisDyplomow {
     motywKoloru: 'semper',
     kolorMotywu: koloryFirmoweDyplomu.semper,
     tytulSzkolenia:
-      'Identyfikowanie podrobionych dokumentĂłw jako instrument przeciwdziaĹ‚ania naduĹĽyciom finansowym, w tym w FEnIKS',
+      'Identyfikowanie podrobionych dokumentów jako instrument przeciwdziałania nadużyciom finansowym, w tym w FEnIKS',
     rozmiarTytulu: 20,
     trybSzkolenia: 'stacjonarne',
     miejsceSzkolenia: 'Warszawa',
@@ -516,7 +514,7 @@ function utworzDomyslnyZapis(): ZapisDyplomow {
     marginesDodatkuDolnego: 7.6,
     tloSzablonu: '',
     drugaStronaAktywna: false,
-    trescDrugiejStrony: 'Cele, korzyĹ›ci, program szkolenia albo efekty uczenia siÄ™.',
+    trescDrugiejStrony: 'Cele, korzyści, program szkolenia albo efekty uczenia się.',
   }
 }
 
@@ -736,7 +734,7 @@ function pobierzOpcjeZapisuDat(wybraneDaty: string[]): OpcjaZapisuDat[] {
   const daty = [...wybraneDaty].sort()
 
   if (daty.length < 2) {
-    return [{ wartosc: 'lista_przecinek', etykieta: 'DomyĹ›lny zapis pojedynczej daty' }]
+    return [{ wartosc: 'lista_przecinek', etykieta: 'Domyślny zapis pojedynczej daty' }]
   }
 
   const trybyDat: TrybZapisuDat[] = czyDatyKolejne(daty)
@@ -784,7 +782,7 @@ function sprawdzDane(dane: ZapisDyplomow) {
   }
 
   if (!dane.tytulSzkolenia.trim()) {
-    problemy.push('uzupeĹ‚nij tytuĹ‚ szkolenia')
+    problemy.push('uzupełnij tytuł szkolenia')
   }
 
   if (!dane.wybraneDaty.length) {
@@ -792,15 +790,15 @@ function sprawdzDane(dane: ZapisDyplomow) {
   }
 
   if (!dane.liczbaGodzin || Number(dane.liczbaGodzin) <= 0) {
-    problemy.push('uzupeĹ‚nij liczbÄ™ godzin')
+    problemy.push('uzupełnij liczbę godzin')
   }
 
   if (!dane.trener.trim()) {
-    problemy.push('uzupeĹ‚nij eksperta / trenera')
+    problemy.push('uzupełnij eksperta / trenera')
   }
 
   if (dane.trybSzkolenia !== 'online' && !dane.miejsceSzkolenia.trim()) {
-    problemy.push('uzupeĹ‚nij miejsce szkolenia')
+    problemy.push('uzupełnij miejsce szkolenia')
   }
 
   const brakiNumerow = uczestnicy.filter((uczestnik) => !uczestnik.numerRejestru.trim()).length
@@ -808,8 +806,8 @@ function sprawdzDane(dane: ZapisDyplomow) {
   if (brakiNumerow) {
     problemy.push(
       brakiNumerow === 1
-        ? 'uzupeĹ‚nij numer rejestru dla 1 uczestnika'
-        : `uzupeĹ‚nij numer rejestru dla ${brakiNumerow} uczestnikĂłw`,
+        ? 'uzupełnij numer rejestru dla 1 uczestnika'
+        : `uzupełnij numer rejestru dla ${brakiNumerow} uczestników`,
     )
   }
 
@@ -856,7 +854,7 @@ function StronaDrugaDyplomu({ dane, uczestnik }: { dane: ZapisDyplomow; uczestni
 
         <main className="dyplom-kartka__tresc-drugiej">
           <h2>Informacje dodatkowe</h2>
-          <div>{dane.trescDrugiejStrony || 'Cele, korzyĹ›ci, program szkolenia albo efekty uczenia siÄ™.'}</div>
+          <div>{dane.trescDrugiejStrony || 'Cele, korzyści, program szkolenia albo efekty uczenia się.'}</div>
         </main>
       </div>
     </article>
@@ -903,14 +901,14 @@ function StronaDyplomu({ dane, uczestnik }: { dane: ZapisDyplomow; uczestnik: Uc
         <div className="dyplom-kartka__naglowek-ozdobny">
           <div className="dyplom-kartka__typ">{pobierzTekstTytulu(dane.trybTytulu)}</div>
           <div className="dyplom-kartka__linia-tytulu" />
-          <div className="dyplom-kartka__podtytul">UKOĹCZENIA SZKOLENIA</div>
+          <div className="dyplom-kartka__podtytul">UKOŃCZENIA SZKOLENIA</div>
         </div>
 
         <main className="dyplom-kartka__glowna">
-          <div className="dyplom-kartka__wstep">Niniejszym zaĹ›wiadcza siÄ™, ĹĽe</div>
+          <div className="dyplom-kartka__wstep">Niniejszym zaświadcza się, że</div>
           <div className="dyplom-kartka__osoba">
             <span>Pan/Pani</span>
-            <strong>{uczestnik.imieNazwisko || 'ImiÄ™ i nazwisko'}</strong>
+            <strong>{uczestnik.imieNazwisko || 'Imię i nazwisko'}</strong>
           </div>
           <div className="dyplom-kartka__ukonczenie">{pobierzZdanieUkonczenia(dane.trybTytulu)}</div>
           <div className="dyplom-kartka__tytul" style={{ fontSize: `${dane.rozmiarTytulu}px` }}>
@@ -930,15 +928,15 @@ function StronaDyplomu({ dane, uczestnik }: { dane: ZapisDyplomow; uczestnik: Uc
             <img alt="SEMPER" src="/logo-semper.png" />
           </div>
           <div className="dyplom-kartka__organizator">
-            Centrum Organizacji SzkoleĹ„ i Konferencji <strong>SEMPER</strong>
+            Centrum Organizacji Szkoleń i Konferencji <strong>SEMPER</strong>
           </div>
           <div className="dyplom-kartka__pieczec">
-            <span>PieczÄ™Ä‡ i podpis Organizatora:</span>
+            <span>Pieczęć i podpis Organizatora:</span>
             <span>Magdalena Wolniewicz-Kesaria</span>
-            <span>Manager DziaĹ‚u BadaĹ„ i Koordynacji SzkoleĹ„</span>
-            <span>Centrum Organizacji SzkoleĹ„</span>
+            <span>Manager Działu Badań i Koordynacji Szkoleń</span>
+            <span>Centrum Organizacji Szkoleń</span>
             <span>Konferencji SEMPER</span>
-            <span>ul. Libelta 1a/2, 61-706 PoznaĹ„</span>
+            <span>ul. Libelta 1a/2, 61-706 Poznań</span>
             <span>NIP 7772616176</span>
           </div>
           <div className="dyplom-kartka__linia-kropkowana">........................................................</div>
@@ -946,7 +944,7 @@ function StronaDyplomu({ dane, uczestnik }: { dane: ZapisDyplomow; uczestnik: Uc
             Ekspert merytoryczny: {dane.trener || '....................................'}
           </div>
           <div className="dyplom-kartka__gratulacje">
-            Serdecznie gratulujemy i ĹĽyczymy dalszych sukcesĂłw!
+            Serdecznie gratulujemy i życzymy dalszych sukcesów!
           </div>
         </footer>
         <RenderujDodatek dodatek={dodatekDolny} polozenie="dol" />
@@ -976,65 +974,6 @@ export default function WidokDyplomow() {
   const uczestnikDrugiejStrony = uczestnicyDrugiejStrony[0] ?? uczestnicyDoDruku[0] ?? utworzUczestnika('', 0, dane)
   const uczestnikPierwszejStrony = uczestnicyDoDruku[indeksPierwszejStrony] ?? uczestnikDrugiejStrony
   const problemy = useMemo(() => sprawdzDane(dane), [dane])
-  const pozycjeJakosciDyplomow = useMemo<PozycjaKontroliJakosci[]>(() => {
-    const pozycje = problemy.map((problem, indeks) => {
-      const czyUczestnicy = problem.includes('uczestnik') || problem.includes('rejestru')
-      const czyTermin = problem.includes('termin')
-      const czyDokument = problem.includes('tytuł') || problem.includes('godzin') || problem.includes('trenera') || problem.includes('miejsce')
-      const grupa = czyUczestnicy ? 'Dane wejściowe' : czyTermin || czyDokument ? 'Dokument' : 'Ustawienia'
-      const idPola = czyUczestnicy ? 'dyplomy-uczestnicy' : czyTermin ? 'dyplomy-termin' : 'dyplomy-dokument'
-
-      return {
-        id: `dyplomy-problem-${indeks}`,
-        tytul: problem,
-        poziom: 'krytyczne' as const,
-        grupa,
-        zakladka: grupa,
-        idPola,
-        czyBlokujePublikacje: true,
-        czyBlokujeEksport: true,
-        kolejnosc: indeks,
-      }
-    })
-
-    pozycje.push(
-      {
-        id: 'dyplomy-uczestnicy-status',
-        tytul: uczestnicyDoDruku.length ? `Uczestnicy do druku: ${uczestnicyDoDruku.length}` : 'Brak uczestników do druku',
-        poziom: uczestnicyDoDruku.length ? 'poprawne' : 'krytyczne',
-        grupa: 'Dane wejściowe',
-        zakladka: 'Dane wejściowe',
-        idPola: 'dyplomy-uczestnicy',
-        czyBlokujePublikacje: !uczestnicyDoDruku.length,
-        czyBlokujeEksport: !uczestnicyDoDruku.length,
-        kolejnosc: 100,
-      },
-      {
-        id: 'dyplomy-druga-strona-status',
-        tytul: dane.drugaStronaAktywna ? 'Druga strona aktywna' : 'Druga strona wyłączona',
-        poziom: dane.drugaStronaAktywna ? 'podpowiedz' : 'poprawne',
-        grupa: 'Ustawienia',
-        zakladka: 'Ustawienia',
-        idPola: 'dyplomy-druga-strona',
-        czyBlokujePublikacje: false,
-        czyBlokujeEksport: false,
-        kolejnosc: 101,
-      },
-      {
-        id: 'dyplomy-podglad-status',
-        tytul: czyKontrolaPodgladuDostepna ? 'Kontrola podglądu jest dostępna' : 'Podgląd podstawowy',
-        poziom: 'podpowiedz',
-        grupa: 'Podgląd',
-        zakladka: 'Podgląd',
-        idPola: 'dyplomy-podglad',
-        czyBlokujePublikacje: false,
-        czyBlokujeEksport: false,
-        kolejnosc: 102,
-      },
-    )
-
-    return pozycje
-  }, [czyKontrolaPodgladuDostepna, dane.drugaStronaAktywna, problemy, uczestnicyDoDruku.length])
   const miejscowosciDoPodpowiedzi = useMemo(
     () =>
       [...new Set(pobierzLokalizacjeZMagazynu().map((lokalizacja) => lokalizacja.nazwa))].sort((pierwsza, druga) =>
@@ -1216,7 +1155,7 @@ export default function WidokDyplomow() {
         numerRejestru: zbudujNumerRejestru(aktualne, indeks),
       })),
     }))
-    ustawKomunikat('Zastosowano numeracjÄ™ rejestru dla uczestnikĂłw.')
+    ustawKomunikat('Zastosowano numerację rejestru dla uczestników.')
   }
 
   function przelaczDate(iso: string) {
@@ -1247,9 +1186,9 @@ export default function WidokDyplomow() {
           uczestnicy: polaczUczestnikow(parsujListeUczestnikow(nowyTekst), aktualne.uczestnicy, aktualne),
         }
       })
-      ustawKomunikat(`Zaimportowano uczestnikĂłw z pliku: ${plik.name}.`)
+      ustawKomunikat(`Zaimportowano uczestników z pliku: ${plik.name}.`)
     } catch {
-      ustawKomunikat('Nie udaĹ‚o siÄ™ wczytaÄ‡ listy uczestnikĂłw.')
+      ustawKomunikat('Nie udało się wczytać listy uczestników.')
     } finally {
       zdarzenie.target.value = ''
     }
@@ -1271,9 +1210,9 @@ export default function WidokDyplomow() {
         trescDrugiejStrony: tekst.trim() || aktualne.trescDrugiejStrony,
       }))
       ustawTrybPodgladuStron('obie')
-      ustawKomunikat(`Wczytano treĹ›Ä‡ drugiej strony: ${plik.name}.`)
+      ustawKomunikat(`Wczytano treść drugiej strony: ${plik.name}.`)
     } catch {
-      ustawKomunikat('Nie udaĹ‚o siÄ™ wczytaÄ‡ treĹ›ci drugiej strony.')
+      ustawKomunikat('Nie udało się wczytać treści drugiej strony.')
     } finally {
       zdarzenie.target.value = ''
     }
@@ -1289,9 +1228,9 @@ export default function WidokDyplomow() {
     try {
       const daneUrl = await wczytajPlikJakoDataUrl(plik)
       zmienPole('tloSzablonu', daneUrl)
-      ustawKomunikat(`Wczytano tĹ‚o szablonu: ${plik.name}.`)
+      ustawKomunikat(`Wczytano tło szablonu: ${plik.name}.`)
     } catch {
-      ustawKomunikat('Nie udaĹ‚o siÄ™ wczytaÄ‡ tĹ‚a szablonu.')
+      ustawKomunikat('Nie udało się wczytać tła szablonu.')
     } finally {
       zdarzenie.target.value = ''
     }
@@ -1320,7 +1259,7 @@ export default function WidokDyplomow() {
       }))
       ustawKomunikat(`Dodano grafik: ${dodatki.length}.`)
     } catch {
-      ustawKomunikat('Nie udaĹ‚o siÄ™ wczytaÄ‡ dodatku graficznego.')
+      ustawKomunikat('Nie udało się wczytać dodatku graficznego.')
     } finally {
       zdarzenie.target.value = ''
     }
@@ -1330,7 +1269,7 @@ export default function WidokDyplomow() {
     const tekst = tekstNowegoDodatku.trim()
 
     if (!tekst) {
-      ustawKomunikat('Wpisz treĹ›Ä‡ dodatku tekstowego.')
+      ustawKomunikat('Wpisz treść dodatku tekstowego.')
       return
     }
 
@@ -1379,17 +1318,17 @@ export default function WidokDyplomow() {
     const idDodatku = polozenie === 'gora' ? idWybranegoDodatkuGornego : idWybranegoDodatkuDolnego
 
     if (!idDodatku) {
-      ustawKomunikat(polozenie === 'gora' ? 'Wybierz gĂłrny logotyp.' : 'Wybierz dolny logotyp.')
+      ustawKomunikat(polozenie === 'gora' ? 'Wybierz górny logotyp.' : 'Wybierz dolny logotyp.')
       return
     }
 
     przypiszDodatekWszystkim(polozenie, idDodatku)
-    ustawKomunikat(polozenie === 'gora' ? 'Dodano gĂłrny logotyp wszystkim uczestnikom.' : 'Dodano dolny logotyp wszystkim uczestnikom.')
+    ustawKomunikat(polozenie === 'gora' ? 'Dodano górny logotyp wszystkim uczestnikom.' : 'Dodano dolny logotyp wszystkim uczestnikom.')
   }
 
   function zapiszRoboczo() {
     localStorage.setItem(kluczZapisuDyplomow, JSON.stringify(dane))
-    ustawKomunikat('Szkic generatora dyplomĂłw zapisany lokalnie.')
+    ustawKomunikat('Szkic generatora dyplomów zapisany lokalnie.')
   }
 
   function wyczyscGenerator() {
@@ -1411,7 +1350,7 @@ export default function WidokDyplomow() {
     localStorage.removeItem(kluczZapisuDyplomow)
     ustawTrybPodgladuStron('pierwsza')
     ustawUkladPodgladuStron('pod_soba')
-    ustawKomunikat('Wyczyszczono generator dyplomĂłw.')
+    ustawKomunikat('Wyczyszczono generator dyplomów.')
   }
 
   function resetujFormatowaniePodgladu() {
@@ -1429,7 +1368,7 @@ export default function WidokDyplomow() {
       czyPokazacDrugaStrone: false,
     }))
     ustawTrybPodgladuStron('pierwsza')
-    ustawKomunikat('Zresetowano formatowanie podglÄ…du.')
+    ustawKomunikat('Zresetowano formatowanie podglądu.')
   }
 
   function pokazPoprzedniegoUczestnikaPierwszejStrony() {
@@ -1448,22 +1387,18 @@ export default function WidokDyplomow() {
       return
     }
 
-    ustawKomunikat('Otwieram drukowanie. W oknie systemowym moĹĽesz wybraÄ‡ zapis jako PDF.')
+    ustawKomunikat('Otwieram drukowanie. W oknie systemowym możesz wybrać zapis jako PDF.')
     window.print()
   }
 
   return (
-    <UkladGeneratoraDokumentu
-      nazwaKlasy="widok dyplomy"
-      naglowek={
-        <div className="dyplomy__naglowek">
-          <div>
-            <h1>Generator Dyplomów</h1>
-            <p>Generator certyfikatów, zaświadczeń i dyplomów z podglądem A4.</p>
-          </div>
+    <section className="widok dyplomy">
+      <header className="dyplomy__naglowek">
+        <div>
+          <h1>Generator Dyplomów</h1>
+          <p>Generator certyfikatów, zaświadczeń i dyplomów z podglądem A4.</p>
         </div>
-      }
-      pasekAkcji={
+
         <div className="dyplomy__akcje">
           <button className="dyplomy__przycisk dyplomy__przycisk--glowny" onClick={drukujDyplomy} type="button">
             Drukuj / PDF
@@ -1475,240 +1410,7 @@ export default function WidokDyplomow() {
             Wyczyść
           </button>
         </div>
-      }
-      prawyPanel={(stanPanelu) => (
-        <PrawyPanelGeneratora
-          akcjeGlowne={
-            <button className="dyplomy__przycisk" onClick={zapiszRoboczo} type="button">
-              Zapisz wersję roboczą
-            </button>
-          }
-          komunikaty={<p>{komunikat}</p>}
-          licznikProblemow={pozycjeJakosciDyplomow.filter((pozycja) => pozycja.poziom === 'krytyczne' || pozycja.poziom === 'ostrzezenie').length}
-          pozycjeJakosci={pozycjeJakosciDyplomow}
-          aktywnaGrupaJakosci="Dokument"
-          etykietaAktywnejGrupy="Aktywna sekcja"
-          stanPanelu={stanPanelu}
-          status={problemy.length ? 'Wymaga korekty: ' + problemy.length : 'Gotowe do druku lub zapisu jako PDF.'}
-          statusJakosci={problemy.length ? 'NIEPEŁNE' : 'GOTOWE'}
-          tytul="Panel dyplomów"
-        >
-          <div className="dyplomy__podglad dyplomy__podglad--panel">
-
-          <section className="dyplomy__status">
-            <div className="dyplomy__status-naglowek">
-              <h2>Status</h2>
-              <button className="dyplomy__przycisk dyplomy__przycisk--maly" onClick={resetujFormatowaniePodgladu} type="button">
-                Resetuj formatowanie
-              </button>
-            </div>
-            {problemy.length ? (
-              <ul>
-                {problemy.map((problem) => (
-                  <li key={problem}>{problem}</li>
-                ))}
-              </ul>
-            ) : (
-              <p>Gotowe do druku lub zapisu jako PDF.</p>
-            )}
-          </section>
-
-          <section className="dyplomy__narzedzia-podgladu" aria-label="Dodatki i widocznoĹ›Ä‡ podglÄ…du">
-            <div className="dyplomy__widocznosc-podgladu">
-              <label className="dyplomy__pole dyplomy__pole--checkbox">
-                <input
-                  checked={dane.czyPokazacDodatekGorny}
-                  onChange={(zdarzenie) => zmienPole('czyPokazacDodatekGorny', zdarzenie.target.checked)}
-                  type="checkbox"
-                />
-                <span>PokaĹĽ gĂłrne dodatki</span>
-              </label>
-              <label className="dyplomy__pole dyplomy__pole--checkbox">
-                <input
-                  checked={dane.czyPokazacDodatekDolny}
-                  onChange={(zdarzenie) => zmienPole('czyPokazacDodatekDolny', zdarzenie.target.checked)}
-                  type="checkbox"
-                />
-                <span>PokaĹĽ dolne dodatki</span>
-              </label>
-              <label className="dyplomy__pole dyplomy__pole--checkbox">
-                <input
-                  checked={dane.czyPokazacDrugaStrone}
-                  onChange={(zdarzenie) => zmienPole('czyPokazacDrugaStrone', zdarzenie.target.checked)}
-                  type="checkbox"
-                />
-                <span>PokaĹĽ drugÄ… stronÄ™</span>
-              </label>
-            </div>
-
-            <label className="dyplomy__pole">
-              <span>Dodaj grafiki</span>
-              <input accept="image/*" multiple onChange={importujDodatkiGraficzne} type="file" />
-            </label>
-
-            <div className="dyplomy__logotypy">
-              <div className="dyplomy__logotyp-panel">
-                <strong className="dyplomy__logotyp-naglowek">â†‘ GĂłrny Logotyp â†‘</strong>
-                <label className="dyplomy__pole">
-                  <span>Wybierz gĂłrny logotyp</span>
-                  <select onChange={(zdarzenie) => ustawIdWybranegoDodatkuGornego(zdarzenie.target.value)} value={idWybranegoDodatkuGornego}>
-                    <option value="">Wybierz dodatek dla gĂłry</option>
-                    {dane.dodatki.map((dodatek) => (
-                      <option key={dodatek.id} value={dodatek.id}>
-                        {dodatek.nazwa}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="dyplomy__pole">
-                  <span>SzerokoĹ›Ä‡: {dane.szerokoscDodatkuGornego}%</span>
-                  <input
-                    max={100}
-                    min={10}
-                    onChange={(zdarzenie) => zmienPole('szerokoscDodatkuGornego', Number(zdarzenie.target.value))}
-                    type="range"
-                    value={dane.szerokoscDodatkuGornego}
-                  />
-                </label>
-                <label className="dyplomy__pole">
-                  <span>Margines gĂłrny: {dane.marginesDodatkuGornego}%</span>
-                  <input
-                    max={24}
-                    min={0}
-                    onChange={(zdarzenie) => zmienPole('marginesDodatkuGornego', Number(zdarzenie.target.value))}
-                    step={0.1}
-                    type="range"
-                    value={dane.marginesDodatkuGornego}
-                  />
-                </label>
-                <button className="dyplomy__przycisk" onClick={() => dodajWybranyDodatekWszystkim('gora')} type="button">
-                  + Dodaj wszystkim
-                </button>
-              </div>
-
-              <div className="dyplomy__logotyp-panel">
-                <strong className="dyplomy__logotyp-naglowek">â†“ Dolny Logotyp â†“</strong>
-                <label className="dyplomy__pole">
-                  <span>Wybierz dolny logotyp</span>
-                  <select onChange={(zdarzenie) => ustawIdWybranegoDodatkuDolnego(zdarzenie.target.value)} value={idWybranegoDodatkuDolnego}>
-                    <option value="">Wybierz dodatek dla doĹ‚u</option>
-                    {dane.dodatki.map((dodatek) => (
-                      <option key={dodatek.id} value={dodatek.id}>
-                        {dodatek.nazwa}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="dyplomy__pole">
-                  <span>SzerokoĹ›Ä‡: {dane.szerokoscDodatkuDolnego}%</span>
-                  <input
-                    max={100}
-                    min={10}
-                    onChange={(zdarzenie) => zmienPole('szerokoscDodatkuDolnego', Number(zdarzenie.target.value))}
-                    type="range"
-                    value={dane.szerokoscDodatkuDolnego}
-                  />
-                </label>
-                <label className="dyplomy__pole">
-                  <span>Margines dolny: {dane.marginesDodatkuDolnego}%</span>
-                  <input
-                    max={24}
-                    min={0}
-                    onChange={(zdarzenie) => zmienPole('marginesDodatkuDolnego', Number(zdarzenie.target.value))}
-                    step={0.1}
-                    type="range"
-                    value={dane.marginesDodatkuDolnego}
-                  />
-                </label>
-                <button className="dyplomy__przycisk" onClick={() => dodajWybranyDodatekWszystkim('dol')} type="button">
-                  + Dodaj wszystkim
-                </button>
-              </div>
-            </div>
-          </section>
-
-          {czyKontrolaPodgladuDostepna && (
-            <section className="dyplomy__kontrola-podgladu">
-              {uczestnicyDoDruku.length > 1 && (
-                <div className="dyplomy__nawigacja-uczestnika">
-                  <button
-                    aria-label="Poprzedni uczestnik na pierwszej stronie"
-                    className="dyplomy__przycisk-wyboru dyplomy__przycisk-strzalka"
-                    disabled={indeksPierwszejStrony === 0}
-                    onClick={pokazPoprzedniegoUczestnikaPierwszejStrony}
-                    title="Poprzedni uczestnik na pierwszej stronie"
-                    type="button"
-                  >
-                    â†
-                  </button>
-                  <span className="dyplomy__licznik-uczestnika">
-                    1 strona: {indeksPierwszejStrony + 1}/{uczestnicyDoDruku.length}
-                  </span>
-                  <button
-                    aria-label="Kolejny uczestnik na pierwszej stronie"
-                    className="dyplomy__przycisk-wyboru dyplomy__przycisk-strzalka"
-                    disabled={indeksPierwszejStrony >= uczestnicyDoDruku.length - 1}
-                    onClick={pokazKolejnegoUczestnikaPierwszejStrony}
-                    title="Kolejny uczestnik na pierwszej stronie"
-                    type="button"
-                  >
-                    â†’
-                  </button>
-                </div>
-              )}
-              {czyDrugaStronaDostepna && (
-                <div className="dyplomy__wybor">
-                  <button
-                    className={`dyplomy__przycisk-wyboru${trybPodgladuStron === 'pierwsza' ? ' dyplomy__przycisk-wyboru--aktywny' : ''}`}
-                    onClick={() => ustawTrybPodgladuStron('pierwsza')}
-                    type="button"
-                  >
-                    1 strona
-                  </button>
-                  <button
-                    className={`dyplomy__przycisk-wyboru${trybPodgladuStron === 'druga' ? ' dyplomy__przycisk-wyboru--aktywny' : ''}`}
-                    onClick={() => ustawTrybPodgladuStron('druga')}
-                    type="button"
-                  >
-                    2 strona
-                  </button>
-                  <button
-                    className={`dyplomy__przycisk-wyboru${trybPodgladuStron === 'obie' ? ' dyplomy__przycisk-wyboru--aktywny' : ''}`}
-                    onClick={() => ustawTrybPodgladuStron('obie')}
-                    type="button"
-                  >
-                    Obie
-                  </button>
-                </div>
-              )}
-              {czyDrugaStronaDostepna && trybPodgladuStron === 'obie' && (
-                <div className="dyplomy__wybor">
-                  <button
-                    className={`dyplomy__przycisk-wyboru${ukladPodgladuStron === 'pod_soba' ? ' dyplomy__przycisk-wyboru--aktywny' : ''}`}
-                    onClick={() => ustawUkladPodgladuStron('pod_soba')}
-                    type="button"
-                  >
-                    Pod sobÄ…
-                  </button>
-                  <button
-                    className={`dyplomy__przycisk-wyboru${ukladPodgladuStron === 'obok' ? ' dyplomy__przycisk-wyboru--aktywny' : ''}`}
-                    onClick={() => ustawUkladPodgladuStron('obok')}
-                    type="button"
-                  >
-                    Obok siebie
-                  </button>
-                </div>
-              )}
-            </section>
-          )}
-
-
-          </div>
-        </PrawyPanelGeneratora>
-      )}
-      licznikProblemow={pozycjeJakosciDyplomow.filter((pozycja) => pozycja.poziom === 'krytyczne' || pozycja.poziom === 'ostrzezenie').length}
-    >
-
+      </header>
 
       <div className="dyplomy__komunikat" aria-live="polite">
         {komunikat}
@@ -1720,7 +1422,7 @@ export default function WidokDyplomow() {
             <h2>Dokument</h2>
             <div className="dyplomy__siatka dyplomy__siatka--trzy">
               <div className="dyplomy__pole dyplomy__pole--pelne">
-                <span>Typ widocznego tytuĹ‚u</span>
+                <span>Typ widocznego tytułu</span>
                 <div className="dyplomy__wybor">
                   {trybyTytulu.map((trybTytulu) => (
                     <button
@@ -1773,7 +1475,7 @@ export default function WidokDyplomow() {
               )}
 
               <label className="dyplomy__pole dyplomy__pole--pelne">
-                <span>TytuĹ‚ szkolenia</span>
+                <span>Tytuł szkolenia</span>
                 <textarea
                   onChange={(zdarzenie) => zmienPole('tytulSzkolenia', zdarzenie.target.value)}
                   rows={3}
@@ -1782,7 +1484,7 @@ export default function WidokDyplomow() {
               </label>
 
               <label className="dyplomy__pole">
-                <span>Rozmiar tytuĹ‚u: {dane.rozmiarTytulu}px</span>
+                <span>Rozmiar tytułu: {dane.rozmiarTytulu}px</span>
                 <input
                   max={34}
                   min={18}
@@ -1885,7 +1587,7 @@ export default function WidokDyplomow() {
                 value={dane.miesiacKalendarza || pobierzDzisiejszaDateIso().slice(0, 7)}
               />
               <button className="dyplomy__przycisk" onClick={() => zmienPole('wybraneDaty', [])} type="button">
-                WyczyĹ›Ä‡ daty
+                Wyczyść daty
               </button>
             </div>
             <div className="dyplomy__kalendarz">
@@ -1908,7 +1610,7 @@ export default function WidokDyplomow() {
               ))}
             </div>
             <label className="dyplomy__pole dyplomy__format-dat">
-              <span>Format dat na podglÄ…dzie</span>
+              <span>Format dat na podglądzie</span>
               <select
                 onChange={(zdarzenie) => zmienPole('trybZapisuDat', zdarzenie.target.value as TrybZapisuDat)}
                 value={skutecznyTrybZapisuDat}
@@ -1927,7 +1629,7 @@ export default function WidokDyplomow() {
             <h2>Numer rejestru</h2>
             <div className="dyplomy__siatka dyplomy__siatka--dwie">
               <label className="dyplomy__pole">
-                <span>PoczÄ…tkowy numer rejestru</span>
+                <span>Początkowy numer rejestru</span>
                 <input
                   onChange={(zdarzenie) => zmienPole('poczatkowyNumerRejestru', zdarzenie.target.value)}
                   type="text"
@@ -1942,7 +1644,7 @@ export default function WidokDyplomow() {
                   onChange={(zdarzenie) => zmienPole('indeksZmiennegoBloku', Number(zdarzenie.target.value))}
                   value={indeksZmiennegoBloku >= 0 ? indeksZmiennegoBloku : ''}
                 >
-                  {!blokiNumeru.length && <option value="">Brak blokĂłw liczbowych</option>}
+                  {!blokiNumeru.length && <option value="">Brak bloków liczbowych</option>}
                   {blokiNumeru.map((blok, indeks) => (
                     <option key={`${blok.indeks}-${blok.wartosc}`} value={indeks}>
                       blok {indeks + 1}: {blok.wartosc}
@@ -1962,7 +1664,7 @@ export default function WidokDyplomow() {
               ))}
             </div>
             <button className="dyplomy__przycisk" onClick={zastosujNumeracje} type="button">
-              Zastosuj numeracjÄ™
+              Zastosuj numerację
             </button>
           </section>
 
@@ -1970,7 +1672,7 @@ export default function WidokDyplomow() {
             <h2>Uczestnicy</h2>
             <div className="dyplomy__siatka dyplomy__siatka--dwie">
               <label className="dyplomy__pole dyplomy__pole--pelne">
-                <span>Lista uczestnikĂłw</span>
+                <span>Lista uczestników</span>
                 <textarea
                   onChange={(zdarzenie) => zmienTekstUczestnikow(zdarzenie.target.value)}
                   rows={6}
@@ -1989,9 +1691,9 @@ export default function WidokDyplomow() {
                 <thead>
                   <tr>
                     <th>#</th>
-                    <th>ImiÄ™ i nazwisko</th>
+                    <th>Imię i nazwisko</th>
                     <th>Nr rejestru</th>
-                    <th>GĂłrny Logotyp</th>
+                    <th>Górny Logotyp</th>
                     <th>Dolny logotyp</th>
                     <th>2 strona</th>
                     <th></th>
@@ -2062,14 +1764,14 @@ export default function WidokDyplomow() {
                         </td>
                         <td>
                           <button className="dyplomy__przycisk dyplomy__przycisk--maly" onClick={() => usunUczestnika(uczestnik.id)} type="button">
-                            UsuĹ„
+                            Usuń
                           </button>
                         </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={7}>Dodaj uczestnikĂłw do wygenerowania dokumentĂłw.</td>
+                      <td colSpan={7}>Dodaj uczestników do wygenerowania dokumentów.</td>
                     </tr>
                   )}
                 </tbody>
@@ -2082,13 +1784,13 @@ export default function WidokDyplomow() {
               <h2>Dodatki i szablon</h2>
               <div className="dyplomy__siatka dyplomy__siatka--dwie">
                 <label className="dyplomy__pole">
-                  <span>Grafika tĹ‚a</span>
+                  <span>Grafika tła</span>
                   <input accept="image/*" onChange={importujTloSzablonu} type="file" />
                 </label>
 
                 <div className="dyplomy__pole dyplomy__pole--przycisk">
                   <button className="dyplomy__przycisk" onClick={() => zmienPole('tloSzablonu', '')} type="button">
-                    UsuĹ„ tĹ‚o
+                    Usuń tło
                   </button>
                 </div>
               </div>
@@ -2129,7 +1831,7 @@ export default function WidokDyplomow() {
                     )}
                     <strong>{dodatek.nazwa}</strong>
                     <button className="dyplomy__przycisk dyplomy__przycisk--maly" onClick={() => usunDodatek(dodatek.id)} type="button">
-                      UsuĹ„
+                      Usuń
                     </button>
                   </article>
                 ))}
@@ -2159,7 +1861,7 @@ export default function WidokDyplomow() {
               </div>
               <div className={`dyplomy__pola-drugiej-strony${dane.drugaStronaAktywna ? '' : ' dyplomy__pola-drugiej-strony--nieaktywne'}`}>
                 <label className="dyplomy__pole">
-                  <span>Import treĹ›ci TXT / MD</span>
+                  <span>Import treści TXT / MD</span>
                   <input
                     accept=".txt,.md,text/plain,text/markdown"
                     disabled={!dane.drugaStronaAktywna}
@@ -2168,7 +1870,7 @@ export default function WidokDyplomow() {
                   />
                 </label>
                 <label className="dyplomy__pole">
-                  <span>TreĹ›Ä‡ wspĂłlna</span>
+                  <span>Treść wspólna</span>
                   <textarea
                     disabled={!dane.drugaStronaAktywna}
                     onChange={(zdarzenie) => zmienTrescDrugiejStrony(zdarzenie.target.value)}
@@ -2181,8 +1883,216 @@ export default function WidokDyplomow() {
           </div>
         </div>
 
+        <aside className="dyplomy__podglad">
+          <section className="dyplomy__status">
+            <div className="dyplomy__status-naglowek">
+              <h2>Status</h2>
+              <button className="dyplomy__przycisk dyplomy__przycisk--maly" onClick={resetujFormatowaniePodgladu} type="button">
+                Resetuj formatowanie
+              </button>
+            </div>
+            {problemy.length ? (
+              <ul>
+                {problemy.map((problem) => (
+                  <li key={problem}>{problem}</li>
+                ))}
+              </ul>
+            ) : (
+              <p>Gotowe do druku lub zapisu jako PDF.</p>
+            )}
+          </section>
+
+          <section className="dyplomy__narzedzia-podgladu" aria-label="Dodatki i widoczność podglądu">
+            <div className="dyplomy__widocznosc-podgladu">
+              <label className="dyplomy__pole dyplomy__pole--checkbox">
+                <input
+                  checked={dane.czyPokazacDodatekGorny}
+                  onChange={(zdarzenie) => zmienPole('czyPokazacDodatekGorny', zdarzenie.target.checked)}
+                  type="checkbox"
+                />
+                <span>Pokaż górne dodatki</span>
+              </label>
+              <label className="dyplomy__pole dyplomy__pole--checkbox">
+                <input
+                  checked={dane.czyPokazacDodatekDolny}
+                  onChange={(zdarzenie) => zmienPole('czyPokazacDodatekDolny', zdarzenie.target.checked)}
+                  type="checkbox"
+                />
+                <span>Pokaż dolne dodatki</span>
+              </label>
+              <label className="dyplomy__pole dyplomy__pole--checkbox">
+                <input
+                  checked={dane.czyPokazacDrugaStrone}
+                  onChange={(zdarzenie) => zmienPole('czyPokazacDrugaStrone', zdarzenie.target.checked)}
+                  type="checkbox"
+                />
+                <span>Pokaż drugą stronę</span>
+              </label>
+            </div>
+
+            <label className="dyplomy__pole">
+              <span>Dodaj grafiki</span>
+              <input accept="image/*" multiple onChange={importujDodatkiGraficzne} type="file" />
+            </label>
+
+            <div className="dyplomy__logotypy">
+              <div className="dyplomy__logotyp-panel">
+                <strong className="dyplomy__logotyp-naglowek">↑ Górny Logotyp ↑</strong>
+                <label className="dyplomy__pole">
+                  <span>Wybierz górny logotyp</span>
+                  <select onChange={(zdarzenie) => ustawIdWybranegoDodatkuGornego(zdarzenie.target.value)} value={idWybranegoDodatkuGornego}>
+                    <option value="">Wybierz dodatek dla góry</option>
+                    {dane.dodatki.map((dodatek) => (
+                      <option key={dodatek.id} value={dodatek.id}>
+                        {dodatek.nazwa}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="dyplomy__pole">
+                  <span>Szerokość: {dane.szerokoscDodatkuGornego}%</span>
+                  <input
+                    max={100}
+                    min={10}
+                    onChange={(zdarzenie) => zmienPole('szerokoscDodatkuGornego', Number(zdarzenie.target.value))}
+                    type="range"
+                    value={dane.szerokoscDodatkuGornego}
+                  />
+                </label>
+                <label className="dyplomy__pole">
+                  <span>Margines górny: {dane.marginesDodatkuGornego}%</span>
+                  <input
+                    max={24}
+                    min={0}
+                    onChange={(zdarzenie) => zmienPole('marginesDodatkuGornego', Number(zdarzenie.target.value))}
+                    step={0.1}
+                    type="range"
+                    value={dane.marginesDodatkuGornego}
+                  />
+                </label>
+                <button className="dyplomy__przycisk" onClick={() => dodajWybranyDodatekWszystkim('gora')} type="button">
+                  + Dodaj wszystkim
+                </button>
+              </div>
+
+              <div className="dyplomy__logotyp-panel">
+                <strong className="dyplomy__logotyp-naglowek">↓ Dolny Logotyp ↓</strong>
+                <label className="dyplomy__pole">
+                  <span>Wybierz dolny logotyp</span>
+                  <select onChange={(zdarzenie) => ustawIdWybranegoDodatkuDolnego(zdarzenie.target.value)} value={idWybranegoDodatkuDolnego}>
+                    <option value="">Wybierz dodatek dla dołu</option>
+                    {dane.dodatki.map((dodatek) => (
+                      <option key={dodatek.id} value={dodatek.id}>
+                        {dodatek.nazwa}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="dyplomy__pole">
+                  <span>Szerokość: {dane.szerokoscDodatkuDolnego}%</span>
+                  <input
+                    max={100}
+                    min={10}
+                    onChange={(zdarzenie) => zmienPole('szerokoscDodatkuDolnego', Number(zdarzenie.target.value))}
+                    type="range"
+                    value={dane.szerokoscDodatkuDolnego}
+                  />
+                </label>
+                <label className="dyplomy__pole">
+                  <span>Margines dolny: {dane.marginesDodatkuDolnego}%</span>
+                  <input
+                    max={24}
+                    min={0}
+                    onChange={(zdarzenie) => zmienPole('marginesDodatkuDolnego', Number(zdarzenie.target.value))}
+                    step={0.1}
+                    type="range"
+                    value={dane.marginesDodatkuDolnego}
+                  />
+                </label>
+                <button className="dyplomy__przycisk" onClick={() => dodajWybranyDodatekWszystkim('dol')} type="button">
+                  + Dodaj wszystkim
+                </button>
+              </div>
+            </div>
+          </section>
+
+          {czyKontrolaPodgladuDostepna && (
+            <section className="dyplomy__kontrola-podgladu">
+              {uczestnicyDoDruku.length > 1 && (
+                <div className="dyplomy__nawigacja-uczestnika">
+                  <button
+                    aria-label="Poprzedni uczestnik na pierwszej stronie"
+                    className="dyplomy__przycisk-wyboru dyplomy__przycisk-strzalka"
+                    disabled={indeksPierwszejStrony === 0}
+                    onClick={pokazPoprzedniegoUczestnikaPierwszejStrony}
+                    title="Poprzedni uczestnik na pierwszej stronie"
+                    type="button"
+                  >
+                    ←
+                  </button>
+                  <span className="dyplomy__licznik-uczestnika">
+                    1 strona: {indeksPierwszejStrony + 1}/{uczestnicyDoDruku.length}
+                  </span>
+                  <button
+                    aria-label="Kolejny uczestnik na pierwszej stronie"
+                    className="dyplomy__przycisk-wyboru dyplomy__przycisk-strzalka"
+                    disabled={indeksPierwszejStrony >= uczestnicyDoDruku.length - 1}
+                    onClick={pokazKolejnegoUczestnikaPierwszejStrony}
+                    title="Kolejny uczestnik na pierwszej stronie"
+                    type="button"
+                  >
+                    →
+                  </button>
+                </div>
+              )}
+              {czyDrugaStronaDostepna && (
+                <div className="dyplomy__wybor">
+                  <button
+                    className={`dyplomy__przycisk-wyboru${trybPodgladuStron === 'pierwsza' ? ' dyplomy__przycisk-wyboru--aktywny' : ''}`}
+                    onClick={() => ustawTrybPodgladuStron('pierwsza')}
+                    type="button"
+                  >
+                    1 strona
+                  </button>
+                  <button
+                    className={`dyplomy__przycisk-wyboru${trybPodgladuStron === 'druga' ? ' dyplomy__przycisk-wyboru--aktywny' : ''}`}
+                    onClick={() => ustawTrybPodgladuStron('druga')}
+                    type="button"
+                  >
+                    2 strona
+                  </button>
+                  <button
+                    className={`dyplomy__przycisk-wyboru${trybPodgladuStron === 'obie' ? ' dyplomy__przycisk-wyboru--aktywny' : ''}`}
+                    onClick={() => ustawTrybPodgladuStron('obie')}
+                    type="button"
+                  >
+                    Obie
+                  </button>
+                </div>
+              )}
+              {czyDrugaStronaDostepna && trybPodgladuStron === 'obie' && (
+                <div className="dyplomy__wybor">
+                  <button
+                    className={`dyplomy__przycisk-wyboru${ukladPodgladuStron === 'pod_soba' ? ' dyplomy__przycisk-wyboru--aktywny' : ''}`}
+                    onClick={() => ustawUkladPodgladuStron('pod_soba')}
+                    type="button"
+                  >
+                    Pod sobą
+                  </button>
+                  <button
+                    className={`dyplomy__przycisk-wyboru${ukladPodgladuStron === 'obok' ? ' dyplomy__przycisk-wyboru--aktywny' : ''}`}
+                    onClick={() => ustawUkladPodgladuStron('obok')}
+                    type="button"
+                  >
+                    Obok siebie
+                  </button>
+                </div>
+              )}
+            </section>
+          )}
+
           <section
-            id="dyplomy-podglad"`r`n            className={`dyplomy__podglad-kartki${
+            className={`dyplomy__podglad-kartki${
               trybPodgladuStron === 'obie' && ukladPodgladuStron === 'obok'
                 ? ' dyplomy__podglad-kartki--obok'
                 : ' dyplomy__podglad-kartki--pod-soba'
@@ -2191,7 +2101,7 @@ export default function WidokDyplomow() {
             {czyPokazacPierwszaStrone && <StronaDyplomu dane={dane} uczestnik={uczestnikPierwszejStrony} />}
             {czyPokazacDrugaStrone && <StronaDrugaDyplomu dane={dane} uczestnik={uczestnikDrugiejStrony} />}
           </section>
-
+        </aside>
       </div>
 
       <div className="dyplomy__druk" aria-hidden="true">
@@ -2204,6 +2114,6 @@ export default function WidokDyplomow() {
           </div>
         ))}
       </div>
-    </UkladGeneratoraDokumentu>
+    </section>
   )
 }

@@ -1,6 +1,4 @@
-﻿import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import PrawyPanelGeneratora, { type PozycjaKontroliJakosci, type SekcjaPrawegoPanelu } from './komponenty/PrawyPanelGeneratora'
-import UkladGeneratoraDokumentu from './komponenty/UkladGeneratoraDokumentu'
+import { useEffect, useMemo, useState } from 'react'
 import './prostyGeneratorDokumentu.css'
 
 type KonfiguracjaGeneratora = {
@@ -10,16 +8,6 @@ type KonfiguracjaGeneratora = {
   tekstPrzykladowy: string
   kluczLocalStorage: string
   generujDokument: (daneWejsciowe: string) => string
-  statusPanelu?: (kontekst: KontekstPaneluProstegoGeneratora) => ReactNode
-  licznikProblemowPanelu?: (kontekst: KontekstPaneluProstegoGeneratora) => number
-  sekcjePanelu?: (kontekst: KontekstPaneluProstegoGeneratora) => SekcjaPrawegoPanelu[]
-  pozycjeJakosciPanelu?: (kontekst: KontekstPaneluProstegoGeneratora) => PozycjaKontroliJakosci[]
-  aktywnaGrupaJakosci?: string
-}
-
-type KontekstPaneluProstegoGeneratora = {
-  daneWejsciowe: string
-  wygenerowanyDokument: string
 }
 
 function zabezpieczHtml(tekst: string) {
@@ -38,11 +26,6 @@ export default function ProstyGeneratorDokumentu({
   tekstPrzykladowy,
   kluczLocalStorage,
   generujDokument,
-  statusPanelu,
-  licznikProblemowPanelu,
-  sekcjePanelu,
-  pozycjeJakosciPanelu,
-  aktywnaGrupaJakosci = 'Dane wejściowe',
 }: KonfiguracjaGeneratora) {
   const [daneWejsciowe, ustawDaneWejsciowe] = useState(() => {
     return localStorage.getItem(kluczLocalStorage) ?? tekstPrzykladowy
@@ -112,88 +95,13 @@ export default function ProstyGeneratorDokumentu({
     ustawKomunikat('Wyczyszczono dane i zapisany szkic.')
   }
 
-  const kontekstPanelu = { daneWejsciowe, wygenerowanyDokument }
-  const liczbaWierszy = daneWejsciowe.split('\n').filter((wiersz) => wiersz.trim()).length
-  const licznikProblemow = licznikProblemowPanelu?.(kontekstPanelu) ?? 0
-  const sekcjePaneluGeneratora = sekcjePanelu?.(kontekstPanelu) ?? []
-  const pozycjeJakosci = pozycjeJakosciPanelu?.(kontekstPanelu) ?? [
-    {
-      id: 'dane-wejsciowe',
-      tytul: daneWejsciowe.trim() ? 'Dane wejściowe są dostępne' : 'Brak danych wejściowych',
-      opis: `Wiersze: ${liczbaWierszy}. Znaki: ${daneWejsciowe.length}.`,
-      poziom: daneWejsciowe.trim() ? 'poprawne' : 'krytyczne',
-      grupa: 'Dane wejściowe',
-      zakladka: 'Dane wejściowe',
-      idPola: `${kluczLocalStorage}-dane`,
-      czyBlokujePublikacje: !daneWejsciowe.trim(),
-      czyBlokujeEksport: !daneWejsciowe.trim(),
-      kolejnosc: 1,
-    },
-    {
-      id: 'podglad-techniczny',
-      tytul: wygenerowanyDokument.trim() ? 'Podgląd techniczny jest gotowy' : 'Brak wyniku',
-      poziom: wygenerowanyDokument.trim() ? 'poprawne' : 'ostrzezenie',
-      grupa: 'Podgląd',
-      zakladka: 'Podgląd',
-      czyBlokujePublikacje: false,
-      czyBlokujeEksport: !wygenerowanyDokument.trim(),
-      kolejnosc: 2,
-    },
-    {
-      id: 'ustawienia-rozszerzone',
-      tytul: 'Ustawienia rozszerzone',
-      opis: 'Do wdrożenia później.',
-      poziom: 'podpowiedz',
-      grupa: 'Ustawienia',
-      zakladka: 'Ustawienia',
-      czyBlokujePublikacje: false,
-      czyBlokujeEksport: false,
-      kolejnosc: 3,
-    },
-  ]
-  const akcjeGeneratora = (
-    <>
-      <button type="button" onClick={obsluzGenerowanie}>
-        Generuj
-      </button>
-      <button type="button" onClick={obsluzKopiowanie}>
-        Kopiuj wynik
-      </button>
-      <button type="button" onClick={obsluzDrukowanie}>
-        Drukuj
-      </button>
-      <button type="button" onClick={obsluzCzyszczenie}>
-        Wyczyść
-      </button>
-    </>
-  )
-
   return (
-    <UkladGeneratoraDokumentu
-      nazwaKlasy="widok prosty-generator"
-      naglowek={
-        <div className="prosty-generator__naglowek">
-          <h1>{tytul}</h1>
-          <p>{opis}</p>
-        </div>
-      }
-      pasekAkcji={<div className="prosty-generator__akcje">{akcjeGeneratora}</div>}
-      prawyPanel={(stanPanelu) => (
-        <PrawyPanelGeneratora
-          komunikaty={<p>{komunikat}</p>}
-          licznikProblemow={licznikProblemow}
-          pozycjeJakosci={pozycjeJakosci}
-          aktywnaGrupaJakosci={aktywnaGrupaJakosci}
-          etykietaAktywnejGrupy="Aktywna sekcja"
-          sekcje={sekcjePaneluGeneratora}
-          stanPanelu={stanPanelu}
-          status={statusPanelu?.(kontekstPanelu) ?? (wygenerowanyDokument.trim() ? 'Podgląd techniczny jest dostępny.' : 'Brak wyniku.')}
-          statusJakosci={licznikProblemow ? 'NIEPEŁNE' : 'GOTOWE'}
-          tytul={`Panel: ${tytul}`}
-        />
-      )}
-      licznikProblemow={licznikProblemow}
-    >
+    <section className="widok prosty-generator">
+      <header className="prosty-generator__naglowek">
+        <h1>{tytul}</h1>
+        <p>{opis}</p>
+      </header>
+
       <div className="prosty-generator__siatka">
         <section className="prosty-generator__panel">
           <label className="prosty-generator__etykieta" htmlFor={`${kluczLocalStorage}-dane`}>
@@ -206,6 +114,21 @@ export default function ProstyGeneratorDokumentu({
             value={daneWejsciowe}
           />
 
+          <div className="prosty-generator__akcje">
+            <button type="button" onClick={obsluzGenerowanie}>
+              Generuj
+            </button>
+            <button type="button" onClick={obsluzKopiowanie}>
+              Kopiuj wynik
+            </button>
+            <button type="button" onClick={obsluzDrukowanie}>
+              Drukuj
+            </button>
+            <button type="button" onClick={obsluzCzyszczenie}>
+              Wyczyść
+            </button>
+          </div>
+
           <p className="prosty-generator__komunikat">{komunikat}</p>
         </section>
 
@@ -214,6 +137,6 @@ export default function ProstyGeneratorDokumentu({
           <pre className="prosty-generator__wynik">{wygenerowanyDokument}</pre>
         </section>
       </div>
-    </UkladGeneratoraDokumentu>
+    </section>
   )
 }
