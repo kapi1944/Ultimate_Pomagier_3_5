@@ -251,8 +251,7 @@ export default function KartaGrupySzkoleniowej({
     const fraza = wartoscWyszukiwanegoTrenera.trim().toLocaleLowerCase('pl')
     return trenerzyDoWyboru.filter((trener) => !fraza || trener.imieNazwisko.toLocaleLowerCase('pl').includes(fraza)).slice(0, 50)
   }, [trenerzyDoWyboru, wartoscWyszukiwanegoTrenera])
-  const czyMechanizmPodzielonejPlatnosci = czyCenaWymagaMpp(grupa)
-  const zasadyMiejsca = pobierzZasadyPolaDynamicznego(grupa, 'miejsce')
+  const czyMechanizmPodzielonejPlatnosci = czyCenaWymagaMpp(grupa)
   const zasadyGodzinNiestandardowych = pobierzZasadyPolaDynamicznego(grupa, 'nazwaNiestandardowychGodzin')
 
   useEffect(() => {
