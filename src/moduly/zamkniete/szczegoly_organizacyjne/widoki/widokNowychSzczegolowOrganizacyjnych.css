@@ -928,6 +928,10 @@
     transform: translateX(0);
   }
 
+  .szczegoly-sticky {
+    z-index: 11;
+  }
+
   .szczegoly-karta-grupy__formularz {
     grid-template-columns: 1fr;
     gap: 14px;
