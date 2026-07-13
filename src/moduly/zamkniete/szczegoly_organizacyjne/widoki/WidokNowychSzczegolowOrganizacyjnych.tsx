@@ -609,6 +609,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
 
         <SekcjaFormularza
           id="grupy-szkoleniowe"
+          opis="Każda grupa ma własny termin, miejsce, trenera i rozliczenie."
           tytul="Grupy szkoleniowe"
           akcje={
             <button type="button" onClick={generator.dodajGrupe}>
@@ -622,6 +623,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
                 aktualizujGrupe={generator.aktualizujGrupe}
                 grupa={grupa}
                 indeks={indeks}
+                liczbaGrup={generator.grupy.length}
                 key={grupa.id}
                 statusyPol={generator.statusyPol}
                 trenerzyKartoteki={generator.trenerzyKartoteki}
