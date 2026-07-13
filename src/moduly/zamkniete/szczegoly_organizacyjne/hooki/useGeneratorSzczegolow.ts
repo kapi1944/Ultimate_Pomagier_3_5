@@ -11,8 +11,8 @@ import {
   poczatkoweSzczegolyWzorowKlienta,
   poczatkoweWzoryKlienta,
   poczatkowiAdresaci,
-  utworzPoczatkowaGrupe,
 } from '../danePoczatkowe'
+import { dodajGrupeDoListy, przetworzUsuniecieGrupy } from '../logikaGrupSzkoleniowych'
 import { polaWymaganePoImporcie, trenerzyKartotekiStartowi } from '../stale'
 import { czyKontoMozeWidziecKopie, pobierzAktywneKontoSzczegolow } from '../uzytkownicySzczegolow'
 import type {
@@ -660,7 +660,7 @@ export function useGeneratorSzczegolow() {
       return
     }
 
-    ustawGrupy((obecne) => [...obecne, utworzPoczatkowaGrupe(obecne.length + 1)])
+    ustawGrupy(dodajGrupeDoListy)
   }
 
   function duplikujGrupe(id: string) {
@@ -689,13 +689,13 @@ export function useGeneratorSzczegolow() {
     })
   }
 
-  function usunGrupe(id: string) {
+  function usunGrupe(id: string, czyPotwierdzone: boolean) {
     if (!czyMoznaEdytowac) {
       ustawKomunikat('Ten formularz jest dostępny tylko do podglądu dla bieżącego konta.')
       return
     }
 
-    ustawGrupy((obecne) => (obecne.length > 1 ? obecne.filter((grupa) => grupa.id !== id).map(normalizujGrupe) : obecne))
+    ustawGrupy((obecne) => przetworzUsuniecieGrupy(obecne, id, czyPotwierdzone))
   }
 
   function obsluzImportMaila() {

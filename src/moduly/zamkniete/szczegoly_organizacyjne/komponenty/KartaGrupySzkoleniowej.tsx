@@ -15,16 +15,18 @@ import type {
   TrybCeny,
 } from '../typy'
 import { PoleLiczbowe, PoleTekstowe, PoleWyboru } from './PolaSzczegolow'
+import { pobierzEtykieteGrupy, ustawFormeGrupy, ustawRodzajGodzinGrupy } from '../logikaGrupSzkoleniowych'
 import PrzelacznikTakNie from './PrzelacznikTakNie'
 
 type WlasciwosciKartyGrupy = {
   grupa: GrupaSzkoleniowa
   indeks: number
+  liczbaGrup: number
   statusyPol: StatusyPolImportu
   trenerzyKartoteki: TrenerKartoteki[]
   aktualizujGrupe: (id: string, aktualizacja: (grupa: GrupaSzkoleniowa) => GrupaSzkoleniowa, pole?: string) => void
   duplikujGrupe: (id: string) => void
-  usunGrupe: (id: string) => void
+  usunGrupe: (id: string, czyPotwierdzone: boolean) => void
 }
 
 const opcjeFormy: FormaSzkolenia[] = ['Stacjonarne', 'Online']
@@ -214,12 +216,14 @@ function PolePrzelacznika({
 export default function KartaGrupySzkoleniowej({
   grupa,
   indeks,
+  liczbaGrup,
   statusyPol,
   trenerzyKartoteki,
   aktualizujGrupe,
   duplikujGrupe,
   usunGrupe,
 }: WlasciwosciKartyGrupy) {
+  const [czyRozwinieta, ustawCzyRozwinieta] = useState(true)
   const [wersjaLokalizacji, ustawWersjeLokalizacji] = useState(0)
   const [poprawionyMiejscownik, ustawPoprawionyMiejscownik] = useState('')
   const wybranyTrener = grupa.trenerzy[0]
@@ -306,15 +310,7 @@ export default function KartaGrupySzkoleniowej({
   }
 
   function ustawForme(formaSzkolenia: FormaSzkolenia) {
-    aktualizujGrupe(
-      grupa.id,
-      (obecna) => ({
-        ...obecna,
-        formaSzkolenia,
-        miejsce: formaSzkolenia === 'Online' ? 'Online' : obecna.miejsce === 'Online' ? '' : obecna.miejsce,
-      }),
-      `grupy.${indeks}.formaSzkolenia`,
-    )
+    aktualizujGrupe(grupa.id, (obecna) => ustawFormeGrupy(obecna, formaSzkolenia), `grupy.${indeks}.formaSzkolenia`)
   }
 
   function ustawMiejsce(miejsce: string) {
@@ -339,24 +335,36 @@ export default function KartaGrupySzkoleniowej({
     aktualizujGrupe(grupa.id, (obecna) => ({ ...obecna, miejsce: obecna.miejsce }), `grupy.${indeks}.miejsce`)
   }
 
+  function usunGrupePoPotwierdzeniu() {
+    usunGrupe(grupa.id, window.confirm('Usunąć ' + pobierzEtykieteGrupy(indeks) + '? Tej operacji nie można cofnąć.'))
+  }
   return (
     <article className="szczegoly-karta-grupy">
       <header className="szczegoly-karta-grupy__naglowek">
         <div>
-          <h3>{grupa.nazwa || `Grupa ${indeks + 1}`}</h3>
+          <h3>{pobierzEtykieteGrupy(indeks)}</h3>
           <span>{opiszGrupe(grupa)}</span>
         </div>
         <div className="szczegoly-akcje">
+          <button
+            aria-controls={'grupa-' + grupa.id}
+            aria-expanded={czyRozwinieta}
+            className="szczegoly-karta-grupy__przycisk-rozwiniecia"
+            type="button"
+            onClick={() => ustawCzyRozwinieta((obecna) => !obecna)}
+          >
+            {czyRozwinieta ? 'Zwiń grupę' : 'Rozwiń grupę'}
+          </button>
           <button type="button" onClick={() => duplikujGrupe(grupa.id)}>
             Duplikuj grupę
           </button>
-          <button disabled={indeks === 0} type="button" onClick={() => usunGrupe(grupa.id)}>
+          <button disabled={liczbaGrup === 1} title={liczbaGrup === 1 ? 'Formularz musi zawierać co najmniej jedną grupę.' : undefined} type="button" onClick={usunGrupePoPotwierdzeniu}>
             Usuń grupę
           </button>
         </div>
       </header>
 
-      <div className="szczegoly-karta-grupy__formularz">
+      {czyRozwinieta && <div className="szczegoly-karta-grupy__formularz" id={'grupa-' + grupa.id}>
         <div className="szczegoly-karta-grupy__kolumna szczegoly-karta-grupy__kolumna--lewa">
           <div className="szczegoly-karta-grupy__pola">
             <PoleTekstowe
@@ -434,7 +442,7 @@ export default function KartaGrupySzkoleniowej({
               pole={`grupy.${indeks}.rodzajGodzin`}
               statusyPol={statusyPol}
               wartosc={grupa.rodzajGodzin}
-              ustawWartosc={(wartosc) => aktualizujGrupe(grupa.id, (obecna) => ({ ...obecna, rodzajGodzin: wartosc as RodzajGodzin }), `grupy.${indeks}.rodzajGodzin`)}
+              ustawWartosc={(wartosc) => aktualizujGrupe(grupa.id, (obecna) => ustawRodzajGodzinGrupy(obecna, wartosc as RodzajGodzin), `grupy.${indeks}.rodzajGodzin`)}
             />
             {grupa.rodzajGodzin === 'Niestandardowe' && (
               <>
@@ -570,7 +578,7 @@ export default function KartaGrupySzkoleniowej({
             />
           </div>
         </div>
-      </div>
+      </div>}
     </article>
   )
 }
