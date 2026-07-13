@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import WidokUstawien from '../ustawienia/WidokUstawien'
 import MenuBoczne from '../menu/MenuBoczne'
 import type { WidokNawigacji } from '../nawigacja/typyNawigacji'
+import { pobierzSciezkeGeneratora, pobierzWidokGeneratoraZeSciezki } from '../nawigacja/konfiguracjaGeneratorow'
 import WidokKartotek, { type ZakladkaKartotek } from '../../kartoteki/WidokKartotek'
 import WidokDokumentow from '../../moduly/dokumenty/WidokDokumentow'
 import WidokAnkiet from '../../moduly/dokumenty/generatory/ankiety/WidokAnkiet'
@@ -50,6 +51,12 @@ function czyWidokNawigacji(wartosc: string | null): wartosc is WidokNawigacji {
 
 function pobierzPoczatkowyWidok(): WidokNawigacji {
   try {
+    const widokZeSciezki = pobierzWidokGeneratoraZeSciezki(window.location.pathname)
+
+    if (widokZeSciezki) {
+      return widokZeSciezki
+    }
+
     const zapisanyWidok = localStorage.getItem(kluczAktywnegoWidoku)
 
     return czyWidokNawigacji(zapisanyWidok) ? zapisanyWidok : 'pulpit'
@@ -119,8 +126,17 @@ function renderujWidok(widok: WidokNawigacji, zmienZakladkeKartotek: (zakladka: 
 export default function UkladAplikacji() {
   const [aktywnyWidok, ustawAktywnyWidok] = useState<WidokNawigacji>(pobierzPoczatkowyWidok)
 
+  function ustawWidok(widok: WidokNawigacji) {
+    const sciezka = pobierzSciezkeGeneratora(widok) ?? '/'
+
+    if (window.location.pathname !== sciezka) {
+      window.history.pushState({ widok }, '', sciezka)
+    }
+
+    ustawAktywnyWidok(widok)
+  }
   function zmienZakladkeKartotek(zakladka: ZakladkaKartotek) {
-    ustawAktywnyWidok(pobierzWidokZakladkiKartotek(zakladka))
+    ustawWidok(pobierzWidokZakladkiKartotek(zakladka))
   }
 
   useEffect(() => {
@@ -131,10 +147,27 @@ export default function UkladAplikacji() {
     }
   }, [aktywnyWidok])
 
+  useEffect(() => {
+    function obsluzPowrotPrzegladarki() {
+      const stanHistorii = window.history.state as { widok?: string } | null
+      const widokZeSciezki = pobierzWidokGeneratoraZeSciezki(window.location.pathname)
+      const widok = widokZeSciezki ?? stanHistorii?.widok
+      const poprawnyWidok = widok ?? null
+
+      if (czyWidokNawigacji(poprawnyWidok)) {
+        ustawAktywnyWidok(poprawnyWidok)
+      }
+    }
+
+    window.addEventListener('popstate', obsluzPowrotPrzegladarki)
+
+    return () => window.removeEventListener('popstate', obsluzPowrotPrzegladarki)
+  }, [])
+
   return (
     <div className="uklad-aplikacji">
-      <MenuBoczne aktywnyWidok={aktywnyWidok} ustawAktywnyWidok={ustawAktywnyWidok} />
-      <main className="uklad-aplikacji__obszar-roboczy">{renderujWidok(aktywnyWidok, zmienZakladkeKartotek, ustawAktywnyWidok)}</main>
+      <MenuBoczne aktywnyWidok={aktywnyWidok} ustawAktywnyWidok={ustawWidok} />
+      <main className="uklad-aplikacji__obszar-roboczy">{renderujWidok(aktywnyWidok, zmienZakladkeKartotek, ustawWidok)}</main>
     </div>
   )
 }

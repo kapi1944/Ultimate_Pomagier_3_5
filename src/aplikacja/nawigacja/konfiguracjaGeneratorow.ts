@@ -1,0 +1,71 @@
+import type { WidokNawigacji } from './typyNawigacji'
+
+type MiejscePodmenuGeneratora = 'szkolenia-zamkniete' | 'dokumenty'
+
+export type PozycjaPodmenuGeneratora = {
+  widok: WidokNawigacji
+  etykieta: string
+  sciezka: string
+}
+
+export type KonfiguracjaPodmenuGeneratora = {
+  klucz: string
+  miejsce: MiejscePodmenuGeneratora
+  etykieta: string
+  pozycje: PozycjaPodmenuGeneratora[]
+}
+
+export const konfiguracjePodmenuGeneratorow: KonfiguracjaPodmenuGeneratora[] = [
+  {
+    klucz: 'szczegoly-organizacyjne',
+    miejsce: 'szkolenia-zamkniete',
+    etykieta: 'Szczegóły Organizacyjne',
+    pozycje: [
+      { widok: 'zamkniete_szczegoly_organizacyjne_lista', etykieta: 'Lista szczegółów organizacyjnych', sciezka: '/szkolenia-zamkniete/szczegoly-organizacyjne' },
+      { widok: 'zamkniete_szczegoly_organizacyjne_kopie_robocze', etykieta: 'Kopie robocze', sciezka: '/szkolenia-zamkniete/szczegoly-organizacyjne/kopie-robocze' },
+      { widok: 'zamkniete_szczegoly_organizacyjne_nowe', etykieta: 'Nowe Szczegóły Organizacyjne', sciezka: '/szkolenia-zamkniete/szczegoly-organizacyjne/nowe' },
+    ],
+  },
+  {
+    klucz: 'listy-obecnosci',
+    miejsce: 'dokumenty',
+    etykieta: 'Listy obecności',
+    pozycje: [{ widok: 'listy-obecnosci', etykieta: 'Nowa lista obecności', sciezka: '/dokumenty/listy-obecnosci' }],
+  },
+  {
+    klucz: 'ankiety',
+    miejsce: 'dokumenty',
+    etykieta: 'Ankiety',
+    pozycje: [{ widok: 'ankiety', etykieta: 'Nowa ankieta', sciezka: '/dokumenty/ankiety' }],
+  },
+  {
+    klucz: 'dyplomy',
+    miejsce: 'dokumenty',
+    etykieta: 'Dyplomy',
+    pozycje: [{ widok: 'dyplomy', etykieta: 'Nowy dyplom', sciezka: '/dokumenty/dyplomy' }],
+  },
+  {
+    klucz: 'karta-na-drzwi',
+    miejsce: 'dokumenty',
+    etykieta: 'Karta na drzwi',
+    pozycje: [{ widok: 'karta-na-drzwi', etykieta: 'Nowa karta na drzwi', sciezka: '/dokumenty/karta-na-drzwi' }],
+  },
+  {
+    klucz: 'programy-szkolen',
+    miejsce: 'dokumenty',
+    etykieta: 'Programy szkoleń',
+    pozycje: [{ widok: 'programy_szkolen', etykieta: 'Nowy program szkolenia', sciezka: '/dokumenty/programy-szkolen' }],
+  },
+]
+
+export function pobierzKonfiguracjePodmenuGeneratorow(miejsce: MiejscePodmenuGeneratora) {
+  return konfiguracjePodmenuGeneratorow.filter((konfiguracja) => konfiguracja.miejsce === miejsce)
+}
+
+export function pobierzSciezkeGeneratora(widok: WidokNawigacji) {
+  return konfiguracjePodmenuGeneratorow.flatMap((konfiguracja) => konfiguracja.pozycje).find((pozycja) => pozycja.widok === widok)?.sciezka
+}
+
+export function pobierzWidokGeneratoraZeSciezki(sciezka: string) {
+  return konfiguracjePodmenuGeneratorow.flatMap((konfiguracja) => konfiguracja.pozycje).find((pozycja) => pozycja.sciezka === sciezka)?.widok
+}

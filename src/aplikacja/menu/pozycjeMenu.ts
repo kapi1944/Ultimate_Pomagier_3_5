@@ -1,15 +1,33 @@
 import type { WidokNawigacji } from '../nawigacja/typyNawigacji'
+import { pobierzKonfiguracjePodmenuGeneratorow } from '../nawigacja/konfiguracjaGeneratorow'
 
-export type PozycjaMenu = {
+type PozycjaMenuNawigacji = {
   id: WidokNawigacji
   etykieta: string
-  sciezka?: string
-  ikona?: string
-  grupa?: string
+  czyPrzelaczaPodmenu?: false
   dzieci?: PozycjaMenu[]
 }
 
-const FileText = 'FileText'
+type PozycjaMenuPodmenu = {
+  id: string
+  etykieta: string
+  czyPrzelaczaPodmenu: true
+  dzieci: PozycjaMenu[]
+}
+
+export type PozycjaMenu = PozycjaMenuNawigacji | PozycjaMenuPodmenu
+
+function pobierzPozycjePodmenuGeneratorow(miejsce: 'szkolenia-zamkniete' | 'dokumenty'): PozycjaMenu[] {
+  return pobierzKonfiguracjePodmenuGeneratorow(miejsce).map((konfiguracja) => ({
+    id: konfiguracja.klucz,
+    etykieta: konfiguracja.etykieta,
+    czyPrzelaczaPodmenu: true,
+    dzieci: konfiguracja.pozycje.map((pozycja) => ({
+      id: pozycja.widok,
+      etykieta: pozycja.etykieta,
+    })),
+  }))
+}
 
 export const pozycjeMenu: PozycjaMenu[] = [
   {
@@ -19,26 +37,7 @@ export const pozycjeMenu: PozycjaMenu[] = [
   {
     id: 'szkolenia-zamkniete',
     etykieta: 'Szkolenia Zamknięte',
-    dzieci: [
-      {
-        id: 'zamkniete_szczegoly_organizacyjne_lista',
-        etykieta: 'Szczegóły Organizacyjne',
-        dzieci: [
-          {
-            id: 'zamkniete_szczegoly_organizacyjne_lista',
-            etykieta: 'Lista szczegółów organizacyjnych',
-          },
-          {
-            id: 'zamkniete_szczegoly_organizacyjne_kopie_robocze',
-            etykieta: 'Kopie robocze',
-          },
-          {
-            id: 'zamkniete_szczegoly_organizacyjne_nowe',
-            etykieta: 'Nowe Szczegóły Organizacyjne',
-          },
-        ],
-      },
-    ],
+    dzieci: pobierzPozycjePodmenuGeneratorow('szkolenia-zamkniete'),
   },
   {
     id: 'szkolenia-otwarte',
@@ -52,29 +51,7 @@ export const pozycjeMenu: PozycjaMenu[] = [
         id: 'replikator_dokumentow',
         etykieta: 'Replikator dokumentów',
       },
-      {
-        id: 'listy-obecnosci',
-        etykieta: 'Listy obecności',
-      },
-      {
-        id: 'ankiety',
-        etykieta: 'Ankiety',
-      },
-      {
-        id: 'dyplomy',
-        etykieta: 'Dyplomy',
-      },
-      {
-        id: 'karta-na-drzwi',
-        etykieta: 'Karta na drzwi',
-      },
-      {
-        id: 'programy_szkolen',
-        etykieta: 'Programy szkoleń',
-        sciezka: '/dokumenty/programy-szkolen',
-        ikona: FileText,
-        grupa: 'Dokumenty',
-      },
+      ...pobierzPozycjePodmenuGeneratorow('dokumenty'),
     ],
   },
   {

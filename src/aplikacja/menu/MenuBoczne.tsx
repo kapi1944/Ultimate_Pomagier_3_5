@@ -10,6 +10,10 @@ type WlasciwosciMenuBocznego = {
   ustawAktywnyWidok: (widok: WidokNawigacji) => void
 }
 
+function czyPozycjaLubPotomekJestAktywny(pozycja: PozycjaMenu, aktywnyWidok: WidokNawigacji): boolean {
+  return pozycja.id === aktywnyWidok || Boolean(pozycja.dzieci?.some((dziecko) => czyPozycjaLubPotomekJestAktywny(dziecko, aktywnyWidok)))
+}
+
 function pobierzPoczatkowePrzypiecieMenu() {
   try {
     return localStorage.getItem(kluczPrzypieciaMenu) === 'true'
@@ -36,6 +40,7 @@ export default function MenuBoczne({
     pobierzPoczatkoweWysuwanieZKrawedzi,
   )
   const czyAutoukrywanieWlaczone = !czyMenuPrzypiete
+  const [stanPodmenu, ustawStanPodmenu] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     try {
@@ -82,21 +87,38 @@ export default function MenuBoczne({
     ustawCzyWysuwanieZKrawedziWlaczone((czyWlaczone) => !czyWlaczone)
   }
 
+  function przelaczPodmenu(pozycjaPodmenu: PozycjaMenu) {
+    ustawStanPodmenu((poprzedniStan) => ({
+      ...poprzedniStan,
+      [pozycjaPodmenu.id]: !(poprzedniStan[pozycjaPodmenu.id] ?? czyPozycjaLubPotomekJestAktywny(pozycjaPodmenu, aktywnyWidok)),
+    }))
+  }
+
   function renderujPozycje(pozycja: PozycjaMenu, poziom = 0) {
     const czyAktywna = pozycja.id === aktywnyWidok
+    const czyAktywnaJakoRodzic = !czyAktywna && czyPozycjaLubPotomekJestAktywny(pozycja, aktywnyWidok)
+    const czyRozwinieta = !pozycja.czyPrzelaczaPodmenu || (stanPodmenu[pozycja.id] ?? czyPozycjaLubPotomekJestAktywny(pozycja, aktywnyWidok))
 
     return (
       <li className="menu-boczne__element" key={pozycja.id}>
         <button
-          className={`menu-boczne__przycisk${czyAktywna ? ' menu-boczne__przycisk--aktywny' : ''}`}
-          onClick={() => ustawAktywnyWidok(pozycja.id)}
+          aria-expanded={pozycja.czyPrzelaczaPodmenu ? czyRozwinieta : undefined}
+          className={`menu-boczne__przycisk${czyAktywna || czyAktywnaJakoRodzic ? ' menu-boczne__przycisk--aktywny' : ''}`}
+          onClick={() => {
+            if (pozycja.czyPrzelaczaPodmenu) {
+              przelaczPodmenu(pozycja)
+              return
+            }
+
+            ustawAktywnyWidok(pozycja.id)
+          }}
           style={{ paddingLeft: `${16 + poziom * 18}px` }}
           type="button"
         >
           {pozycja.etykieta}
         </button>
 
-        {pozycja.dzieci && (
+        {pozycja.dzieci && czyRozwinieta && (
           <ul className="menu-boczne__lista menu-boczne__lista--dzieci">
             {pozycja.dzieci.map((dziecko) => renderujPozycje(dziecko, poziom + 1))}
           </ul>
