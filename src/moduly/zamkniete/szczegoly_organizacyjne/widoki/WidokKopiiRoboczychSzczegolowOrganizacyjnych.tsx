@@ -7,7 +7,7 @@ import {
   pobierzKolorTlaOpiekuna,
   pobierzNazweOpiekuna,
 } from '../uzytkownicySzczegolow'
-import { pobierzKopieRobocze, ustawAktualnaWersjeRobocza } from '../uslugi/magazynWersjiRoboczych'
+import { pobierzAktualnaWersjeRobocza, pobierzKopieRobocze, ustawAktualnaWersjeRobocza } from '../uslugi/magazynWersjiRoboczych'
 import './widokNowychSzczegolowOrganizacyjnych.css'
 
 type WlasciwosciWidokuKopii = {
@@ -21,7 +21,8 @@ function formatujDate(data: string) {
 export default function WidokKopiiRoboczychSzczegolowOrganizacyjnych({ otworzNoweSzczegoly }: WlasciwosciWidokuKopii) {
   const konto = useMemo(() => pobierzAktywneKontoSzczegolow(), [])
   const [kopie] = useState(() => pobierzKopieRobocze())
-  const widoczneKopie = kopie.filter((kopia) => czyKontoMozeWidziecKopie(konto, kopia))
+  const aktualnaKopia = pobierzAktualnaWersjeRobocza()
+  const widoczneKopie = kopie.filter((kopia) => kopia.id === aktualnaKopia?.id || czyKontoMozeWidziecKopie(konto, kopia))
 
   function edytujKopie(kopia: WersjaRoboczaGeneratora) {
     if (!czyKontoMozeEdytowacKopie(konto, kopia)) {

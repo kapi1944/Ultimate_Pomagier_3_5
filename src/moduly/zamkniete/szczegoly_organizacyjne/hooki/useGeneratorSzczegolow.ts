@@ -912,12 +912,23 @@ export function useGeneratorSzczegolow() {
       return
     }
 
-    ustawDaneFormularza(normalizujDane(autosaveDoDecyzji.dane))
-    ustawGrupy(autosaveDoDecyzji.grupy.length ? autosaveDoDecyzji.grupy.map(normalizujGrupe) : [normalizujGrupe()])
-    ustawAdresaci(normalizujAdresatow(autosaveDoDecyzji.adresaci))
+    const dane = normalizujDane(autosaveDoDecyzji.dane)
+    const grupyDoZapisu = autosaveDoDecyzji.grupy.length ? autosaveDoDecyzji.grupy.map(normalizujGrupe) : [normalizujGrupe()]
+    const adresaciDoZapisu = normalizujAdresatow(autosaveDoDecyzji.adresaci)
+    const wersja = zbudujWersjeRobocza(dane, grupyDoZapisu, adresaciDoZapisu, autosaveDoDecyzji.statusyPol, aktywneKonto, {
+      id: autosaveDoDecyzji.aktywnaKopiaId,
+      zrodloOpublikowanegoId: autosaveDoDecyzji.zrodloOpublikowanegoId,
+    })
+
+    zapiszWersjeRobocza(wersja)
+    ustawDaneFormularza(dane)
+    ustawGrupy(grupyDoZapisu)
+    ustawAdresaci(adresaciDoZapisu)
     ustawStatusyPol(autosaveDoDecyzji.statusyPol)
-    ustawAktywnaKopiaId(autosaveDoDecyzji.aktywnaKopiaId)
+    ustawAktywnaKopiaId(wersja.id)
     ustawZrodloOpublikowanegoId(autosaveDoDecyzji.zrodloOpublikowanegoId)
+    ustawKopieRobocze(pobierzWidoczneKopieRobocze(aktywneKonto))
+    ustawHistorieSzczegolow(pobierzHistorieSzczegolow())
     ustawAutosaveDoDecyzji(null)
     ustawCzyAutosaveAktywny(true)
     ustawKomunikat('Przywrócono niezapisaną wersję roboczą.')
