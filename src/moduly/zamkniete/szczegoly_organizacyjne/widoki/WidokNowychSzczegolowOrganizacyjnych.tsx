@@ -1,4 +1,4 @@
-import { useMemo, useState, type ChangeEvent, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ChangeEvent, type KeyboardEvent, type ReactNode } from 'react'
 import { pobierzLokalizacjeZMagazynu } from '../../../../kartoteki/lokalizacje/magazynLokalizacji'
 import KartaGrupySzkoleniowej from '../komponenty/KartaGrupySzkoleniowej'
 import PanelWykrytychProblemow from '../komponenty/PanelWykrytychProblemow'
@@ -12,7 +12,6 @@ import type { DaneFirmy, DaneFormularza, OrganizatorSzkolenia, StatusLogotypow }
 import './widokNowychSzczegolowOrganizacyjnych.css'
 
 const sekcjeNawigacji = [
-  { id: 'wykryte-problemy', etykieta: 'Problemy' },
   { id: 'importuj-szczegoly', etykieta: 'Importuj' },
   { id: 'podstawowe-informacje', etykieta: 'Podstawowe' },
   { id: 'grupy-szkoleniowe', etykieta: 'Grupy' },
@@ -28,6 +27,9 @@ const sekcjeNawigacji = [
 ]
 
 const opcjeOpiekunow = ['', ...opiekunowieSzczegolow.map((opiekun) => opiekun.id)]
+const kluczPrzypieciaPaneluJakosci = 'ultimatePomagier.panelJakosciPrzypiety'
+const kluczWysuwaniaPaneluJakosci = 'ultimatePomagier.panelJakosciWysuwanieZKrawedzi'
+const idPaneluJakosci = 'panel-kontroli-jakosci'
 
 const pozycjePakietu = [
   ['listaObecnosci', 'Lista obecności'],
@@ -47,6 +49,22 @@ const pozycjeWymogowMaterialow = [
   ['dostepnoscCyfrowa', 'Dostępność cyfrowa'],
 ] as const
 
+
+function pobierzPoczatkowePrzypieciePaneluJakosci() {
+  try {
+    return localStorage.getItem(kluczPrzypieciaPaneluJakosci) === 'true'
+  } catch {
+    return false
+  }
+}
+
+function pobierzPoczatkoweWysuwaniePaneluJakosci() {
+  try {
+    return localStorage.getItem(kluczWysuwaniaPaneluJakosci) !== 'false'
+  } catch {
+    return true
+  }
+}
 const pozycjeDodatkowychWymogow = [
   ['dokumentacjaZdjęciowa', 'Dokumentacja zdjęciowa'],
   ['karyWHarmonogramie', 'Kary w harmonogramie'],
@@ -241,6 +259,63 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
   const porownywanaWersja = wersjeHistorii.find((wpis) => wpis.id === porownywanaWersjaId)
   const poprzedniaWersja = porownywanaWersja ? wersjeHistorii[wersjeHistorii.findIndex((wpis) => wpis.id === porownywanaWersja.id) + 1] : undefined
 
+  const [czyPanelJakosciPrzypiety, ustawCzyPanelJakosciPrzypiety] = useState(pobierzPoczatkowePrzypieciePaneluJakosci)
+  const [czyPanelJakosciOtwarty, ustawCzyPanelJakosciOtwarty] = useState(czyPanelJakosciPrzypiety)
+  const [czyWysuwaniePaneluJakosciWlaczone, ustawCzyWysuwaniePaneluJakosciWlaczone] = useState(pobierzPoczatkoweWysuwaniePaneluJakosci)
+  const czyPanelJakosciOdpiety = !czyPanelJakosciPrzypiety
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(kluczPrzypieciaPaneluJakosci, String(czyPanelJakosciPrzypiety))
+    } catch {
+      return
+    }
+  }, [czyPanelJakosciPrzypiety])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(kluczWysuwaniaPaneluJakosci, String(czyWysuwaniePaneluJakosciWlaczone))
+    } catch {
+      return
+    }
+  }, [czyWysuwaniePaneluJakosciWlaczone])
+
+  function otworzPanelJakosci() {
+    ustawCzyPanelJakosciOtwarty(true)
+  }
+
+  function otworzPanelJakosciZKrawedzi() {
+    if (czyWysuwaniePaneluJakosciWlaczone) {
+      otworzPanelJakosci()
+    }
+  }
+
+  function schowajPanelJakosciJesliOdpiety() {
+    if (czyPanelJakosciOdpiety) {
+      ustawCzyPanelJakosciOtwarty(false)
+    }
+  }
+
+  function ustawTrybAutoukrywaniaPaneluJakosci(czyWlaczone: boolean) {
+    ustawCzyPanelJakosciPrzypiety(!czyWlaczone)
+    ustawCzyPanelJakosciOtwarty(!czyWlaczone)
+  }
+
+  function przelaczPrzypieciePaneluJakosci() {
+    ustawTrybAutoukrywaniaPaneluJakosci(czyPanelJakosciPrzypiety)
+  }
+
+  function przelaczWysuwaniePaneluJakosci() {
+    ustawCzyWysuwaniePaneluJakosciWlaczone((czyWlaczone) => !czyWlaczone)
+  }
+
+  function obsluzKlawiszPaneluJakosci(zdarzenie: KeyboardEvent<HTMLElement>) {
+    if (zdarzenie.key === 'Escape' && czyPanelJakosciOdpiety) {
+      zdarzenie.stopPropagation()
+      schowajPanelJakosciJesliOdpiety()
+    }
+  }
+
   function aktualizujNabywce(klucz: KluczFirmy, wartosc: string) {
     generator.aktualizujDane(
       (dane) => {
@@ -431,8 +506,11 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
   }
 
   return (
-    <section className="widok szczegoly-organizacyjne">
-      <PasekStickySzczegolow
+    <section
+      className={`widok szczegoly-organizacyjne${czyPanelJakosciPrzypiety ? ' szczegoly-organizacyjne--panel-przypiety' : ''}${czyPanelJakosciOtwarty ? ' szczegoly-organizacyjne--panel-otwarty' : ''}`}
+    >
+      <div className="szczegoly-obszar-roboczy">
+        <PasekStickySzczegolow
         sekcje={sekcjeNawigacji}
         status={statusFormularza}
         tytul="Nowe szczegóły organizacyjne"
@@ -478,17 +556,6 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
 
       <div className="szczegoly-uklad-generatora">
         <div className="szczegoly-formularz">
-          <SekcjaFormularza id="wykryte-problemy" tytul="Wykryte problemy">
-            <PanelWykrytychProblemow
-              komunikatySystemowe={[generator.komunikat]}
-              modelSekcyjny={generator.modelSekcyjny}
-              ostatniAutosave={generator.ostatniAutosave}
-              polaNiepewne={generator.polaNiepewne}
-              problemy={generator.problemyWalidacji}
-              zaakceptujPolaNiepewne={generator.zaakceptujWszystkiePolaNiepewne}
-            />
-          </SekcjaFormularza>
-
         <SekcjaFormularza id="importuj-szczegoly" tytul="Importuj szczegóły">
           <label className="szczegoly-pole szczegoly-import-maila">
             <span className="szczegoly-pole__naglowek">Wklej treść maila ze szczegółami</span>
@@ -879,17 +946,35 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
           </div>
         </SekcjaFormularza>
         </div>
-        <aside className="szczegoly-panel-jakosci" aria-label="Panel kontroli jakości">
-          <PanelWykrytychProblemow
-            komunikatySystemowe={[generator.komunikat]}
-            modelSekcyjny={generator.modelSekcyjny}
-            ostatniAutosave={generator.ostatniAutosave}
-            polaNiepewne={generator.polaNiepewne}
-            problemy={generator.problemyWalidacji}
-            zaakceptujPolaNiepewne={generator.zaakceptujWszystkiePolaNiepewne}
-          />
-        </aside>
       </div>
+      </div>
+
+      <div className="szczegoly-panel-jakosci__strefa-aktywacji" onMouseEnter={otworzPanelJakosciZKrawedzi} aria-hidden="true" />
+      <aside
+        aria-label="Panel kontroli jakosci"
+        className={`szczegoly-panel-jakosci${czyPanelJakosciOtwarty ? ' szczegoly-panel-jakosci--otwarty' : ''}${czyPanelJakosciPrzypiety ? ' szczegoly-panel-jakosci--przypiety' : ''}`}
+        id={idPaneluJakosci}
+        onKeyDown={obsluzKlawiszPaneluJakosci}
+        onMouseEnter={otworzPanelJakosci}
+        onMouseLeave={schowajPanelJakosciJesliOdpiety}
+      >
+        <div className="szczegoly-panel-jakosci__sterowanie">
+          <button aria-label={czyWysuwaniePaneluJakosciWlaczone ? 'Wylacz automatyczne wysuwanie panelu jakosci' : 'Wlacz automatyczne wysuwanie panelu jakosci'} className="szczegoly-panel-jakosci__przycisk" onClick={przelaczWysuwaniePaneluJakosci} title={czyWysuwaniePaneluJakosciWlaczone ? 'Wylacz wysuwanie' : 'Wlacz wysuwanie'} type="button">
+            {czyWysuwaniePaneluJakosciWlaczone ? 'Wylacz wysuwanie' : 'Wlacz wysuwanie'}
+          </button>
+          <button aria-label={czyPanelJakosciPrzypiety ? 'Odepnij panel kontroli jakosci' : 'Przypnij panel kontroli jakosci'} className="szczegoly-panel-jakosci__przycisk" onClick={przelaczPrzypieciePaneluJakosci} title={czyPanelJakosciPrzypiety ? 'Odepnij panel' : 'Przypnij panel'} type="button">
+            {czyPanelJakosciPrzypiety ? 'Odepnij panel' : 'Przypnij panel'}
+          </button>
+        </div>
+        <PanelWykrytychProblemow
+          komunikatySystemowe={[generator.komunikat]}
+          modelSekcyjny={generator.modelSekcyjny}
+          ostatniAutosave={generator.ostatniAutosave}
+          polaNiepewne={generator.polaNiepewne}
+          problemy={generator.problemyWalidacji}
+          zaakceptujPolaNiepewne={generator.zaakceptujWszystkiePolaNiepewne}
+        />
+      </aside>
     </section>
   )
 }
