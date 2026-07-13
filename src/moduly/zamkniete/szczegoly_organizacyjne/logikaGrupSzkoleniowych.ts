@@ -18,11 +18,7 @@ export function pobierzEtykieteGrupy(indeks: number) {
 }
 
 export function ustawFormeGrupy(grupa: GrupaSzkoleniowa, formaSzkolenia: FormaSzkolenia): GrupaSzkoleniowa {
-  return {
-    ...grupa,
-    formaSzkolenia,
-    miejsce: formaSzkolenia === 'Online' ? 'Online' : grupa.miejsce === 'Online' ? '' : grupa.miejsce,
-  }
+  return { ...grupa, formaSzkolenia }
 }
 
 export function ustawRodzajGodzinGrupy(grupa: GrupaSzkoleniowa, rodzajGodzin: RodzajGodzin): GrupaSzkoleniowa {

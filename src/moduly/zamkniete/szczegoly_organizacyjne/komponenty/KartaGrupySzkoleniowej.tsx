@@ -16,6 +16,7 @@ import type {
 } from '../typy'
 import { PoleLiczbowe, PoleTekstowe, PoleWyboru } from './PolaSzczegolow'
 import { pobierzEtykieteGrupy, ustawFormeGrupy, ustawRodzajGodzinGrupy } from '../logikaGrupSzkoleniowych'
+import { pobierzZasadyPolaDynamicznego } from '../logikaPolDynamicznych'
 import PrzelacznikTakNie from './PrzelacznikTakNie'
 
 type WlasciwosciKartyGrupy = {
@@ -251,6 +252,8 @@ export default function KartaGrupySzkoleniowej({
     return trenerzyDoWyboru.filter((trener) => !fraza || trener.imieNazwisko.toLocaleLowerCase('pl').includes(fraza)).slice(0, 50)
   }, [trenerzyDoWyboru, wartoscWyszukiwanegoTrenera])
   const czyMechanizmPodzielonejPlatnosci = czyCenaWymagaMpp(grupa)
+  const zasadyMiejsca = pobierzZasadyPolaDynamicznego(grupa, 'miejsce')
+  const zasadyGodzinNiestandardowych = pobierzZasadyPolaDynamicznego(grupa, 'nazwaNiestandardowychGodzin')
 
   useEffect(() => {
     if (grupa.mechanizmPodzielonejPlatnosci !== czyMechanizmPodzielonejPlatnosci) {
@@ -444,7 +447,7 @@ export default function KartaGrupySzkoleniowej({
               wartosc={grupa.rodzajGodzin}
               ustawWartosc={(wartosc) => aktualizujGrupe(grupa.id, (obecna) => ustawRodzajGodzinGrupy(obecna, wartosc as RodzajGodzin), `grupy.${indeks}.rodzajGodzin`)}
             />
-            {grupa.rodzajGodzin === 'Niestandardowe' && (
+            {zasadyGodzinNiestandardowych.widoczne && (
               <>
                 <PoleTekstowe
                   etykieta="Nazwa rodzaju"
