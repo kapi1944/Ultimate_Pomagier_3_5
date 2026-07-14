@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties, ChangeEvent } from 'react'
 import { pobierzLokalizacjeZMagazynu } from '../../../../kartoteki/lokalizacje/magazynLokalizacji'
 import type { TrybTytuluDyplomu } from '../../../../wspolne/dokumenty/typyDokumentu'
+import { zapiszDokumentRoboczyGeneratora } from '../../../../wspolne/dokumenty/zapisDokumentuGeneratora'
 import { trenerzyKartotekiStartowi } from '../../../zamkniete/szczegoly_organizacyjne/stale'
 import type { TrenerKartoteki } from '../../../zamkniete/szczegoly_organizacyjne/typy'
 import './widokDyplomow.css'
@@ -101,6 +102,7 @@ type ZapisDyplomow = DaneNumeracji & {
 }
 
 const kluczZapisuDyplomow = 'ultimate-pomagier.dyplomy.generator-pawla'
+const kluczDokumentuDyplomow = 'ultimate-pomagier.dyplomy.generator-pawla.dokumentId'
 const kluczTrenerowKartoteki = 'ultimate-pomagier.kartoteki.trenerzy'
 const domyslnyNumerRejestru = '88754867/106061/2026'
 const domyslnaDataSzkolenia = '2026-05-18'
@@ -1327,10 +1329,26 @@ export default function WidokDyplomow() {
   }
 
   function zapiszRoboczo() {
-    localStorage.setItem(kluczZapisuDyplomow, JSON.stringify(dane))
-    ustawKomunikat('Szkic generatora dyplomów zapisany lokalnie.')
+    try {
+      const typ = dane.trybTytulu === 'certyfikat' ? 'CERTYFIKAT' : dane.trybTytulu === 'zaswiadczenie' ? 'ZASWIADCZENIE' : 'DYPLOM'
+      const dokument = zapiszDokumentRoboczyGeneratora({
+        id: localStorage.getItem(kluczDokumentuDyplomow),
+        typ,
+        generatorId: 'dyplomy',
+        tytul: dane.tytulSzkolenia || 'Dokument dyplomowy',
+        daneDokumentu: dane,
+        ustawieniaDokumentu: { motywKoloru: dane.motywKoloru, kolorMotywu: dane.kolorMotywu, trybTytulu: dane.trybTytulu },
+      })
+      if (!dokument) {
+        throw new Error('Nie znaleziono dokumentu.')
+      }
+      localStorage.setItem(kluczDokumentuDyplomow, dokument.id)
+      localStorage.setItem(kluczZapisuDyplomow, JSON.stringify(dane))
+      ustawKomunikat('Dokument roboczy zapisano w rejestrze.')
+    } catch {
+      ustawKomunikat('Nie udało się zapisać dokumentu roboczego.')
+    }
   }
-
   function wyczyscGenerator() {
     const pustyZapis = utworzDomyslnyZapis()
     ustawDane({

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { zapiszDokumentRoboczyGeneratora } from '../../../wspolne/dokumenty/zapisDokumentuGeneratora'
 import './prostyGeneratorDokumentu.css'
 
 type KonfiguracjaGeneratora = {
@@ -8,6 +9,12 @@ type KonfiguracjaGeneratora = {
   tekstPrzykladowy: string
   kluczLocalStorage: string
   generujDokument: (daneWejsciowe: string) => string
+}
+
+const konfiguracjeRejestru: Record<string, { typ: 'LISTA_OBECNOSCI' | 'ANKIETA' | 'KARTA_NA_DRZWI'; generatorId: string }> = {
+  'ultimate-pomagier.listy-obecnosci.szkic': { typ: 'LISTA_OBECNOSCI', generatorId: 'listy_obecnosci' },
+  'ultimate-pomagier.ankiety.szkic': { typ: 'ANKIETA', generatorId: 'ankiety' },
+  'ultimate-pomagier.karta-na-drzwi.szkic': { typ: 'KARTA_NA_DRZWI', generatorId: 'karta_na_drzwi' },
 }
 
 function zabezpieczHtml(tekst: string) {
@@ -31,6 +38,7 @@ export default function ProstyGeneratorDokumentu({
     return localStorage.getItem(kluczLocalStorage) ?? tekstPrzykladowy
   })
   const [komunikat, ustawKomunikat] = useState('Szkic zapisany lokalnie.')
+  const [idDokumentu, ustawIdDokumentu] = useState(() => localStorage.getItem(kluczLocalStorage + '.dokumentId'))
   const wygenerowanyDokument = useMemo(() => generujDokument(daneWejsciowe), [daneWejsciowe, generujDokument])
 
   useEffect(() => {
@@ -38,9 +46,21 @@ export default function ProstyGeneratorDokumentu({
   }, [daneWejsciowe, kluczLocalStorage])
 
   function obsluzGenerowanie() {
-    ustawKomunikat('Podgląd jest aktualny. Szkic zapisany lokalnie.')
-  }
+    try {
+      const konfiguracja = konfiguracjeRejestru[kluczLocalStorage]
+      const dokument = konfiguracja
+        ? zapiszDokumentRoboczyGeneratora({ id: idDokumentu, ...konfiguracja, tytul, daneDokumentu: { tekst: daneWejsciowe }, ustawieniaDokumentu: {} })
+        : null
 
+      if (dokument) {
+        ustawIdDokumentu(dokument.id)
+        localStorage.setItem(`${kluczLocalStorage}.dokumentId`, dokument.id)
+      }
+      ustawKomunikat('Podgląd jest aktualny. Dokument roboczy zapisano w rejestrze.')
+    } catch {
+      ustawKomunikat('Podgląd jest aktualny, ale nie udało się zapisać dokumentu roboczego.')
+    }
+  }
   async function obsluzKopiowanie() {
     if (!wygenerowanyDokument.trim()) {
       ustawKomunikat('Najpierw wygeneruj dokument.')
