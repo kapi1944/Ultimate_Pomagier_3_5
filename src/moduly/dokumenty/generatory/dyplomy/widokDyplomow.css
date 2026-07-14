@@ -284,6 +284,10 @@
   font: inherit;
 }
 
+.dyplomy__dzien--weekend {
+  background: #242725;
+}
+
 .dyplomy__dzien:hover,
 .dyplomy__dzien--aktywny {
   border-color: #4ade80;
