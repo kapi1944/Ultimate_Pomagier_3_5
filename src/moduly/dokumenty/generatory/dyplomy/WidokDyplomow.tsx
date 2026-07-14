@@ -1031,6 +1031,7 @@ export default function WidokDyplomow() {
         iso,
         dzien: data.getDate(),
         wMiesiacu: data.getMonth() === miesiac - 1,
+        weekend: data.getDay() === 0 || data.getDay() === 6,
       }
     })
   }, [dane.miesiacKalendarza])
@@ -1618,7 +1619,7 @@ export default function WidokDyplomow() {
                 <button
                   className={`dyplomy__dzien${
                     dzien.wMiesiacu ? '' : ' dyplomy__dzien--spoza'
-                  }${dane.wybraneDaty.includes(dzien.iso) ? ' dyplomy__dzien--aktywny' : ''}`}
+                  }${dzien.weekend ? ' dyplomy__dzien--weekend' : ''}${dane.wybraneDaty.includes(dzien.iso) ? ' dyplomy__dzien--aktywny' : ''}`}
                   key={dzien.iso}
                   onClick={() => przelaczDate(dzien.iso)}
                   type="button"

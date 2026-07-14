@@ -3,6 +3,7 @@ import { pobierzKonfiguracjeTypuDokumentu } from '../../wspolne/dokumenty/konfig
 import { filtrujDokumenty, sortujDokumenty, type FiltrDokumentow, type KryteriumSortowaniaDokumentow } from '../../wspolne/dokumenty/filtryDokumentow'
 import { statusyDokumentow, typyDokumentow, type Dokument, type StatusDokumentu } from '../../wspolne/dokumenty/modelDokumentu'
 import { repozytoriumWspolnychDokumentow } from '../../wspolne/dokumenty/rejestrDokumentow'
+import { opublikujDokument, utworzAktualizacjeDokumentu } from '../../wspolne/dokumenty/wersjonowanieDokumentow'
 import './listaDokumentow.css'
 
 type WlasciwosciListyDokumentow = {
@@ -156,6 +157,8 @@ export default function ListaDokumentow({ tytul, opis, filtrPoczatkowy = { czyZa
                 </dl>
                 <div className="lista-dokumentow__akcje">
                   <button type="button" disabled={!czyMoznaOtworzyc} title={czyMoznaOtworzyc ? 'Otworz w odpowiednim generatorze' : 'Brak trasy dla tego typu dokumentu'} onClick={() => otworzDokument?.(dokument)}>Otworz</button>
+                  {dokument.status === 'ROBOCZY' && <button type="button" onClick={() => wykonajAkcje(() => opublikujDokument(dokument.id))}>Publikuj</button>}
+                  {dokument.status === 'OPUBLIKOWANY' && <button type="button" onClick={() => wykonajAkcje(() => utworzAktualizacjeDokumentu(dokument.id))}>Utworz aktualizacje</button>}
                   {dokument.czyZarchiwizowany ? (
                     <button type="button" onClick={() => wykonajAkcje(() => repozytoriumWspolnychDokumentow.przywroc(dokument.id))}>Przywroc</button>
                   ) : (

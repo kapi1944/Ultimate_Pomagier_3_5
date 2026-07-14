@@ -27,30 +27,30 @@ export const konfiguracjePodmenuGeneratorow: KonfiguracjaPodmenuGeneratora[] = [
     etykieta: 'Szczegóły Organizacyjne',
     pozycje: [
       { widok: 'zamkniete_szczegoly_organizacyjne_lista', etykieta: 'Lista szczegółów organizacyjnych', sciezka: '/szkolenia-zamkniete/szczegoly-organizacyjne' },
-      { widok: 'zamkniete_szczegoly_organizacyjne_kopie_robocze', etykieta: 'Kopie robocze', sciezka: '/szkolenia-zamkniete/szczegoly-organizacyjne/kopie-robocze' },
       { widok: 'zamkniete_szczegoly_organizacyjne_nowe', etykieta: 'Nowe Szczegóły Organizacyjne', sciezka: '/szkolenia-zamkniete/szczegoly-organizacyjne/nowe' },
+      { widok: 'zamkniete_szczegoly_organizacyjne_kopie_robocze', etykieta: 'Kopie robocze', sciezka: '/szkolenia-zamkniete/szczegoly-organizacyjne/kopie-robocze' },
     ],
   },
   {
-    klucz: 'listy-obecnosci',
+    klucz: 'generator-list-obecnosci',
     miejsce: 'dokumenty',
     etykieta: 'Listy obecności',
     pozycje: [{ widok: 'listy-obecnosci', etykieta: 'Nowa lista obecności', sciezka: '/dokumenty/listy-obecnosci' }],
   },
   {
-    klucz: 'ankiety',
+    klucz: 'generator-ankiet',
     miejsce: 'dokumenty',
     etykieta: 'Ankiety',
     pozycje: [{ widok: 'ankiety', etykieta: 'Nowa ankieta', sciezka: '/dokumenty/ankiety' }],
   },
   {
-    klucz: 'dyplomy',
+    klucz: 'generator-dyplomow',
     miejsce: 'dokumenty',
     etykieta: 'Dyplomy',
     pozycje: [{ widok: 'dyplomy', etykieta: 'Nowy dyplom', sciezka: '/dokumenty/dyplomy' }],
   },
   {
-    klucz: 'karta-na-drzwi',
+    klucz: 'generator-kart-na-drzwi',
     miejsce: 'dokumenty',
     etykieta: 'Karta na drzwi',
     pozycje: [{ widok: 'karta-na-drzwi', etykieta: 'Nowa karta na drzwi', sciezka: '/dokumenty/karta-na-drzwi' }],
@@ -60,8 +60,8 @@ export const konfiguracjePodmenuGeneratorow: KonfiguracjaPodmenuGeneratora[] = [
     miejsce: 'dokumenty',
     etykieta: 'Programy szkoleń',
     pozycje: [
-      { widok: 'programy_szkolen_kopie_robocze', etykieta: 'Kopie robocze', sciezka: '/dokumenty/programy-szkolen/kopie-robocze' },
       { widok: 'programy_szkolen', etykieta: 'Nowy program szkolenia', sciezka: '/dokumenty/programy-szkolen' },
+      { widok: 'programy_szkolen_kopie_robocze', etykieta: 'Kopie robocze', sciezka: '/dokumenty/programy-szkolen/kopie-robocze' },
     ],
   },
 ]
