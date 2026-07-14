@@ -1,11 +1,15 @@
-import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import PanelKontroliJakosciDokumentu from '../../../../wspolne/dokumenty/PanelKontroliJakosciDokumentu'
-import { zapiszKopieRobocza } from '../../../../wspolne/dokumenty/magazynKopiiRoboczych'
 import {
+  pobierzAktywnaKopieProgramu,
+  pobierzAutosaveProgramu,
   pobierzIdAktywnejKopiiProgramu,
   ustawAktywnaKopieProgramu,
-  wyczyscAktywnaKopieProgramu,
+  usunAutosaveProgramu,
+  zapiszAutosaveProgramu,
+  zapiszJawnaKopieProgramu,
 } from './magazynKopiiRoboczychProgramu'
+import { ustawObslugeNiezapisanychProgramow } from './strzeznikNiezapisanychProgramow'
 import {
   przygotujRaportEksportuDokumentu,
   sprawdzDokumentBlokowy,
@@ -62,7 +66,6 @@ type DaneProfiluFirmy = {
   stopka: string
 }
 
-const kluczProgramuRoboczego = 'ultimate-pomagier-program-szkolenia-roboczy'
 const wzorzecHex = /^#[0-9a-f]{6}$/i
 const punktoryDoWyboru = ['•', '◦', '▪', '-', '–', '*']
 const etykietaNumeracjiListyGlownej = '1,2,3'
@@ -779,51 +782,26 @@ function renderujMarkdownInline(tekst: string): ReactNode[] {
   return elementy.length ? elementy : [tekst]
 }
 
-function wczytajZapisRoboczy(): ZapisProgramuRoboczego {
-  let zapis: string | null = null
+function normalizujZapisProgramu(zapis: unknown): ZapisProgramuRoboczego {
+  const dane = zapis && typeof zapis === 'object' ? (zapis as Partial<ZapisProgramuRoboczego>) : {}
+  const trescProgramu = dane.trescProgramu ?? ''
 
-  try {
-    zapis = localStorage.getItem(kluczProgramuRoboczego)
-
-    if (!zapis) {
-      return domyslnyZapisProgramu
-    }
-
-    const dane = JSON.parse(zapis) as Partial<ZapisProgramuRoboczego>
-    const trescProgramu = dane.trescProgramu ?? ''
-
-    return {
-      tytulSzkolenia: dane.tytulSzkolenia ?? '',
-      trescProgramu,
-      trescProgramuHtml: dane.trescProgramuHtml ?? konwertujTekstProgramuNaHtml(trescProgramu),
-      czyWynikParsowaniaZatwierdzony: dane.czyWynikParsowaniaZatwierdzony ?? false,
-      ustawienia: {
-        ...domyslneUstawienia,
-        ...dane.ustawienia,
-        stylePoziomowListy: dane.ustawienia?.stylePoziomowListy?.length
-          ? dane.ustawienia.stylePoziomowListy
-          : domyslneUstawienia.stylePoziomowListy,
-      },
-      logotypProgramu: dane.logotypProgramu ?? '',
-      linkLogotypu: dane.linkLogotypu ?? '',
-    }
-  } catch {
-    const trescProgramu = zapis ?? ''
-
-    return {
-      ...domyslnyZapisProgramu,
-      trescProgramu,
-      trescProgramuHtml: konwertujTekstProgramuNaHtml(trescProgramu),
-    }
+  return {
+    tytulSzkolenia: dane.tytulSzkolenia ?? '',
+    trescProgramu,
+    trescProgramuHtml: dane.trescProgramuHtml ?? konwertujTekstProgramuNaHtml(trescProgramu),
+    czyWynikParsowaniaZatwierdzony: dane.czyWynikParsowaniaZatwierdzony ?? false,
+    ustawienia: {
+      ...domyslneUstawienia,
+      ...dane.ustawienia,
+      stylePoziomowListy: dane.ustawienia?.stylePoziomowListy?.length
+        ? dane.ustawienia.stylePoziomowListy
+        : domyslneUstawienia.stylePoziomowListy,
+    },
+    logotypProgramu: dane.logotypProgramu ?? '',
+    linkLogotypu: dane.linkLogotypu ?? '',
   }
-
-  return domyslnyZapisProgramu
 }
-
-function zapiszProgramRoboczo(daneProgramu: ZapisProgramuRoboczego) {
-  localStorage.setItem(kluczProgramuRoboczego, JSON.stringify(daneProgramu))
-}
-
 function czyPlikTekstowy(plik: File) {
   return plik.type.startsWith('text/') || /\.(txt|md|csv|html?)$/i.test(plik.name)
 }
@@ -864,9 +842,11 @@ function zapiszLogWymuszeniaEksportu(raport: ReturnType<typeof przygotujRaportEk
 }
 
 export function WidokProgramowSzkolen() {
-  const pomijajZapisRef = useRef(false)
-  const aktywnaKopiaIdRef = useRef<string | null>(pobierzIdAktywnejKopiiProgramu())
-  const [daneProgramu, ustawDaneProgramu] = useState<ZapisProgramuRoboczego>(wczytajZapisRoboczy)
+  const [aktywnaKopiaId, ustawAktywnaKopiaId] = useState<string | null>(pobierzIdAktywnejKopiiProgramu())
+  const [daneProgramu, ustawDaneProgramu] = useState<ZapisProgramuRoboczego>(() => normalizujZapisProgramu(pobierzAktywnaKopieProgramu<ZapisProgramuRoboczego>()?.daneDokumentu))
+  const [ostatniJawnyZapis, ustawOstatniJawnyZapis] = useState(() => JSON.stringify(daneProgramu))
+  const [idSesjiAutosave] = useState(() => `program-autosave-${crypto.randomUUID()}`)
+  const [autosaveDoDecyzji, ustawAutosaveDoDecyzji] = useState(() => pobierzAutosaveProgramu<ZapisProgramuRoboczego>())
   const [komunikat, ustawKomunikat] = useState('')
   const { tytulSzkolenia, trescProgramu, trescProgramuHtml, czyWynikParsowaniaZatwierdzony, ustawienia, logotypProgramu, linkLogotypu } = daneProgramu
 
@@ -963,18 +943,37 @@ export function WidokProgramowSzkolen() {
     .map((styl, indeks) => ({ styl, indeks }))
     .filter(({ indeks }) => indeks === 0 || czyPokazacPoziomyPodpunktow)
 
+  const czyNiezapisaneZmiany = JSON.stringify(daneProgramu) !== ostatniJawnyZapis
+
   useEffect(() => {
-    if (pomijajZapisRef.current) {
-      pomijajZapisRef.current = false
+    if (!czyNiezapisaneZmiany || autosaveDoDecyzji) {
       return
     }
 
     try {
-      zapiszProgramRoboczo(daneProgramu)
+      zapiszAutosaveProgramu({
+        idSesji: idSesjiAutosave,
+        aktywnaKopiaId: aktywnaKopiaId ?? undefined,
+        daneDokumentu: daneProgramu,
+      })
     } catch {
       return
     }
-  }, [daneProgramu])
+  }, [aktywnaKopiaId, autosaveDoDecyzji, czyNiezapisaneZmiany, daneProgramu, idSesjiAutosave])
+
+  useEffect(() => {
+    function ostrzezPrzedOdswiezeniem(zdarzenie: BeforeUnloadEvent) {
+      if (!czyNiezapisaneZmiany) {
+        return
+      }
+
+      zdarzenie.preventDefault()
+      zdarzenie.returnValue = ''
+    }
+
+    window.addEventListener('beforeunload', ostrzezPrzedOdswiezeniem)
+    return () => window.removeEventListener('beforeunload', ostrzezPrzedOdswiezeniem)
+  }, [czyNiezapisaneZmiany])
 
   function zmienDane<Nazwa extends keyof ZapisProgramuRoboczego>(nazwa: Nazwa, wartosc: ZapisProgramuRoboczego[Nazwa]) {
     ustawDaneProgramu((aktualne) => ({
@@ -1010,31 +1009,62 @@ export function WidokProgramowSzkolen() {
     }))
   }
 
-  function zapiszRoboczo() {
+  const zapiszRoboczo = useCallback((tryb: 'zapisz' | 'aktualizuj' | 'utworz_nowa') => {
     try {
-      const kopia = zapiszKopieRobocza({
-        id: aktywnaKopiaIdRef.current ?? undefined,
-        typGeneratora: 'programy_szkolen',
+      const rekord = zapiszJawnaKopieProgramu({
+        idAktywnejKopii: aktywnaKopiaId,
+        tryb,
         tytul: daneProgramu.tytulSzkolenia,
-        status: daneProgramu.czyWynikParsowaniaZatwierdzony ? 'zatwierdzona' : 'robocza',
+        statusBiznesowy: daneProgramu.czyWynikParsowaniaZatwierdzony ? 'zatwierdzona' : 'robocza',
         daneDokumentu: daneProgramu,
-        wersjaFormatu: 'programy-szkolen-v1',
+        metadane: {
+          organizator: ustawienia.profilFirmy === 'iist' ? 'IIST' : 'SEMPER',
+          liczbaDni: program.dni.length,
+          liczbaModulow,
+          autor: undefined,
+          klient: undefined,
+          dataSzkolenia: undefined,
+          zrodloProgramu: undefined,
+          czyWynikParsowaniaZatwierdzony: daneProgramu.czyWynikParsowaniaZatwierdzony,
+        },
       })
-      aktywnaKopiaIdRef.current = kopia.id
-      ustawAktywnaKopieProgramu(kopia.id)
-      zapiszProgramRoboczo(daneProgramu)
-      ustawKomunikat('Program zapisany jako kopia robocza.')
+      ustawAktywnaKopiaId(rekord.id)
+      ustawAktywnaKopieProgramu(rekord.id)
+      ustawOstatniJawnyZapis(JSON.stringify(daneProgramu))
+      ustawAutosaveDoDecyzji(null)
+      ustawKomunikat(tryb === 'utworz_nowa' ? 'Utworzono nową kopię roboczą.' : tryb === 'aktualizuj' ? 'Zaktualizowano kopię roboczą.' : 'Program zapisany jako kopia robocza.')
     } catch {
       ustawKomunikat('Nie udało się zapisać programu roboczo.')
     }
-  }
+  }, [aktywnaKopiaId, daneProgramu, liczbaModulow, program.dni.length, ustawienia.profilFirmy])
 
   function wyczyscProgram() {
-    pomijajZapisRef.current = true
     ustawDaneProgramu(domyslnyZapisProgramu)
-    aktywnaKopiaIdRef.current = null
-    wyczyscAktywnaKopieProgramu()
-    ustawKomunikat('Program wyczyszczony.')
+    ustawKomunikat('Program wyczyszczony. Pusty stan pozostaje wyłącznie autosave.')
+  }
+
+  function przywrocAutosave() {
+    if (!autosaveDoDecyzji) {
+      return
+    }
+
+    ustawDaneProgramu(normalizujZapisProgramu(autosaveDoDecyzji.daneDokumentu))
+    ustawAktywnaKopiaId(autosaveDoDecyzji.aktywnaKopiaId ?? null)
+    if (autosaveDoDecyzji.aktywnaKopiaId) {
+      ustawAktywnaKopieProgramu(autosaveDoDecyzji.aktywnaKopiaId)
+    }
+    ustawAutosaveDoDecyzji(null)
+    ustawKomunikat('Przywrócono niezapisany draft.')
+  }
+
+  function odrzucAutosave() {
+    usunAutosaveProgramu()
+    ustawAutosaveDoDecyzji(null)
+    ustawKomunikat('Odrzucono niezapisany draft.')
+  }
+
+  function anulujOdzyskiwanieAutosave() {
+    window.history.back()
   }
 
   function drukujProgram() {
@@ -1223,6 +1253,12 @@ export function WidokProgramowSzkolen() {
     )
   }
 
+  useEffect(() => {
+    return ustawObslugeNiezapisanychProgramow({
+      czySaNiezapisaneZmiany: () => JSON.stringify(daneProgramu) !== ostatniJawnyZapis,
+      zapiszPrzedWyjsciem: () => zapiszRoboczo(aktywnaKopiaId ? 'aktualizuj' : 'zapisz'),
+    })
+  }, [aktywnaKopiaId, daneProgramu, ostatniJawnyZapis, zapiszRoboczo])
   return (
     <section className="widok program-szkolen">
       <style>{styleProgramuSzkolenia}</style>
@@ -1233,16 +1269,37 @@ export function WidokProgramowSzkolen() {
           <button className="program-szkolen__przycisk" onClick={drukujProgram} type="button">
             Drukuj
           </button>
-          <button className="program-szkolen__przycisk" onClick={zapiszRoboczo} type="button">
-            Zapisz roboczo
-          </button>
+          {aktywnaKopiaId ? (
+            <>
+              <button className="program-szkolen__przycisk" onClick={() => zapiszRoboczo('aktualizuj')} type="button">
+                Aktualizuj kopię
+              </button>
+              <button className="program-szkolen__przycisk" onClick={() => zapiszRoboczo('utworz_nowa')} type="button">
+                Utwórz nową kopię
+              </button>
+            </>
+          ) : (
+            <button className="program-szkolen__przycisk" onClick={() => zapiszRoboczo('zapisz')} type="button">
+              Zapisz kopię roboczą
+            </button>
+          )}
           <button className="program-szkolen__przycisk" onClick={wyczyscProgram} type="button">
-            Wyczyść
+            Wyczyść program
           </button>
         </div>
       </header>
 
       {komunikat && <div className="program-panel-roboczy program-szkolen__komunikat">{komunikat}</div>}
+      {autosaveDoDecyzji && (
+        <section className="program-panel-roboczy program-szkolen__komunikat" role="dialog" aria-modal="true" aria-label="Odzyskiwanie niezapisanego draftu">
+          <strong>Wykryto niezapisany draft.</strong>
+          <div className="program-szkolen__akcje">
+            <button className="program-szkolen__przycisk" type="button" onClick={przywrocAutosave}>Przywróć</button>
+            <button className="program-szkolen__przycisk" type="button" onClick={odrzucAutosave}>Odrzuć</button>
+            <button className="program-szkolen__przycisk" type="button" onClick={anulujOdzyskiwanieAutosave}>Anuluj i wróć</button>
+          </div>
+        </section>
+      )}
 
       <div className="program-szkolen__uklad">
         <div className="program-panel-roboczy program-szkolen__panel">

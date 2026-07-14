@@ -14,8 +14,10 @@ import {
   otworzKopieRoboczaProgramu,
   pobierzKopieRoboczeProgramu,
   usunKopieRoboczaProgramu,
+  wyczyscAktywnaKopieProgramu,
 } from '../../moduly/dokumenty/generatory/programy_szkolen/magazynKopiiRoboczychProgramu'
 import WidokKopiiRoboczychGeneratora from '../../wspolne/dokumenty/WidokKopiiRoboczychGeneratora'
+import { czyProgramMaNiezapisaneZmiany, zapiszProgramPrzedWyjsciem } from '../../moduly/dokumenty/generatory/programy_szkolen/strzeznikNiezapisanychProgramow'
 import WidokReplikatoraDokumentow from '../../moduly/dokumenty/replikator_dokumentow/WidokReplikatoraDokumentow'
 import WidokSzkolenOtwartych from '../../moduly/otwarte/WidokSzkolenOtwartych'
 import WidokPulpitu from '../../moduly/zamkniete/pulpit/WidokPulpitu'
@@ -27,6 +29,14 @@ import WidokSzkolenZamknietych from '../../moduly/zamkniete/szkolenia/WidokSzkol
 import './ukladAplikacji.css'
 
 const kluczAktywnegoWidoku = 'ultimate-pomagier-aktywny-widok'
+
+
+type OpcjeZmianyWidoku = {
+  zachowajKopieProgramu?: boolean
+  pomijajOstrzezenie?: boolean
+}
+
+type UstawWidok = (widok: WidokNawigacji, opcje?: OpcjeZmianyWidoku) => void
 
 const dostepneWidoki: WidokNawigacji[] = [
   'pulpit',
@@ -85,7 +95,7 @@ function pobierzWidokZakladkiKartotek(zakladka: ZakladkaKartotek): WidokNawigacj
   }
 }
 
-function renderujWidok(widok: WidokNawigacji, zmienZakladkeKartotek: (zakladka: ZakladkaKartotek) => void, ustawAktywnyWidok: (widok: WidokNawigacji) => void): ReactNode {
+function renderujWidok(widok: WidokNawigacji, zmienZakladkeKartotek: (zakladka: ZakladkaKartotek) => void, ustawAktywnyWidok: UstawWidok, wersjaProgramu: number): ReactNode {
   switch (widok) {
     case 'pulpit':
       return <WidokPulpitu />
@@ -114,7 +124,7 @@ function renderujWidok(widok: WidokNawigacji, zmienZakladkeKartotek: (zakladka: 
     case 'karta-na-drzwi':
       return <WidokKartNaDrzwi />
     case 'programy_szkolen':
-      return <WidokProgramowSzkolen />
+      return <WidokProgramowSzkolen key={wersjaProgramu} />
     case 'programy_szkolen_kopie_robocze':
       return (
         <WidokKopiiRoboczychGeneratora
@@ -123,7 +133,7 @@ function renderujWidok(widok: WidokNawigacji, zmienZakladkeKartotek: (zakladka: 
           pobierzKopie={pobierzKopieRoboczeProgramu}
           otworzKopie={(kopia) => {
             otworzKopieRoboczaProgramu(kopia)
-            ustawAktywnyWidok('programy_szkolen')
+            ustawAktywnyWidok('programy_szkolen', { zachowajKopieProgramu: true })
           }}
           usunKopie={usunKopieRoboczaProgramu}
         />
@@ -145,8 +155,15 @@ function renderujWidok(widok: WidokNawigacji, zmienZakladkeKartotek: (zakladka: 
 
 export default function UkladAplikacji() {
   const [aktywnyWidok, ustawAktywnyWidok] = useState<WidokNawigacji>(pobierzPoczatkowyWidok)
+  const [wersjaProgramu, ustawWersjeProgramu] = useState(0)
+  const [widokDoPotwierdzenia, ustawWidokDoPotwierdzenia] = useState<WidokNawigacji | null>(null)
 
-  function ustawWidok(widok: WidokNawigacji) {
+  function wykonajZmianeWidoku(widok: WidokNawigacji, opcje: OpcjeZmianyWidoku = {}) {
+    if (widok === 'programy_szkolen' && !opcje.zachowajKopieProgramu) {
+      wyczyscAktywnaKopieProgramu()
+      ustawWersjeProgramu((obecna) => obecna + 1)
+    }
+
     const sciezka = pobierzSciezkeGeneratora(widok) ?? '/'
 
     if (window.location.pathname !== sciezka) {
@@ -154,6 +171,39 @@ export default function UkladAplikacji() {
     }
 
     ustawAktywnyWidok(widok)
+  }
+
+  function ustawWidok(widok: WidokNawigacji, opcje: OpcjeZmianyWidoku = {}) {
+    const czyToNowyProgram = widok === 'programy_szkolen' && !opcje.zachowajKopieProgramu
+    const czyZmianaWymagaPotwierdzenia = aktywnyWidok === 'programy_szkolen' && (widok !== aktywnyWidok || czyToNowyProgram)
+
+    if (!opcje.pomijajOstrzezenie && czyZmianaWymagaPotwierdzenia && czyProgramMaNiezapisaneZmiany()) {
+      ustawWidokDoPotwierdzenia(widok)
+      return
+    }
+
+    wykonajZmianeWidoku(widok, opcje)
+  }
+
+  function zapiszIWyjdz() {
+    if (!widokDoPotwierdzenia) {
+      return
+    }
+
+    zapiszProgramPrzedWyjsciem()
+    const docelowyWidok = widokDoPotwierdzenia
+    ustawWidokDoPotwierdzenia(null)
+    wykonajZmianeWidoku(docelowyWidok, { pomijajOstrzezenie: true })
+  }
+
+  function wyjdzBezZapisywania() {
+    if (!widokDoPotwierdzenia) {
+      return
+    }
+
+    const docelowyWidok = widokDoPotwierdzenia
+    ustawWidokDoPotwierdzenia(null)
+    wykonajZmianeWidoku(docelowyWidok, { pomijajOstrzezenie: true })
   }
   function zmienZakladkeKartotek(zakladka: ZakladkaKartotek) {
     ustawWidok(pobierzWidokZakladkiKartotek(zakladka))
@@ -174,20 +224,38 @@ export default function UkladAplikacji() {
       const widok = widokZeSciezki ?? stanHistorii?.widok
       const poprawnyWidok = widok ?? null
 
-      if (czyWidokNawigacji(poprawnyWidok)) {
-        ustawAktywnyWidok(poprawnyWidok)
+      if (!czyWidokNawigacji(poprawnyWidok)) {
+        return
       }
+
+      if (aktywnyWidok === 'programy_szkolen' && poprawnyWidok !== aktywnyWidok && czyProgramMaNiezapisaneZmiany()) {
+        const sciezkaBiezacegoWidoku = pobierzSciezkeGeneratora(aktywnyWidok) ?? '/'
+        window.history.pushState({ widok: aktywnyWidok }, '', sciezkaBiezacegoWidoku)
+        ustawWidokDoPotwierdzenia(poprawnyWidok)
+        return
+      }
+
+      ustawAktywnyWidok(poprawnyWidok)
     }
 
     window.addEventListener('popstate', obsluzPowrotPrzegladarki)
 
     return () => window.removeEventListener('popstate', obsluzPowrotPrzegladarki)
-  }, [])
+  }, [aktywnyWidok])
 
   return (
     <div className="uklad-aplikacji">
       <MenuBoczne aktywnyWidok={aktywnyWidok} ustawAktywnyWidok={ustawWidok} />
-      <main className="uklad-aplikacji__obszar-roboczy">{renderujWidok(aktywnyWidok, zmienZakladkeKartotek, ustawWidok)}</main>
-    </div>
-  )
+      <main className="uklad-aplikacji__obszar-roboczy">{renderujWidok(aktywnyWidok, zmienZakladkeKartotek, ustawWidok, wersjaProgramu)}</main>
+      {widokDoPotwierdzenia && (
+        <section className="program-panel-roboczy program-szkolen__komunikat" role="dialog" aria-modal="true" aria-label="Niezapisane zmiany programu">
+          <strong>Masz niezapisane zmiany programu.</strong>
+          <div className="program-szkolen__akcje">
+            <button type="button" onClick={() => ustawWidokDoPotwierdzenia(null)}>Wróć do edycji</button>
+            <button type="button" onClick={zapiszIWyjdz}>Zapisz i wyjdź</button>
+            <button type="button" onClick={wyjdzBezZapisywania}>Wyjdź bez zapisywania</button>
+          </div>
+        </section>
+      )}
+    </div>  )
 }
