@@ -1,5 +1,5 @@
 import type { WidokNawigacji } from '../nawigacja/typyNawigacji'
-import { pobierzKonfiguracjePodmenuGeneratorow } from '../nawigacja/konfiguracjaGeneratorow'
+import { pobierzKonfiguracjePodmenuGeneratorow, pozycjeRejestruDokumentow } from '../nawigacja/konfiguracjaGeneratorow'
 
 type PozycjaMenuNawigacji = {
   id: WidokNawigacji
@@ -47,6 +47,7 @@ export const pozycjeMenu: PozycjaMenu[] = [
     id: 'dokumenty',
     etykieta: 'Dokumenty',
     dzieci: [
+      ...pozycjeRejestruDokumentow.map((pozycja) => ({ id: pozycja.widok, etykieta: pozycja.etykieta })),
       {
         id: 'replikator_dokumentow',
         etykieta: 'Replikator dokumentów',

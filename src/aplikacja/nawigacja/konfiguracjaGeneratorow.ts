@@ -15,6 +15,11 @@ export type KonfiguracjaPodmenuGeneratora = {
   pozycje: PozycjaPodmenuGeneratora[]
 }
 
+export const pozycjeRejestruDokumentow: PozycjaPodmenuGeneratora[] = [
+  { widok: 'dokumenty_wszystkie', etykieta: 'Wszystkie dokumenty', sciezka: '/dokumenty/wszystkie' },
+  { widok: 'dokumenty_kopie_robocze', etykieta: 'Kopie robocze', sciezka: '/dokumenty/kopie-robocze' },
+]
+
 export const konfiguracjePodmenuGeneratorow: KonfiguracjaPodmenuGeneratora[] = [
   {
     klucz: 'szczegoly-organizacyjne',
@@ -66,9 +71,9 @@ export function pobierzKonfiguracjePodmenuGeneratorow(miejsce: MiejscePodmenuGen
 }
 
 export function pobierzSciezkeGeneratora(widok: WidokNawigacji) {
-  return konfiguracjePodmenuGeneratorow.flatMap((konfiguracja) => konfiguracja.pozycje).find((pozycja) => pozycja.widok === widok)?.sciezka
+  return [...pozycjeRejestruDokumentow, ...konfiguracjePodmenuGeneratorow.flatMap((konfiguracja) => konfiguracja.pozycje)].find((pozycja) => pozycja.widok === widok)?.sciezka
 }
 
 export function pobierzWidokGeneratoraZeSciezki(sciezka: string) {
-  return konfiguracjePodmenuGeneratorow.flatMap((konfiguracja) => konfiguracja.pozycje).find((pozycja) => pozycja.sciezka === sciezka)?.widok
+  return [...pozycjeRejestruDokumentow, ...konfiguracjePodmenuGeneratorow.flatMap((konfiguracja) => konfiguracja.pozycje)].find((pozycja) => pozycja.sciezka === sciezka)?.widok
 }

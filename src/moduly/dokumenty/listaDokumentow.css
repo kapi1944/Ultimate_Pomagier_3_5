@@ -1,0 +1,179 @@
+.lista-dokumentow {
+  display: grid;
+  gap: 18px;
+}
+
+.lista-dokumentow__naglowek,
+.lista-dokumentow__filtry,
+.lista-dokumentow__karta,
+.lista-dokumentow__akcje {
+  display: flex;
+  gap: 12px;
+}
+
+.lista-dokumentow__naglowek {
+  align-items: start;
+  justify-content: space-between;
+}
+
+.lista-dokumentow__naglowek h1,
+.lista-dokumentow__karta h2 {
+  margin: 0;
+}
+
+.lista-dokumentow button,
+.lista-dokumentow input,
+.lista-dokumentow select {
+  border: 1px solid rgba(74, 222, 128, 0.35);
+  border-radius: 6px;
+  background: #082b14;
+  color: #f4fff7;
+  font: inherit;
+}
+
+.lista-dokumentow button {
+  min-height: 36px;
+  cursor: pointer;
+  padding: 7px 10px;
+}
+
+.lista-dokumentow button:hover:not(:disabled) {
+  border-color: #4ade80;
+  background: #123a20;
+}
+
+.lista-dokumentow button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.lista-dokumentow__filtry {
+  flex-wrap: wrap;
+  align-items: end;
+  border: 1px solid rgba(74, 222, 128, 0.24);
+  border-radius: 8px;
+  background: #041f0f;
+  padding: 14px;
+}
+
+.lista-dokumentow__filtry label {
+  display: grid;
+  gap: 5px;
+  color: #c7ead0;
+  font-size: 0.82rem;
+}
+
+.lista-dokumentow__filtry input,
+.lista-dokumentow__filtry select {
+  min-height: 36px;
+  padding: 6px 8px;
+}
+
+.lista-dokumentow__przelacznik {
+  display: flex !important;
+  align-items: center;
+  min-height: 36px;
+}
+
+.lista-dokumentow__przelacznik input {
+  min-height: 0;
+}
+
+.lista-dokumentow__licznik,
+.lista-dokumentow__stan,
+.lista-dokumentow__typ {
+  margin: 0;
+}
+
+.lista-dokumentow__licznik {
+  color: #9ccfab;
+}
+
+.lista-dokumentow__stan {
+  border: 1px dashed rgba(156, 207, 171, 0.4);
+  border-radius: 8px;
+  padding: 18px;
+}
+
+.lista-dokumentow__stan--blad {
+  border-color: rgba(248, 113, 113, 0.7);
+  color: #fecaca;
+}
+
+.lista-dokumentow__wyniki {
+  display: grid;
+  gap: 12px;
+}
+
+.lista-dokumentow__karta {
+  flex-direction: column;
+  border: 1px solid rgba(74, 222, 128, 0.28);
+  border-radius: 8px;
+  background: #041f0f;
+  padding: 16px;
+}
+
+.lista-dokumentow__karta-naglowek {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.lista-dokumentow__karta-naglowek strong {
+  align-self: start;
+  border-radius: 999px;
+  background: #123a20;
+  color: #bbf7d0;
+  font-size: 0.78rem;
+  padding: 4px 8px;
+}
+
+.lista-dokumentow__typ {
+  color: #9ccfab;
+  font-size: 0.8rem;
+}
+
+.lista-dokumentow__metadane {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.lista-dokumentow__metadane div {
+  min-width: 0;
+}
+
+.lista-dokumentow__metadane dt {
+  color: #9ccfab;
+  font-size: 0.76rem;
+}
+
+.lista-dokumentow__metadane dd {
+  overflow-wrap: anywhere;
+  margin: 2px 0 0;
+}
+
+.lista-dokumentow__akcje {
+  flex-wrap: wrap;
+}
+
+@media (max-width: 760px) {
+  .lista-dokumentow__naglowek {
+    flex-direction: column;
+  }
+
+  .lista-dokumentow__metadane {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 440px) {
+  .lista-dokumentow__metadane {
+    grid-template-columns: 1fr;
+  }
+
+  .lista-dokumentow__karta-naglowek {
+    flex-direction: column;
+  }
+}
