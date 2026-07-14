@@ -5,6 +5,7 @@ import {
   usunKopieRobocza,
   zapiszKopieRobocza,
 } from '../src/wspolne/dokumenty/magazynKopiiRoboczych.ts'
+import { pobierzKopieRobocze } from '../src/moduly/zamkniete/szczegoly_organizacyjne/uslugi/magazynWersjiRoboczych.ts'
 
 const magazyn = new Map<string, string>()
 
@@ -63,4 +64,16 @@ test('izoluje kopie robocze według typu generatora i usuwa wyłącznie wskazany
 
   assert.equal(pobierzKopieRoboczeGeneratora('programy_szkolen').length, 0)
   assert.equal(pobierzKopieRoboczeGeneratora('szczegoly_organizacyjne')[0].id, szczegoly.id)
+})
+
+test('migracja szczegolow ignoruje null i niepelne stare kopie robocze', () => {
+  magazyn.clear()
+  magazyn.set('ultimatePomagier.szczegolyOrganizacyjne.kopieRobocze', 'null')
+
+  assert.deepEqual(pobierzKopieRobocze(), [])
+
+  magazyn.clear()
+  magazyn.set('ultimatePomagier.szczegolyOrganizacyjne.kopieRobocze', JSON.stringify([null, {}, { id: 'niepelna' }]))
+
+  assert.deepEqual(pobierzKopieRobocze(), [])
 })

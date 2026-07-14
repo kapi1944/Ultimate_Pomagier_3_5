@@ -38,6 +38,24 @@ function bezpiecznieParsuj<Typ>(wartosc: string | null, fallback: Typ): Typ {
   }
 }
 
+function pobierzStarszeKopieRobocze() {
+  const kopie = bezpiecznieParsuj<unknown>(localStorage.getItem(kluczKopiiRoboczych), [])
+
+  if (!Array.isArray(kopie)) {
+    return []
+  }
+
+  return kopie.filter((kopia): kopia is KopiaRoboczaSzkolenia => {
+    if (!kopia || typeof kopia !== 'object') {
+      return false
+    }
+
+    const wersja = kopia as Partial<KopiaRoboczaSzkolenia>
+
+    return typeof wersja.id === 'string' && Boolean(wersja.dane && typeof wersja.dane === 'object')
+  })
+}
+
 function zapiszOpublikowaneSzczegoly(rekordy: OpublikowaneSzczegolyOrganizacyjne[]) {
   localStorage.setItem(kluczOpublikowanychSzczegolow, JSON.stringify(rekordy))
 }
@@ -73,15 +91,15 @@ export function pobierzKopieRobocze() {
     return wspolneKopie.map((kopia) => kopia.daneDokumentu)
   }
 
-  const starszeKopie = bezpiecznieParsuj<KopiaRoboczaSzkolenia[]>(localStorage.getItem(kluczKopiiRoboczych), [])
+  const starszeKopie = pobierzStarszeKopieRobocze()
   starszeKopie.forEach((kopia) => {
     zapiszKopieRobocza({
       id: kopia.id,
       typGeneratora: 'szczegoly_organizacyjne',
-      tytul: kopia.dane.tytulSzkolenia || kopia.nazwa,
-      status: kopia.dane.status,
+      tytul: kopia.dane.tytulSzkolenia || kopia.nazwa || 'Bez tytulu',
+      status: kopia.dane.status || 'robocza',
       daneDokumentu: kopia,
-      wersjaFormatu: kopia.wersja,
+      wersjaFormatu: kopia.wersja || undefined,
     })
   })
   localStorage.setItem(kluczMigracjiKopiiRoboczych, 'true')
