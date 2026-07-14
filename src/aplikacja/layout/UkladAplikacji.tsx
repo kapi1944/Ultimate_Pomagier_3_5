@@ -10,6 +10,12 @@ import WidokDyplomow from '../../moduly/dokumenty/generatory/dyplomy/WidokDyplom
 import WidokKartNaDrzwi from '../../moduly/dokumenty/generatory/karta_na_drzwi/WidokKartNaDrzwi'
 import WidokListObecnosci from '../../moduly/dokumenty/generatory/listy_obecnosci/WidokListObecnosci'
 import { WidokProgramowSzkolen } from '../../moduly/dokumenty/generatory/programy_szkolen'
+import {
+  otworzKopieRoboczaProgramu,
+  pobierzKopieRoboczeProgramu,
+  usunKopieRoboczaProgramu,
+} from '../../moduly/dokumenty/generatory/programy_szkolen/magazynKopiiRoboczychProgramu'
+import WidokKopiiRoboczychGeneratora from '../../wspolne/dokumenty/WidokKopiiRoboczychGeneratora'
 import WidokReplikatoraDokumentow from '../../moduly/dokumenty/replikator_dokumentow/WidokReplikatoraDokumentow'
 import WidokSzkolenOtwartych from '../../moduly/otwarte/WidokSzkolenOtwartych'
 import WidokPulpitu from '../../moduly/zamkniete/pulpit/WidokPulpitu'
@@ -37,6 +43,7 @@ const dostepneWidoki: WidokNawigacji[] = [
   'dyplomy',
   'karta-na-drzwi',
   'programy_szkolen',
+  'programy_szkolen_kopie_robocze',
   'kartoteki',
   'kartoteki_trenerzy',
   'kartoteki_klienci',
@@ -108,6 +115,19 @@ function renderujWidok(widok: WidokNawigacji, zmienZakladkeKartotek: (zakladka: 
       return <WidokKartNaDrzwi />
     case 'programy_szkolen':
       return <WidokProgramowSzkolen />
+    case 'programy_szkolen_kopie_robocze':
+      return (
+        <WidokKopiiRoboczychGeneratora
+          typGeneratora="programy_szkolen"
+          tytul="Programy szkoleń"
+          pobierzKopie={pobierzKopieRoboczeProgramu}
+          otworzKopie={(kopia) => {
+            otworzKopieRoboczaProgramu(kopia)
+            ustawAktywnyWidok('programy_szkolen')
+          }}
+          usunKopie={usunKopieRoboczaProgramu}
+        />
+      )
     case 'kartoteki':
       return <WidokKartotek poZmianieZakladki={zmienZakladkeKartotek} />
     case 'kartoteki_trenerzy':

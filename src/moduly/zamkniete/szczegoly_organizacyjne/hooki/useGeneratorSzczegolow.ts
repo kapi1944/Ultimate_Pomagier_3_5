@@ -759,6 +759,7 @@ export function useGeneratorSzczegolow() {
       status: czyFormularzKompletny ? 'PEŁNE' : 'NIEPEŁNE',
     }
     const wersja = zbudujWersjeRobocza(daneDoZapisu, grupy, adresaci, statusyPol, aktywneKonto, {
+      id: aktywnaKopiaId,
       zrodloOpublikowanegoId,
     })
     zapiszWersjeRobocza(wersja)

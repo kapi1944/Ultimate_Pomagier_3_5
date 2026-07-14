@@ -13,9 +13,14 @@ import type {
   WpisHistoriiSzczegolow,
 } from '../typy'
 import { utworzPoczatkowaGrupe } from '../danePoczatkowe'
-
+import {
+  pobierzKopieRoboczeGeneratora,
+  usunKopieRobocza as usunWspolnaKopieRobocza,
+  zapiszKopieRobocza,
+} from '../../../../wspolne/dokumenty/magazynKopiiRoboczych'
 const kluczAktualnejWersji = 'ultimatePomagier.szczegolyOrganizacyjne.aktualnaWersja'
 const kluczKopiiRoboczych = 'ultimatePomagier.szczegolyOrganizacyjne.kopieRobocze'
+const kluczMigracjiKopiiRoboczych = 'ultimatePomagier.szczegolyOrganizacyjne.kopieRobocze.wspolnyMagazyn.v1'
 const kluczOpublikowanychSzczegolow = 'ultimatePomagier.szczegolyOrganizacyjne.opublikowane'
 const kluczAutosave = 'ultimatePomagier.szczegolyOrganizacyjne.autosave'
 const kluczHistorii = 'ultimatePomagier.szczegolyOrganizacyjne.historia'
@@ -31,10 +36,6 @@ function bezpiecznieParsuj<Typ>(wartosc: string | null, fallback: Typ): Typ {
   } catch {
     return fallback
   }
-}
-
-function zapiszKopieRobocze(kopie: KopiaRoboczaSzkolenia[]) {
-  localStorage.setItem(kluczKopiiRoboczych, JSON.stringify(kopie))
 }
 
 function zapiszOpublikowaneSzczegoly(rekordy: OpublikowaneSzczegolyOrganizacyjne[]) {
@@ -66,7 +67,26 @@ export function pobierzAktualnaWersjeRobocza() {
 }
 
 export function pobierzKopieRobocze() {
-  return bezpiecznieParsuj<KopiaRoboczaSzkolenia[]>(localStorage.getItem(kluczKopiiRoboczych), [])
+  const wspolneKopie = pobierzKopieRoboczeGeneratora<WersjaRoboczaGeneratora>('szczegoly_organizacyjne')
+
+  if (wspolneKopie.length || localStorage.getItem(kluczMigracjiKopiiRoboczych) === 'true') {
+    return wspolneKopie.map((kopia) => kopia.daneDokumentu)
+  }
+
+  const starszeKopie = bezpiecznieParsuj<KopiaRoboczaSzkolenia[]>(localStorage.getItem(kluczKopiiRoboczych), [])
+  starszeKopie.forEach((kopia) => {
+    zapiszKopieRobocza({
+      id: kopia.id,
+      typGeneratora: 'szczegoly_organizacyjne',
+      tytul: kopia.dane.tytulSzkolenia || kopia.nazwa,
+      status: kopia.dane.status,
+      daneDokumentu: kopia,
+      wersjaFormatu: kopia.wersja,
+    })
+  })
+  localStorage.setItem(kluczMigracjiKopiiRoboczych, 'true')
+
+  return pobierzKopieRoboczeGeneratora<WersjaRoboczaGeneratora>('szczegoly_organizacyjne').map((kopia) => kopia.daneDokumentu)
 }
 
 export function pobierzOpublikowaneSzczegoly() {
@@ -143,10 +163,14 @@ export function ustawAktualnaWersjeRobocza(wersja: WersjaRoboczaGeneratora) {
 export function zapiszWersjeRobocza(wersja: WersjaRoboczaGeneratora) {
   ustawAktualnaWersjeRobocza(wersja)
 
-  const kopie = pobierzKopieRobocze()
-  const pozostaleKopie = kopie.filter((kopia) => kopia.id !== wersja.id)
-  const noweKopie = [wersja, ...pozostaleKopie].slice(0, 20)
-  zapiszKopieRobocze(noweKopie)
+  zapiszKopieRobocza({
+    id: wersja.id,
+    typGeneratora: 'szczegoly_organizacyjne',
+    tytul: wersja.dane.tytulSzkolenia || wersja.nazwa,
+    status: wersja.dane.status,
+    daneDokumentu: wersja,
+    wersjaFormatu: wersja.wersja,
+  })
   dodajWpisHistoriiSzczegolow({
     typ: 'wersja',
     etykietaWersji: wersja.etykietaWersji,
@@ -162,8 +186,7 @@ export function zapiszWersjeRobocza(wersja: WersjaRoboczaGeneratora) {
 }
 
 export function usunKopieRobocza(id: string) {
-  const kopie = pobierzKopieRobocze().filter((kopia) => kopia.id !== id)
-  zapiszKopieRobocze(kopie)
+  usunWspolnaKopieRobocza('szczegoly_organizacyjne', id)
 
   if (pobierzAktualnaWersjeRobocza()?.id === id) {
     wyczyscAktualnaWersjeRobocza()

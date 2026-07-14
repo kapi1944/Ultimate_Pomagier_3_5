@@ -1,5 +1,11 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import PanelKontroliJakosciDokumentu from '../../../../wspolne/dokumenty/PanelKontroliJakosciDokumentu'
+import { zapiszKopieRobocza } from '../../../../wspolne/dokumenty/magazynKopiiRoboczych'
+import {
+  pobierzIdAktywnejKopiiProgramu,
+  ustawAktywnaKopieProgramu,
+  wyczyscAktywnaKopieProgramu,
+} from './magazynKopiiRoboczychProgramu'
 import {
   przygotujRaportEksportuDokumentu,
   sprawdzDokumentBlokowy,
@@ -859,6 +865,7 @@ function zapiszLogWymuszeniaEksportu(raport: ReturnType<typeof przygotujRaportEk
 
 export function WidokProgramowSzkolen() {
   const pomijajZapisRef = useRef(false)
+  const aktywnaKopiaIdRef = useRef<string | null>(pobierzIdAktywnejKopiiProgramu())
   const [daneProgramu, ustawDaneProgramu] = useState<ZapisProgramuRoboczego>(wczytajZapisRoboczy)
   const [komunikat, ustawKomunikat] = useState('')
   const { tytulSzkolenia, trescProgramu, trescProgramuHtml, czyWynikParsowaniaZatwierdzony, ustawienia, logotypProgramu, linkLogotypu } = daneProgramu
@@ -1005,8 +1012,18 @@ export function WidokProgramowSzkolen() {
 
   function zapiszRoboczo() {
     try {
+      const kopia = zapiszKopieRobocza({
+        id: aktywnaKopiaIdRef.current ?? undefined,
+        typGeneratora: 'programy_szkolen',
+        tytul: daneProgramu.tytulSzkolenia,
+        status: daneProgramu.czyWynikParsowaniaZatwierdzony ? 'zatwierdzona' : 'robocza',
+        daneDokumentu: daneProgramu,
+        wersjaFormatu: 'programy-szkolen-v1',
+      })
+      aktywnaKopiaIdRef.current = kopia.id
+      ustawAktywnaKopieProgramu(kopia.id)
       zapiszProgramRoboczo(daneProgramu)
-      ustawKomunikat('Program zapisany roboczo lokalnie.')
+      ustawKomunikat('Program zapisany jako kopia robocza.')
     } catch {
       ustawKomunikat('Nie udało się zapisać programu roboczo.')
     }
@@ -1015,7 +1032,8 @@ export function WidokProgramowSzkolen() {
   function wyczyscProgram() {
     pomijajZapisRef.current = true
     ustawDaneProgramu(domyslnyZapisProgramu)
-    localStorage.removeItem(kluczProgramuRoboczego)
+    aktywnaKopiaIdRef.current = null
+    wyczyscAktywnaKopieProgramu()
     ustawKomunikat('Program wyczyszczony.')
   }
 

@@ -7,7 +7,7 @@ import {
   pobierzKolorTlaOpiekuna,
   pobierzNazweOpiekuna,
 } from '../uzytkownicySzczegolow'
-import { pobierzAktualnaWersjeRobocza, pobierzKopieRobocze, ustawAktualnaWersjeRobocza } from '../uslugi/magazynWersjiRoboczych'
+import { pobierzAktualnaWersjeRobocza, pobierzKopieRobocze, ustawAktualnaWersjeRobocza, usunKopieRobocza } from '../uslugi/magazynWersjiRoboczych'
 import './widokNowychSzczegolowOrganizacyjnych.css'
 
 type WlasciwosciWidokuKopii = {
@@ -20,9 +20,18 @@ function formatujDate(data: string) {
 
 export default function WidokKopiiRoboczychSzczegolowOrganizacyjnych({ otworzNoweSzczegoly }: WlasciwosciWidokuKopii) {
   const konto = useMemo(() => pobierzAktywneKontoSzczegolow(), [])
-  const [kopie] = useState(() => pobierzKopieRobocze())
+  const [kopie, ustawKopie] = useState(() => pobierzKopieRobocze())
   const aktualnaKopia = pobierzAktualnaWersjeRobocza()
   const widoczneKopie = kopie.filter((kopia) => kopia.id === aktualnaKopia?.id || czyKontoMozeWidziecKopie(konto, kopia))
+
+  function usunKopie(kopia: WersjaRoboczaGeneratora) {
+    if (!czyKontoMozeEdytowacKopie(konto, kopia)) {
+      return
+    }
+
+    usunKopieRobocza(kopia.id)
+    ustawKopie((obecne) => obecne.filter((istniejaca) => istniejaca.id !== kopia.id))
+  }
 
   function edytujKopie(kopia: WersjaRoboczaGeneratora) {
     if (!czyKontoMozeEdytowacKopie(konto, kopia)) {
@@ -57,9 +66,14 @@ export default function WidokKopiiRoboczychSzczegolowOrganizacyjnych({ otworzNow
             </div>
             <div className="szczegoly-rekord__akcje">
               {czyKontoMozeEdytowacKopie(konto, kopia) && (
-                <button type="button" onClick={() => edytujKopie(kopia)}>
-                  Edytuj
-                </button>
+                <>
+                  <button type="button" onClick={() => edytujKopie(kopia)}>
+                    Edytuj
+                  </button>
+                  <button type="button" onClick={() => usunKopie(kopia)}>
+                    Usuń
+                  </button>
+                </>
               )}
             </div>
           </article>

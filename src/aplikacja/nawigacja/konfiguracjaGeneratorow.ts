@@ -54,7 +54,10 @@ export const konfiguracjePodmenuGeneratorow: KonfiguracjaPodmenuGeneratora[] = [
     klucz: 'programy-szkolen',
     miejsce: 'dokumenty',
     etykieta: 'Programy szkoleń',
-    pozycje: [{ widok: 'programy_szkolen', etykieta: 'Nowy program szkolenia', sciezka: '/dokumenty/programy-szkolen' }],
+    pozycje: [
+      { widok: 'programy_szkolen_kopie_robocze', etykieta: 'Kopie robocze', sciezka: '/dokumenty/programy-szkolen/kopie-robocze' },
+      { widok: 'programy_szkolen', etykieta: 'Nowy program szkolenia', sciezka: '/dokumenty/programy-szkolen' },
+    ],
   },
 ]
 

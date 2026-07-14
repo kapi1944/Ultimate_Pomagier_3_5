@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "test": "node testy/parserProgramu.regresja.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/replikatorDokumentow.regresja.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/kartotekaSzablonowDokumentow.regresja.test.ts",
+    "test": "node testy/parserProgramu.regresja.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/replikatorDokumentow.regresja.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/kartotekaSzablonowDokumentow.regresja.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/kopieRobocze.regresja.test.ts",
     "preview": "vite preview"
   },
   "dependencies": {

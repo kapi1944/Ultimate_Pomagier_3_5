@@ -13,6 +13,7 @@ export type WidokNawigacji =
   | 'dyplomy'
   | 'karta-na-drzwi'
   | 'programy_szkolen'
+  | 'programy_szkolen_kopie_robocze'
   | 'kartoteki'
   | 'kartoteki_trenerzy'
   | 'kartoteki_klienci'
