@@ -4,7 +4,8 @@ import MenuBoczne from '../menu/MenuBoczne'
 import type { WidokNawigacji } from '../nawigacja/typyNawigacji'
 import { pobierzSciezkeGeneratora, pobierzWidokGeneratoraZeSciezki } from '../nawigacja/konfiguracjaGeneratorow'
 import WidokKartotek, { type ZakladkaKartotek } from '../../kartoteki/WidokKartotek'
-import WidokDokumentow from '../../moduly/dokumenty/WidokDokumentow'
+import WidokKopiiRoboczychDokumentow from '../../moduly/dokumenty/WidokKopiiRoboczychDokumentow'
+import WidokWszystkichDokumentow from '../../moduly/dokumenty/WidokWszystkichDokumentow'
 import WidokAnkiet from '../../moduly/dokumenty/generatory/ankiety/WidokAnkiet'
 import WidokDyplomow from '../../moduly/dokumenty/generatory/dyplomy/WidokDyplomow'
 import WidokKartNaDrzwi from '../../moduly/dokumenty/generatory/karta_na_drzwi/WidokKartNaDrzwi'
@@ -26,6 +27,8 @@ import WidokListySzczegolowOrganizacyjnych from '../../moduly/zamkniete/szczegol
 import WidokNowychSzczegolowOrganizacyjnych from '../../moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokNowychSzczegolowOrganizacyjnych'
 import WidokGeneratoraSzczegolow from '../../moduly/zamkniete/szkolenia/generator_szczegolow/WidokGeneratoraSzczegolow'
 import WidokSzkolenZamknietych from '../../moduly/zamkniete/szkolenia/WidokSzkolenZamknietych'
+import { pobierzSciezkeGeneratoraDokumentu } from '../../wspolne/dokumenty/konfiguracjaDokumentow'
+import type { Dokument } from '../../wspolne/dokumenty/modelDokumentu'
 import './ukladAplikacji.css'
 
 const kluczAktywnegoWidoku = 'ultimate-pomagier-aktywny-widok'
@@ -47,6 +50,8 @@ const dostepneWidoki: WidokNawigacji[] = [
   'zamkniete_szczegoly_organizacyjne_nowe',
   'szkolenia-otwarte',
   'dokumenty',
+  'dokumenty_wszystkie',
+  'dokumenty_kopie_robocze',
   'replikator_dokumentow',
   'listy-obecnosci',
   'ankiety',
@@ -95,7 +100,13 @@ function pobierzWidokZakladkiKartotek(zakladka: ZakladkaKartotek): WidokNawigacj
   }
 }
 
-function renderujWidok(widok: WidokNawigacji, zmienZakladkeKartotek: (zakladka: ZakladkaKartotek) => void, ustawAktywnyWidok: UstawWidok, wersjaProgramu: number): ReactNode {
+function renderujWidok(
+  widok: WidokNawigacji,
+  zmienZakladkeKartotek: (zakladka: ZakladkaKartotek) => void,
+  ustawAktywnyWidok: UstawWidok,
+  wersjaProgramu: number,
+  otworzDokument: (dokument: Dokument<unknown, unknown>) => void,
+): ReactNode {
   switch (widok) {
     case 'pulpit':
       return <WidokPulpitu />
@@ -112,7 +123,10 @@ function renderujWidok(widok: WidokNawigacji, zmienZakladkeKartotek: (zakladka: 
     case 'szkolenia-otwarte':
       return <WidokSzkolenOtwartych />
     case 'dokumenty':
-      return <WidokDokumentow />
+    case 'dokumenty_wszystkie':
+      return <WidokWszystkichDokumentow otworzDokument={otworzDokument} />
+    case 'dokumenty_kopie_robocze':
+      return <WidokKopiiRoboczychDokumentow otworzDokument={otworzDokument} />
     case 'replikator_dokumentow':
       return <WidokReplikatoraDokumentow />
     case 'listy-obecnosci':
@@ -209,6 +223,15 @@ export default function UkladAplikacji() {
     ustawWidok(pobierzWidokZakladkiKartotek(zakladka))
   }
 
+  function otworzDokument(dokument: Dokument<unknown, unknown>) {
+    const sciezka = pobierzSciezkeGeneratoraDokumentu(dokument.typ)
+    const widok = sciezka ? pobierzWidokGeneratoraZeSciezki(sciezka) : null
+
+    if (widok) {
+      ustawWidok(widok)
+    }
+  }
+
   useEffect(() => {
     try {
       localStorage.setItem(kluczAktywnegoWidoku, aktywnyWidok)
@@ -246,7 +269,7 @@ export default function UkladAplikacji() {
   return (
     <div className="uklad-aplikacji">
       <MenuBoczne aktywnyWidok={aktywnyWidok} ustawAktywnyWidok={ustawWidok} />
-      <main className="uklad-aplikacji__obszar-roboczy">{renderujWidok(aktywnyWidok, zmienZakladkeKartotek, ustawWidok, wersjaProgramu)}</main>
+      <main className="uklad-aplikacji__obszar-roboczy">{renderujWidok(aktywnyWidok, zmienZakladkeKartotek, ustawWidok, wersjaProgramu, otworzDokument)}</main>
       {widokDoPotwierdzenia && (
         <section className="program-panel-roboczy program-szkolen__komunikat" role="dialog" aria-modal="true" aria-label="Niezapisane zmiany programu">
           <strong>Masz niezapisane zmiany programu.</strong>

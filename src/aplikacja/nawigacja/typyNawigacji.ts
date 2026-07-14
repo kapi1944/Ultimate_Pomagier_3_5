@@ -7,6 +7,8 @@ export type WidokNawigacji =
   | 'zamkniete_szczegoly_organizacyjne_nowe'
   | 'szkolenia-otwarte'
   | 'dokumenty'
+  | 'dokumenty_wszystkie'
+  | 'dokumenty_kopie_robocze'
   | 'replikator_dokumentow'
   | 'listy-obecnosci'
   | 'ankiety'
