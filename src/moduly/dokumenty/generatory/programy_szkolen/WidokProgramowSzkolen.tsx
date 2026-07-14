@@ -1397,12 +1397,6 @@ export function WidokProgramowSzkolen() {
 
               <div className="program-szkolen__srodtytul">Treść programu</div>
 
-              <div className="program-szkolen__akcje-parsowania">
-                <button className="program-szkolen__przycisk" disabled={!trescProgramu.trim()} onClick={zatwierdzWynikParsowania} type="button">
-                  Zatwierdź wynik parsowania
-                </button>
-              </div>
-
               <label className="program-szkolen__etykieta">
                 <span>
                   <input
@@ -1607,6 +1601,12 @@ export function WidokProgramowSzkolen() {
               </label>
 
               <div className="program-szkolen__srodtytul">Treść programu</div>
+
+              <div className="program-szkolen__akcje-parsowania">
+                <button className="program-szkolen__przycisk" disabled={!trescProgramu.trim()} onClick={zatwierdzWynikParsowania} type="button">
+                  Zatwierdź wynik parsowania
+                </button>
+              </div>
 
               <EdytorProgramuWysiwyg
                 onZmianaHtml={(html) => zmienTrescProgramuHtml(html)}
