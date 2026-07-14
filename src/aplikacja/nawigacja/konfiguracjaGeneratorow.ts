@@ -75,5 +75,11 @@ export function pobierzSciezkeGeneratora(widok: WidokNawigacji) {
 }
 
 export function pobierzWidokGeneratoraZeSciezki(sciezka: string) {
-  return [...pozycjeRejestruDokumentow, ...konfiguracjePodmenuGeneratorow.flatMap((konfiguracja) => konfiguracja.pozycje)].find((pozycja) => pozycja.sciezka === sciezka)?.widok
+  const widok = [...pozycjeRejestruDokumentow, ...konfiguracjePodmenuGeneratorow.flatMap((konfiguracja) => konfiguracja.pozycje)].find((pozycja) => pozycja.sciezka === sciezka)?.widok
+
+  if (widok) {
+    return widok
+  }
+
+  return /^\/dokumenty\/programy-szkolen\/[^/]+$/.test(sciezka) ? 'programy_szkolen' : undefined
 }

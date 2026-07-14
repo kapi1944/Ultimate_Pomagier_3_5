@@ -16,6 +16,7 @@ import {
   pobierzKopieRoboczeProgramu,
   usunKopieRoboczaProgramu,
   wyczyscAktywnaKopieProgramu,
+  ustawAktywnaKopieProgramu,
 } from '../../moduly/dokumenty/generatory/programy_szkolen/magazynKopiiRoboczychProgramu'
 import WidokKopiiRoboczychGeneratora from '../../wspolne/dokumenty/WidokKopiiRoboczychGeneratora'
 import { czyProgramMaNiezapisaneZmiany, zapiszProgramPrzedWyjsciem } from '../../moduly/dokumenty/generatory/programy_szkolen/strzeznikNiezapisanychProgramow'
@@ -87,6 +88,11 @@ function pobierzPoczatkowyWidok(): WidokNawigacji {
   }
 }
 
+function pobierzIdProgramuZeSciezki() {
+  const dopasowanie = window.location.pathname.match(/^\/dokumenty\/programy-szkolen\/([^/]+)$/)
+  return dopasowanie ? decodeURIComponent(dopasowanie[1]) : null
+}
+
 function pobierzWidokZakladkiKartotek(zakladka: ZakladkaKartotek): WidokNawigacji {
   switch (zakladka) {
     case 'trenerzy':
@@ -138,7 +144,7 @@ function renderujWidok(
     case 'karta-na-drzwi':
       return <WidokKartNaDrzwi />
     case 'programy_szkolen':
-      return <WidokProgramowSzkolen key={wersjaProgramu} />
+      return <WidokProgramowSzkolen key={`${wersjaProgramu}-${pobierzIdProgramuZeSciezki() ?? 'nowy'}`} dokumentIdZTrasy={pobierzIdProgramuZeSciezki()} />
     case 'programy_szkolen_kopie_robocze':
       return (
         <WidokKopiiRoboczychGeneratora
@@ -224,6 +230,18 @@ export default function UkladAplikacji() {
   }
 
   function otworzDokument(dokument: Dokument<unknown, unknown>) {
+    if (dokument.typ === 'PROGRAM_SZKOLENIA') {
+      ustawAktywnaKopieProgramu(dokument.id)
+      const sciezka = `/dokumenty/programy-szkolen/${encodeURIComponent(dokument.id)}`
+
+      if (window.location.pathname !== sciezka) {
+        window.history.pushState({ widok: 'programy_szkolen' }, '', sciezka)
+      }
+
+      ustawAktywnyWidok('programy_szkolen')
+      return
+    }
+
     const sciezka = pobierzSciezkeGeneratoraDokumentu(dokument.typ)
     const widok = sciezka ? pobierzWidokGeneratoraZeSciezki(sciezka) : null
 
