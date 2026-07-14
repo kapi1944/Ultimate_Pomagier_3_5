@@ -19,6 +19,7 @@ import {
   zapiszKopieRobocza,
 } from '../../../../wspolne/dokumenty/magazynKopiiRoboczych'
 import { repozytoriumDokumentow } from '../../../../wspolne/dokumenty/repozytoriumDokumentow'
+import { zapiszDokumentRoboczyGeneratora } from '../../../../wspolne/dokumenty/zapisDokumentuGeneratora'
 const kluczAktualnejWersji = 'ultimatePomagier.szczegolyOrganizacyjne.aktualnaWersja'
 const kluczKopiiRoboczych = 'ultimatePomagier.szczegolyOrganizacyjne.kopieRobocze'
 const kluczMigracjiKopiiRoboczych = 'ultimatePomagier.szczegolyOrganizacyjne.kopieRobocze.wspolnyMagazyn.v1'
@@ -249,6 +250,18 @@ export function ustawAktualnaWersjeRobocza(wersja: WersjaRoboczaGeneratora) {
 }
 
 export function zapiszWersjeRobocza(wersja: WersjaRoboczaGeneratora) {
+  zapiszDokumentRoboczyGeneratora({
+    id: wersja.id,
+    typ: 'SZCZEGOLY_ORGANIZACYJNE',
+    generatorId: 'szczegoly_organizacyjne',
+    tytul: wersja.dane.tytulSzkolenia || wersja.nazwa,
+    daneDokumentu: wersja,
+    ustawieniaDokumentu: { wersja: wersja.wersja, statusyPol: wersja.statusyPol },
+    klientId: wersja.dane.nazwaKlienta || null,
+    organizatorId: wersja.dane.organizator,
+    autorId: wersja.autorId,
+    wlascicielId: wersja.dane.opiekunId || null,
+  })
   ustawAktualnaWersjeRobocza(wersja)
 
   zapiszKopieRobocza({
