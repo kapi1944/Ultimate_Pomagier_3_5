@@ -18,6 +18,7 @@ import {
   usunKopieRobocza as usunWspolnaKopieRobocza,
   zapiszKopieRobocza,
 } from '../../../../wspolne/dokumenty/magazynKopiiRoboczych'
+import { repozytoriumDokumentow } from '../../../../wspolne/dokumenty/repozytoriumDokumentow'
 const kluczAktualnejWersji = 'ultimatePomagier.szczegolyOrganizacyjne.aktualnaWersja'
 const kluczKopiiRoboczych = 'ultimatePomagier.szczegolyOrganizacyjne.kopieRobocze'
 const kluczMigracjiKopiiRoboczych = 'ultimatePomagier.szczegolyOrganizacyjne.kopieRobocze.wspolnyMagazyn.v1'
@@ -57,7 +58,66 @@ function pobierzStarszeKopieRobocze() {
 }
 
 function zapiszOpublikowaneSzczegoly(rekordy: OpublikowaneSzczegolyOrganizacyjne[]) {
-  localStorage.setItem(kluczOpublikowanychSzczegolow, JSON.stringify(rekordy))
+  rekordy.forEach((rekord) => {
+    const zmiany = {
+      tytul: rekord.dane.tytulSzkolenia || rekord.nazwa,
+      stanCyklu: 'opublikowany' as const,
+      statusBiznesowy: rekord.status,
+      opublikowano: rekord.dataPublikacji,
+      autorId: rekord.autorId,
+      autorNazwa: rekord.autorNazwa,
+      opiekunId: rekord.opiekunId,
+      daneDokumentu: rekord,
+      metadaneGeneratora: {},
+    }
+    const poprzedni = repozytoriumDokumentow.pobierzPoId('szczegoly_organizacyjne', rekord.id)
+
+    if (poprzedni) {
+      repozytoriumDokumentow.aktualizuj('szczegoly_organizacyjne', rekord.id, zmiany)
+      return
+    }
+
+    repozytoriumDokumentow.zapiszNowy({
+      id: rekord.id,
+      typGeneratora: 'szczegoly_organizacyjne',
+      ...zmiany,
+      widocznosc: 'zespol',
+      zrodlo: 'migracja',
+      wersjaFormatu: rekord.wersja,
+      rekordZrodlowyId: rekord.zrodloKopiiRoboczejId,
+    })
+  })
+}
+
+function zmigrujStarszeOpublikowaneSzczegoly() {
+  const rekordy = bezpiecznieParsuj<unknown>(localStorage.getItem(kluczOpublikowanychSzczegolow), [])
+
+  if (Array.isArray(rekordy)) {
+    zapiszOpublikowaneSzczegoly(rekordy.filter((rekord): rekord is OpublikowaneSzczegolyOrganizacyjne => Boolean(rekord && typeof rekord === 'object' && typeof (rekord as { id?: unknown }).id === 'string')))
+  }
+}
+
+function zmigrujStarszaHistorieSzczegolow() {
+  const historia = bezpiecznieParsuj<unknown>(localStorage.getItem(kluczHistorii), [])
+
+  if (!Array.isArray(historia)) {
+    return
+  }
+
+  const istniejaceId = new Set(repozytoriumDokumentow.pobierzHistorie('szczegoly_organizacyjne').map((wpis) => wpis.id))
+  historia.forEach((wpis) => {
+    if (!wpis || typeof wpis !== 'object' || typeof (wpis as { id?: unknown }).id !== 'string' || istniejaceId.has((wpis as { id: string }).id)) {
+      return
+    }
+
+    const staryWpis = wpis as WpisHistoriiSzczegolow
+    repozytoriumDokumentow.dodajWersjeHistorii({
+      id: staryWpis.id,
+      typGeneratora: 'szczegoly_organizacyjne',
+      data: staryWpis.data,
+      dane: staryWpis,
+    })
+  })
 }
 
 function utworzNazweOpublikowanegoRekordu(wersja: WersjaRoboczaGeneratora) {
@@ -76,8 +136,12 @@ function utworzEtykieteWersji(historia: WpisHistoriiSzczegolow[]) {
 }
 
 function zarejestrujHistorie(wpis: WpisHistoriiSzczegolow) {
-  const historia = pobierzHistorieSzczegolow()
-  localStorage.setItem(kluczHistorii, JSON.stringify([wpis, ...historia].slice(0, 100)))
+  repozytoriumDokumentow.dodajWersjeHistorii({
+    id: wpis.id,
+    typGeneratora: 'szczegoly_organizacyjne',
+    data: wpis.data,
+    dane: wpis,
+  })
 }
 
 export function pobierzAktualnaWersjeRobocza() {
@@ -108,7 +172,10 @@ export function pobierzKopieRobocze() {
 }
 
 export function pobierzOpublikowaneSzczegoly() {
-  return bezpiecznieParsuj<OpublikowaneSzczegolyOrganizacyjne[]>(localStorage.getItem(kluczOpublikowanychSzczegolow), [])
+  zmigrujStarszeOpublikowaneSzczegoly()
+  return repozytoriumDokumentow
+    .pobierz({ typGeneratora: 'szczegoly_organizacyjne', stanCyklu: 'opublikowany' })
+    .map((dokument) => dokument.daneDokumentu as OpublikowaneSzczegolyOrganizacyjne)
 }
 
 export function pobierzAutosaveSzczegolow() {
@@ -124,7 +191,10 @@ export function usunAutosaveSzczegolow() {
 }
 
 export function pobierzHistorieSzczegolow() {
-  return bezpiecznieParsuj<WpisHistoriiSzczegolow[]>(localStorage.getItem(kluczHistorii), [])
+  zmigrujStarszaHistorieSzczegolow()
+  return repozytoriumDokumentow
+    .pobierzHistorie('szczegoly_organizacyjne')
+    .map((wpis) => wpis.dane as WpisHistoriiSzczegolow)
 }
 
 export function dodajWpisHistoriiSzczegolow(wpis: Omit<WpisHistoriiSzczegolow, 'id' | 'data'>) {

@@ -1,4 +1,10 @@
-export type TypGeneratoraKopiiRoboczej = 'programy_szkolen' | 'szczegoly_organizacyjne'
+import {
+  repozytoriumDokumentow,
+  type RekordDokumentu,
+  type TypGeneratoraDokumentu,
+} from './repozytoriumDokumentow'
+
+export type TypGeneratoraKopiiRoboczej = TypGeneratoraDokumentu
 
 export type KopiaRobocza<TypDanych = unknown> = {
   id: string
@@ -22,63 +28,63 @@ type DaneKopiiRoboczej<TypDanych> = {
 
 const kluczWspolnychKopiiRoboczych = 'ultimatePomagier.kopieRobocze'
 
-function bezpiecznieParsuj(wartosc: string | null): unknown[] {
-  if (!wartosc) {
-    return []
-  }
+function czyObiekt(wartosc: unknown): wartosc is Record<string, unknown> {
+  return Boolean(wartosc && typeof wartosc === 'object')
+}
 
+function pobierzStarszeKopie() {
   try {
-    const dane = JSON.parse(wartosc)
-
-    return Array.isArray(dane) ? dane : []
+    const zapis = JSON.parse(localStorage.getItem(kluczWspolnychKopiiRoboczych) ?? '[]') as unknown
+    return Array.isArray(zapis) ? zapis : []
   } catch {
     return []
   }
 }
 
-function czyRekord(wartosc: unknown): wartosc is Record<string, unknown> {
-  return Boolean(wartosc && typeof wartosc === 'object')
-}
-
-function normalizujKopieRobocza(wartosc: unknown): KopiaRobocza | null {
-  if (!czyRekord(wartosc) || typeof wartosc.id !== 'string') {
-    return null
-  }
-
-  const typGeneratora = wartosc.typGeneratora
-
-  if (typGeneratora !== 'programy_szkolen' && typGeneratora !== 'szczegoly_organizacyjne') {
-    return null
-  }
-
-  const dataZapisu = typeof wartosc.dataZapisu === 'string' ? wartosc.dataZapisu : new Date().toISOString()
-  const utworzono = typeof wartosc.utworzono === 'string' ? wartosc.utworzono : dataZapisu
-  const zaktualizowano = typeof wartosc.zaktualizowano === 'string' ? wartosc.zaktualizowano : dataZapisu
-
+function jakoKopieRobocza<TypDanych>(dokument: RekordDokumentu): KopiaRobocza<TypDanych> {
   return {
-    id: wartosc.id,
-    typGeneratora,
-    tytul: typeof wartosc.tytul === 'string' ? wartosc.tytul : typeof wartosc.nazwa === 'string' ? wartosc.nazwa : 'Bez tytułu',
-    status: typeof wartosc.status === 'string' ? wartosc.status : 'robocza',
-    utworzono,
-    zaktualizowano,
-    daneDokumentu: 'daneDokumentu' in wartosc ? wartosc.daneDokumentu : wartosc.dane,
-    wersjaFormatu: typeof wartosc.wersjaFormatu === 'string' ? wartosc.wersjaFormatu : typeof wartosc.wersja === 'string' ? wartosc.wersja : undefined,
+    id: dokument.id,
+    typGeneratora: dokument.typGeneratora,
+    tytul: dokument.tytul,
+    status: dokument.statusBiznesowy ?? 'robocza',
+    utworzono: dokument.utworzono,
+    zaktualizowano: dokument.zaktualizowano,
+    daneDokumentu: dokument.daneDokumentu as TypDanych,
+    wersjaFormatu: dokument.wersjaFormatu,
   }
 }
 
-function zapiszWszystkieKopieRobocze(kopie: KopiaRobocza[]) {
-  localStorage.setItem(kluczWspolnychKopiiRoboczych, JSON.stringify(kopie))
-}
+function zmigrujStarszeKopie() {
+  pobierzStarszeKopie().forEach((wartosc) => {
+    if (!czyObiekt(wartosc) || typeof wartosc.id !== 'string' || (wartosc.typGeneratora !== 'programy_szkolen' && wartosc.typGeneratora !== 'szczegoly_organizacyjne')) {
+      return
+    }
 
-function utworzId(typGeneratora: TypGeneratoraKopiiRoboczej) {
-  return `${typGeneratora}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    if (repozytoriumDokumentow.pobierzPoId(wartosc.typGeneratora, wartosc.id)) {
+      return
+    }
+
+    repozytoriumDokumentow.zapiszNowy({
+      id: wartosc.id,
+      typGeneratora: wartosc.typGeneratora,
+      tytul: typeof wartosc.tytul === 'string' ? wartosc.tytul : typeof wartosc.nazwa === 'string' ? wartosc.nazwa : 'Bez tytułu',
+      stanCyklu: 'kopia_robocza',
+      statusBiznesowy: typeof wartosc.status === 'string' ? wartosc.status : 'robocza',
+      utworzono: typeof wartosc.utworzono === 'string' ? wartosc.utworzono : undefined,
+      zaktualizowano: typeof wartosc.zaktualizowano === 'string' ? wartosc.zaktualizowano : undefined,
+      widocznosc: 'prywatny',
+      zrodlo: 'migracja',
+      wersjaFormatu: typeof wartosc.wersjaFormatu === 'string' ? wartosc.wersjaFormatu : typeof wartosc.wersja === 'string' ? wartosc.wersja : undefined,
+      daneDokumentu: 'daneDokumentu' in wartosc ? wartosc.daneDokumentu : wartosc.dane ?? {},
+      metadaneGeneratora: {},
+      daneMigracji: { kluczZrodlowy: kluczWspolnychKopiiRoboczych, idZrodlowy: wartosc.id, zmigrowano: new Date().toISOString() },
+    })
+  })
 }
 
 export function pobierzWszystkieKopieRobocze() {
-  return bezpiecznieParsuj(localStorage.getItem(kluczWspolnychKopiiRoboczych))
-    .map(normalizujKopieRobocza)
-    .filter((kopia): kopia is KopiaRobocza => Boolean(kopia))
+  zmigrujStarszeKopie()
+  return repozytoriumDokumentow.pobierz({ stanCyklu: 'kopia_robocza' }).map((dokument) => jakoKopieRobocza(dokument))
 }
 
 export function pobierzKopieRoboczeGeneratora<TypDanych>(typGeneratora: TypGeneratoraKopiiRoboczej) {
@@ -88,27 +94,28 @@ export function pobierzKopieRoboczeGeneratora<TypDanych>(typGeneratora: TypGener
 }
 
 export function zapiszKopieRobocza<TypDanych>(dane: DaneKopiiRoboczej<TypDanych>) {
-  const kopie = pobierzWszystkieKopieRobocze()
-  const poprzedniaKopia = dane.id ? kopie.find((kopia) => kopia.id === dane.id && kopia.typGeneratora === dane.typGeneratora) : undefined
-  const teraz = new Date().toISOString()
-  const kopia: KopiaRobocza<TypDanych> = {
-    id: poprzedniaKopia?.id ?? dane.id ?? utworzId(dane.typGeneratora),
-    typGeneratora: dane.typGeneratora,
-    tytul: dane.tytul.trim() || 'Bez tytułu',
-    status: dane.status,
-    utworzono: poprzedniaKopia?.utworzono ?? teraz,
-    zaktualizowano: teraz,
+  const poprzednia = dane.id ? repozytoriumDokumentow.pobierzPoId(dane.typGeneratora, dane.id) : null
+  const zmiany = {
+    tytul: dane.tytul,
+    statusBiznesowy: dane.status,
     daneDokumentu: dane.daneDokumentu,
     wersjaFormatu: dane.wersjaFormatu,
+    metadaneGeneratora: {},
   }
+  const dokument = poprzednia
+    ? repozytoriumDokumentow.aktualizuj(dane.typGeneratora, poprzednia.id, zmiany)
+    : repozytoriumDokumentow.zapiszNowy({
+        id: dane.id,
+        typGeneratora: dane.typGeneratora,
+        ...zmiany,
+        stanCyklu: 'kopia_robocza',
+        widocznosc: 'prywatny',
+        zrodlo: 'nowy',
+      })
 
-  zapiszWszystkieKopieRobocze([kopia, ...kopie.filter((istniejaca) => istniejaca.id !== kopia.id)])
-
-  return kopia
+  return jakoKopieRobocza<TypDanych>(dokument!)
 }
 
 export function usunKopieRobocza(typGeneratora: TypGeneratoraKopiiRoboczej, id: string) {
-  zapiszWszystkieKopieRobocze(
-    pobierzWszystkieKopieRobocze().filter((kopia) => kopia.id !== id || kopia.typGeneratora !== typGeneratora),
-  )
+  repozytoriumDokumentow.przeniesDoKosza(typGeneratora, id)
 }
