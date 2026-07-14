@@ -1,8 +1,0 @@
-main|946d5defed5f02eff2fa9a7a1248095a679b2b21|2026-07-13|4c damage
-origin|946d5defed5f02eff2fa9a7a1248095a679b2b21|2026-07-13|4c damage
-origin/etap-4a/stabilizacja-generatora-szczegolow|6c185b63f50d79e1cddbd5b1a041c5c238a8b5b3|2026-07-13|fix: popraw warstwowanie panelu na tabletach
-origin/etap-4b/sekcje-i-grupy-szkoleniowe|733eec57adb365894abba7cbe9759944dcd58f60|2026-07-13|feat: uporządkuj sekcje i grupy szkoleniowe
-origin/main|946d5defed5f02eff2fa9a7a1248095a679b2b21|2026-07-13|4c damage
-origin/naprawa/panel-generatorow-po-awarii|d0c52f10918cab6c761e73832234dee90c070eb0|2026-07-10|Merge branch 'main' of https://github.com/kapi1944/Ultimate_Pomagier_3_5
-origin/naprawa/prawy-panel-czysty-pr|78d53b99e5b4711e461e513bbb6130845b2cc5d2|2026-07-13|fix: odtwórz docelowy układ prawego panelu
-origin/naprawa/prawy-panel-po-awarii|2cc5ad2a93b4ff5292a616e8682547a9b4a92899|2026-07-13|prawy panel over
