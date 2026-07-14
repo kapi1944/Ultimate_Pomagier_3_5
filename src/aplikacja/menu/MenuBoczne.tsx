@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import type { WidokNawigacji } from '../nawigacja/typyNawigacji'
 import { pozycjeMenu, type PozycjaMenu } from './pozycjeMenu'
+import IkonaMenu from './IkonaMenu'
+import { pobierzTypIkonyMenu } from './ikonyPozycjiMenu'
 
 const kluczPrzypieciaMenu = 'ultimatePomagier.menuPrzypiete'
 const kluczWysuwaniaZKrawedzi = 'ultimatePomagier.menuWysuwanieZKrawedzi'
@@ -115,7 +117,8 @@ export default function MenuBoczne({
           style={{ paddingLeft: `${16 + poziom * 18}px` }}
           type="button"
         >
-          {pozycja.etykieta}
+          <IkonaMenu typ={pobierzTypIkonyMenu(pozycja.id)} />
+          <span className="menu-boczne__etykieta">{pozycja.etykieta}</span>
         </button>
 
         {pozycja.dzieci && czyRozwinieta && (
