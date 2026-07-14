@@ -11,6 +11,7 @@ import {
   zapiszJawnaKopieProgramu,
 } from '../src/moduly/dokumenty/generatory/programy_szkolen/magazynKopiiRoboczychProgramu.ts'
 import { czyProgramMaNiezapisaneZmiany, ustawObslugeNiezapisanychProgramow } from '../src/moduly/dokumenty/generatory/programy_szkolen/strzeznikNiezapisanychProgramow.ts'
+import { repozytoriumWspolnychDokumentow } from '../src/wspolne/dokumenty/rejestrDokumentow.ts'
 
 const magazyn = new Map<string, string>()
 globalThis.localStorage = { getItem: (klucz: string) => magazyn.get(klucz) ?? null, setItem: (klucz: string, wartosc: string) => magazyn.set(klucz, wartosc), removeItem: (klucz: string) => magazyn.delete(klucz), clear: () => magazyn.clear(), key: () => null, length: 0 } as Storage
@@ -75,4 +76,21 @@ test('każdy jawny zapis dodaje historię z migawką', () => {
   const druga = zapiszJawnaKopieProgramu({ idAktywnejKopii: pierwsza.id, tryb: 'utworz_nowa', tytul: 'Nowa kopia', statusBiznesowy: 'robocza', daneDokumentu: dane('Kopia'), metadane: metadane() })
   assert.equal(pobierzHistorieProgramu(pierwsza.id).length, 2)
   assert.equal(pobierzHistorieProgramu(druga.id)[0].typOperacji, 'utworzenie_nowej_kopii')
+})
+
+test('jawny zapis programu tworzy rekord wspólnego modelu z rozdzielonymi ustawieniami', () => {
+  magazyn.clear()
+  const rekord = zapiszJawnaKopieProgramu({
+    tryb: 'zapisz',
+    tytul: 'Program w rejestrze',
+    statusBiznesowy: 'robocza',
+    daneDokumentu: { ...dane(), ustawienia: { kolorAkcentuProgramu: '#DE1914' } },
+    metadane: metadane(),
+  })
+
+  const dokument = repozytoriumWspolnychDokumentow.pobierzPoId(rekord.id)
+  assert.equal(dokument?.typ, 'PROGRAM_SZKOLENIA')
+  assert.equal(dokument?.status, 'ROBOCZY')
+  assert.equal(dokument?.daneDokumentu.ustawienia, undefined)
+  assert.deepEqual(dokument?.ustawieniaDokumentu.ustawienia, { kolorAkcentuProgramu: '#DE1914' })
 })

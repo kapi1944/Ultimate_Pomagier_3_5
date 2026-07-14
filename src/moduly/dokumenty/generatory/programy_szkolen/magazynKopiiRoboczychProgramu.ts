@@ -1,8 +1,5 @@
-import {
-  pobierzKopieRoboczeGeneratora,
-  usunKopieRobocza,
-  type KopiaRobocza,
-} from '../../../../wspolne/dokumenty/magazynKopiiRoboczych'
+import type { KopiaRobocza } from '../../../../wspolne/dokumenty/magazynKopiiRoboczych'
+import { pobierzKopieProgramowZRejestru, pobierzProgramPoId, usunProgramMiekko, zapiszProgramWRejestrze } from './rejestrProgramowSzkolen'
 import { repozytoriumDokumentow } from '../../../../wspolne/dokumenty/repozytoriumDokumentow'
 
 const kluczProgramuRoboczego = 'ultimate-pomagier-program-szkolenia-roboczy'
@@ -25,6 +22,7 @@ export type MetadaneProgramu = {
   liczbaModulow: number
   autor?: string
   klient?: string
+  szkolenieId?: string
   dataSzkolenia?: string
   zrodloProgramu?: string
   czyWynikParsowaniaZatwierdzony: boolean
@@ -130,7 +128,7 @@ export function wyczyscAktywnaKopieProgramu() {
 }
 
 export function pobierzKopieRoboczeProgramu() {
-  return pobierzKopieRoboczeGeneratora('programy_szkolen')
+  return pobierzKopieProgramowZRejestru()
 }
 
 export function pobierzAktywnaKopieProgramu<TypDanych = DaneProgramu>(): KopiaRobocza<TypDanych> | null {
@@ -140,7 +138,7 @@ export function pobierzAktywnaKopieProgramu<TypDanych = DaneProgramu>(): KopiaRo
     return null
   }
 
-  return pobierzKopieRoboczeProgramu().find((kopia) => kopia.id === id) as KopiaRobocza<TypDanych> | null
+  return pobierzProgramPoId<TypDanych>(id)
 }
 
 export function otworzKopieRoboczaProgramu(kopia: KopiaRobocza) {
@@ -148,7 +146,7 @@ export function otworzKopieRoboczaProgramu(kopia: KopiaRobocza) {
 }
 
 export function usunKopieRoboczaProgramu(kopia: KopiaRobocza) {
-  usunKopieRobocza('programy_szkolen', kopia.id)
+  usunProgramMiekko(kopia.id)
 
   if (pobierzIdAktywnejKopiiProgramu() === kopia.id) {
     wyczyscAktywnaKopieProgramu()
@@ -156,30 +154,8 @@ export function usunKopieRoboczaProgramu(kopia: KopiaRobocza) {
 }
 
 export function zapiszJawnaKopieProgramu<TypDanych>(dane: DaneZapisuJawnejKopii<TypDanych>) {
-  const czyAktualizacja = dane.tryb === 'aktualizuj' && Boolean(dane.idAktywnejKopii)
-  const poprzednia = czyAktualizacja && dane.idAktywnejKopii ? repozytoriumDokumentow.pobierzPoId('programy_szkolen', dane.idAktywnejKopii) : null
-  const typOperacji: TypOperacjiHistoriiProgramu = czyAktualizacja ? 'aktualizacja_kopii' : dane.tryb === 'utworz_nowa' ? 'utworzenie_nowej_kopii' : 'utworzenie_kopii'
-  const zmiany = {
-    tytul: dane.tytul,
-    statusBiznesowy: dane.statusBiznesowy,
-    daneDokumentu: dane.daneDokumentu,
-    metadaneGeneratora: dane.metadane,
-    wersjaFormatu: 'programy-szkolen-v1',
-  }
-  const rekord = poprzednia
-    ? repozytoriumDokumentow.aktualizuj('programy_szkolen', poprzednia.id, zmiany)
-    : repozytoriumDokumentow.zapiszNowy({
-        ...zmiany,
-        typGeneratora: 'programy_szkolen',
-        stanCyklu: 'kopia_robocza',
-        widocznosc: 'prywatny',
-        zrodlo: dane.tryb === 'utworz_nowa' ? 'duplikat' : 'nowy',
-        rekordZrodlowyId: dane.tryb === 'utworz_nowa' ? dane.idAktywnejKopii ?? undefined : undefined,
-      })
-
-  if (!rekord) {
-    throw new Error('Nie znaleziono kopii do aktualizacji.')
-  }
+  const rekord = zapiszProgramWRejestrze(dane)
+  const typOperacji: TypOperacjiHistoriiProgramu = dane.tryb === 'aktualizuj' ? 'aktualizacja_kopii' : dane.tryb === 'utworz_nowa' ? 'utworzenie_nowej_kopii' : 'utworzenie_kopii'
 
   ustawAktywnaKopieProgramu(rekord.id)
   repozytoriumDokumentow.dodajWersjeHistorii({
@@ -188,7 +164,6 @@ export function zapiszJawnaKopieProgramu<TypDanych>(dane: DaneZapisuJawnejKopii<
     dane: {
       typOperacji,
       idWersji: rekord.id,
-      uzytkownik: rekord.autorNazwa,
       migawkaDokumentu: dane.daneDokumentu,
     } satisfies WpisHistoriiProgramu<TypDanych>,
   })
@@ -196,7 +171,6 @@ export function zapiszJawnaKopieProgramu<TypDanych>(dane: DaneZapisuJawnejKopii<
 
   return rekord
 }
-
 export function pobierzHistorieProgramu<TypDanych = DaneProgramu>(idDokumentu?: string) {
   return repozytoriumDokumentow
     .pobierzHistorie('programy_szkolen', idDokumentu)

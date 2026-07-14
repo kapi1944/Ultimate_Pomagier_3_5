@@ -9,6 +9,7 @@ import {
   zapiszAutosaveProgramu,
   zapiszJawnaKopieProgramu,
 } from './magazynKopiiRoboczychProgramu'
+import { pobierzProgramPoId } from './rejestrProgramowSzkolen'
 import { ustawObslugeNiezapisanychProgramow } from './strzeznikNiezapisanychProgramow'
 import {
   przygotujRaportEksportuDokumentu,
@@ -841,13 +842,49 @@ function zapiszLogWymuszeniaEksportu(raport: ReturnType<typeof przygotujRaportEk
   }
 }
 
-export function WidokProgramowSzkolen() {
-  const [aktywnaKopiaId, ustawAktywnaKopiaId] = useState<string | null>(pobierzIdAktywnejKopiiProgramu())
-  const [daneProgramu, ustawDaneProgramu] = useState<ZapisProgramuRoboczego>(() => normalizujZapisProgramu(pobierzAktywnaKopieProgramu<ZapisProgramuRoboczego>()?.daneDokumentu))
+type WlasciwosciWidokuProgramowSzkolen = {
+  dokumentIdZTrasy?: string | null
+}
+
+export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWidokuProgramowSzkolen) {
+  const [stanOdczytu, ustawStanOdczytu] = useState<'ladowanie' | 'gotowy' | 'blad'>(() => dokumentIdZTrasy ? 'ladowanie' : 'gotowy')
+  const [bladOdczytu, ustawBladOdczytu] = useState('')
+  const [aktywnaKopiaId, ustawAktywnaKopiaId] = useState<string | null>(() => dokumentIdZTrasy ? null : pobierzIdAktywnejKopiiProgramu())
+  const [daneProgramu, ustawDaneProgramu] = useState<ZapisProgramuRoboczego>(() => normalizujZapisProgramu(dokumentIdZTrasy ? undefined : pobierzAktywnaKopieProgramu<ZapisProgramuRoboczego>()?.daneDokumentu))
   const [ostatniJawnyZapis, ustawOstatniJawnyZapis] = useState(() => JSON.stringify(daneProgramu))
   const [idSesjiAutosave] = useState(() => `program-autosave-${crypto.randomUUID()}`)
   const [autosaveDoDecyzji, ustawAutosaveDoDecyzji] = useState(() => pobierzAutosaveProgramu<ZapisProgramuRoboczego>())
   const [komunikat, ustawKomunikat] = useState('')
+  const [stanZapisu, ustawStanZapisu] = useState<'zapisano' | 'zapisywanie' | 'blad'>('zapisano')
+
+  useEffect(() => {
+    if (!dokumentIdZTrasy) {
+      return
+    }
+
+    const odroczonyOdczyt = window.setTimeout(() => {
+      try {
+        const kopia = pobierzProgramPoId<ZapisProgramuRoboczego>(dokumentIdZTrasy)
+
+        if (!kopia) {
+          ustawBladOdczytu('Nie znaleziono programu o wskazanym identyfikatorze lub ma niewłaściwy typ.')
+          ustawStanOdczytu('blad')
+          return
+        }
+
+        const dane = normalizujZapisProgramu(kopia.daneDokumentu)
+        ustawAktywnaKopiaId(kopia.id)
+        ustawDaneProgramu(dane)
+        ustawOstatniJawnyZapis(JSON.stringify(dane))
+        ustawStanOdczytu('gotowy')
+      } catch {
+        ustawBladOdczytu('Nie udało się odczytać wskazanego programu.')
+        ustawStanOdczytu('blad')
+      }
+    }, 0)
+
+    return () => window.clearTimeout(odroczonyOdczyt)
+  }, [dokumentIdZTrasy])
   const { tytulSzkolenia, trescProgramu, trescProgramuHtml, czyWynikParsowaniaZatwierdzony, ustawienia, logotypProgramu, linkLogotypu } = daneProgramu
 
   const program = useMemo(() => parsujTekstProgramu(trescProgramu), [trescProgramu])
@@ -950,15 +987,22 @@ export function WidokProgramowSzkolen() {
       return
     }
 
-    try {
-      zapiszAutosaveProgramu({
-        idSesji: idSesjiAutosave,
-        aktywnaKopiaId: aktywnaKopiaId ?? undefined,
-        daneDokumentu: daneProgramu,
-      })
-    } catch {
-      return
-    }
+    const odroczonyZapis = window.setTimeout(() => {
+      ustawStanZapisu('zapisywanie')
+
+      try {
+        zapiszAutosaveProgramu({
+          idSesji: idSesjiAutosave,
+          aktywnaKopiaId: aktywnaKopiaId ?? undefined,
+          daneDokumentu: daneProgramu,
+        })
+        ustawStanZapisu('zapisano')
+      } catch {
+        ustawStanZapisu('blad')
+      }
+    }, 500)
+
+    return () => window.clearTimeout(odroczonyZapis)
   }, [aktywnaKopiaId, autosaveDoDecyzji, czyNiezapisaneZmiany, daneProgramu, idSesjiAutosave])
 
   useEffect(() => {
@@ -1010,6 +1054,8 @@ export function WidokProgramowSzkolen() {
   }
 
   const zapiszRoboczo = useCallback((tryb: 'zapisz' | 'aktualizuj' | 'utworz_nowa') => {
+    ustawStanZapisu('zapisywanie')
+
     try {
       const rekord = zapiszJawnaKopieProgramu({
         idAktywnejKopii: aktywnaKopiaId,
@@ -1032,8 +1078,10 @@ export function WidokProgramowSzkolen() {
       ustawAktywnaKopieProgramu(rekord.id)
       ustawOstatniJawnyZapis(JSON.stringify(daneProgramu))
       ustawAutosaveDoDecyzji(null)
+      ustawStanZapisu('zapisano')
       ustawKomunikat(tryb === 'utworz_nowa' ? 'Utworzono nową kopię roboczą.' : tryb === 'aktualizuj' ? 'Zaktualizowano kopię roboczą.' : 'Program zapisany jako kopia robocza.')
     } catch {
+      ustawStanZapisu('blad')
       ustawKomunikat('Nie udało się zapisać programu roboczo.')
     }
   }, [aktywnaKopiaId, daneProgramu, liczbaModulow, program.dni.length, ustawienia.profilFirmy])
@@ -1259,6 +1307,23 @@ export function WidokProgramowSzkolen() {
       zapiszPrzedWyjsciem: () => zapiszRoboczo(aktywnaKopiaId ? 'aktualizuj' : 'zapisz'),
     })
   }, [aktywnaKopiaId, daneProgramu, ostatniJawnyZapis, zapiszRoboczo])
+
+  if (stanOdczytu === 'ladowanie') {
+    return (
+      <section className="widok program-szkolen" role="status">
+        <p>Ładowanie programu...</p>
+      </section>
+    )
+  }
+
+  if (stanOdczytu === 'blad') {
+    return (
+      <section className="widok program-szkolen" role="alert">
+        <h1>Nie można otworzyć programu</h1>
+        <p>{bladOdczytu}</p>
+      </section>
+    )
+  }
   return (
     <section className="widok program-szkolen">
       <style>{styleProgramuSzkolenia}</style>
@@ -1266,6 +1331,7 @@ export function WidokProgramowSzkolen() {
       <header className="program-panel-roboczy program-szkolen__naglowek">
         <h1>Programy szkoleń</h1>
         <div className="program-szkolen__akcje">
+          <span role="status">{stanZapisu === 'zapisywanie' ? 'Zapisywanie...' : stanZapisu === 'blad' ? 'Błąd zapisu' : 'Zapisano'}</span>
           <button className="program-szkolen__przycisk" onClick={drukujProgram} type="button">
             Drukuj
           </button>
