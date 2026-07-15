@@ -4,6 +4,9 @@ export type StatusSzczegolow =
   | 'OCZEKUJĄCE'
   | 'ZAAKCEPTOWANE'
   | 'GOTOWE'
+  | 'ZREALIZOWANE'
+  | 'NIEZREALIZOWANE'
+  | 'ROZLICZONE'
 
 export type StatusSzkolenia =
   | 'W PRZYGOTOWANIACH'
@@ -253,6 +256,9 @@ export type WpisHistoriiSzczegolow = {
   autorId: string
   autorNazwa: string
   komentarz: string
+  akcjaStatusu?: string
+  powod?: string
+  automatyczne?: boolean
   zmianaStatusu?: {
     z?: StatusSzczegolow | StatusSzkolenia
     na: StatusSzczegolow | StatusSzkolenia
