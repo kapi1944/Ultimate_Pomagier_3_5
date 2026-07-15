@@ -20,6 +20,7 @@ import {
 } from '../../../../wspolne/dokumenty/magazynKopiiRoboczych'
 import { repozytoriumDokumentow } from '../../../../wspolne/dokumenty/repozytoriumDokumentow'
 import { zapiszDokumentRoboczyGeneratora } from '../../../../wspolne/dokumenty/zapisDokumentuGeneratora'
+import { walidujPrzejscieStatusuSzczegolow } from '../workflowStatusow'
 const kluczAktualnejWersji = 'ultimatePomagier.szczegolyOrganizacyjne.aktualnaWersja'
 const kluczKopiiRoboczych = 'ultimatePomagier.szczegolyOrganizacyjne.kopieRobocze'
 const kluczMigracjiKopiiRoboczych = 'ultimatePomagier.szczegolyOrganizacyjne.kopieRobocze.wspolnyMagazyn.v1'
@@ -299,6 +300,11 @@ export function wyczyscAktualnaWersjeRobocza() {
 }
 
 export function opublikujWersjeRobocza(wersja: WersjaRoboczaGeneratora) {
+  const walidacjaPrzejscia = walidujPrzejscieStatusuSzczegolow(wersja.dane.status, 'OCZEKUJĄCE')
+  if (!walidacjaPrzejscia.poprawne) {
+    throw new Error(walidacjaPrzejscia.komunikat)
+  }
+
   const daneOpublikowane: DaneFormularza = {
     ...wersja.dane,
     status: 'OCZEKUJĄCE',
@@ -335,6 +341,15 @@ export function opublikujWersjeRobocza(wersja: WersjaRoboczaGeneratora) {
 
 export function ustawStatusOpublikowanychSzczegolow(id: string, status: StatusOpublikowanychSzczegolow, konto?: KontoSzczegolow, komentarz = 'Zmieniono status szczegółów.') {
   const poprzedni = pobierzOpublikowaneSzczegoly().find((rekord) => rekord.id === id)
+  if (!poprzedni) {
+    return pobierzOpublikowaneSzczegoly()
+  }
+
+  const walidacjaPrzejscia = walidujPrzejscieStatusuSzczegolow(poprzedni.status, status, komentarz)
+  if (!walidacjaPrzejscia.poprawne) {
+    throw new Error(walidacjaPrzejscia.komunikat)
+  }
+
   const rekordy = pobierzOpublikowaneSzczegoly().map((rekord) =>
     rekord.id === id
       ? {

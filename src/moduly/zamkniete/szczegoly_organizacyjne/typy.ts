@@ -4,6 +4,9 @@ export type StatusSzczegolow =
   | 'OCZEKUJĄCE'
   | 'ZAAKCEPTOWANE'
   | 'GOTOWE'
+  | 'ZREALIZOWANE'
+  | 'NIEZREALIZOWANE'
+  | 'ROZLICZONE'
 
 export type StatusSzkolenia =
   | 'W PRZYGOTOWANIACH'
