@@ -161,6 +161,11 @@ export default function MenuBoczne({
             </button>
           </div>
           <div className="menu-boczne__marka">
+            <img
+              className="menu-boczne__logo"
+              src="/logo-ultimate-pomagier.png"
+              alt="Ultimate Pomagier"
+            />
             <strong>Ultimate Pomagier 3.0</strong>
             <span>V3-01</span>
           </div>
