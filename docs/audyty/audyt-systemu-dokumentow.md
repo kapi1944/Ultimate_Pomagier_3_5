@@ -1,6 +1,6 @@
 # Audyt wspólnego systemu dokumentów
 
-Data audytu: 2026-07-15  
+Data audytu: 2026-07-15
 Commit bazowy: `2c04295 merge: zakoncz etap 5F kontekstu integracji dokumentow`
 
 ## Zakres i architektura
