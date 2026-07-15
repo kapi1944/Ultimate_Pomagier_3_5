@@ -12,6 +12,16 @@ export type TypDokumentu =
   | 'INNY'
 
 export type StatusDokumentu = 'ROBOCZY' | 'GOTOWY' | 'OPUBLIKOWANY' | 'ZARCHIWIZOWANY'
+export type PowiazanieZeSzczegolami = 'SAMODZIELNY' | 'POWIAZANY_ZE_SZCZEGOLAMI'
+export type StanWartosciDokumentu = 'POBRANA_ZE_ZRODLA' | 'RECZNIE_NADPISANA' | 'NIEAKTUALNA_WZGLEM_ZRODLA'
+
+export type IntegralnoscDokumentu = {
+  powiazanieZeSzczegolami: PowiazanieZeSzczegolami
+  idZrodlowychSzczegolow: string | null
+  znacznikDanychZrodlowych: string | null
+  reczneNadpisania: Record<string, unknown>
+  czyDaneZrodloweNowsze: boolean
+}
 
 export const typyDokumentow: TypDokumentu[] = [
   'PROGRAM_SZKOLENIA',
@@ -44,8 +54,10 @@ export type Dokument<TDane, TUstawienia> = {
   organizatorId: string | null
   dokumentNadrzednyId: string | null
   poprzedniaWersjaId: string | null
+  integralnosc: IntegralnoscDokumentu
   utworzono: string
   zmodyfikowano: string
+  zaktualizowano: string
   opublikowano: string | null
   autorId: string | null
   wlascicielId: string | null
@@ -68,6 +80,7 @@ export type DaneNowegoDokumentu<TDane, TUstawienia> = {
   organizatorId?: string | null
   dokumentNadrzednyId?: string | null
   poprzedniaWersjaId?: string | null
+  integralnosc?: Partial<IntegralnoscDokumentu>
   autorId?: string | null
   wlascicielId?: string | null
   ostatnioModyfikujacyId?: string | null
@@ -99,8 +112,16 @@ export function utworzNowyDokument<TDane, TUstawienia>(dane: DaneNowegoDokumentu
     organizatorId: dane.organizatorId ?? null,
     dokumentNadrzednyId: dane.dokumentNadrzednyId ?? null,
     poprzedniaWersjaId: dane.poprzedniaWersjaId ?? null,
+    integralnosc: {
+      powiazanieZeSzczegolami: dane.integralnosc?.powiazanieZeSzczegolami ?? (dane.integralnosc?.idZrodlowychSzczegolow ? 'POWIAZANY_ZE_SZCZEGOLAMI' : 'SAMODZIELNY'),
+      idZrodlowychSzczegolow: dane.integralnosc?.idZrodlowychSzczegolow ?? null,
+      znacznikDanychZrodlowych: dane.integralnosc?.znacznikDanychZrodlowych ?? null,
+      reczneNadpisania: dane.integralnosc?.reczneNadpisania ?? {},
+      czyDaneZrodloweNowsze: dane.integralnosc?.czyDaneZrodloweNowsze ?? false,
+    },
     utworzono: teraz,
     zmodyfikowano: teraz,
+    zaktualizowano: teraz,
     opublikowano: null,
     autorId: dane.autorId ?? null,
     wlascicielId: dane.wlascicielId ?? null,
@@ -135,11 +156,24 @@ export function walidujDokument(dokument: Dokument<unknown, unknown>): WynikWali
   if (!Number.isInteger(dokument.wersja) || dokument.wersja < 1) bledy.push('Wersja dokumentu musi byc dodatnia liczba calkowita.')
   if (!Number.isInteger(dokument.wersjaSchematu) || dokument.wersjaSchematu < 1) bledy.push('Wersja schematu musi byc dodatnia liczba calkowita.')
   if (!czyNiepustyTekst(dokument.generatorId)) bledy.push('Dokument musi wskazywac generator.')
-  if (!czyDataIsoLubNull(dokument.utworzono) || !czyDataIsoLubNull(dokument.zmodyfikowano) || !czyDataIsoLubNull(dokument.opublikowano)) bledy.push('Daty dokumentu musza miec format ISO.')
+  if (dokument.integralnosc.powiazanieZeSzczegolami === 'SAMODZIELNY' && dokument.integralnosc.idZrodlowychSzczegolow !== null) bledy.push('Samodzielny dokument nie moze wskazywac Szczegolow organizacyjnych.')
+  if (dokument.integralnosc.powiazanieZeSzczegolami === 'POWIAZANY_ZE_SZCZEGOLAMI' && !czyNiepustyTekst(dokument.integralnosc.idZrodlowychSzczegolow)) bledy.push('Powiazany dokument musi wskazywac Szczegoly organizacyjne.')
+  if (!czyDataIsoLubNull(dokument.utworzono) || !czyDataIsoLubNull(dokument.zmodyfikowano) || !czyDataIsoLubNull(dokument.zaktualizowano) || !czyDataIsoLubNull(dokument.opublikowano)) bledy.push('Daty dokumentu musza miec format ISO.')
+  if (dokument.zaktualizowano !== dokument.zmodyfikowano) bledy.push('Data aktualizacji musi odpowiadac dacie modyfikacji.')
   if (dokument.status === 'OPUBLIKOWANY' && dokument.opublikowano === null) bledy.push('Opublikowany dokument musi miec date publikacji.')
   if (dokument.czyZarchiwizowany !== (dokument.status === 'ZARCHIWIZOWANY')) bledy.push('Znacznik archiwizacji musi odpowiadac statusowi dokumentu.')
   if (dokument.czyZarchiwizowany !== (dokument.zarchiwizowano !== null)) bledy.push('Archiwizacja musi miec date archiwizacji.')
   if (dokument.czyUsunietyMiekko !== (dokument.usunieto !== null)) bledy.push('Miekkie usuniecie musi miec date usuniecia.')
 
   return { czyPoprawny: bledy.length === 0, bledy }
+}
+
+export function pobierzStanWartosciDokumentu(czyPoleNadpisaneRecznie: boolean, czyDaneZrodloweNowsze: boolean): StanWartosciDokumentu {
+  if (czyDaneZrodloweNowsze) return 'NIEAKTUALNA_WZGLEM_ZRODLA'
+  return czyPoleNadpisaneRecznie ? 'RECZNIE_NADPISANA' : 'POBRANA_ZE_ZRODLA'
+}
+
+export function czyDokumentMaNowszeDaneZrodlowe(dokument: Dokument<unknown, unknown>, aktualnyZnacznikDanychZrodlowych: string | null) {
+  const { idZrodlowychSzczegolow, znacznikDanychZrodlowych } = dokument.integralnosc
+  return idZrodlowychSzczegolow !== null && aktualnyZnacznikDanychZrodlowych !== null && znacznikDanychZrodlowych !== aktualnyZnacznikDanychZrodlowych
 }

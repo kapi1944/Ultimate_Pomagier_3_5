@@ -1,12 +1,23 @@
-import { statusyDokumentow, typyDokumentow, walidujDokument, type Dokument } from './modelDokumentu'
+import { czyDokumentMaNowszeDaneZrodlowe, statusyDokumentow, typyDokumentow, walidujDokument, type Dokument } from './modelDokumentu'
 
 export const kluczRejestruDokumentow = 'ultimatePomagier.rejestrDokumentow.v1'
 export const kluczKopiiBezpieczenstwaRejestruDokumentow = 'ultimatePomagier.rejestrDokumentow.kopia-bezpieczenstwa'
-export const wersjaRejestruDokumentow = 1
+export const wersjaRejestruDokumentow = 2
+
+export type KopiaRoboczaDokumentu = {
+  id: string
+  dokumentNadrzednyId: string | null
+  czyNowyDokument: boolean
+  daneDokumentu: unknown
+  reczneNadpisania: Record<string, unknown>
+  utworzono: string
+  zaktualizowano: string
+}
 
 type StanRejestruDokumentow = {
   wersja: number
   dokumenty: Dokument<unknown, unknown>[]
+  kopieRobocze: KopiaRoboczaDokumentu[]
 }
 
 export type ZmianyDokumentu = Partial<Omit<Dokument<unknown, unknown>, 'id' | 'utworzono' | 'zmodyfikowano'>>
@@ -19,6 +30,11 @@ export interface RepozytoriumWspolnychDokumentow {
   archiwizuj(id: string): Dokument<unknown, unknown> | null
   przywroc(id: string): Dokument<unknown, unknown> | null
   usunMiekko(id: string): Dokument<unknown, unknown> | null
+  utworzKopieRobocza(dane: Omit<KopiaRoboczaDokumentu, 'id' | 'utworzono' | 'zaktualizowano'> & { id?: string }): KopiaRoboczaDokumentu
+  pobierzKopieRobocza(id: string): KopiaRoboczaDokumentu | null
+  aktualizujKopieRobocza(id: string, zmiany: Partial<Pick<KopiaRoboczaDokumentu, 'daneDokumentu' | 'reczneNadpisania'>>): KopiaRoboczaDokumentu | null
+  usunKopieRobocza(id: string): boolean
+  odswiezDostepnoscDanychZrodlowych(id: string, aktualnyZnacznikDanychZrodlowych: string | null): Dokument<unknown, unknown> | null
 }
 
 type MigracjaRejestruDokumentow = {
@@ -75,8 +91,16 @@ function normalizujDokument(wartosc: unknown): Dokument<unknown, unknown> | null
     organizatorId: czyTekstLubNull(wartosc.organizatorId) ? wartosc.organizatorId : null,
     dokumentNadrzednyId: czyTekstLubNull(wartosc.dokumentNadrzednyId) ? wartosc.dokumentNadrzednyId : null,
     poprzedniaWersjaId: czyTekstLubNull(wartosc.poprzedniaWersjaId) ? wartosc.poprzedniaWersjaId : null,
+    integralnosc: {
+      powiazanieZeSzczegolami: wartosc.integralnosc && czyObiekt(wartosc.integralnosc) && wartosc.integralnosc.powiazanieZeSzczegolami === 'POWIAZANY_ZE_SZCZEGOLAMI' ? 'POWIAZANY_ZE_SZCZEGOLAMI' : 'SAMODZIELNY',
+      idZrodlowychSzczegolow: wartosc.integralnosc && czyObiekt(wartosc.integralnosc) && czyTekstLubNull(wartosc.integralnosc.idZrodlowychSzczegolow) ? wartosc.integralnosc.idZrodlowychSzczegolow : null,
+      znacznikDanychZrodlowych: wartosc.integralnosc && czyObiekt(wartosc.integralnosc) && czyTekstLubNull(wartosc.integralnosc.znacznikDanychZrodlowych) ? wartosc.integralnosc.znacznikDanychZrodlowych : null,
+      reczneNadpisania: wartosc.integralnosc && czyObiekt(wartosc.integralnosc) && czyObiekt(wartosc.integralnosc.reczneNadpisania) ? wartosc.integralnosc.reczneNadpisania : {},
+      czyDaneZrodloweNowsze: Boolean(wartosc.integralnosc && czyObiekt(wartosc.integralnosc) && wartosc.integralnosc.czyDaneZrodloweNowsze),
+    },
     utworzono: typeof wartosc.utworzono === 'string' ? wartosc.utworzono : '',
     zmodyfikowano: typeof wartosc.zmodyfikowano === 'string' ? wartosc.zmodyfikowano : '',
+    zaktualizowano: typeof wartosc.zaktualizowano === 'string' ? wartosc.zaktualizowano : typeof wartosc.zmodyfikowano === 'string' ? wartosc.zmodyfikowano : '',
     opublikowano: czyDataLubNull(wartosc.opublikowano) ? wartosc.opublikowano : null,
     autorId: czyTekstLubNull(wartosc.autorId) ? wartosc.autorId : null,
     wlascicielId: czyTekstLubNull(wartosc.wlascicielId) ? wartosc.wlascicielId : null,
@@ -94,11 +118,12 @@ function migrujWersjeZero(stan: unknown): StanRejestruDokumentow {
   const zrodloDokumentow = Array.isArray(stan) ? stan : czyObiekt(stan) && Array.isArray(stan.dokumenty) ? stan.dokumenty : []
   const dokumenty = zrodloDokumentow.map(normalizujDokument).filter((dokument): dokument is Dokument<unknown, unknown> => dokument !== null)
 
-  return { wersja: 1, dokumenty }
+  return { wersja: 1, dokumenty, kopieRobocze: [] }
 }
 
 export const rejestrMigracjiDokumentow: MigracjaRejestruDokumentow[] = [
   { wersjaZrodlowa: 0, wersjaDocelowa: 1, wykonaj: migrujWersjeZero },
+  { wersjaZrodlowa: 1, wersjaDocelowa: 2, wykonaj: (stan) => ({ wersja: 2, dokumenty: Array.isArray((stan as { dokumenty?: unknown[] }).dokumenty) ? (stan as { dokumenty: unknown[] }).dokumenty.map(normalizujDokument).filter((dokument): dokument is Dokument<unknown, unknown> => dokument !== null) : [], kopieRobocze: [] }) },
 ]
 
 function zapiszKopieBezpieczenstwa(wartosc: string) {
@@ -118,7 +143,7 @@ function pobierzStan(): StanRejestruDokumentow {
   const odczyt = bezpiecznieParsuj(zapis)
 
   if (!czyObiekt(odczyt)) {
-    return { wersja: wersjaRejestruDokumentow, dokumenty: [] }
+    return { wersja: wersjaRejestruDokumentow, dokumenty: [], kopieRobocze: [] }
   }
 
   let wersja = typeof odczyt.wersja === 'number' ? odczyt.wersja : 0
@@ -128,7 +153,7 @@ function pobierzStan(): StanRejestruDokumentow {
     const migracja = rejestrMigracjiDokumentow.find((kandydat) => kandydat.wersjaZrodlowa === wersja)
 
     if (!migracja || !zapis) {
-      return { wersja: wersjaRejestruDokumentow, dokumenty: [] }
+      return { wersja: wersjaRejestruDokumentow, dokumenty: [], kopieRobocze: [] }
     }
 
     zapiszKopieBezpieczenstwa(zapis)
@@ -149,7 +174,19 @@ function pobierzStan(): StanRejestruDokumentow {
       return true
     })
 
-  const wynik = { wersja: wersjaRejestruDokumentow, dokumenty }
+  const kopieRobocze = (Array.isArray(rekord?.kopieRobocze) ? rekord.kopieRobocze : []).flatMap((wartosc): KopiaRoboczaDokumentu[] => {
+    if (!czyObiekt(wartosc) || typeof wartosc.id !== 'string' || (wartosc.dokumentNadrzednyId !== null && typeof wartosc.dokumentNadrzednyId !== 'string')) return []
+    return [{
+      id: wartosc.id,
+      dokumentNadrzednyId: wartosc.dokumentNadrzednyId,
+      czyNowyDokument: wartosc.czyNowyDokument === true,
+      daneDokumentu: wartosc.daneDokumentu,
+      reczneNadpisania: czyObiekt(wartosc.reczneNadpisania) ? wartosc.reczneNadpisania : {},
+      utworzono: typeof wartosc.utworzono === 'string' ? wartosc.utworzono : new Date().toISOString(),
+      zaktualizowano: typeof wartosc.zaktualizowano === 'string' ? wartosc.zaktualizowano : new Date().toISOString(),
+    }]
+  })
+  const wynik = { wersja: wersjaRejestruDokumentow, dokumenty, kopieRobocze }
 
   if (wersja !== (typeof odczyt.wersja === 'number' ? odczyt.wersja : 0)) {
     zapiszStan(wynik)
@@ -204,27 +241,72 @@ export const repozytoriumWspolnychDokumentow: RepozytoriumWspolnychDokumentow = 
   },
 
   aktualizuj(id, zmiany) {
+    const teraz = new Date().toISOString()
     return aktualizujStan(id, (dokument) => ({
       ...dokument,
       ...zmiany,
       id: dokument.id,
       utworzono: dokument.utworzono,
-      zmodyfikowano: new Date().toISOString(),
+      zmodyfikowano: teraz,
+      zaktualizowano: teraz,
     }))
   },
 
   archiwizuj(id) {
     const teraz = new Date().toISOString()
-    return aktualizujStan(id, (dokument) => ({ ...dokument, status: 'ZARCHIWIZOWANY', czyZarchiwizowany: true, zarchiwizowano: teraz, zmodyfikowano: teraz }))
+    return aktualizujStan(id, (dokument) => ({ ...dokument, status: 'ZARCHIWIZOWANY', czyZarchiwizowany: true, zarchiwizowano: teraz, zmodyfikowano: teraz, zaktualizowano: teraz }))
   },
 
   przywroc(id) {
     const teraz = new Date().toISOString()
-    return aktualizujStan(id, (dokument) => ({ ...dokument, status: 'GOTOWY', czyZarchiwizowany: false, zarchiwizowano: null, zmodyfikowano: teraz }))
+    return aktualizujStan(id, (dokument) => ({ ...dokument, status: 'GOTOWY', czyZarchiwizowany: false, zarchiwizowano: null, zmodyfikowano: teraz, zaktualizowano: teraz }))
   },
 
   usunMiekko(id) {
     const teraz = new Date().toISOString()
-    return aktualizujStan(id, (dokument) => ({ ...dokument, czyUsunietyMiekko: true, usunieto: teraz, zmodyfikowano: teraz }))
+    return aktualizujStan(id, (dokument) => ({ ...dokument, czyUsunietyMiekko: true, usunieto: teraz, zmodyfikowano: teraz, zaktualizowano: teraz }))
+  },
+
+  utworzKopieRobocza(dane) {
+    const stan = pobierzStan()
+    const teraz = new Date().toISOString()
+    const zajeteId = new Set([...stan.dokumenty.map((dokument) => dokument.id), ...stan.kopieRobocze.map((kopia) => kopia.id)])
+    const id = dane.id && !zajeteId.has(dane.id) ? dane.id : ['kopia', crypto.randomUUID()].join('-')
+    const kopia: KopiaRoboczaDokumentu = { ...dane, id, utworzono: teraz, zaktualizowano: teraz }
+    stan.kopieRobocze.unshift(kopia)
+    zapiszStan(stan)
+    return kopia
+  },
+
+  pobierzKopieRobocza(id) {
+    return pobierzStan().kopieRobocze.find((kopia) => kopia.id === id) ?? null
+  },
+
+  aktualizujKopieRobocza(id, zmiany) {
+    const stan = pobierzStan()
+    const indeks = stan.kopieRobocze.findIndex((kopia) => kopia.id === id)
+    if (indeks === -1) return null
+    const kopia = { ...stan.kopieRobocze[indeks], ...zmiany, id, zaktualizowano: new Date().toISOString() }
+    stan.kopieRobocze[indeks] = kopia
+    zapiszStan(stan)
+    return kopia
+  },
+
+  usunKopieRobocza(id) {
+    const stan = pobierzStan()
+    const kopieRobocze = stan.kopieRobocze.filter((kopia) => kopia.id !== id)
+    if (kopieRobocze.length === stan.kopieRobocze.length) return false
+    zapiszStan({ ...stan, kopieRobocze })
+    return true
+  },
+
+  odswiezDostepnoscDanychZrodlowych(id, aktualnyZnacznikDanychZrodlowych) {
+    const teraz = new Date().toISOString()
+    return aktualizujStan(id, (dokument) => ({
+      ...dokument,
+      integralnosc: { ...dokument.integralnosc, czyDaneZrodloweNowsze: czyDokumentMaNowszeDaneZrodlowe(dokument, aktualnyZnacznikDanychZrodlowych) },
+      zmodyfikowano: teraz,
+      zaktualizowano: teraz,
+    }))
   },
 }

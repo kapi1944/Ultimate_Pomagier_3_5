@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { filtrujDokumenty, sortujDokumenty } from '../src/wspolne/dokumenty/filtryDokumentow.ts'
-import { utworzNowyDokument } from '../src/wspolne/dokumenty/modelDokumentu.ts'
+import { pobierzStanWartosciDokumentu, utworzNowyDokument } from '../src/wspolne/dokumenty/modelDokumentu.ts'
 import {
   kluczKopiiBezpieczenstwaRejestruDokumentow,
   kluczRejestruDokumentow,
@@ -81,4 +81,47 @@ test('filtry i sortowanie pozostaja czystymi funkcjami', () => {
   assert.deepEqual(filtrujDokumenty([program, ankieta], { typ: 'PROGRAM_SZKOLENIA', szkolenieId: 'szkolenie-1' }).map((dokument) => dokument.id), ['program'])
   assert.deepEqual(filtrujDokumenty([program, ankieta], { tekst: 'ankieta' }).map((dokument) => dokument.id), ['ankieta'])
   assert.deepEqual(sortujDokumenty([ankieta, program], 'ZMODYFIKOWANO_MALEJACO').map((dokument) => dokument.id), ['program', 'ankieta'])
+})
+
+test('kopia robocza zachowuje wlasne dane i nie usuwa dokumentu nadrzednego', () => {
+  magazyn.clear()
+  const dokument = repozytoriumWspolnychDokumentow.utworz(utworzDokument('dokument-nadrzedny'))
+  const kopia = repozytoriumWspolnychDokumentow.utworzKopieRobocza({
+    dokumentNadrzednyId: dokument.id,
+    czyNowyDokument: false,
+    daneDokumentu: { tytul: 'Wersja robocza' },
+    reczneNadpisania: { tytul: 'Wersja robocza' },
+  })
+
+  const odczytana = repozytoriumWspolnychDokumentow.pobierzKopieRobocza(kopia.id)
+  assert.deepEqual(odczytana?.daneDokumentu, { tytul: 'Wersja robocza' })
+  assert.deepEqual(odczytana?.reczneNadpisania, { tytul: 'Wersja robocza' })
+  assert.equal(repozytoriumWspolnychDokumentow.usunKopieRobocza(kopia.id), true)
+  assert.equal(repozytoriumWspolnychDokumentow.pobierzPoId(dokument.id)?.id, dokument.id)
+})
+
+test('rozroznia zrodlo, reczne nadpisanie i nowsze dane Szczegolow bez kolizji identyfikatorow', () => {
+  magazyn.clear()
+  const dokument = repozytoriumWspolnychDokumentow.utworz(utworzNowyDokument({
+    typ: 'LISTA_OBECNOSCI',
+    tytul: 'Lista',
+    generatorId: 'listy_obecnosci',
+    daneDokumentu: {},
+    ustawieniaDokumentu: {},
+    integralnosc: {
+      powiazanieZeSzczegolami: 'POWIAZANY_ZE_SZCZEGOLAMI',
+      idZrodlowychSzczegolow: 'szczegoly-1',
+      znacznikDanychZrodlowych: 'wersja-1',
+    },
+  }))
+  const kopiaPierwsza = repozytoriumWspolnychDokumentow.utworzKopieRobocza({ dokumentNadrzednyId: null, czyNowyDokument: true, daneDokumentu: {}, reczneNadpisania: {} })
+  const kopiaDruga = repozytoriumWspolnychDokumentow.utworzKopieRobocza({ dokumentNadrzednyId: null, czyNowyDokument: true, daneDokumentu: {}, reczneNadpisania: {} })
+  const odswiezony = repozytoriumWspolnychDokumentow.odswiezDostepnoscDanychZrodlowych(dokument.id, 'wersja-2')
+
+  assert.notEqual(kopiaPierwsza.id, kopiaDruga.id)
+  assert.notEqual(kopiaPierwsza.id, dokument.id)
+  assert.equal(odswiezony?.integralnosc.czyDaneZrodloweNowsze, true)
+  assert.equal(pobierzStanWartosciDokumentu(false, false), 'POBRANA_ZE_ZRODLA')
+  assert.equal(pobierzStanWartosciDokumentu(true, false), 'RECZNIE_NADPISANA')
+  assert.equal(pobierzStanWartosciDokumentu(false, true), 'NIEAKTUALNA_WZGLEM_ZRODLA')
 })
