@@ -256,6 +256,9 @@ export type WpisHistoriiSzczegolow = {
   autorId: string
   autorNazwa: string
   komentarz: string
+  akcjaStatusu?: string
+  powod?: string
+  automatyczne?: boolean
   zmianaStatusu?: {
     z?: StatusSzczegolow | StatusSzkolenia
     na: StatusSzczegolow | StatusSzkolenia

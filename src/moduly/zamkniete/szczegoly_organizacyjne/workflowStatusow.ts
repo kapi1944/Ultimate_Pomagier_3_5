@@ -9,18 +9,17 @@ export type PrzejscieStatusuSzczegolow = {
   automatyczne: boolean
   wymagaPowodu: boolean
   wymagaPrzyszlegoUprawnienia: boolean
-  blokujeEdycje: boolean
 }
 
 export const macierzPrzejscStatusowSzczegolow: readonly PrzejscieStatusuSzczegolow[] = [
-  { z: 'PEŁNE', do: 'OCZEKUJĄCE', akcja: 'publikacja', automatyczne: true, wymagaPowodu: false, wymagaPrzyszlegoUprawnienia: false, blokujeEdycje: true },
-  { z: 'OCZEKUJĄCE', do: 'ZAAKCEPTOWANE', akcja: 'akceptacja', automatyczne: false, wymagaPowodu: false, wymagaPrzyszlegoUprawnienia: true, blokujeEdycje: true },
-  { z: 'ZAAKCEPTOWANE', do: 'GOTOWE', akcja: 'przygotowanie', automatyczne: false, wymagaPowodu: false, wymagaPrzyszlegoUprawnienia: false, blokujeEdycje: true },
-  { z: 'GOTOWE', do: 'ZREALIZOWANE', akcja: 'realizacja', automatyczne: false, wymagaPowodu: false, wymagaPrzyszlegoUprawnienia: false, blokujeEdycje: true },
-  { z: 'GOTOWE', do: 'NIEZREALIZOWANE', akcja: 'realizacja', automatyczne: false, wymagaPowodu: true, wymagaPrzyszlegoUprawnienia: false, blokujeEdycje: true },
-  { z: 'ZREALIZOWANE', do: 'ROZLICZONE', akcja: 'rozliczenie', automatyczne: false, wymagaPowodu: false, wymagaPrzyszlegoUprawnienia: true, blokujeEdycje: true },
-  { z: 'NIEZREALIZOWANE', do: 'ROZLICZONE', akcja: 'rozliczenie', automatyczne: false, wymagaPowodu: false, wymagaPrzyszlegoUprawnienia: true, blokujeEdycje: true },
-  { z: 'ZAAKCEPTOWANE', do: 'OCZEKUJĄCE', akcja: 'cofniecie', automatyczne: false, wymagaPowodu: false, wymagaPrzyszlegoUprawnienia: true, blokujeEdycje: true },
+  { z: 'PEŁNE', do: 'OCZEKUJĄCE', akcja: 'publikacja', automatyczne: true, wymagaPowodu: false, wymagaPrzyszlegoUprawnienia: false },
+  { z: 'OCZEKUJĄCE', do: 'ZAAKCEPTOWANE', akcja: 'akceptacja', automatyczne: false, wymagaPowodu: false, wymagaPrzyszlegoUprawnienia: true },
+  { z: 'ZAAKCEPTOWANE', do: 'GOTOWE', akcja: 'przygotowanie', automatyczne: false, wymagaPowodu: false, wymagaPrzyszlegoUprawnienia: false },
+  { z: 'GOTOWE', do: 'ZREALIZOWANE', akcja: 'realizacja', automatyczne: false, wymagaPowodu: false, wymagaPrzyszlegoUprawnienia: false },
+  { z: 'GOTOWE', do: 'NIEZREALIZOWANE', akcja: 'realizacja', automatyczne: false, wymagaPowodu: true, wymagaPrzyszlegoUprawnienia: false },
+  { z: 'ZREALIZOWANE', do: 'ROZLICZONE', akcja: 'rozliczenie', automatyczne: false, wymagaPowodu: false, wymagaPrzyszlegoUprawnienia: true },
+  { z: 'NIEZREALIZOWANE', do: 'ROZLICZONE', akcja: 'rozliczenie', automatyczne: false, wymagaPowodu: false, wymagaPrzyszlegoUprawnienia: true },
+  { z: 'ZAAKCEPTOWANE', do: 'OCZEKUJĄCE', akcja: 'cofniecie', automatyczne: false, wymagaPowodu: false, wymagaPrzyszlegoUprawnienia: true },
 ]
 
 export function pobierzPrzejscieStatusuSzczegolow(z: StatusSzczegolow, doStatusu: StatusSzczegolow) {
@@ -41,6 +40,15 @@ export function walidujPrzejscieStatusuSzczegolow(z: StatusSzczegolow, doStatusu
   return { poprawne: true, przejscie }
 }
 
-export function czyStatusBlokujeEdycje(status: StatusSzczegolow) {
+export function czyMoznaEdytowacBezposrednio(status: StatusSzczegolow) {
+  void status
+  return false
+}
+
+export function czyStatusJestZamkniety(status: StatusSzczegolow) {
   return status === 'ROZLICZONE'
+}
+
+export function czyMoznaUtworzycAktualizacje(status: StatusSzczegolow) {
+  return !czyStatusJestZamkniety(status)
 }

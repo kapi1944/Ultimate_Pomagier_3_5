@@ -15,6 +15,7 @@ import {
   utworzKopieRoboczaZOpublikowanychSzczegolow,
 } from '../uslugi/magazynWersjiRoboczych'
 import { statusySzkolenia } from '../stale'
+import { czyMoznaUtworzycAktualizacje } from '../workflowStatusow'
 import './widokNowychSzczegolowOrganizacyjnych.css'
 
 const statusyOpublikowane: StatusOpublikowanychSzczegolow[] = [
@@ -45,10 +46,14 @@ export default function WidokListySzczegolowOrganizacyjnych({ otworzNoweSzczegol
       return
     }
 
-    ustawRekordy(ustawStatusOpublikowanychSzczegolow(rekord.id, 'ZAAKCEPTOWANE', konto, 'Zaakceptowano szczegóły organizacyjne.'))
+    ustawRekordy(ustawStatusOpublikowanychSzczegolow(rekord.id, 'ZAAKCEPTOWANE', { konto, komentarz: 'Zaakceptowano szczegóły organizacyjne.' }))
   }
 
   function utworzAktualizacje(rekord: OpublikowaneSzczegolyOrganizacyjne) {
+    if (!czyMoznaUtworzycAktualizacje(rekord.status)) {
+      return
+    }
+
     const czyBezGrup = !czyKontoArchitekta(konto) && rekord.opiekunId !== konto.id
     utworzKopieRoboczaZOpublikowanychSzczegolow(rekord, konto, czyBezGrup)
     otworzNoweSzczegoly()
@@ -59,7 +64,7 @@ export default function WidokListySzczegolowOrganizacyjnych({ otworzNoweSzczegol
       return
     }
 
-    ustawRekordy(ustawStatusOpublikowanychSzczegolow(rekord.id, 'GOTOWE', konto, 'Oznaczono szczegóły jako gotowe.'))
+    ustawRekordy(ustawStatusOpublikowanychSzczegolow(rekord.id, 'GOTOWE', { konto, komentarz: 'Oznaczono szczegóły jako gotowe.' }))
   }
 
   function cofnijStatus(rekord: OpublikowaneSzczegolyOrganizacyjne) {
@@ -74,7 +79,7 @@ export default function WidokListySzczegolowOrganizacyjnych({ otworzNoweSzczegol
     }
 
     const poprzedniStatus = rekord.status === 'GOTOWE' ? 'ZAAKCEPTOWANE' : 'OCZEKUJĄCE'
-    ustawRekordy(ustawStatusOpublikowanychSzczegolow(rekord.id, poprzedniStatus, konto, komentarz.trim()))
+    ustawRekordy(ustawStatusOpublikowanychSzczegolow(rekord.id, poprzedniStatus, { konto, komentarz: komentarz.trim() }))
   }
 
   function ustawStatusSzkolenia(rekord: OpublikowaneSzczegolyOrganizacyjne, statusSzkolenia: string) {
@@ -143,9 +148,11 @@ export default function WidokListySzczegolowOrganizacyjnych({ otworzNoweSzczegol
                   ))}
                 </select>
               </label>
-              <button type="button" onClick={() => utworzAktualizacje(rekord)}>
-                {rekord.opiekunId === konto.id || czyKontoArchitekta(konto) ? 'Utwórz aktualizację' : 'Utwórz formularz bez grup'}
-              </button>
+              {czyMoznaUtworzycAktualizacje(rekord.status) && (
+                <button type="button" onClick={() => utworzAktualizacje(rekord)}>
+                  {rekord.opiekunId === konto.id || czyKontoArchitekta(konto) ? 'Utwórz aktualizację' : 'Utwórz formularz bez grup'}
+                </button>
+              )}
             </div>
           </article>
         ))}

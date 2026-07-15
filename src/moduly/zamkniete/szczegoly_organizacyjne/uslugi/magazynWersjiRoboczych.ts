@@ -20,7 +20,7 @@ import {
 } from '../../../../wspolne/dokumenty/magazynKopiiRoboczych'
 import { repozytoriumDokumentow } from '../../../../wspolne/dokumenty/repozytoriumDokumentow'
 import { zapiszDokumentRoboczyGeneratora } from '../../../../wspolne/dokumenty/zapisDokumentuGeneratora'
-import { walidujPrzejscieStatusuSzczegolow } from '../workflowStatusow'
+import { czyMoznaUtworzycAktualizacje, walidujPrzejscieStatusuSzczegolow, type AkcjaStatusuSzczegolow } from '../workflowStatusow'
 const kluczAktualnejWersji = 'ultimatePomagier.szczegolyOrganizacyjne.aktualnaWersja'
 const kluczKopiiRoboczych = 'ultimatePomagier.szczegolyOrganizacyjne.kopieRobocze'
 const kluczMigracjiKopiiRoboczych = 'ultimatePomagier.szczegolyOrganizacyjne.kopieRobocze.wspolnyMagazyn.v1'
@@ -301,7 +301,7 @@ export function wyczyscAktualnaWersjeRobocza() {
 
 export function opublikujWersjeRobocza(wersja: WersjaRoboczaGeneratora) {
   const walidacjaPrzejscia = walidujPrzejscieStatusuSzczegolow(wersja.dane.status, 'OCZEKUJĄCE')
-  if (!walidacjaPrzejscia.poprawne) {
+  if (!walidacjaPrzejscia.poprawne || !walidacjaPrzejscia.przejscie) {
     throw new Error(walidacjaPrzejscia.komunikat)
   }
 
@@ -333,20 +333,36 @@ export function opublikujWersjeRobocza(wersja: WersjaRoboczaGeneratora) {
     autorId: wersja.autorId,
     autorNazwa: wersja.autorNazwa,
     komentarz: 'Opublikowano szczegóły organizacyjne.',
+    akcjaStatusu: 'publikacja',
+    automatyczne: true,
     zmianaStatusu: { z: wersja.dane.status, na: 'OCZEKUJĄCE' },
   })
 
   return rekord
 }
 
-export function ustawStatusOpublikowanychSzczegolow(id: string, status: StatusOpublikowanychSzczegolow, konto?: KontoSzczegolow, komentarz = 'Zmieniono status szczegółów.') {
+export type OpcjeZmianyStatusuOpublikowanychSzczegolow = {
+  konto: KontoSzczegolow
+  komentarz?: string
+  powod?: string
+}
+
+export function ustawStatusOpublikowanychSzczegolow(
+  id: string,
+  status: StatusOpublikowanychSzczegolow,
+  opcje: OpcjeZmianyStatusuOpublikowanychSzczegolow,
+) {
   const poprzedni = pobierzOpublikowaneSzczegoly().find((rekord) => rekord.id === id)
   if (!poprzedni) {
     return pobierzOpublikowaneSzczegoly()
   }
 
-  const walidacjaPrzejscia = walidujPrzejscieStatusuSzczegolow(poprzedni.status, status, komentarz)
-  if (!walidacjaPrzejscia.poprawne) {
+  if (!opcje?.konto) {
+    throw new Error('Ręczna zmiana statusu wymaga wskazania aktora.')
+  }
+
+  const walidacjaPrzejscia = walidujPrzejscieStatusuSzczegolow(poprzedni.status, status, opcje.powod)
+  if (!walidacjaPrzejscia.poprawne || !walidacjaPrzejscia.przejscie) {
     throw new Error(walidacjaPrzejscia.komunikat)
   }
 
@@ -364,15 +380,16 @@ export function ustawStatusOpublikowanychSzczegolow(id: string, status: StatusOp
   )
 
   zapiszOpublikowaneSzczegoly(rekordy)
-  if (konto) {
-    dodajWpisHistoriiSzczegolow({
-      typ: 'status',
-      autorId: konto.id,
-      autorNazwa: konto.nazwa,
-      komentarz,
-      zmianaStatusu: { z: poprzedni?.status, na: status },
-    })
-  }
+  dodajWpisHistoriiSzczegolow({
+    typ: 'status',
+    autorId: opcje.konto.id,
+    autorNazwa: opcje.konto.nazwa,
+    komentarz: opcje.komentarz?.trim() ?? '',
+    powod: opcje.powod?.trim() || undefined,
+    akcjaStatusu: walidacjaPrzejscia.przejscie.akcja as AkcjaStatusuSzczegolow,
+    automatyczne: false,
+    zmianaStatusu: { z: poprzedni.status, na: status },
+  })
 
   return rekordy
 }
@@ -411,6 +428,10 @@ export function ustawStatusSzkoleniaOpublikowanychSzczegolow(
 }
 
 export function utworzKopieRoboczaZOpublikowanychSzczegolow(rekord: OpublikowaneSzczegolyOrganizacyjne, konto: KontoSzczegolow, czyBezGrup = false) {
+  if (!czyMoznaUtworzycAktualizacje(rekord.status)) {
+    return null
+  }
+
   const grupy = czyBezGrup ? [utworzPoczatkowaGrupe(1)] : rekord.grupy
   const kopia: WersjaRoboczaGeneratora = {
     id: `wersja-${Date.now()}`,
