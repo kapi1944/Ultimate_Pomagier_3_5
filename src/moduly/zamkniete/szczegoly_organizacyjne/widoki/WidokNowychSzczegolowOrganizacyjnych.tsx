@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type KeyboardEvent, type ReactNode } from 'react'
 import { pobierzLokalizacjeZMagazynu } from '../../../../kartoteki/lokalizacje/magazynLokalizacji'
 import KartaGrupySzkoleniowej from '../komponenty/KartaGrupySzkoleniowej'
+import PanelDokumentowPowiazanych from '../komponenty/PanelDokumentowPowiazanych'
+import PanelTworzeniaListObecnosci from '../komponenty/PanelTworzeniaListObecnosci'
 import PanelWykrytychProblemow from '../komponenty/PanelWykrytychProblemow'
 import PasekStickySzczegolow from '../komponenty/PasekStickySzczegolow'
 import { PoleCheckbox, PoleTekstowe, PoleTekstoweWielowierszowe, PoleWyboru } from '../komponenty/PolaSzczegolow'
@@ -241,8 +243,23 @@ function WierszWymoguRozszerzony({
   )
 }
 
+type WlasciwosciWidokuNowychSzczegolow = {
+  otworzListeObecnosci: (id: string) => void
+}
+
 export default function WidokNowychSzczegolowOrganizacyjnych() {
   const generator = useGeneratorSzczegolow()
+  const otworzListeObecnosci: WlasciwosciWidokuNowychSzczegolow['otworzListeObecnosci'] = (id) => {
+    const sciezka = `/dokumenty/listy-obecnosci/${encodeURIComponent(id)}`
+    if (window.location.pathname !== sciezka) {
+      window.history.pushState({ widok: 'listy-obecnosci' }, '', sciezka)
+    }
+    window.dispatchEvent(new PopStateEvent('popstate'))
+  }
+
+  const [odswiezaczDokumentow, ustawOdswiezaczDokumentow] = useState(0)
+  const aktywnaWersja = generator.kopieRobocze.find((kopia) => kopia.id === generator.aktywnaKopiaId) ?? null
+  const szczegolyOrganizacyjneId = generator.zrodloOpublikowanegoId ?? aktywnaWersja?.id ?? null
   const [podgladyWzorowKlienta, ustawPodgladyWzorowKlienta] = useState<Record<string, PodgladWzoruKlienta>>({})
   const [porownywanaWersjaId, ustawPorownywanaWersjaId] = useState<string | null>(null)
   const liczbaProblemowBlokujacych = generator.problemyWalidacji.filter((problem) => problem.czyBlokuje).length
@@ -541,6 +558,13 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
       />
 
       <p className="szczegoly-komunikat">{generator.komunikat}</p>
+      <PanelTworzeniaListObecnosci
+        wersja={aktywnaWersja}
+        otworzDokument={otworzListeObecnosci}
+        poUtworzeniu={() => ustawOdswiezaczDokumentow((obecny) => obecny + 1)}
+      />
+      <PanelDokumentowPowiazanych szczegolyOrganizacyjneId={szczegolyOrganizacyjneId} odswiezacz={odswiezaczDokumentow} otworzDokument={otworzListeObecnosci} />
+
       {generator.autosaveDoDecyzji && (
         <div className="szczegoly-autosave">
           <strong>Znaleziono niezapisaną wersję roboczą</strong>

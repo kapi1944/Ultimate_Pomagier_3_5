@@ -17,6 +17,7 @@ import type {
 import { PoleLiczbowe, PoleTekstowe, PoleWyboru } from './PolaSzczegolow'
 import { pobierzEtykieteGrupy, ustawFormeGrupy, ustawRodzajGodzinGrupy } from '../logikaGrupSzkoleniowych'
 import PrzelacznikTakNie from './PrzelacznikTakNie'
+import PoleUczestnikowGrupy from './PoleUczestnikowGrupy'
 
 type WlasciwosciKartyGrupy = {
   grupa: GrupaSzkoleniowa
@@ -536,6 +537,7 @@ export default function KartaGrupySzkoleniowej({
               wartosc={grupa.liczbaUczestnikow}
               ustawWartosc={(wartosc) => aktualizujGrupe(grupa.id, (obecna) => ({ ...obecna, liczbaUczestnikow: wartosc }), `grupy.${indeks}.liczbaUczestnikow`)}
             />
+            <PoleUczestnikowGrupy grupa={grupa} indeks={indeks} aktualizujGrupe={aktualizujGrupe} />
             <PoleTekstowe
               etykieta="Data umowy"
               pole={`grupy.${indeks}.dataUmowy`}

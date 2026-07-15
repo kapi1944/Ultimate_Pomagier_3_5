@@ -55,7 +55,14 @@ function zbudujGrupe(dane: DaneSzczegolowDoKontekstu, grupa: DaneSzczegolowDoKon
     liczbaGodzin: Number.isFinite(grupa.liczbaGodzin) ? grupa.liczbaGodzin : null,
     lokalizacje: zbudujLokalizacje(daty, grupa.miejsce, trybOnline),
     trenerzy: zbudujTrenerow(grupa.trenerzy),
-    uczestnicy: [],
+    uczestnicy: (grupa.uczestnicy ?? []).map((uczestnik) => ({
+      id: tekstLubNull(uczestnik.id),
+      imie: uczestnik.imie.trim(),
+      nazwisko: uczestnik.nazwisko.trim(),
+      nazwaPelna: `${uczestnik.imie} ${uczestnik.nazwisko}`.trim(),
+      email: tekstLubNull(uczestnik.email),
+      stanowisko: null,
+    })),
     liczbaUczestnikow: Number.isFinite(grupa.liczbaUczestnikow) ? grupa.liczbaUczestnikow : 0,
     wysylkaMaterialow: {
       wymagana: dane.dane.wysylkaPaczkiDotyczy,

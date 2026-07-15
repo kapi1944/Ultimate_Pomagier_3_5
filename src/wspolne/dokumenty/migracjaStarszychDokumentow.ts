@@ -126,6 +126,7 @@ function migrujStareRepozytorium(raport: RaportMigracjiStarszychDokumentow) {
   const mapowanie: Record<RekordDokumentu['typGeneratora'], TypDokumentu> = {
     programy_szkolen: 'PROGRAM_SZKOLENIA',
     szczegoly_organizacyjne: 'SZCZEGOLY_ORGANIZACYJNE',
+    listy_obecnosci: 'LISTA_OBECNOSCI',
   }
 
   repozytoriumDokumentow.pobierz().forEach((rekord) => {

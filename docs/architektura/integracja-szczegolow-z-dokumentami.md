@@ -4,7 +4,7 @@ Moduł `src/wspolne/integracje/szczegolyDoDokumentow` oddziela dane Szczegółó
 
 `KontekstDokumentuSzkolenia` jest migawką: wszystkie obiekty są klonowane przed zwróceniem i przed zapisaniem ich jako powiązanie dokumentu. Zawiera identyfikator Szczegółów, rzeczywisty identyfikator wersji (albo `null`), datę modyfikacji i deterministyczny odcisk. Odcisk powstaje przez stabilną serializację obiektu z posortowanymi kluczami, a następnie 32-bitowy skrót FNV-1a. Nie jest zależny od kolejności kluczy ani od wartości losowych.
 
-Obecny model `GrupaSzkoleniowa` ma zakres `dataOd`/`dataDo`, liczbę uczestników, trenerów, formę i nazwę miejsca, lecz nie przechowuje list uczestników ani identyfikatora/adresu lokalizacji. Mapper zachowuje więc znane daty, nazwę miejsca i liczbę uczestników, a dla nieistniejących danych przekazuje puste listy lub `null`. Nie tworzy danych demonstracyjnych ani nie odczytuje `localStorage`.
+Model `GrupaSzkoleniowa` przechowuje opcjonalną listę `uczestnicy` (identyfikator, imię, nazwisko i e-mail), dzięki czemu Lista obecności może otrzymać rzeczywistych uczestników wybranej grupy. Pole jest opcjonalne dla zgodności ze starszymi wersjami roboczymi; jego brak mapuje się na pustą listę i jest błędem blokującym tylko dla tworzonej Listy obecności. Model nadal nie przechowuje identyfikatora ani adresu lokalizacji, więc mapper przekazuje te wartości jako `null`. Nie tworzy danych demonstracyjnych ani nie odczytuje `localStorage`.
 
 Plan generowania obsługuje trzy strategie:
 
@@ -16,4 +16,4 @@ Pierwszy adapter, `adapterListyObecnosci`, przygotowuje DTO jednej grupy: dane s
 
 Walidacja zwraca błędy i ostrzeżenia zamiast wyświetlać UI. Dla Listy obecności blokują: brak tytułu, brak lub błędny wybór grupy, brak terminu oraz brak uczestników. Ostrzeżenia obejmują brak trenera, lokalizacji, klienta, organizatora, logo oraz niepełne dane uczestnika. Brak e-maila ani stanowiska nie blokuje dokumentu.
 
-Następny etap może dodać wybór grup, utworzenie rekordu w rejestrze dokumentów i podłączenie DTO do generatora. Ten etap celowo nie dodaje UI, zapisu do rejestru, synchronizacji przy otwieraniu ani generatora Zestawienia organizacyjnego grup.
+Etap 5G wykorzystuje ten kontrakt w Szczegółach organizacyjnych: pozwala wybrać grupy, tworzy osobne robocze Listy obecności przez wspólne repozytorium, otwiera pojedynczy dokument albo pokazuje wynik zbiorczy, a także udostępnia Dokumenty powiązane. Generator odczytuje dokument po ID i zapisuje wyłącznie korekty ręczne. Kolejny etap może dodać synchronizację danych źródłowych albo generator Zestawienia organizacyjnego grup.

@@ -81,5 +81,9 @@ export function pobierzWidokGeneratoraZeSciezki(sciezka: string) {
     return widok
   }
 
+  if (/^\/dokumenty\/listy-obecnosci\/[^/]+$/.test(sciezka)) {
+    return 'listy-obecnosci'
+  }
+
   return /^\/dokumenty\/programy-szkolen\/[^/]+$/.test(sciezka) ? 'programy_szkolen' : undefined
 }

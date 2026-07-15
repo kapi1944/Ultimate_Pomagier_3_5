@@ -1,4 +1,4 @@
-export type TypGeneratoraDokumentu = 'programy_szkolen' | 'szczegoly_organizacyjne'
+export type TypGeneratoraDokumentu = 'programy_szkolen' | 'szczegoly_organizacyjne' | 'listy_obecnosci'
 export type StanCykluDokumentu = 'kopia_robocza' | 'opublikowany' | 'archiwalny' | 'kosz'
 export type WidocznoscDokumentu = 'prywatny' | 'zespol' | 'organizacja'
 export type ZrodloDokumentu = 'nowy' | 'duplikat' | 'aktualizacja' | 'migracja'
@@ -70,7 +70,7 @@ type StanMagazynuDokumentow = {
 }
 
 export const kluczRepozytoriumDokumentow = 'ultimatePomagier.dokumenty.wspolne.v1'
-const typyGeneratorow: TypGeneratoraDokumentu[] = ['programy_szkolen', 'szczegoly_organizacyjne']
+const typyGeneratorow: TypGeneratoraDokumentu[] = ['programy_szkolen', 'szczegoly_organizacyjne', 'listy_obecnosci']
 const stanyCyklu: StanCykluDokumentu[] = ['kopia_robocza', 'opublikowany', 'archiwalny', 'kosz']
 const widocznosci: WidocznoscDokumentu[] = ['prywatny', 'zespol', 'organizacja']
 const zrodla: ZrodloDokumentu[] = ['nowy', 'duplikat', 'aktualizacja', 'migracja']
