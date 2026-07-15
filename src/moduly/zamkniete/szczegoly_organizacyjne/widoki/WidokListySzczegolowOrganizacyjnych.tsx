@@ -109,6 +109,7 @@ export default function WidokListySzczegolowOrganizacyjnych({ otworzNoweSzczegol
               <span>Opiekun: {pobierzNazweOpiekuna(rekord.opiekunId)}</span>
               <span>Autor: {rekord.autorNazwa}</span>
               <span>Publikacja: {formatujDate(rekord.dataPublikacji)}</span>
+              <span>Wersja {rekord.numerWersji}</span>
               <span>Status szkolenia: {rekord.statusSzkolenia ?? rekord.dane.statusSzkolenia}</span>
             </div>
             <div className="szczegoly-rekord__akcje">

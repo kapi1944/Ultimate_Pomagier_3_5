@@ -126,6 +126,25 @@ function utworzNazweOpublikowanegoRekordu(wersja: WersjaRoboczaGeneratora) {
   return wersja.nazwa.replace('[Kopia robocza]', '[Opublikowane]')
 }
 
+export function ustalDokumentIdWersji(wersja: Pick<WersjaRoboczaGeneratora, 'id' | 'dokumentId' | 'zrodloOpublikowanegoId'>) {
+  return wersja.dokumentId || wersja.zrodloOpublikowanegoId || wersja.id
+}
+
+function normalizujWersjeRobocza(wersja: WersjaRoboczaGeneratora): WersjaRoboczaGeneratora {
+  return { ...wersja, dokumentId: ustalDokumentIdWersji(wersja) }
+}
+
+function normalizujOpublikowaneSzczegoly(rekord: OpublikowaneSzczegolyOrganizacyjne): OpublikowaneSzczegolyOrganizacyjne {
+  const dataPublikacji = rekord.dataPublikacji || new Date().toISOString()
+  return {
+    ...rekord,
+    numerWersji: rekord.numerWersji || 1,
+    dataPierwszejPublikacji: rekord.dataPierwszejPublikacji || dataPublikacji,
+    dataOstatniejPublikacji: rekord.dataOstatniejPublikacji || dataPublikacji,
+    dataPublikacji,
+  }
+}
+
 function pobierzDzisiejszyKluczWersji() {
   return new Date().toISOString().slice(0, 10)
 }
@@ -142,19 +161,21 @@ function zarejestrujHistorie(wpis: WpisHistoriiSzczegolow) {
     id: wpis.id,
     typGeneratora: 'szczegoly_organizacyjne',
     data: wpis.data,
+    dokumentId: wpis.dokumentId,
     dane: wpis,
   })
 }
 
 export function pobierzAktualnaWersjeRobocza() {
-  return bezpiecznieParsuj<WersjaRoboczaGeneratora | null>(localStorage.getItem(kluczAktualnejWersji), null)
+  const wersja = bezpiecznieParsuj<WersjaRoboczaGeneratora | null>(localStorage.getItem(kluczAktualnejWersji), null)
+  return wersja ? normalizujWersjeRobocza(wersja) : null
 }
 
 export function pobierzKopieRobocze() {
   const wspolneKopie = pobierzKopieRoboczeGeneratora<WersjaRoboczaGeneratora>('szczegoly_organizacyjne')
 
   if (wspolneKopie.length || localStorage.getItem(kluczMigracjiKopiiRoboczych) === 'true') {
-    return wspolneKopie.map((kopia) => kopia.daneDokumentu)
+    return wspolneKopie.map((kopia) => normalizujWersjeRobocza(kopia.daneDokumentu))
   }
 
   const starszeKopie = pobierzStarszeKopieRobocze()
@@ -170,14 +191,14 @@ export function pobierzKopieRobocze() {
   })
   localStorage.setItem(kluczMigracjiKopiiRoboczych, 'true')
 
-  return pobierzKopieRoboczeGeneratora<WersjaRoboczaGeneratora>('szczegoly_organizacyjne').map((kopia) => kopia.daneDokumentu)
+  return pobierzKopieRoboczeGeneratora<WersjaRoboczaGeneratora>('szczegoly_organizacyjne').map((kopia) => normalizujWersjeRobocza(kopia.daneDokumentu))
 }
 
 export function pobierzOpublikowaneSzczegoly() {
   zmigrujStarszeOpublikowaneSzczegoly()
   return repozytoriumDokumentow
     .pobierz({ typGeneratora: 'szczegoly_organizacyjne', stanCyklu: 'opublikowany' })
-    .map((dokument) => dokument.daneDokumentu as OpublikowaneSzczegolyOrganizacyjne)
+    .map((dokument) => normalizujOpublikowaneSzczegoly(dokument.daneDokumentu as OpublikowaneSzczegolyOrganizacyjne))
 }
 
 export function pobierzAutosaveSzczegolow() {
@@ -200,6 +221,10 @@ export function pobierzHistorieSzczegolow() {
 }
 
 export function dodajWpisHistoriiSzczegolow(wpis: Omit<WpisHistoriiSzczegolow, 'id' | 'data'>) {
+  if (wpis.typ === 'wersja' && wpis.dokumentId && wpis.numerWersji && pobierzHistorieSzczegolow().some((pozycja) => pozycja.typ === 'wersja' && pozycja.dokumentId === wpis.dokumentId && pozycja.numerWersji === wpis.numerWersji)) {
+    return
+  }
+
   zarejestrujHistorie({
     ...wpis,
     id: `historia-${Date.now()}`,
@@ -226,12 +251,15 @@ export function zbudujWersjeRobocza(
   adresaci: DaneAdresatow,
   statusyPol: StatusyPolImportu,
   konto: KontoSzczegolow,
-  metadane?: { id?: string | null; zrodloOpublikowanegoId?: string },
+  metadane?: { id?: string | null; dokumentId?: string; zrodloOpublikowanegoId?: string; bazowaWersjaOpublikowana?: number },
 ): WersjaRoboczaGeneratora {
   const historia = pobierzHistorieSzczegolow()
+  const id = metadane?.id || `wersja-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 
   return {
-    id: metadane?.id || `wersja-${Date.now()}`,
+    id,
+    dokumentId: metadane?.dokumentId || metadane?.zrodloOpublikowanegoId || id,
+    bazowaWersjaOpublikowana: metadane?.bazowaWersjaOpublikowana,
     wersja: wersjaEksportuSzczegolow,
     etykietaWersji: utworzEtykieteWersji(historia),
     nazwa: utworzNazweKopiiRoboczej(dane, grupy),
@@ -251,6 +279,7 @@ export function ustawAktualnaWersjeRobocza(wersja: WersjaRoboczaGeneratora) {
 }
 
 export function zapiszWersjeRobocza(wersja: WersjaRoboczaGeneratora) {
+  wersja = normalizujWersjeRobocza(wersja)
   zapiszDokumentRoboczyGeneratora({
     id: wersja.id,
     typ: 'SZCZEGOLY_ORGANIZACYJNE',
@@ -283,12 +312,17 @@ export function zapiszWersjeRobocza(wersja: WersjaRoboczaGeneratora) {
     grupy: wersja.grupy,
     adresaci: wersja.adresaci,
     statusyPol: wersja.statusyPol,
+    dokumentId: wersja.dokumentId,
+    wersjaRoboczaId: wersja.id,
   })
   usunAutosaveSzczegolow()
 }
 
 export function usunKopieRobocza(id: string) {
-  usunWspolnaKopieRobocza('szczegoly_organizacyjne', id)
+  const rekord = repozytoriumDokumentow.pobierzPoId('szczegoly_organizacyjne', id)
+  if (rekord?.stanCyklu === 'kopia_robocza') {
+    usunWspolnaKopieRobocza('szczegoly_organizacyjne', id)
+  }
 
   if (pobierzAktualnaWersjeRobocza()?.id === id) {
     wyczyscAktualnaWersjeRobocza()
@@ -300,20 +334,42 @@ export function wyczyscAktualnaWersjeRobocza() {
 }
 
 export function opublikujWersjeRobocza(wersja: WersjaRoboczaGeneratora) {
+  wersja = normalizujWersjeRobocza(wersja)
   const walidacjaPrzejscia = walidujPrzejscieStatusuSzczegolow(wersja.dane.status, 'OCZEKUJĄCE')
   if (!walidacjaPrzejscia.poprawne || !walidacjaPrzejscia.przejscie) {
     throw new Error(walidacjaPrzejscia.komunikat)
+  }
+
+  const opublikowane = pobierzOpublikowaneSzczegoly()
+  const istniejacy = opublikowane.find((rekord) => rekord.id === wersja.dokumentId)
+
+  if (istniejacy?.zrodloKopiiRoboczejId === wersja.id) {
+    return istniejacy
+  }
+
+  if (wersja.zrodloOpublikowanegoId && !istniejacy) {
+    throw new Error('Nie znaleziono opublikowanego dokumentu źródłowego aktualizacji.')
+  }
+
+  if (istniejacy && wersja.bazowaWersjaOpublikowana !== istniejacy.numerWersji) {
+    throw new Error('Konflikt wersji: aktualizacja powstała na podstawie nieaktualnej wersji opublikowanej.')
   }
 
   const daneOpublikowane: DaneFormularza = {
     ...wersja.dane,
     status: 'OCZEKUJĄCE',
   }
+  const teraz = new Date().toISOString()
+  const numerWersji = istniejacy ? istniejacy.numerWersji + 1 : 1
   const rekord: OpublikowaneSzczegolyOrganizacyjne = {
-    id: `szczegoly-${Date.now()}`,
+    ...(istniejacy ?? {}),
+    id: wersja.dokumentId,
     wersja: wersjaEksportuSzczegolow,
     nazwa: utworzNazweOpublikowanegoRekordu(wersja),
-    dataPublikacji: new Date().toISOString(),
+    dataPublikacji: teraz,
+    dataPierwszejPublikacji: istniejacy?.dataPierwszejPublikacji ?? teraz,
+    dataOstatniejPublikacji: teraz,
+    numerWersji,
     autorId: wersja.autorId,
     autorNazwa: wersja.autorNazwa,
     opiekunId: daneOpublikowane.opiekunId,
@@ -326,16 +382,23 @@ export function opublikujWersjeRobocza(wersja: WersjaRoboczaGeneratora) {
     zrodloKopiiRoboczejId: wersja.id,
   }
 
-  zapiszOpublikowaneSzczegoly([rekord, ...pobierzOpublikowaneSzczegoly()])
+  zapiszOpublikowaneSzczegoly([rekord, ...opublikowane.filter((pozycja) => pozycja.id !== rekord.id)])
   usunKopieRobocza(wersja.id)
   dodajWpisHistoriiSzczegolow({
-    typ: 'status',
+    typ: 'wersja',
     autorId: wersja.autorId,
     autorNazwa: wersja.autorNazwa,
-    komentarz: 'Opublikowano szczegóły organizacyjne.',
+    komentarz: istniejacy ? `Opublikowano aktualizację jako wersję ${numerWersji}.` : 'Opublikowano szczegóły organizacyjne jako wersję 1.',
     akcjaStatusu: 'publikacja',
     automatyczne: true,
     zmianaStatusu: { z: wersja.dane.status, na: 'OCZEKUJĄCE' },
+    dokumentId: rekord.id,
+    numerWersji,
+    wersjaRoboczaId: wersja.id,
+    dane: daneOpublikowane,
+    grupy: wersja.grupy,
+    adresaci: wersja.adresaci,
+    statusyPol: wersja.statusyPol,
   })
 
   return rekord
@@ -434,7 +497,9 @@ export function utworzKopieRoboczaZOpublikowanychSzczegolow(rekord: Opublikowane
 
   const grupy = czyBezGrup ? [utworzPoczatkowaGrupe(1)] : rekord.grupy
   const kopia: WersjaRoboczaGeneratora = {
-    id: `wersja-${Date.now()}`,
+    id: `wersja-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    dokumentId: rekord.id,
+    bazowaWersjaOpublikowana: rekord.numerWersji,
     wersja: wersjaEksportuSzczegolow,
     etykietaWersji: utworzEtykieteWersji(pobierzHistorieSzczegolow()),
     nazwa: `[Kopia robocza] Aktualizacja - ${rekord.dane.tytulSzkolenia || rekord.nazwa}`,
