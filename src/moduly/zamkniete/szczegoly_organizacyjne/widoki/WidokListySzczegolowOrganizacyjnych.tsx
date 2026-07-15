@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import type { OpublikowaneSzczegolyOrganizacyjne, StatusOpublikowanychSzczegolow } from '../typy'
+import type { OpublikowaneSzczegolyOrganizacyjne } from '../typy'
 import {
   czyKontoMozeCofnacStatus,
   czyKontoMozeZaakceptowacSzczegoly,
@@ -15,14 +15,8 @@ import {
   utworzKopieRoboczaZOpublikowanychSzczegolow,
 } from '../uslugi/magazynWersjiRoboczych'
 import { statusySzkolenia } from '../stale'
-import { czyMoznaUtworzycAktualizacje } from '../workflowStatusow'
+import { czyMoznaUtworzycAktualizacje, pobierzPrzejscieCofnieciaStatusu } from '../workflowStatusow'
 import './widokNowychSzczegolowOrganizacyjnych.css'
-
-const statusyOpublikowane: StatusOpublikowanychSzczegolow[] = [
-  'OCZEKUJĄCE',
-  'ZAAKCEPTOWANE',
-  'GOTOWE',
-]
 
 type WlasciwosciWidokuListy = {
   otworzNoweSzczegoly: () => void
@@ -32,14 +26,9 @@ function formatujDate(data: string) {
   return new Date(data).toLocaleString('pl-PL')
 }
 
-function czyStatusOpublikowany(status: string): status is StatusOpublikowanychSzczegolow {
-  return statusyOpublikowane.includes(status as StatusOpublikowanychSzczegolow)
-}
-
 export default function WidokListySzczegolowOrganizacyjnych({ otworzNoweSzczegoly }: WlasciwosciWidokuListy) {
   const konto = useMemo(() => pobierzAktywneKontoSzczegolow(), [])
   const [rekordy, ustawRekordy] = useState(() => pobierzOpublikowaneSzczegoly())
-  const rekordyOpublikowane = rekordy.filter((rekord) => czyStatusOpublikowany(rekord.status))
 
   function zaakceptujSzczegoly(rekord: OpublikowaneSzczegolyOrganizacyjne) {
     if (rekord.status !== 'OCZEKUJĄCE' || !czyKontoMozeZaakceptowacSzczegoly(konto, rekord)) {
@@ -68,7 +57,8 @@ export default function WidokListySzczegolowOrganizacyjnych({ otworzNoweSzczegol
   }
 
   function cofnijStatus(rekord: OpublikowaneSzczegolyOrganizacyjne) {
-    if (!czyKontoMozeCofnacStatus(konto, rekord) || rekord.status === 'OCZEKUJĄCE') {
+    const przejscieCofniecia = pobierzPrzejscieCofnieciaStatusu(rekord.status)
+    if (!czyKontoMozeCofnacStatus(konto, rekord) || !przejscieCofniecia) {
       return
     }
 
@@ -78,8 +68,7 @@ export default function WidokListySzczegolowOrganizacyjnych({ otworzNoweSzczegol
       return
     }
 
-    const poprzedniStatus = rekord.status === 'GOTOWE' ? 'ZAAKCEPTOWANE' : 'OCZEKUJĄCE'
-    ustawRekordy(ustawStatusOpublikowanychSzczegolow(rekord.id, poprzedniStatus, { konto, komentarz: komentarz.trim() }))
+    ustawRekordy(ustawStatusOpublikowanychSzczegolow(rekord.id, przejscieCofniecia.do, { konto, komentarz: komentarz.trim() }))
   }
 
   function ustawStatusSzkolenia(rekord: OpublikowaneSzczegolyOrganizacyjne, statusSzkolenia: string) {
@@ -106,8 +95,8 @@ export default function WidokListySzczegolowOrganizacyjnych({ otworzNoweSzczegol
       </header>
 
       <div className="szczegoly-lista-rekordow">
-        {rekordyOpublikowane.length === 0 && <p className="szczegoly-komunikat">Brak opublikowanych szczegółów organizacyjnych.</p>}
-        {rekordyOpublikowane.map((rekord) => (
+        {rekordy.length === 0 && <p className="szczegoly-komunikat">Brak opublikowanych szczegółów organizacyjnych.</p>}
+        {rekordy.map((rekord) => (
           <article className="szczegoly-rekord" key={rekord.id} style={{ backgroundColor: pobierzKolorTlaOpiekuna(rekord.opiekunId) }}>
             <div className="szczegoly-rekord__naglowek">
               <div>
@@ -133,7 +122,7 @@ export default function WidokListySzczegolowOrganizacyjnych({ otworzNoweSzczegol
                   Oznacz jako gotowe
                 </button>
               )}
-              {rekord.status !== 'OCZEKUJĄCE' && czyKontoMozeCofnacStatus(konto, rekord) && (
+              {pobierzPrzejscieCofnieciaStatusu(rekord.status) && czyKontoMozeCofnacStatus(konto, rekord) && (
                 <button type="button" onClick={() => cofnijStatus(rekord)}>
                   Cofnij status
                 </button>

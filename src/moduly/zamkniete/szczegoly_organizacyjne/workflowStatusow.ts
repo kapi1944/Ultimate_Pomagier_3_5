@@ -1,4 +1,4 @@
-import type { StatusSzczegolow } from './typy'
+import type { StatusOpublikowanychSzczegolow, StatusSzczegolow } from './typy'
 
 export type AkcjaStatusuSzczegolow = 'publikacja' | 'akceptacja' | 'przygotowanie' | 'realizacja' | 'rozliczenie' | 'cofniecie'
 
@@ -20,10 +20,19 @@ export const macierzPrzejscStatusowSzczegolow: readonly PrzejscieStatusuSzczegol
   { z: 'ZREALIZOWANE', do: 'ROZLICZONE', akcja: 'rozliczenie', automatyczne: false, wymagaPowodu: false, wymagaPrzyszlegoUprawnienia: true },
   { z: 'NIEZREALIZOWANE', do: 'ROZLICZONE', akcja: 'rozliczenie', automatyczne: false, wymagaPowodu: false, wymagaPrzyszlegoUprawnienia: true },
   { z: 'ZAAKCEPTOWANE', do: 'OCZEKUJĄCE', akcja: 'cofniecie', automatyczne: false, wymagaPowodu: false, wymagaPrzyszlegoUprawnienia: true },
+  { z: 'GOTOWE', do: 'ZAAKCEPTOWANE', akcja: 'cofniecie', automatyczne: false, wymagaPowodu: false, wymagaPrzyszlegoUprawnienia: true },
 ]
 
 export function pobierzPrzejscieStatusuSzczegolow(z: StatusSzczegolow, doStatusu: StatusSzczegolow) {
   return macierzPrzejscStatusowSzczegolow.find((przejscie) => przejscie.z === z && przejscie.do === doStatusu) ?? null
+}
+
+export function pobierzPrzejscieCofnieciaStatusu(status: StatusOpublikowanychSzczegolow) {
+  return (
+    (macierzPrzejscStatusowSzczegolow.find((przejscie) => przejscie.z === status && przejscie.akcja === 'cofniecie') as
+      | (PrzejscieStatusuSzczegolow & { do: StatusOpublikowanychSzczegolow })
+      | undefined) ?? null
+  )
 }
 
 export function walidujPrzejscieStatusuSzczegolow(z: StatusSzczegolow, doStatusu: StatusSzczegolow, powod = '') {

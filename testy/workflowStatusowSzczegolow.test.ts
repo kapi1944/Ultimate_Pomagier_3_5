@@ -9,7 +9,13 @@ import {
   ustawStatusOpublikowanychSzczegolow,
   utworzKopieRoboczaZOpublikowanychSzczegolow,
 } from '../src/moduly/zamkniete/szczegoly_organizacyjne/uslugi/magazynWersjiRoboczych.ts'
-import { czyMoznaEdytowacBezposrednio, czyMoznaUtworzycAktualizacje, czyStatusJestZamkniety, walidujPrzejscieStatusuSzczegolow } from '../src/moduly/zamkniete/szczegoly_organizacyjne/workflowStatusow.ts'
+import {
+  czyMoznaEdytowacBezposrednio,
+  czyMoznaUtworzycAktualizacje,
+  czyStatusJestZamkniety,
+  pobierzPrzejscieCofnieciaStatusu,
+  walidujPrzejscieStatusuSzczegolow,
+} from '../src/moduly/zamkniete/szczegoly_organizacyjne/workflowStatusow.ts'
 
 const magazyn = new Map<string, string>()
 
@@ -63,6 +69,14 @@ test('niezrealizowanie wymaga niepustej przyczyny', () => {
   assert.equal(walidujPrzejscieStatusuSzczegolow('GOTOWE', 'NIEZREALIZOWANE', 'Klient odwołał termin.').poprawne, true)
 })
 
+test('cofnięcia są określone centralnie przez macierz', () => {
+  assert.equal(walidujPrzejscieStatusuSzczegolow('GOTOWE', 'ZAAKCEPTOWANE').poprawne, true)
+  assert.equal(pobierzPrzejscieCofnieciaStatusu('GOTOWE')?.do, 'ZAAKCEPTOWANE')
+  assert.equal(pobierzPrzejscieCofnieciaStatusu('ZAAKCEPTOWANE')?.do, 'OCZEKUJĄCE')
+  assert.equal(pobierzPrzejscieCofnieciaStatusu('OCZEKUJĄCE'), null)
+  assert.equal(pobierzPrzejscieCofnieciaStatusu('ROZLICZONE'), null)
+})
+
 test('publikacja automatyczna zapisuje historię z aktorem i oznaczeniem automatycznym', () => {
   const rekord = opublikujTestowyRekord()
   const wpis = pobierzHistorieSzczegolow().find((pozycja) => pozycja.zmianaStatusu?.na === 'OCZEKUJĄCE')
@@ -106,6 +120,38 @@ test('rzeczywista przyczyna zmienia status i trafia do historii', () => {
   assert.equal(wpis?.powod, 'Klient odwołał szkolenie.')
   assert.equal(wpis?.komentarz, 'Klient potwierdził anulowanie.')
   assert.equal(wpis?.autorId, konto.id)
+})
+
+test('cofnięcie GOTOWE do ZAAKCEPTOWANE zapisuje akcję w historii', () => {
+  const rekord = opublikujTestowyRekord()
+  ustawStatusOpublikowanychSzczegolow(rekord.id, 'ZAAKCEPTOWANE', { konto })
+  ustawStatusOpublikowanychSzczegolow(rekord.id, 'GOTOWE', { konto })
+  ustawStatusOpublikowanychSzczegolow(rekord.id, 'ZAAKCEPTOWANE', { konto, komentarz: 'Wymaga ponownej weryfikacji.' })
+
+  const wpis = pobierzHistorieSzczegolow().find((pozycja) => pozycja.zmianaStatusu?.z === 'GOTOWE' && pozycja.zmianaStatusu.na === 'ZAAKCEPTOWANE')
+  assert.equal(pobierzOpublikowaneSzczegoly()[0]?.status, 'ZAAKCEPTOWANE')
+  assert.equal(wpis?.akcjaStatusu, 'cofniecie')
+})
+
+test('źródło danych listy zachowuje późniejsze statusy opublikowanych rekordów', () => {
+  const zrealizowany = opublikujTestowyRekord()
+  ustawStatusOpublikowanychSzczegolow(zrealizowany.id, 'ZAAKCEPTOWANE', { konto })
+  ustawStatusOpublikowanychSzczegolow(zrealizowany.id, 'GOTOWE', { konto })
+  ustawStatusOpublikowanychSzczegolow(zrealizowany.id, 'ZREALIZOWANE', { konto })
+  assert.equal(pobierzOpublikowaneSzczegoly()[0]?.status, 'ZREALIZOWANE')
+
+  const niezrealizowany = opublikujTestowyRekord()
+  ustawStatusOpublikowanychSzczegolow(niezrealizowany.id, 'ZAAKCEPTOWANE', { konto })
+  ustawStatusOpublikowanychSzczegolow(niezrealizowany.id, 'GOTOWE', { konto })
+  ustawStatusOpublikowanychSzczegolow(niezrealizowany.id, 'NIEZREALIZOWANE', { konto, powod: 'Termin odwołany.' })
+  assert.equal(pobierzOpublikowaneSzczegoly()[0]?.status, 'NIEZREALIZOWANE')
+
+  const rozliczony = opublikujTestowyRekord()
+  ustawStatusOpublikowanychSzczegolow(rozliczony.id, 'ZAAKCEPTOWANE', { konto })
+  ustawStatusOpublikowanychSzczegolow(rozliczony.id, 'GOTOWE', { konto })
+  ustawStatusOpublikowanychSzczegolow(rozliczony.id, 'ZREALIZOWANE', { konto })
+  ustawStatusOpublikowanychSzczegolow(rozliczony.id, 'ROZLICZONE', { konto })
+  assert.equal(pobierzOpublikowaneSzczegoly()[0]?.status, 'ROZLICZONE')
 })
 
 test('niedozwolone przejście nie zmienia rekordu', () => {

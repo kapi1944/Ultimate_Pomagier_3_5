@@ -9,7 +9,7 @@ Przeanalizowano: Programy szkoleń, Szczegóły organizacyjne, Dyplomy, Listy ob
 
 | Zasada | Wynik |
 | --- | --- |
-| Stabilny identyfikator dokumentu w rejestrze | potwierdzona dla `Dokument` i wspólnego rejestru |
+| Jeden logiczny dokument ze stałym ID | niepotwierdzone dla Szczegółów organizacyjnych; aktualizacja po publikacji może utworzyć nowy rekord |
 | Autosave nie tworzy elementu listy ani historii | potwierdzona dla Programów i Szczegółów |
 | Ręczny zapis tworzy punkt historii | potwierdzona dla Programów i Szczegółów |
 | Kopie robocze są widokiem wspólnego magazynu | potwierdzona dla podłączonych generatorów |
@@ -44,6 +44,7 @@ Nie wykonano ręcznych testów w przeglądarce. W szczególności niezweryfikowa
 - Proste generatory przechowują pojedyncze szkice i nie są jeszcze podłączone do rejestru wersjonowanych dokumentów.
 - Starsze `repozytoriumDokumentow.ts` operuje kopią jako nowym rekordem; nie jest wspólnym modelem docelowym i powinno zostać wygaszone po migracji użyć.
 - Interfejs nie udostępnia jeszcze przywrócenia wybranej wersji historii jako nowej wersji.
+- Kopia aktualizacji zachowuje `zrodloOpublikowanegoId`, ale ponowna publikacja nadal nadaje `szczegoly-${Date.now()}`. Aktualizacja może więc utworzyć drugi opublikowany rekord zamiast kolejnej wersji tego samego logicznego rekordu. Wymaga to osobnego etapu: **Etap 5H — publikacja aktualizacji jako nowej wersji tego samego rekordu**.
 - Import Szczegółów organizacyjnych obsługuje wklejoną treść maila, ale stosuje wynik bez ekranu wyboru pól; PDF i DOCX nie są importowane do formularza.
 - W repozytorium nie ma bezpiecznego parsera DOCX/PDF dla formularza Szczegółów; nie dodano sztucznych wyników ani OCR.
 - Etap 4C (dynamiczne pola i walidacja) nie został wykonany w tej gałęzi.
