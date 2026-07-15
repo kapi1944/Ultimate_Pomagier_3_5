@@ -1,4 +1,5 @@
-import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import AkcjeEksportuPdf from '../../../../wspolne/dokumenty/AkcjeEksportuPdf'
 import PanelKontroliJakosciDokumentu from '../../../../wspolne/dokumenty/PanelKontroliJakosciDokumentu'
 import {
   pobierzAktywnaKopieProgramu,
@@ -847,6 +848,7 @@ type WlasciwosciWidokuProgramowSzkolen = {
 }
 
 export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWidokuProgramowSzkolen) {
+  const obszarPodgladuRef = useRef<HTMLElement>(null)
   const [stanOdczytu, ustawStanOdczytu] = useState<'ladowanie' | 'gotowy' | 'blad'>(() => dokumentIdZTrasy ? 'ladowanie' : 'gotowy')
   const [bladOdczytu, ustawBladOdczytu] = useState('')
   const [aktywnaKopiaId, ustawAktywnaKopiaId] = useState<string | null>(() => dokumentIdZTrasy ? null : pobierzIdAktywnejKopiiProgramu())
@@ -1115,32 +1117,23 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
     window.history.back()
   }
 
-  function drukujProgram() {
+  function czyMoznaEksportowacProgram() {
     const raport = przygotujRaportEksportuDokumentu(dokumentProgramu, 'PDF')
-
     if (!raport.czyDozwolony) {
       if (!czyArchitekt) {
         ustawKomunikat(`Eksport zablokowany: ${raport.problemy.filter((problem) => problem.czyBlokujeEksport).map((problem) => problem.komunikat).join(' ')}`)
-        return
+        return false
       }
-
-      const czyPotwierdzono = window.confirm('Dokument ma błędy krytyczne. Czy jako Architekt wymuszasz eksport PDF?')
-
-      if (!czyPotwierdzono) {
+      if (!window.confirm('Dokument ma b\u0142\u0119dy krytyczne. Czy jako Architekt wymuszasz eksport PDF?')) {
         ustawKomunikat('Eksport przerwany.')
-        return
+        return false
       }
-
-      const raportWymuszony = przygotujRaportEksportuDokumentu(dokumentProgramu, 'PDF', true)
-
-      zapiszLogWymuszeniaEksportu(raportWymuszony)
-      ustawKomunikat('Architekt wymusił eksport mimo błędów krytycznych. Zapisano wpis w logu lokalnym.')
-      window.print()
-      return
+      zapiszLogWymuszeniaEksportu(przygotujRaportEksportuDokumentu(dokumentProgramu, 'PDF', true))
+      ustawKomunikat('Architekt wymusi\u0142 eksport mimo b\u0142\u0119d\u00f3w krytycznych. Zapisano wpis w logu lokalnym.')
+      return true
     }
-
-    ustawKomunikat('Otwieram drukowanie. PDF jest formatem referencyjnym.')
-    window.print()
+    ustawKomunikat('Dokument jest gotowy do eksportu PDF lub druku.')
+    return true
   }
 
   function zmienProfilFirmy(profilFirmy: ProfilFirmy) {
@@ -1332,9 +1325,12 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
         <h1>Programy szkoleń</h1>
         <div className="program-szkolen__akcje">
           <span role="status">{stanZapisu === 'zapisywanie' ? 'Zapisywanie...' : stanZapisu === 'blad' ? 'Błąd zapisu' : 'Zapisano'}</span>
-          <button className="program-szkolen__przycisk" onClick={drukujProgram} type="button">
-            Drukuj
-          </button>
+          <AkcjeEksportuPdf
+            className="program-szkolen__akcje-eksportu"
+            czyMoznaEksportowac={czyMoznaEksportowacProgram}
+            nazwaPliku={`Program_szkolenia_${program.tytul || 'bez_tytulu'}`}
+            obszarDokumentu={obszarPodgladuRef}
+          />
           {aktywnaKopiaId ? (
             <>
               <button className="program-szkolen__przycisk" onClick={() => zapiszRoboczo('aktualizuj')} type="button">
@@ -1683,7 +1679,7 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
           </section>
         </div>
 
-        <section className="program-szkolen__podglad">
+        <section className="program-szkolen__podglad" ref={obszarPodgladuRef}>
           <div className="program-kartka-a4">
             <header className="program-kartka-a4__naglowek" style={{ borderColor: kolorAkcentu }}>
               <div className="program-kartka-a4__meta">

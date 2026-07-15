@@ -1,0 +1,9 @@
+﻿@page { size: A4 portrait; margin: 12mm; }
+
+[data-pomin-w-eksporcie] { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+
+@media print {
+  [data-pomin-w-eksporcie] { display: none !important; }
+  .program-kartka-a4 { break-after: page; break-inside: avoid; }
+  .program-kartka-a4__naglowek, .program-kartka-a4__stopka { break-inside: avoid; }
+}
