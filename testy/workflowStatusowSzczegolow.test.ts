@@ -4,6 +4,7 @@ import type { KontoSzczegolow } from '../src/moduly/zamkniete/szczegoly_organiza
 import type { DaneFormularza, WersjaRoboczaGeneratora } from '../src/moduly/zamkniete/szczegoly_organizacyjne/typy.ts'
 import {
   opublikujWersjeRobocza,
+  pobierzKopieRobocze,
   pobierzHistorieSzczegolow,
   pobierzOpublikowaneSzczegoly,
   ustawStatusOpublikowanychSzczegolow,
@@ -31,8 +32,10 @@ globalThis.localStorage = {
 const konto: KontoSzczegolow = { id: 'tester', nazwa: 'Tester', rola: 'Architekt' }
 
 function utworzWersjeRobocza(): WersjaRoboczaGeneratora {
+  const id = `wersja-testowa-${Date.now()}`
   return {
-    id: `wersja-testowa-${Date.now()}`,
+    id,
+    dokumentId: id,
     wersja: 'test',
     etykietaWersji: 'testowa',
     nazwa: '[Kopia robocza] Test',
@@ -180,4 +183,36 @@ test('rozliczenie zamyka rekord, a wcześniejszy status pozwala utworzyć aktual
   assert.equal(czyStatusJestZamkniety(rozliczony.status), true)
   assert.equal(czyMoznaUtworzycAktualizacje(rozliczony.status), false)
   assert.equal(utworzKopieRoboczaZOpublikowanychSzczegolow(rozliczony, konto), null)
+})
+
+test('publikacja aktualizacji zachowuje dokumentId, zwiększa wersję i nie tworzy drugiego rekordu', () => {
+  const pierwsza = opublikujTestowyRekord()
+  const aktualizacja = utworzKopieRoboczaZOpublikowanychSzczegolow(pierwsza, konto)!
+  aktualizacja.dane.tytulSzkolenia = 'Test workflow po aktualizacji'
+
+  const druga = opublikujWersjeRobocza(aktualizacja)
+  const historie = pobierzHistorieSzczegolow().filter((wpis) => wpis.dokumentId === pierwsza.id && wpis.numerWersji)
+
+  assert.equal(pierwsza.numerWersji, 1)
+  assert.equal(aktualizacja.dokumentId, pierwsza.id)
+  assert.equal(aktualizacja.bazowaWersjaOpublikowana, 1)
+  assert.notEqual(aktualizacja.id, pierwsza.id)
+  assert.equal(druga.id, pierwsza.id)
+  assert.equal(druga.numerWersji, 2)
+  assert.equal(druga.dataPierwszejPublikacji, pierwsza.dataPierwszejPublikacji)
+  assert.equal(pobierzOpublikowaneSzczegoly().length, 1)
+  assert.equal(pobierzOpublikowaneSzczegoly()[0]?.dane.tytulSzkolenia, 'Test workflow po aktualizacji')
+  assert.deepEqual(historie.map((wpis) => wpis.numerWersji).sort(), [1, 2])
+  assert.equal(opublikujWersjeRobocza(aktualizacja).numerWersji, 2)
+})
+
+test('nieaktualna aktualizacja nie nadpisuje nowszej wersji i pozostaje kopią roboczą', () => {
+  const pierwsza = opublikujTestowyRekord()
+  const pierwszaAktualizacja = utworzKopieRoboczaZOpublikowanychSzczegolow(pierwsza, konto)!
+  const nieaktualnaAktualizacja = utworzKopieRoboczaZOpublikowanychSzczegolow(pierwsza, konto)!
+  opublikujWersjeRobocza(pierwszaAktualizacja)
+
+  assert.throws(() => opublikujWersjeRobocza(nieaktualnaAktualizacja), /Konflikt wersji/)
+  assert.equal(pobierzOpublikowaneSzczegoly()[0]?.numerWersji, 2)
+  assert.equal(pobierzKopieRobocze().some((kopia) => kopia.id === nieaktualnaAktualizacja.id), true)
 })

@@ -269,10 +269,15 @@ export type WpisHistoriiSzczegolow = {
   grupy?: GrupaSzkoleniowa[]
   adresaci?: DaneAdresatow
   statusyPol?: StatusyPolImportu
+  dokumentId?: string
+  numerWersji?: number
+  wersjaRoboczaId?: string
 }
 
 export type WersjaRoboczaGeneratora = {
   id: string
+  dokumentId: string
+  bazowaWersjaOpublikowana?: number
   wersja: string
   etykietaWersji: string
   nazwa: string
@@ -293,6 +298,9 @@ export type OpublikowaneSzczegolyOrganizacyjne = {
   wersja: string
   nazwa: string
   dataPublikacji: string
+  dataPierwszejPublikacji: string
+  dataOstatniejPublikacji: string
+  numerWersji: number
   autorId: string
   autorNazwa: string
   opiekunId: string

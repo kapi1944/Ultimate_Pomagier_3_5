@@ -9,7 +9,7 @@ Przeanalizowano: Programy szkoleń, Szczegóły organizacyjne, Dyplomy, Listy ob
 
 | Zasada | Wynik |
 | --- | --- |
-| Jeden logiczny dokument ze stałym ID | niepotwierdzone dla Szczegółów organizacyjnych; aktualizacja po publikacji może utworzyć nowy rekord |
+| Jeden logiczny dokument ze stałym ID | potwierdzone dla Szczegółów organizacyjnych w etapie 5H; pozostałe generatory poza zakresem |
 | Autosave nie tworzy elementu listy ani historii | potwierdzona dla Programów i Szczegółów |
 | Ręczny zapis tworzy punkt historii | potwierdzona dla Programów i Szczegółów |
 | Kopie robocze są widokiem wspólnego magazynu | potwierdzona dla podłączonych generatorów |
@@ -26,6 +26,10 @@ Ta gałąź zawiera audyt 5G oraz fundament domenowy workflow 4D. Nie stanowi pe
 - `GOTOWE → NIEZREALIZOWANE` wymaga osobnej, niepustej przyczyny; komentarz historii nie może jej zastąpić.
 - Każda skuteczna ręczna zmiana zapisuje poprzedni i nowy status, aktora, akcję, opcjonalny komentarz oraz — gdy wymagana — przyczynę.
 - Wersji opublikowanej nie edytuje się bezpośrednio. Aktualizacja tworzy nową kopię roboczą, natomiast `ROZLICZONE` jest statusem zamkniętym i blokuje zwykłe tworzenie aktualizacji.
+- Etap 5H rozdziela `dokumentId` (stałe ID logicznego dokumentu) od `id` kopii roboczej. Pierwsza publikacja ma numer `1`, a publikacja aktualizacji aktualizuje rekord pod tym samym ID i zwiększa numer dokładnie o `1`.
+- `repozytoriumDokumentow` jest źródłem bieżącego rekordu opublikowanego Szczegółów; wspólny rejestr oraz magazyn kopii roboczych pozostają adapterami zgodności. Historia wersji jest przypisana przez `dokumentId` i zawiera migawkę publikacji.
+- Migracja jest leniwa i zgodna wstecz: brakujący numer wersji jest interpretowany jako `1`, a brakujące daty pierwszej i ostatniej publikacji są wyprowadzane z `dataPublikacji`. Stara aktualizacja używa `zrodloOpublikowanegoId` jako `dokumentId`.
+- Aktualizacja pamięta numer wersji bazowej. Publikacja kopii o nieaktualnej bazie kończy się konfliktem bez nadpisania opublikowanego rekordu i bez usunięcia kopii.
 
 ## Zakres potwierdzony automatycznie
 
@@ -44,7 +48,7 @@ Nie wykonano ręcznych testów w przeglądarce. W szczególności niezweryfikowa
 - Proste generatory przechowują pojedyncze szkice i nie są jeszcze podłączone do rejestru wersjonowanych dokumentów.
 - Starsze `repozytoriumDokumentow.ts` operuje kopią jako nowym rekordem; nie jest wspólnym modelem docelowym i powinno zostać wygaszone po migracji użyć.
 - Interfejs nie udostępnia jeszcze przywrócenia wybranej wersji historii jako nowej wersji.
-- Kopia aktualizacji zachowuje `zrodloOpublikowanegoId`, ale ponowna publikacja nadal nadaje `szczegoly-${Date.now()}`. Aktualizacja może więc utworzyć drugi opublikowany rekord zamiast kolejnej wersji tego samego logicznego rekordu. Wymaga to osobnego etapu: **Etap 5H — publikacja aktualizacji jako nowej wersji tego samego rekordu**.
+- Przywracanie wcześniejszej wersji nadal wymaga osobnego etapu; historia przechowuje migawki, ale nie udostępnia jeszcze akcji przywracania.
 - Import Szczegółów organizacyjnych obsługuje wklejoną treść maila, ale stosuje wynik bez ekranu wyboru pól; PDF i DOCX nie są importowane do formularza.
 - W repozytorium nie ma bezpiecznego parsera DOCX/PDF dla formularza Szczegółów; nie dodano sztucznych wyników ani OCR.
 - Etap 4C (dynamiczne pola i walidacja) nie został wykonany w tej gałęzi.
