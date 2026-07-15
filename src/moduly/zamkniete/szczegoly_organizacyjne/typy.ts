@@ -186,6 +186,7 @@ export type GrupaSzkoleniowa = {
   id: string
   nazwa: string
   trenerzy: TrenerGrupy[]
+  uczestnicy?: UczestnikGrupy[]
   formaSzkolenia: FormaSzkolenia
   dataOd: string
   dataDo: string

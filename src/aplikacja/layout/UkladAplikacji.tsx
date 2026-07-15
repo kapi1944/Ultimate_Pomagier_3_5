@@ -9,7 +9,7 @@ import WidokWszystkichDokumentow from '../../moduly/dokumenty/WidokWszystkichDok
 import WidokAnkiet from '../../moduly/dokumenty/generatory/ankiety/WidokAnkiet'
 import WidokDyplomow from '../../moduly/dokumenty/generatory/dyplomy/WidokDyplomow'
 import WidokKartNaDrzwi from '../../moduly/dokumenty/generatory/karta_na_drzwi/WidokKartNaDrzwi'
-import WidokListObecnosci from '../../moduly/dokumenty/generatory/listy_obecnosci/WidokListObecnosci'
+import WidokListyObecnosciZDokumentu from '../../moduly/dokumenty/generatory/listy_obecnosci/WidokListyObecnosciZDokumentu'
 import { WidokProgramowSzkolen } from '../../moduly/dokumenty/generatory/programy_szkolen'
 import {
   otworzKopieRoboczaProgramu,
@@ -94,6 +94,11 @@ function pobierzIdProgramuZeSciezki() {
   return dopasowanie ? decodeURIComponent(dopasowanie[1]) : null
 }
 
+function pobierzIdListyObecnosciZeSciezki() {
+  const dopasowanie = window.location.pathname.match(/^\/dokumenty\/listy-obecnosci\/([^/]+)$/)
+  return dopasowanie ? decodeURIComponent(dopasowanie[1]) : null
+}
+
 function pobierzWidokZakladkiKartotek(zakladka: ZakladkaKartotek): WidokNawigacji {
   switch (zakladka) {
     case 'trenerzy':
@@ -137,7 +142,7 @@ function renderujWidok(
     case 'replikator_dokumentow':
       return <WidokReplikatoraDokumentow />
     case 'listy-obecnosci':
-      return <WidokListObecnosci />
+      return <WidokListyObecnosciZDokumentu dokumentIdZTrasy={pobierzIdListyObecnosciZeSciezki()} />
     case 'ankiety':
       return <WidokAnkiet />
     case 'dyplomy':
@@ -244,6 +249,17 @@ export default function UkladAplikacji() {
       }
 
       ustawAktywnyWidok('programy_szkolen')
+      return
+    }
+
+    if (dokument.typ === 'LISTA_OBECNOSCI') {
+      const sciezka = `/dokumenty/listy-obecnosci/${encodeURIComponent(dokument.id)}`
+
+      if (window.location.pathname !== sciezka) {
+        window.history.pushState({ widok: 'listy-obecnosci' }, '', sciezka)
+      }
+
+      ustawAktywnyWidok('listy-obecnosci')
       return
     }
 

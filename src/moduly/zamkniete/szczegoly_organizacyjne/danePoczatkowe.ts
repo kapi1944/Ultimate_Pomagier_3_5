@@ -117,6 +117,7 @@ export const poczatkowaGrupa: GrupaSzkoleniowa = {
   id: 'grupa-1',
   nazwa: 'Grupa 1',
   trenerzy: [],
+  uczestnicy: [],
   formaSzkolenia: 'Stacjonarne',
   dataOd: '',
   dataDo: '',
