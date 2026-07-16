@@ -26,6 +26,11 @@ function formatujDate(data: string) {
   return new Date(data).toLocaleString('pl-PL')
 }
 
+function pobierzTrenerow(grupy: { trenerzy: { imieNazwisko: string }[] }[]) {
+  const trenerzy = grupy.flatMap((grupa) => grupa.trenerzy.map((trener) => trener.imieNazwisko).filter(Boolean))
+  return trenerzy.length ? trenerzy.join(', ') : 'Bez trenera'
+}
+
 export default function WidokListySzczegolowOrganizacyjnych({ otworzNoweSzczegoly }: WlasciwosciWidokuListy) {
   const konto = useMemo(() => pobierzAktywneKontoSzczegolow(), [])
   const [rekordy, ustawRekordy] = useState(() => pobierzOpublikowaneSzczegoly())
@@ -106,9 +111,12 @@ export default function WidokListySzczegolowOrganizacyjnych({ otworzNoweSzczegol
               <strong>{rekord.status}</strong>
             </div>
             <div className="szczegoly-rekord__metadane">
+              <span>Organizator: {rekord.dane.organizator}</span>
               <span>Opiekun: {pobierzNazweOpiekuna(rekord.opiekunId)}</span>
               <span>Autor: {rekord.autorNazwa}</span>
               <span>Publikacja: {formatujDate(rekord.dataPublikacji)}</span>
+              <span>Grupy: {rekord.grupy.length}</span>
+              <span>Trenerzy: {pobierzTrenerow(rekord.grupy)}</span>
               <span>Wersja {rekord.numerWersji}</span>
               <span>Status szkolenia: {rekord.statusSzkolenia ?? rekord.dane.statusSzkolenia}</span>
             </div>

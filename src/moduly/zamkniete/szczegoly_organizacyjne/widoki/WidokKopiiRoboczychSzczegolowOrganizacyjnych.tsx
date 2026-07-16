@@ -18,6 +18,11 @@ function formatujDate(data: string) {
   return new Date(data).toLocaleString('pl-PL')
 }
 
+function pobierzTrenerow(grupy: { trenerzy: { imieNazwisko: string }[] }[]) {
+  const trenerzy = grupy.flatMap((grupa) => grupa.trenerzy.map((trener) => trener.imieNazwisko).filter(Boolean))
+  return trenerzy.length ? trenerzy.join(', ') : 'Bez trenera'
+}
+
 export default function WidokKopiiRoboczychSzczegolowOrganizacyjnych({ otworzNoweSzczegoly }: WlasciwosciWidokuKopii) {
   const konto = useMemo(() => pobierzAktywneKontoSzczegolow(), [])
   const [kopie, ustawKopie] = useState(() => pobierzKopieRobocze())
@@ -60,9 +65,12 @@ export default function WidokKopiiRoboczychSzczegolowOrganizacyjnych({ otworzNow
               <strong>{kopia.dane.status}</strong>
             </div>
             <div className="szczegoly-rekord__metadane">
+              <span>Nazwa kopii: {kopia.nazwa}</span>
               <span>Opiekun: {pobierzNazweOpiekuna(kopia.dane.opiekunId)}</span>
               <span>Autor: {kopia.autorNazwa}</span>
               <span>Zapis: {formatujDate(kopia.dataZapisu)}</span>
+              <span>Grupy: {kopia.grupy.length}</span>
+              <span>Trenerzy: {pobierzTrenerow(kopia.grupy)}</span>
             </div>
             <div className="szczegoly-rekord__akcje">
               {czyKontoMozeEdytowacKopie(konto, kopia) && (

@@ -1,8 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { poczatkoweDaneFormularza } from '../src/moduly/zamkniete/szczegoly_organizacyjne/danePoczatkowe.ts'
-import { pobierzKopieRobocze } from '../src/moduly/zamkniete/szczegoly_organizacyjne/uslugi/magazynWersjiRoboczych.ts'
-import { zapiszKopieRobocza } from '../src/wspolne/dokumenty/magazynKopiiRoboczych.ts'
+import { pobierzKopieRobocze, zapiszWersjeRobocza } from '../src/moduly/zamkniete/szczegoly_organizacyjne/uslugi/magazynWersjiRoboczych.ts'
 import type { DaneFormularza, WersjaRoboczaGeneratora } from '../src/moduly/zamkniete/szczegoly_organizacyjne/typy.ts'
 
 const magazyn = new Map<string, string>()
@@ -86,13 +85,7 @@ test('wczytana kopia robocza zachowuje zapisane wartości zamiast nowych domyśl
     statusyPol: {},
   }
 
-  zapiszKopieRobocza({
-    id: wersja.id,
-    typGeneratora: 'szczegoly_organizacyjne',
-    tytul: wersja.nazwa,
-    status: 'robocza',
-    daneDokumentu: wersja,
-  })
+  zapiszWersjeRobocza(wersja)
 
   const [wczytana] = pobierzKopieRobocze()
 

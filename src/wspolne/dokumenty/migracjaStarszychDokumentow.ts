@@ -11,6 +11,7 @@ const kluczeProstychSzkicow: Array<{ klucz: string; typ: TypDokumentu; generator
 const kluczDyplomow = 'ultimate-pomagier.dyplomy.generator-pawla'
 const kluczKopiiSzczegolow = 'ultimatePomagier.szczegolyOrganizacyjne.kopieRobocze'
 const kluczAktualnejWersjiSzczegolow = 'ultimatePomagier.szczegolyOrganizacyjne.aktualnaWersja'
+const kluczWspolnychKopiiRoboczych = 'ultimatePomagier.kopieRobocze'
 const prefiksKopiiBezpieczenstwa = 'ultimatePomagier.migracjaDokumentow.kopia.'
 
 export type RaportMigracjiStarszychDokumentow = {
@@ -109,6 +110,7 @@ function zapiszDokumentMigracji(
     status,
     utworzono,
     zmodyfikowano,
+    zaktualizowano: zmodyfikowano,
     opublikowano: status === 'OPUBLIKOWANY' ? zmodyfikowano : null,
     czyZarchiwizowany: status === 'ZARCHIWIZOWANY',
     zarchiwizowano: status === 'ZARCHIWIZOWANY' ? zmodyfikowano : null,
@@ -199,16 +201,39 @@ function migrujDyplomy(raport: RaportMigracjiStarszychDokumentow) {
   })
 }
 
+function pobierzDaneStarszejWersjiSzczegolow(wartosc: Record<string, unknown>) {
+  const daneDokumentu = czyObiekt(wartosc.daneDokumentu) ? wartosc.daneDokumentu : wartosc
+  const dane = czyObiekt(daneDokumentu.dane) ? daneDokumentu.dane : czyObiekt(daneDokumentu.daneFormularza) ? daneDokumentu.daneFormularza : czyObiekt(wartosc.dane) ? wartosc.dane : czyObiekt(wartosc.daneFormularza) ? wartosc.daneFormularza : null
+
+  if (!dane) {
+    return null
+  }
+
+  const maCharakterystycznePole = ['tytulSzkolenia', 'statusSzczegolow', 'programSzkolenia', 'uwagi'].some((pole) => pole in dane) || Array.isArray(daneDokumentu.grupy) || Array.isArray(wartosc.grupy)
+  return maCharakterystycznePole ? { daneDokumentu, dane } : null
+}
+
 function czyStarszaWersjaSzczegolow(wartosc: unknown): wartosc is StarszaWersjaSzczegolow {
-  return czyObiekt(wartosc) && typeof wartosc.id === 'string' && czyObiekt(wartosc.dane)
+  if (!czyObiekt(wartosc) || typeof wartosc.id !== 'string' || (typeof wartosc.typGeneratora === 'string' && wartosc.typGeneratora !== 'szczegoly_organizacyjne')) {
+    return false
+  }
+
+  return pobierzDaneStarszejWersjiSzczegolow(wartosc) !== null
 }
 
 function migrujWersjeSzczegolow(raport: RaportMigracjiStarszychDokumentow, klucz: string, wartosc: unknown) {
   const wersje = Array.isArray(wartosc) ? wartosc : [wartosc]
   wersje.forEach((wersja) => {
     if (!czyStarszaWersjaSzczegolow(wersja)) {
-      raport.bledne += 1
       return
+    }
+
+    const zrodlo = pobierzDaneStarszejWersjiSzczegolow(wersja)!
+    const znormalizowanaWersja = {
+      ...zrodlo.daneDokumentu,
+      ...wersja,
+      dane: zrodlo.dane,
+      grupy: Array.isArray(zrodlo.daneDokumentu.grupy) ? zrodlo.daneDokumentu.grupy : Array.isArray(wersja.grupy) ? wersja.grupy : [],
     }
 
     raport.znalezione += 1
@@ -216,20 +241,20 @@ function migrujWersjeSzczegolow(raport: RaportMigracjiStarszychDokumentow, klucz
       id: wersja.id,
       typ: 'SZCZEGOLY_ORGANIZACYJNE',
       generatorId: 'szczegoly_organizacyjne',
-      tytul: typeof wersja.dane.tytulSzkolenia === 'string' ? wersja.dane.tytulSzkolenia : 'Szczegoly organizacyjne',
-      daneDokumentu: { ...wersja, metadaneMigracji: { kluczZrodlowy: klucz, idZrodlowy: wersja.id } },
+      tytul: typeof zrodlo.dane.tytulSzkolenia === 'string' ? zrodlo.dane.tytulSzkolenia : 'Szczegoly organizacyjne',
+      daneDokumentu: { ...znormalizowanaWersja, metadaneMigracji: { kluczZrodlowy: klucz, idZrodlowy: wersja.id } },
       ustawieniaDokumentu: {},
       utworzono: wersja.dataZapisu,
       zmodyfikowano: wersja.dataZapisu,
       autorId: wersja.autorId ?? null,
-      klientId: typeof wersja.dane.nazwaKlienta === 'string' ? wersja.dane.nazwaKlienta : null,
-      organizatorId: typeof wersja.dane.organizator === 'string' ? wersja.dane.organizator : null,
+      klientId: typeof zrodlo.dane.nazwaKlienta === 'string' ? zrodlo.dane.nazwaKlienta : null,
+      organizatorId: typeof zrodlo.dane.organizator === 'string' ? zrodlo.dane.organizator : null,
     })
   })
 }
 
 function migrujSzczegoly(raport: RaportMigracjiStarszychDokumentow) {
-  ;[kluczKopiiSzczegolow, kluczAktualnejWersjiSzczegolow].forEach((klucz) => {
+  ;[kluczKopiiSzczegolow, kluczAktualnejWersjiSzczegolow, kluczWspolnychKopiiRoboczych].forEach((klucz) => {
     const zapis = localStorage.getItem(klucz)
     if (zapis === null) return
 
