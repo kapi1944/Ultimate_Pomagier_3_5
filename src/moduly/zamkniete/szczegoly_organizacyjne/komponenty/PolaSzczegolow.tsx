@@ -235,11 +235,13 @@ export function PoleCheckbox({
   ustawZaznaczone,
   disabled,
 }: WlasciwosciPolaCheckbox) {
+  const blad = useBladPola(pole, disabled)
   return (
     <label className={`szczegoly-checkbox ${disabled ? 'szczegoly-checkbox--disabled' : ''}`}>
-      <input checked={zaznaczone} disabled={disabled} type="checkbox" onChange={(zdarzenie) => ustawZaznaczone(zdarzenie.target.checked)} />
-      <span>{etykieta}</span>
+      <input aria-describedby={blad ? pobierzIdBleduPola(pole) : undefined} aria-invalid={Boolean(blad)} checked={zaznaczone} disabled={disabled} type="checkbox" onChange={(zdarzenie) => ustawZaznaczone(zdarzenie.target.checked)} />
+      <span>{etykieta}<ZnacznikBleduPola blad={blad} /></span>
       <ZnacznikStatusu pole={pole} statusyPol={statusyPol} />
+      {blad && <span className="szczegoly-pole__blad" id={pobierzIdBleduPola(pole)}>{blad}</span>}
     </label>
   )
 }
