@@ -7,12 +7,15 @@ import PanelDokumentowPowiazanych from '../komponenty/PanelDokumentowPowiazanych
 import PanelTworzeniaListObecnosci from '../komponenty/PanelTworzeniaListObecnosci'
 import PanelWykrytychProblemow from '../komponenty/PanelWykrytychProblemow'
 import PasekStickySzczegolow from '../komponenty/PasekStickySzczegolow'
-import { PoleCheckbox, PoleTekstowe, PoleTekstoweWielowierszowe, PoleWyboru } from '../komponenty/PolaSzczegolow'
+import { PoleCheckbox, PoleTekstowe, PoleTekstoweWielowierszowe, PoleWyboru, ZnacznikBleduPola } from '../komponenty/PolaSzczegolow'
 import PrzelacznikTakNie from '../komponenty/PrzelacznikTakNie'
+import { pobierzIdBleduPola } from '../komponenty/identyfikatoryPol'
+import { useBladPola } from '../komponenty/stanBledowPol'
 import SekcjaFormularza from '../komponenty/SekcjaFormularza'
 import { useGeneratorSzczegolow } from '../hooki/useGeneratorSzczegolow'
+import { porownajSnapshotyWersji } from '../logikaPorownaniaWersji'
 import { opiekunowieSzczegolow } from '../uzytkownicySzczegolow'
-import type { DaneFirmy, DaneFormularza, OrganizatorSzkolenia, StatusLogotypow } from '../typy'
+import type { DaneFirmy, DaneFormularza, OrganizatorSzkolenia, StatusLogotypow, WpisHistoriiSzczegolow } from '../typy'
 import './widokNowychSzczegolowOrganizacyjnych.css'
 
 const sekcjeNawigacji = [
@@ -91,6 +94,7 @@ type WlasciwosciPolFirmy = {
 
 type WlasciwosciWierszaWymogu = {
   etykieta: string
+  pole: string
   wlaczony: boolean
   ustawWlaczony: (wartosc: boolean) => void
   wariantPrzelacznika?: 'tak-nie' | 'aktywny-nieaktywny' | 'druk-online'
@@ -113,15 +117,9 @@ function wybierzPodpowiedziMiejscowosci(miejscowosci: string[], wartosc: string)
   return miejscowosci.filter((miejscowosc) => !fraza || miejscowosc.toLocaleLowerCase('pl').includes(fraza)).slice(0, 50)
 }
 
-function pobierzRozniceWersji(poprzednia: unknown, aktualna: unknown) {
-  const poprzedniTekst = JSON.stringify(poprzednia, null, 2)
-  const aktualnyTekst = JSON.stringify(aktualna, null, 2)
-
-  if (poprzedniTekst === aktualnyTekst) {
-    return ['Brak różnic w danych formularza.']
-  }
-
-  return ['Dane formularza różnią się od poprzedniej zapisanej wersji.']
+function czyWersjaMaPoprzednia(wersje: WpisHistoriiSzczegolow[], wersjaId: string, dokumentId?: string) {
+  const wersjeTegoDokumentu = wersje.filter((wersja) => wersja.typ === 'wersja' && wersja.dokumentId === dokumentId)
+  return wersjeTegoDokumentu.findIndex((wersja) => wersja.id === wersjaId) < wersjeTegoDokumentu.length - 1
 }
 
 function PolaFirmy({ tytul, prefix, dane, disabled, statusyPol, aktualizujPole, miejscowosciDoPodpowiedzi, elementNaglowka }: WlasciwosciPolFirmy) {
@@ -189,6 +187,7 @@ function PolaFirmy({ tytul, prefix, dane, disabled, statusyPol, aktualizujPole, 
 
 function WierszWymoguRozszerzony({
   etykieta,
+  pole,
   wlaczony,
   ustawWlaczony,
   wariantPrzelacznika,
@@ -200,10 +199,12 @@ function WierszWymoguRozszerzony({
   ustawPlikWzoruKlienta,
   ustawUwagiWzoruKlienta,
 }: WlasciwosciWierszaWymogu) {
+  const blad = useBladPola(pole)
   return (
     <div className="szczegoly-wiersz-wymogu">
-      <span>{etykieta}</span>
-      <PrzelacznikTakNie etykieta={etykieta} wariant={wariantPrzelacznika} wlaczony={wlaczony} ustawWlaczony={ustawWlaczony} />
+      <span>{etykieta}<ZnacznikBleduPola blad={blad} /></span>
+      <PrzelacznikTakNie etykieta={etykieta} pole={pole} wariant={wariantPrzelacznika} wlaczony={wlaczony} ustawWlaczony={ustawWlaczony} />
+      {blad && <span className="szczegoly-pole__blad" id={pobierzIdBleduPola(pole)}>{blad}</span>}
       {pokazWzorKlienta && (
         <label className="szczegoly-checkbox">
           <input checked={wzorKlienta} type="checkbox" onChange={(zdarzenie) => ustawWzorKlienta(zdarzenie.target.checked)} />
@@ -273,7 +274,11 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
   const podpowiedziMiastaPaczki = wybierzPodpowiedziMiejscowosci(miejscowosciDoPodpowiedzi, generator.daneFormularza.odbiorcaPaczki.miasto)
   const wersjeHistorii = generator.historiaSzczegolow.filter((wpis) => wpis.typ === 'wersja')
   const porownywanaWersja = wersjeHistorii.find((wpis) => wpis.id === porownywanaWersjaId)
-  const poprzedniaWersja = porownywanaWersja ? wersjeHistorii[wersjeHistorii.findIndex((wpis) => wpis.id === porownywanaWersja.id) + 1] : undefined
+  const wersjeTegoDokumentu = porownywanaWersja ? wersjeHistorii.filter((wpis) => wpis.dokumentId === porownywanaWersja.dokumentId) : []
+  const poprzedniaWersja = porownywanaWersja ? wersjeTegoDokumentu[wersjeTegoDokumentu.findIndex((wpis) => wpis.id === porownywanaWersja.id) + 1] : undefined
+  const roznicePorownywanejWersji = porownywanaWersja && poprzedniaWersja
+    ? porownajSnapshotyWersji(poprzedniaWersja, porownywanaWersja)
+    : []
 
   const [czyPanelJakosciPrzypiety, ustawCzyPanelJakosciPrzypiety] = useState(pobierzPoczatkowePrzypieciePaneluJakosci)
   const [czyPanelJakosciOtwarty, ustawCzyPanelJakosciOtwarty] = useState(czyPanelJakosciPrzypiety)
@@ -704,6 +709,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
                 <WierszWymoguRozszerzony
                   etykieta={etykieta}
                   key={klucz}
+                  pole={`dokumentacja.${klucz}`}
                   wlaczony={Boolean(generator.daneFormularza.dokumentacja[klucz])}
                   ustawWlaczony={(wartosc) => aktualizujDokumentacje(klucz, wartosc)}
                   wariantPrzelacznika="druk-online"
@@ -739,6 +745,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
                 <WierszWymoguRozszerzony
                   etykieta={etykieta}
                   key={klucz}
+                  pole={`dodatkoweWymogi.${klucz}`}
                   wlaczony={Boolean(generator.daneFormularza.dodatkoweWymogi[klucz])}
                   ustawWlaczony={(wartosc) => aktualizujDodatkowyWymog(klucz, wartosc)}
                   pokazWzorKlienta={false}
@@ -757,6 +764,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
                 <WierszWymoguRozszerzony
                   etykieta={etykieta}
                   key={klucz}
+                  pole={`dokumentacja.${klucz}`}
                   wlaczony={Boolean(generator.daneFormularza.dokumentacja[klucz])}
                   ustawWlaczony={(wartosc) => aktualizujDokumentacje(klucz, wartosc)}
                   wariantPrzelacznika="druk-online"
@@ -777,6 +785,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
                 <WierszWymoguRozszerzony
                   etykieta={etykieta}
                   key={klucz}
+                  pole={`dokumentacja.${klucz}`}
                   wlaczony={Boolean(generator.daneFormularza.dokumentacja[klucz])}
                   ustawWlaczony={(wartosc) => aktualizujDokumentacje(klucz, wartosc)}
                   pokazWzorKlienta={false}
@@ -804,6 +813,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
               <hr className="szczegoly-separator" />
               <WierszWymoguRozszerzony
                 etykieta={'"+1" Dodatkowy egzemplarz'}
+                pole="dokumentacja.plusJedenEgzemplarz"
                 wlaczony={generator.daneFormularza.dokumentacja.plusJedenEgzemplarz}
                 ustawWlaczony={(wartosc) => aktualizujDokumentacje('plusJedenEgzemplarz', wartosc)}
                 pokazWzorKlienta={false}
@@ -920,17 +930,23 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
                 <p>{wpis.komentarz}</p>
                 {wpis.zmianaStatusu && <p>Status: {wpis.zmianaStatusu.z ?? 'brak'} → {wpis.zmianaStatusu.na}</p>}
                 {wpis.zdarzenieSpecjalne && <p>{wpis.zdarzenieSpecjalne}</p>}
-                {wpis.typ === 'wersja' && (
+                {wpis.typ === 'wersja' && czyWersjaMaPoprzednia(wersjeHistorii, wpis.id, wpis.dokumentId) && (
                   <button type="button" onClick={() => ustawPorownywanaWersjaId(porownywanaWersjaId === wpis.id ? null : wpis.id)}>
                     {porownywanaWersjaId === wpis.id ? 'Ukryj porównanie' : 'Porównaj'}
                   </button>
                 )}
                 {porownywanaWersjaId === wpis.id && (
-                  <ul>
-                    {pobierzRozniceWersji(poprzedniaWersja?.dane, porownywanaWersja?.dane).map((roznica) => (
-                      <li key={roznica}>{roznica}</li>
+                  <div className="szczegoly-historia__porownanie">
+                    {roznicePorownywanejWersji.length === 0 && <p>Brak zmian danych formularza względem poprzedniej wersji.</p>}
+                    {roznicePorownywanejWersji.map((roznica, indeks) => (
+                      <article key={`${roznica.sekcja}-${roznica.pole}-${indeks}`}>
+                        <span className="szczegoly-historia__sekcja">{roznica.sekcja}</span>
+                        <strong>{roznica.pole}</strong>
+                        <span className="szczegoly-historia__wartosc szczegoly-historia__wartosc--starsza"><span className="sr-only">Starsza wartość: </span>- {roznica.starszaWartosc}</span>
+                        <span className="szczegoly-historia__wartosc szczegoly-historia__wartosc--nowsza"><span className="sr-only">Nowsza wartość: </span>+ {roznica.nowszaWartosc}</span>
+                      </article>
                     ))}
-                  </ul>
+                  </div>
                 )}
               </article>
             ))}
