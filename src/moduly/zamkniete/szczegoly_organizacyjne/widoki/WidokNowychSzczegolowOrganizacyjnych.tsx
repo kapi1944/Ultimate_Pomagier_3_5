@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type KeyboardEvent, type ReactNode } from 'react'
 import { pobierzLokalizacjeZMagazynu } from '../../../../kartoteki/lokalizacje/magazynLokalizacji'
 import KartaGrupySzkoleniowej from '../komponenty/KartaGrupySzkoleniowej'
+import { DostawcaBledowPol } from '../komponenty/KontekstBledowPol'
+import PoleMinutWczesniejszegoPrzyjazdu from '../komponenty/PoleMinutWczesniejszegoPrzyjazdu'
 import PanelDokumentowPowiazanych from '../komponenty/PanelDokumentowPowiazanych'
 import PanelTworzeniaListObecnosci from '../komponenty/PanelTworzeniaListObecnosci'
 import PanelWykrytychProblemow from '../komponenty/PanelWykrytychProblemow'
@@ -264,9 +266,6 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
   const [porownywanaWersjaId, ustawPorownywanaWersjaId] = useState<string | null>(null)
   const liczbaProblemowBlokujacych = generator.problemyWalidacji.filter((problem) => problem.czyBlokuje).length
   const statusFormularza = `${generator.daneFormularza.status} | ${generator.czyFormularzKompletny ? 'Kompletny' : `Niepełny (${liczbaProblemowBlokujacych})`}`
-  const bladTytulu = generator.daneFormularza.tytulSzkolenia.trim() ? undefined : 'Pole wymagane'
-  const bladKlienta = generator.daneFormularza.nazwaKlienta.trim() ? undefined : 'Pole wymagane'
-  const bladOpiekuna = generator.daneFormularza.opiekunId.trim() ? undefined : 'Pole wymagane'
   const miejscowosciDoPodpowiedzi = useMemo(
     () => [...new Set(pobierzLokalizacjeZMagazynu().map((lokalizacja) => lokalizacja.nazwa))].sort((pierwsza, druga) => pierwsza.localeCompare(druga, 'pl')),
     [],
@@ -526,6 +525,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
     <section
       className={`widok szczegoly-organizacyjne${czyPanelJakosciPrzypiety ? ' szczegoly-organizacyjne--panel-przypiety' : ''}${czyPanelJakosciOtwarty ? ' szczegoly-organizacyjne--panel-otwarty' : ''}`}
     >
+      <DostawcaBledowPol bledyPol={generator.bledyPol}>
       <div className="szczegoly-obszar-roboczy">
         <PasekStickySzczegolow
         sekcje={sekcjeNawigacji}
@@ -603,7 +603,6 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
 
         <SekcjaFormularza id="podstawowe-informacje" tytul="Podstawowe informacje">
           <PoleTekstowe
-            blad={bladTytulu}
             etykieta="Tytuł szkolenia"
             pole="tytulSzkolenia"
             statusyPol={generator.statusyPol}
@@ -612,7 +611,6 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
           />
           <div className="szczegoly-siatka szczegoly-siatka--trzy">
             <PoleTekstowe
-              blad={bladKlienta}
               etykieta="Nazwa klienta"
               pole="nazwaKlienta"
               statusyPol={generator.statusyPol}
@@ -620,7 +618,6 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
               ustawWartosc={(wartosc) => generator.aktualizujDane((dane) => ({ ...dane, nazwaKlienta: wartosc }), 'nazwaKlienta')}
             />
             <PoleWyboru
-              blad={bladOpiekuna}
               etykieta="Opiekun"
               opcje={opcjeOpiekunow}
               pole="opiekunId"
@@ -730,17 +727,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
               >
                 <span>Wcześniejszy przyjazd trenera</span>
                 {generator.daneFormularza.dodatkoweWymogi.wczesniejszyPrzyjazdTrenera && (
-                  <label className="szczegoly-pole-minut">
-                    <span>Ile minut:</span>
-                    <input
-                      aria-invalid={false}
-                      min={0}
-                      step={1}
-                      type="number"
-                      value={generator.daneFormularza.dodatkoweWymogi.minutyWczesniej}
-                      onChange={(zdarzenie) => aktualizujDodatkowyWymog('minutyWczesniej', Number(zdarzenie.target.value))}
-                    />
-                  </label>
+                  <PoleMinutWczesniejszegoPrzyjazdu wartosc={generator.daneFormularza.dodatkoweWymogi.minutyWczesniej} ustawWartosc={(wartosc) => aktualizujDodatkowyWymog('minutyWczesniej', wartosc)} />
                 )}
                 <PrzelacznikTakNie
                   etykieta="Wcześniejszy przyjazd trenera"
@@ -1001,6 +988,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
           zaakceptujPolaNiepewne={generator.zaakceptujWszystkiePolaNiepewne}
         />
       </aside>
+      </DostawcaBledowPol>
     </section>
   )
 }

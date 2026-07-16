@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
 import { etykietyStatusowPol, klasyStatusowPol } from '../stale'
 import type { StatusyPolImportu } from '../typy'
+import { pobierzIdBleduPola } from './identyfikatoryPol'
+import { useBladPola } from './stanBledowPol'
 
 type WspolneWlasciwosciPola = {
   etykieta: string
@@ -68,20 +70,26 @@ function pobierzKomunikatStatusu(pole: string, statusyPol: StatusyPolImportu) {
   return ''
 }
 
+export function ZnacznikBleduPola({ blad }: { blad?: string }) {
+  return blad ? <span aria-hidden="true" className="szczegoly-pole__kropka-bledu" /> : null
+}
+
 function OpakowaniePola({ etykieta, pole, statusyPol, blad, disabled, dzieci, children }: WspolneWlasciwosciPola) {
   const status = statusyPol[pole]
   const zawartosc = dzieci ?? children
   const komunikatStatusu = pobierzKomunikatStatusu(pole, statusyPol)
+  const bladZWalidacji = useBladPola(pole, disabled)
+  const komunikatBledu = blad ?? bladZWalidacji
 
   return (
     <label className={`szczegoly-pole ${status ? klasyStatusowPol[status] : ''} ${disabled ? 'szczegoly-pole--disabled' : ''}`}>
       <span className="szczegoly-pole__naglowek">
-        <span>{etykieta}</span>
+        <span className="szczegoly-pole__etykieta">{etykieta}<ZnacznikBleduPola blad={komunikatBledu} /></span>
         <ZnacznikStatusu pole={pole} statusyPol={statusyPol} />
       </span>
       {zawartosc}
-      {blad && <span className="szczegoly-pole__blad">{blad}</span>}
-      {!blad && komunikatStatusu && <span className="szczegoly-pole__pomoc">{komunikatStatusu}</span>}
+      {komunikatBledu && <span className="szczegoly-pole__blad" id={pobierzIdBleduPola(pole)}>{komunikatBledu}</span>}
+      {!komunikatBledu && komunikatStatusu && <span className="szczegoly-pole__pomoc">{komunikatStatusu}</span>}
     </label>
   )
 }
@@ -99,10 +107,13 @@ export function PoleTekstowe({
   blad,
   disabled,
 }: WlasciwosciPolaTekstowego) {
+  const bladZWalidacji = useBladPola(pole, disabled)
+  const komunikatBledu = blad ?? bladZWalidacji
   return (
-    <OpakowaniePola blad={blad} disabled={disabled} etykieta={etykieta} pole={pole} statusyPol={statusyPol}>
+    <OpakowaniePola blad={komunikatBledu} disabled={disabled} etykieta={etykieta} pole={pole} statusyPol={statusyPol}>
       <input
-        aria-invalid={Boolean(blad)}
+        aria-describedby={komunikatBledu ? pobierzIdBleduPola(pole) : undefined}
+        aria-invalid={Boolean(komunikatBledu)}
         disabled={disabled}
         list={listaPodpowiedziId}
         placeholder={placeholder}
@@ -133,10 +144,13 @@ export function PoleLiczbowe({
   blad,
   disabled,
 }: WlasciwosciPolaLiczbowego) {
+  const bladZWalidacji = useBladPola(pole, disabled)
+  const komunikatBledu = blad ?? bladZWalidacji
   return (
-    <OpakowaniePola blad={blad} disabled={disabled} etykieta={etykieta} pole={pole} statusyPol={statusyPol}>
+    <OpakowaniePola blad={komunikatBledu} disabled={disabled} etykieta={etykieta} pole={pole} statusyPol={statusyPol}>
       <input
-        aria-invalid={Boolean(blad)}
+        aria-describedby={komunikatBledu ? pobierzIdBleduPola(pole) : undefined}
+        aria-invalid={Boolean(komunikatBledu)}
         disabled={disabled}
         max={max}
         min={min}
@@ -172,9 +186,11 @@ export function PoleSuwak({
 }
 
 export function PoleWyboru({ etykieta, pole, statusyPol, wartosc, ustawWartosc, opcje, blad, disabled }: WlasciwosciPolaWyboru) {
+  const bladZWalidacji = useBladPola(pole, disabled)
+  const komunikatBledu = blad ?? bladZWalidacji
   return (
-    <OpakowaniePola blad={blad} disabled={disabled} etykieta={etykieta} pole={pole} statusyPol={statusyPol}>
-      <select aria-invalid={Boolean(blad)} disabled={disabled} value={wartosc} onChange={(zdarzenie) => ustawWartosc(zdarzenie.target.value)}>
+    <OpakowaniePola blad={komunikatBledu} disabled={disabled} etykieta={etykieta} pole={pole} statusyPol={statusyPol}>
+      <select aria-describedby={komunikatBledu ? pobierzIdBleduPola(pole) : undefined} aria-invalid={Boolean(komunikatBledu)} disabled={disabled} value={wartosc} onChange={(zdarzenie) => ustawWartosc(zdarzenie.target.value)}>
         {opcje.map((opcja) => (
           <option key={opcja} value={opcja}>
             {opcja}
@@ -195,10 +211,13 @@ export function PoleTekstoweWielowierszowe({
   blad,
   disabled,
 }: WlasciwosciPolaTekstowego) {
+  const bladZWalidacji = useBladPola(pole, disabled)
+  const komunikatBledu = blad ?? bladZWalidacji
   return (
-    <OpakowaniePola blad={blad} disabled={disabled} etykieta={etykieta} pole={pole} statusyPol={statusyPol}>
+    <OpakowaniePola blad={komunikatBledu} disabled={disabled} etykieta={etykieta} pole={pole} statusyPol={statusyPol}>
       <textarea
-        aria-invalid={Boolean(blad)}
+        aria-describedby={komunikatBledu ? pobierzIdBleduPola(pole) : undefined}
+        aria-invalid={Boolean(komunikatBledu)}
         disabled={disabled}
         placeholder={placeholder}
         value={wartosc}

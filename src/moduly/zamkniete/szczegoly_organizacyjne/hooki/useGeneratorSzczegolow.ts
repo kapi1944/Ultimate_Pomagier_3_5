@@ -360,20 +360,20 @@ function zbudujProblemyWalidacji(dane: DaneFormularza, grupy: GrupaSzkoleniowa[]
   const problemy: ProblemWalidacji[] = []
   const lokalizacje = pobierzLokalizacjeZMagazynu()
 
-  function dodaj(sekcja: string, pole: string, komunikat: string, czyBlokuje = true, poziom: ProblemWalidacji['poziom'] = 'blad') {
-    problemy.push({ sekcja, pole, komunikat, poziom, czyBlokuje })
+  function dodaj(sekcja: string, pole: string, komunikat: string, czyBlokuje = true, poziom: ProblemWalidacji['poziom'] = 'blad', polaPowiazane?: string[]) {
+    problemy.push({ sekcja, pole, polaPowiazane, komunikat, poziom, czyBlokuje })
   }
 
   if (!dane.tytulSzkolenia.trim()) {
-    dodaj('Podstawowe informacje', 'Tytuł szkolenia', 'Tytuł szkolenia: wpisz tytuł szkolenia')
+    dodaj('Podstawowe informacje', 'tytulSzkolenia', 'Tytuł szkolenia: wpisz tytuł szkolenia')
   }
 
   if (!dane.nazwaKlienta.trim()) {
-    dodaj('Podstawowe informacje', 'Nazwa klienta', 'Nazwa klienta: wpisz nazwę klienta')
+    dodaj('Podstawowe informacje', 'nazwaKlienta', 'Nazwa klienta: wpisz nazwę klienta')
   }
 
   if (!dane.opiekunId.trim()) {
-    dodaj('Podstawowe informacje', 'Opiekun', 'Opiekun: wybierz opiekuna')
+    dodaj('Podstawowe informacje', 'opiekunId', 'Opiekun: wybierz opiekuna')
   }
 
   if (!grupy.length) {
@@ -384,46 +384,46 @@ function zbudujProblemyWalidacji(dane: DaneFormularza, grupy: GrupaSzkoleniowa[]
     const nazwaGrupy = `Grupa ${indeks + 1}`
 
     if (!grupa.trenerzy.length || !grupa.trenerzy[0]?.imieNazwisko.trim()) {
-      dodaj('Grupy szkoleniowe', `${nazwaGrupy}: Trener`, `${nazwaGrupy}: wybierz trenera`)
+      dodaj('Grupy szkoleniowe', `grupy.${indeks}.trenerzy`, `${nazwaGrupy}: wybierz trenera`)
     }
 
     if (!grupa.formaSzkolenia) {
-      dodaj('Grupy szkoleniowe', `${nazwaGrupy}: Forma szkolenia`, `${nazwaGrupy}: wybierz formę szkolenia`)
+      dodaj('Grupy szkoleniowe', `grupy.${indeks}.formaSzkolenia`, `${nazwaGrupy}: wybierz formę szkolenia`)
     }
 
     if (!grupa.dataOd) {
-      dodaj('Grupy szkoleniowe', `${nazwaGrupy}: Data od`, `${nazwaGrupy}: wpisz datę od`)
+      dodaj('Grupy szkoleniowe', `grupy.${indeks}.dataOd`, `${nazwaGrupy}: wpisz datę od`)
     }
 
     if (!grupa.dataDo) {
-      dodaj('Grupy szkoleniowe', `${nazwaGrupy}: Data do`, `${nazwaGrupy}: wpisz datę do`)
+      dodaj('Grupy szkoleniowe', `grupy.${indeks}.dataDo`, `${nazwaGrupy}: wpisz datę do`)
     }
 
     if (grupa.dataOd && grupa.dataDo && grupa.dataDo < grupa.dataOd) {
-      dodaj('Grupy szkoleniowe', `${nazwaGrupy}: Zakres dat`, `${nazwaGrupy}: data do nie może być wcześniejsza niż data od`)
+      dodaj('Grupy szkoleniowe', `grupy.${indeks}.dataDo`, `${nazwaGrupy}: data do nie może być wcześniejsza niż data od`, true, 'blad', [`grupy.${indeks}.dataOd`])
     }
 
     if (!Number.isFinite(grupa.liczbaUczestnikow) || grupa.liczbaUczestnikow < 1) {
-      dodaj('Grupy szkoleniowe', `${nazwaGrupy}: Liczba uczestników`, `${nazwaGrupy}: wpisz liczbę uczestników minimum 1`)
+      dodaj('Grupy szkoleniowe', `grupy.${indeks}.liczbaUczestnikow`, `${nazwaGrupy}: wpisz liczbę uczestników minimum 1`)
     }
 
     if (!Number.isFinite(grupa.liczbaGodzin) || grupa.liczbaGodzin < 0) {
-      dodaj('Grupy szkoleniowe', `${nazwaGrupy}: Liczba godzin`, `${nazwaGrupy}: liczba godzin nie może być ujemna`)
+      dodaj('Grupy szkoleniowe', `grupy.${indeks}.liczbaGodzin`, `${nazwaGrupy}: liczba godzin nie może być ujemna`)
     }
 
     const bledyDynamiczne = zbudujBledyDynamicznychPolGrupy(grupa)
     bledyDynamiczne.forEach((blad) => {
-      dodaj('Grupy szkoleniowe', `grupy.${grupa.id}.${blad.pole}`, `${nazwaGrupy}: ${blad.komunikat}`)
+      dodaj('Grupy szkoleniowe', `grupy.${indeks}.${blad.pole}`, `${nazwaGrupy}: ${blad.komunikat}`)
     })
 
     if (!Number.isFinite(grupa.cenaNetto)) {
-      dodaj('Grupy szkoleniowe', `${nazwaGrupy}: Cena netto`, `${nazwaGrupy}: cena nie może zawierać liter`)
+      dodaj('Grupy szkoleniowe', `grupy.${indeks}.cenaNetto`, `${nazwaGrupy}: cena nie może zawierać liter`)
     } else if (grupa.cenaNetto <= 0) {
-      dodaj('Grupy szkoleniowe', `${nazwaGrupy}: Cena netto`, `${nazwaGrupy}: wpisz cenę netto`)
+      dodaj('Grupy szkoleniowe', `grupy.${indeks}.cenaNetto`, `${nazwaGrupy}: wpisz cenę netto`)
     }
 
     if (!Number.isFinite(grupa.terminPlatnosci) || grupa.terminPlatnosci < 0) {
-      dodaj('Grupy szkoleniowe', `${nazwaGrupy}: Termin płatności`, `${nazwaGrupy}: termin płatności nie może być ujemny`)
+      dodaj('Grupy szkoleniowe', `grupy.${indeks}.terminPlatnosci`, `${nazwaGrupy}: termin płatności nie może być ujemny`)
     }
 
 
@@ -431,21 +431,21 @@ function zbudujProblemyWalidacji(dane: DaneFormularza, grupy: GrupaSzkoleniowa[]
     const miejscownik = lokalizacja ? pobierzPotwierdzonyMiejscownikLokalizacji(lokalizacja.klucz_lokalizacji) : null
 
     if (miejscownik?.blad) {
-      dodaj('Grupy szkoleniowe', `${nazwaGrupy}: Miejsce`, miejscownik.blad)
+      dodaj('Grupy szkoleniowe', `grupy.${indeks}.miejsce`, miejscownik.blad)
     }
   })
 
   if (dane.dodatkoweWymogi.wczesniejszyPrzyjazdTrenera && dane.dodatkoweWymogi.minutyWczesniej < 0) {
-    dodaj('Dodatkowe wymogi', 'Ile minut wcześniej', 'Wcześniejszy przyjazd trenera: wpisz liczbę minut minimum 0')
+    dodaj('Dodatkowe wymogi', 'dodatkoweWymogi.minutyWczesniej', 'Wcześniejszy przyjazd trenera: wpisz liczbę minut minimum 0')
   }
 
   if (dane.wysylkaPaczkiDotyczy) {
     if (dane.odbiorcaPaczki.email && !czyEmailPoprawny(dane.odbiorcaPaczki.email)) {
-      dodaj('Wysyłka paczki', 'Email', 'Wysyłka paczki: popraw adres email', false, 'ostrzezenie')
+      dodaj('Wysyłka paczki', 'odbiorcaPaczki.email', 'Wysyłka paczki: popraw adres email', false, 'ostrzezenie')
     }
 
     if (dane.odbiorcaPaczki.kodPocztowy && !czyKodPocztowyPoprawny(dane.odbiorcaPaczki.kodPocztowy)) {
-      dodaj('Wysyłka paczki', 'Kod pocztowy', 'Wysyłka paczki: popraw kod pocztowy', false, 'ostrzezenie')
+      dodaj('Wysyłka paczki', 'odbiorcaPaczki.kodPocztowy', 'Wysyłka paczki: popraw kod pocztowy', false, 'ostrzezenie')
     }
   }
 
@@ -576,6 +576,15 @@ export function useGeneratorSzczegolow() {
     () => Object.values(modelSekcyjny).flatMap((sekcja) => [...sekcja.bledyKrytyczne, ...sekcja.ostrzezenia]),
     [modelSekcyjny],
   )
+  const bledyPol = useMemo(() => {
+    const wynik: Record<string, string> = {}
+    podstawoweProblemyWalidacji.forEach(({ pole, polaPowiazane, komunikat }) => {
+      ;[pole, ...(polaPowiazane ?? [])].forEach((kluczPola) => {
+        wynik[kluczPola] ??= komunikat
+      })
+    })
+    return wynik
+  }, [podstawoweProblemyWalidacji])
   const polaNiepewne = useMemo(() => Object.entries(statusyPol).filter(([, status]) => status === 'niepewne').map(([pole]) => pole), [statusyPol])
   const ostrzezeniaWalidacji = useMemo(() => problemyWalidacji.filter((problem) => !problem.czyBlokuje), [problemyWalidacji])
   const bledyKrytyczne = useMemo(() => problemyWalidacji.filter((problem) => problem.czyBlokuje), [problemyWalidacji])
@@ -984,6 +993,7 @@ export function useGeneratorSzczegolow() {
     ostatniAutosave,
     modelSekcyjny,
     problemyWalidacji,
+    bledyPol,
     bledyKrytyczne,
     ostrzezeniaWalidacji,
     polaNiepewne,

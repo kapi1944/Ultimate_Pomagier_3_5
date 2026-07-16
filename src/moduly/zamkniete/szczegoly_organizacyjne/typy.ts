@@ -219,6 +219,7 @@ export type StatusyPolImportu = Partial<Record<string, StatusPolaImportu>>
 export type ProblemWalidacji = {
   sekcja: string
   pole: string
+  polaPowiazane?: string[]
   komunikat: string
   poziom: 'blad' | 'ostrzezenie' | 'informacja'
   czyBlokuje: boolean

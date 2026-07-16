@@ -341,6 +341,21 @@
   justify-content: space-between;
 }
 
+.szczegoly-pole__etykieta {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
+}
+
+.szczegoly-pole__kropka-bledu {
+  background: #ef4444;
+  border-radius: 50%;
+  display: inline-block;
+  flex: 0 0 9px;
+  height: 9px;
+  width: 9px;
+}
+
 .szczegoly-pole__status {
   border-radius: 999px;
   font-size: 0.68rem;

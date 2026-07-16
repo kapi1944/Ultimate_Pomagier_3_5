@@ -1,4 +1,7 @@
 import type { GrupaSzkoleniowa, UczestnikGrupy } from '../typy'
+import { pobierzIdBleduPola } from './identyfikatoryPol'
+import { ZnacznikBleduPola } from './PolaSzczegolow'
+import { useBladPola } from './stanBledowPol'
 
 type WlasciwosciPolaUczestnikowGrupy = {
   grupa: GrupaSzkoleniowa
@@ -29,6 +32,8 @@ function utworzUczestnikow(grupa: GrupaSzkoleniowa, tekst: string): UczestnikGru
 
 export default function PoleUczestnikowGrupy({ grupa, indeks, aktualizujGrupe }: WlasciwosciPolaUczestnikowGrupy) {
   const tekstUczestnikow = (grupa.uczestnicy ?? []).map((uczestnik) => `${uczestnik.imie} ${uczestnik.nazwisko}`.trim()).join('\n')
+  const poleLiczbyUczestnikow = `grupy.${indeks}.liczbaUczestnikow`
+  const blad = useBladPola(poleLiczbyUczestnikow)
 
   function ustawUczestnikow(tekst: string) {
     aktualizujGrupe(
@@ -43,8 +48,9 @@ export default function PoleUczestnikowGrupy({ grupa, indeks, aktualizujGrupe }:
 
   return (
     <label className="szczegoly-pole">
-      <span className="szczegoly-pole__naglowek">Uczestnicy</span>
-      <textarea placeholder="Jedna osoba w każdym wierszu" rows={5} value={tekstUczestnikow} onChange={(zdarzenie) => ustawUczestnikow(zdarzenie.target.value)} />
+      <span className="szczegoly-pole__naglowek"><span className="szczegoly-pole__etykieta">Uczestnicy<ZnacznikBleduPola blad={blad} /></span></span>
+      <textarea aria-describedby={blad ? pobierzIdBleduPola(poleLiczbyUczestnikow) : undefined} aria-invalid={Boolean(blad)} placeholder="Jedna osoba w każdym wierszu" rows={5} value={tekstUczestnikow} onChange={(zdarzenie) => ustawUczestnikow(zdarzenie.target.value)} />
+      {blad && <span className="szczegoly-pole__blad" id={pobierzIdBleduPola(poleLiczbyUczestnikow)}>{blad}</span>}
       <span className="szczegoly-pole__pomoc">Lista uczestników jest źródłem danych dla Listy obecności.</span>
     </label>
   )

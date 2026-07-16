@@ -14,7 +14,9 @@ import type {
   TrenerKartoteki,
   TrybCeny,
 } from '../typy'
-import { PoleLiczbowe, PoleTekstowe, PoleWyboru } from './PolaSzczegolow'
+import { PoleLiczbowe, PoleTekstowe, PoleWyboru, ZnacznikBleduPola } from './PolaSzczegolow'
+import { pobierzIdBleduPola } from './identyfikatoryPol'
+import { useBladPola } from './stanBledowPol'
 import { pobierzEtykieteGrupy, ustawFormeGrupy, ustawRodzajGodzinGrupy } from '../logikaGrupSzkoleniowych'
 import { pobierzZasadyPolaDynamicznego } from '../logikaPolDynamicznych'
 import PrzelacznikTakNie from './PrzelacznikTakNie'
@@ -98,6 +100,7 @@ function PoleCeny({
 }: Pick<WlasciwosciKartyGrupy, 'grupa' | 'indeks' | 'statusyPol' | 'aktualizujGrupe'>) {
   const pole = `grupy.${indeks}.cenaNetto`
   const status = statusyPol[pole]
+  const blad = useBladPola(pole)
   const [czyAktywne, ustawCzyAktywne] = useState(false)
   const [wartoscRobocza, ustawWartoscRobocza] = useState(formatujKwote(grupa.cenaNetto))
   const wartoscWidoczna = czyAktywne ? wartoscRobocza : formatujKwote(grupa.cenaNetto)
@@ -115,12 +118,13 @@ function PoleCeny({
   return (
     <label className={`szczegoly-pole ${status ? klasyStatusowPol[status] : ''}`}>
       <span className="szczegoly-pole__naglowek">
-        <span>Cena netto</span>
+        <span className="szczegoly-pole__etykieta">Cena netto<ZnacznikBleduPola blad={blad} /></span>
         <ZnacznikStatusu pole={pole} statusyPol={statusyPol} />
       </span>
       <span className="szczegoly-pole-ceny">
         <input
-          aria-invalid={!Number.isFinite(grupa.cenaNetto)}
+          aria-describedby={blad ? pobierzIdBleduPola(pole) : undefined}
+          aria-invalid={Boolean(blad)}
           inputMode="decimal"
           value={wartoscWidoczna}
           onBlur={sformatujWartosc}
@@ -132,6 +136,7 @@ function PoleCeny({
         />
         <span>zł/netto</span>
       </span>
+      {blad && <span className="szczegoly-pole__blad" id={pobierzIdBleduPola(pole)}>{blad}</span>}
     </label>
   )
 }
@@ -144,6 +149,7 @@ function PoleCenyZaGrupe({
 }: Pick<WlasciwosciKartyGrupy, 'grupa' | 'indeks' | 'statusyPol' | 'aktualizujGrupe'>) {
   const pole = `grupy.${indeks}.cenaNetto`
   const status = statusyPol[pole]
+  const blad = useBladPola(pole)
   const [czyAktywne, ustawCzyAktywne] = useState(false)
   const [wartoscRobocza, ustawWartoscRobocza] = useState(formatujKwote(obliczWartoscNettoGrupy(grupa)))
   const wartoscWidoczna = czyAktywne ? wartoscRobocza : formatujKwote(obliczWartoscNettoGrupy(grupa))
@@ -168,12 +174,13 @@ function PoleCenyZaGrupe({
   return (
     <label className={`szczegoly-pole ${status ? klasyStatusowPol[status] : ''}`}>
       <span className="szczegoly-pole__naglowek">
-        <span>Cena za grupę</span>
+        <span className="szczegoly-pole__etykieta">Cena za grupę<ZnacznikBleduPola blad={blad} /></span>
         <ZnacznikStatusu pole={pole} statusyPol={statusyPol} />
       </span>
       <span className="szczegoly-pole-ceny">
         <input
-          aria-invalid={!Number.isFinite(grupa.cenaNetto)}
+          aria-describedby={blad ? pobierzIdBleduPola(pole) : undefined}
+          aria-invalid={Boolean(blad)}
           inputMode="decimal"
           value={wartoscWidoczna}
           onBlur={sformatujWartosc}
@@ -185,6 +192,7 @@ function PoleCenyZaGrupe({
         />
         <span>zł/netto</span>
       </span>
+      {blad && <span className="szczegoly-pole__blad" id={pobierzIdBleduPola(pole)}>{blad}</span>}
     </label>
   )
 }
@@ -254,6 +262,10 @@ export default function KartaGrupySzkoleniowej({
   }, [trenerzyDoWyboru, wartoscWyszukiwanegoTrenera])
   const czyMechanizmPodzielonejPlatnosci = czyCenaWymagaMpp(grupa)
   const zasadyGodzinNiestandardowych = pobierzZasadyPolaDynamicznego(grupa, 'nazwaNiestandardowychGodzin')
+  const poleMiejsca = `grupy.${indeks}.miejsce`
+  const bladMiejsca = useBladPola(poleMiejsca, grupa.formaSzkolenia === 'Online')
+  const poleTrenerow = `grupy.${indeks}.trenerzy`
+  const bladTrenerow = useBladPola(poleTrenerow)
 
   useEffect(() => {
     if (grupa.mechanizmPodzielonejPlatnosci !== czyMechanizmPodzielonejPlatnosci) {
@@ -400,10 +412,12 @@ export default function KartaGrupySzkoleniowej({
               }`}
             >
               <span className="szczegoly-pole__naglowek">
-                <span>Miejsce</span>
-                <ZnacznikStatusu pole={`grupy.${indeks}.miejsce`} statusyPol={statusyPol} />
+                <span className="szczegoly-pole__etykieta">Miejsce<ZnacznikBleduPola blad={bladMiejsca} /></span>
+                <ZnacznikStatusu pole={poleMiejsca} statusyPol={statusyPol} />
               </span>
               <input
+                aria-describedby={bladMiejsca ? pobierzIdBleduPola(poleMiejsca) : undefined}
+                aria-invalid={Boolean(bladMiejsca)}
                 disabled={grupa.formaSzkolenia === 'Online'}
                 list={`lokalizacje-${grupa.id}`}
                 value={grupa.miejsce}
@@ -414,6 +428,7 @@ export default function KartaGrupySzkoleniowej({
                   <option key={lokalizacja.klucz_lokalizacji} value={lokalizacja.nazwa} />
                 ))}
               </datalist>
+              {bladMiejsca && <span className="szczegoly-pole__blad" id={pobierzIdBleduPola(poleMiejsca)}>{bladMiejsca}</span>}
               {wybranaLokalizacja && <span className="szczegoly-pole__pomoc">Miejscownik: {wybranaLokalizacja.miejscownik_pelny_auto}</span>}
               {wybranaLokalizacja && !wybranaLokalizacja.status_odmiany && (
                 <>
@@ -515,10 +530,12 @@ export default function KartaGrupySzkoleniowej({
           <div className="szczegoly-karta-grupy__pola">
             <label className={`szczegoly-pole ${statusyPol[`grupy.${indeks}.trenerzy`] ? klasyStatusowPol[statusyPol[`grupy.${indeks}.trenerzy`]!] : ''}`}>
               <span className="szczegoly-pole__naglowek">
-                <span>Trener</span>
-                <ZnacznikStatusu pole={`grupy.${indeks}.trenerzy`} statusyPol={statusyPol} />
+                <span className="szczegoly-pole__etykieta">Trener<ZnacznikBleduPola blad={bladTrenerow} /></span>
+                <ZnacznikStatusu pole={poleTrenerow} statusyPol={statusyPol} />
               </span>
               <input
+                aria-describedby={bladTrenerow ? pobierzIdBleduPola(poleTrenerow) : undefined}
+                aria-invalid={Boolean(bladTrenerow)}
                 list={`trenerzy-${grupa.id}`}
                 placeholder="Wybierz trenera"
                 value={wartoscWyszukiwanegoTrenera}
@@ -530,6 +547,7 @@ export default function KartaGrupySzkoleniowej({
                   <option key={trener.id} value={trener.imieNazwisko} />
                 ))}
               </datalist>
+              {bladTrenerow && <span className="szczegoly-pole__blad" id={pobierzIdBleduPola(poleTrenerow)}>{bladTrenerow}</span>}
             </label>
             <PoleLiczbowe
               etykieta="Liczba uczestników"
