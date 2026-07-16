@@ -21,6 +21,16 @@ import {
 } from '../../../../wspolne/dokumenty/modelBlokowy'
 import { parsujTekstProgramu } from './ParserTekstu'
 import RendererPodgladuProgramu from './RendererPodgladuProgramu'
+import RendererStronSemper from './RendererStronSemper'
+import {
+  konfiguracjePresetowProgramu,
+  domyslnyPresetNowegoProgramu,
+  normalizujPresetWygladuProgramu,
+  pobierzElementyIdentyfikacjiProgramu,
+  zasugerujPresetProgramu,
+  type ElementyIdentyfikacjiProgramu,
+  type PresetWygladuProgramu,
+} from './presetyProgramu'
 import { EdytorProgramuWysiwyg } from './komponenty/EdytorProgramuWysiwyg'
 import {
   konwertujHtmlNaTekstProgramu,
@@ -36,6 +46,10 @@ type StylListyGlownej = 'numeracja' | 'punktory'
 type FormatCudzyslowu = 'dolny-gorny' | 'gorny-gorny'
 
 type UstawieniaProgramu = {
+  presetWygladu: PresetWygladuProgramu
+  czyWyborPresetySwiadomy: boolean
+  czyJustowac: boolean
+  elementyIdentyfikacji: Partial<ElementyIdentyfikacjiProgramu>
   profilFirmy: ProfilFirmy
   kolorAkcentuProgramu: string
   kolorReczny: boolean
@@ -89,6 +103,10 @@ const daneProfilowFirmy: Record<ProfilFirmy, DaneProfiluFirmy> = {
 }
 
 const domyslneUstawienia: UstawieniaProgramu = {
+  presetWygladu: domyslnyPresetNowegoProgramu,
+  czyWyborPresetySwiadomy: false,
+  czyJustowac: true,
+  elementyIdentyfikacji: {},
   profilFirmy: 'semper',
   kolorAkcentuProgramu: daneProfilowFirmy.semper.kolor,
   kolorReczny: false,
@@ -632,6 +650,169 @@ const styleProgramuSzkolenia = `
   text-align: center;
 }
 
+.program-szkolen__identyfikacja {
+  display: grid;
+  gap: 9px;
+  border: 1px solid rgba(74, 222, 128, 0.28);
+  border-radius: 6px;
+  padding: 10px;
+}
+
+.program-szkolen__identyfikacja summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.program-semper {
+  display: grid;
+  gap: 22px;
+  width: min(100%, 800px);
+}
+
+.program-semper__strona {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 210mm;
+  min-height: 297mm;
+  max-width: 100%;
+  padding: 14mm 15mm 35mm;
+  overflow: hidden;
+  background: #fff;
+  color: #4f4f4f;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
+  font-family: Arial, sans-serif;
+}
+
+.program-semper__naglowek {
+  position: relative;
+  display: grid;
+  grid-template-columns: .7fr 1.6fr 1.45fr .95fr;
+  align-items: center;
+  min-height: 18mm;
+  margin: -14mm -15mm 7mm;
+  padding: 3mm 15mm;
+  color: #888;
+  font-size: 8.5pt;
+}
+
+.program-semper__pas {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: #efefef;
+}
+
+.program-semper__naglowek > :not(.program-semper__pas) {
+  position: relative;
+  z-index: 1;
+}
+
+.program-semper__kontakt-etykieta,
+.program-semper__kontakt {
+  min-height: 10mm;
+  padding: 0 3mm;
+  border-right: 1px solid #d2d2d2;
+}
+
+.program-semper__kontakt {
+  display: grid;
+  align-content: center;
+  gap: 1.5mm;
+  text-align: center;
+}
+
+.program-semper__logo {
+  max-width: 100%;
+  max-height: 12mm;
+  margin-left: 3mm;
+  object-fit: contain;
+}
+
+.program-semper__etykieta {
+  margin: 2mm 0 3mm;
+  color: #de1914;
+  font-size: 11pt;
+  font-weight: 700;
+  text-align: center;
+}
+
+.program-semper__panel-tytulu {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 18mm;
+  margin: 0 3mm 7mm;
+  padding: 4mm 7mm;
+  overflow-wrap: anywhere;
+  background: #e7e7e7;
+  color: #333;
+  font-size: 13pt;
+  font-weight: 700;
+  line-height: 1.28;
+  text-align: center;
+}
+
+.program-semper__tresc {
+  flex: 1;
+  min-height: 0;
+}
+
+.program-semper__tresc--justowana .program-kartka-a4__pozycja > span:last-child {
+  text-align: justify;
+}
+
+.program-semper__tresc .program-kartka-a4__dzien {
+  break-inside: avoid-page;
+  margin-bottom: 5mm;
+}
+
+.program-semper--semper_kompaktowy .program-kartka-a4__lista { gap: 3px; }
+.program-semper--semper_szczegolowy .program-kartka-a4__lista { gap: 2px; }
+.program-semper--semper_szczegolowy .program-kartka-a4__pozycja { font-size: .82rem; line-height: 1.35; }
+.program-semper--semper_wedlug_dni .program-kartka-a4__dzien-tytul { break-after: avoid-page; }
+
+.program-semper__stopka {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  min-height: 29mm;
+  color: #858585;
+  font-size: 7.8pt;
+}
+
+.program-semper__numer-strony {
+  padding: 1.5mm;
+  text-align: center;
+}
+
+.program-semper__stopka-pas {
+  display: flex;
+  min-height: 18mm;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24mm;
+  padding: 3mm 15mm;
+  background: #efefef;
+  line-height: 1.35;
+}
+
+.program-semper__stopka-pas > div:last-child {
+  max-width: 58mm;
+  text-align: right;
+}
+
+.program-semper__mapa {
+  position: absolute;
+  right: 5mm;
+  bottom: 4mm;
+  width: 22mm;
+  max-height: 20mm;
+  object-fit: contain;
+  opacity: .34;
+  pointer-events: none;
+}
 @media (max-width: 1860px) {
   .program-szkolen__uklad {
     grid-template-columns: minmax(420px, 1fr) minmax(0, 800px);
@@ -671,6 +852,21 @@ const styleProgramuSzkolenia = `
     padding-left: 0;
   }
 
+  .program-semper {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .program-semper__strona {
+    width: 210mm !important;
+    min-height: 297mm !important;
+    max-width: none !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    break-after: page;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
   .program-kartka-a4 {
     padding: 28px 20px;
   }
@@ -722,6 +918,21 @@ const styleProgramuSzkolenia = `
     overflow: visible !important;
   }
 
+  .program-semper {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .program-semper__strona {
+    width: 210mm !important;
+    min-height: 297mm !important;
+    max-width: none !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    break-after: page;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
   .program-kartka-a4 {
     box-shadow: none !important;
     margin: 0 !important;
@@ -796,6 +1007,10 @@ function normalizujZapisProgramu(zapis: unknown): ZapisProgramuRoboczego {
     ustawienia: {
       ...domyslneUstawienia,
       ...dane.ustawienia,
+      presetWygladu: normalizujPresetWygladuProgramu(dane.ustawienia?.presetWygladu),
+      czyWyborPresetySwiadomy: dane.ustawienia?.czyWyborPresetySwiadomy ?? false,
+      czyJustowac: dane.ustawienia?.czyJustowac ?? konfiguracjePresetowProgramu[normalizujPresetWygladuProgramu(dane.ustawienia?.presetWygladu)].justowanie,
+      elementyIdentyfikacji: dane.ustawienia?.elementyIdentyfikacji ?? {},
       stylePoziomowListy: dane.ustawienia?.stylePoziomowListy?.length
         ? dane.ustawienia.stylePoziomowListy
         : domyslneUstawienia.stylePoziomowListy,
@@ -959,6 +1174,9 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
   const tytulZCudzyslowem = formatujTytulSzkolenia(tytulDokumentu, ustawienia.formatCudzyslowu)
   const kolorAkcentu = pobierzKolorAkcentu(ustawienia)
   const profil = daneProfilowFirmy[ustawienia.profilFirmy]
+  const presetWygladu = ustawienia.presetWygladu
+  const elementyIdentyfikacji = pobierzElementyIdentyfikacjiProgramu(presetWygladu, ustawienia.elementyIdentyfikacji)
+  const sugestiaPresety = useMemo(() => zasugerujPresetProgramu(dokumentProgramu), [dokumentProgramu])
   const blokiDokumentu = useMemo(() => splaszczBloki(dokumentProgramu.struktura), [dokumentProgramu.struktura])
   const diagnostykaParsera = useMemo(
     () =>
@@ -1153,6 +1371,34 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
         },
       }
     })
+  }
+
+  function wybierzPresetWygladu(preset: PresetWygladuProgramu, czyWyborSwiadomy = true) {
+    const konfiguracja = konfiguracjePresetowProgramu[preset]
+    ustawDaneProgramu((aktualne) => ({
+      ...aktualne,
+      ustawienia: {
+        ...aktualne.ustawienia,
+        presetWygladu: preset,
+        czyWyborPresetySwiadomy: czyWyborSwiadomy,
+        czyJustowac: konfiguracja.justowanie,
+        stylDni: konfiguracja.stylDni,
+        separacjaModulow: konfiguracja.separacjaModulow,
+        stylPodpunktow: konfiguracja.stylPodpunktow,
+        stylListyGlownej: konfiguracja.stylListyGlownej,
+        elementyIdentyfikacji: {},
+      },
+    }))
+  }
+
+  function zmienElementIdentyfikacji(nazwa: keyof ElementyIdentyfikacjiProgramu, wartosc: boolean) {
+    ustawDaneProgramu((aktualne) => ({
+      ...aktualne,
+      ustawienia: {
+        ...aktualne.ustawienia,
+        elementyIdentyfikacji: { ...aktualne.ustawienia.elementyIdentyfikacji, [nazwa]: wartosc },
+      },
+    }))
   }
 
   function zmienKolor(kolor: string, kolorReczny = true) {
@@ -1403,6 +1649,27 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
                   ))}
                 </div>
               </div>
+
+              <label className="program-szkolen__etykieta">
+                Wygląd dokumentu
+                <select className="program-szkolen__lista" onChange={(zdarzenie) => wybierzPresetWygladu(zdarzenie.target.value as PresetWygladuProgramu)} value={presetWygladu}>
+                  {(Object.keys(konfiguracjePresetowProgramu) as PresetWygladuProgramu[]).map((preset) => <option key={preset} value={preset}>{konfiguracjePresetowProgramu[preset].etykieta}</option>)}
+                </select>
+                {!ustawienia.czyWyborPresetySwiadomy && presetWygladu !== sugestiaPresety && <p className="program-szkolen__opis">Sugestia na podstawie treści: {konfiguracjePresetowProgramu[sugestiaPresety].etykieta}.</p>}
+              </label>
+              <button className="program-szkolen__przycisk" onClick={() => wybierzPresetWygladu(presetWygladu)} type="button">Przywróć ustawienia presetu</button>
+
+              {presetWygladu !== 'DOTYCHCZASOWY' && (
+                <details className="program-szkolen__identyfikacja">
+                  <summary>Identyfikacja wizualna</summary>
+                  {(Object.entries(elementyIdentyfikacji) as Array<[keyof ElementyIdentyfikacjiProgramu, boolean]>).map(([nazwa, widoczny]) => (
+                    <label className="program-szkolen__etykieta" key={nazwa}>
+                      <span><input checked={widoczny} onChange={(zdarzenie) => zmienElementIdentyfikacji(nazwa, zdarzenie.target.checked)} type="checkbox" /> {nazwa.replace(/([A-Z])/g, ' $1').toLowerCase()}</span>
+                    </label>
+                  ))}
+                  <label className="program-szkolen__etykieta"><span><input checked={ustawienia.czyJustowac} onChange={(zdarzenie) => zmienUstawienie('czyJustowac', zdarzenie.target.checked)} type="checkbox" /> justowanie treści</span></label>
+                </details>
+              )}
 
               <div className="program-szkolen__siatka program-szkolen__siatka--dwie">
                 <label className="program-szkolen__etykieta">
@@ -1680,6 +1947,16 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
         </div>
 
         <section className="program-szkolen__podglad" ref={obszarPodgladuRef}>
+          {presetWygladu !== 'DOTYCHCZASOWY' && ustawienia.profilFirmy === 'semper' ? (
+            <RendererStronSemper
+              czyJustowac={ustawienia.czyJustowac}
+              dokument={dokumentProgramu}
+              elementyIdentyfikacji={ustawienia.elementyIdentyfikacji}
+              preset={presetWygladu}
+              profilFirmy={ustawienia.profilFirmy}
+              tytul={tytulZCudzyslowem || 'Program szkolenia'}
+            />
+          ) : (
           <div className="program-kartka-a4">
             <header className="program-kartka-a4__naglowek" style={{ borderColor: kolorAkcentu }}>
               <div className="program-kartka-a4__meta">
@@ -1711,6 +1988,7 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
 
             <footer className="program-kartka-a4__stopka">{profil.stopka}</footer>
           </div>
+          )}
         </section>
       </div>
     </section>
