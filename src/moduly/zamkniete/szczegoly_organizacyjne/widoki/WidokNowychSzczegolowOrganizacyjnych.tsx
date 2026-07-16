@@ -7,7 +7,7 @@ import PanelDokumentowPowiazanych from '../komponenty/PanelDokumentowPowiazanych
 import PanelTworzeniaListObecnosci from '../komponenty/PanelTworzeniaListObecnosci'
 import PanelWykrytychProblemow from '../komponenty/PanelWykrytychProblemow'
 import PasekStickySzczegolow from '../komponenty/PasekStickySzczegolow'
-import { PoleCheckbox, PoleTekstowe, PoleTekstoweWielowierszowe, PoleWyboru, ZnacznikBleduPola } from '../komponenty/PolaSzczegolow'
+import { PoleCheckbox, PoleLiczbowe, PoleTekstowe, PoleTekstoweWielowierszowe, PoleWyboru, ZnacznikBleduPola } from '../komponenty/PolaSzczegolow'
 import PrzelacznikTakNie from '../komponenty/PrzelacznikTakNie'
 import { pobierzIdBleduPola } from '../komponenty/identyfikatoryPol'
 import { useBladPola } from '../komponenty/stanBledowPol'
@@ -27,6 +27,9 @@ const sekcjeNawigacji = [
   { id: 'materialy-szkoleniowe', etykieta: 'Materiały' },
   { id: 'wymogi-materialow', etykieta: 'Wymogi' },
   { id: 'dodatkowe-wymogi', etykieta: 'Dodatkowe' },
+  { id: 'harmonogram', etykieta: 'Harmonogram' },
+  { id: 'program-szkolenia', etykieta: 'Program szkolenia' },
+  { id: 'uwagi', etykieta: 'Uwagi' },
   { id: 'wysylka-paczki', etykieta: 'Wysyłka' },
   { id: 'wyslij-aktualizacje', etykieta: 'Aktualizacja' },
   { id: 'historia-wersji', etykieta: 'Historia' },
@@ -827,13 +830,68 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
         <div className="szczegoly-uwagi-dodatkowe szczegoly-uwagi-dodatkowe--osobne">
           <PoleTekstoweWielowierszowe
             etykieta="Uwagi dodatkowe"
-            pole="dodatkoweWymogi.uwagi"
+            pole="dodatkoweWymogi.uwagiDodatkowe"
             statusyPol={generator.statusyPol}
-            wartosc={generator.daneFormularza.dodatkoweWymogi.uwagi}
-            ustawWartosc={(wartosc) => aktualizujDodatkowyWymog('uwagi', wartosc)}
+            wartosc={generator.daneFormularza.dodatkoweWymogi.uwagiDodatkowe}
+            ustawWartosc={(wartosc) => aktualizujDodatkowyWymog('uwagiDodatkowe', wartosc)}
           />
         </div>
 
+        <SekcjaFormularza id="harmonogram" tytul="Harmonogram" opis="Godziny są zapisane osobno dla każdej grupy szkoleniowej.">
+          <div className="szczegoly-grupy">
+            {generator.grupy.map((grupa, indeks) => (
+              <div className="szczegoly-karta-grupy" key={`harmonogram-${grupa.id}`}>
+                <h3>{grupa.nazwa || `Grupa ${indeks + 1}`}</h3>
+                <div className="szczegoly-siatka szczegoly-siatka--trzy">
+                  <PoleLiczbowe
+                    etykieta="Liczba godzin"
+                    min={0}
+                    pole={`grupy.${indeks}.liczbaGodzin`}
+                    statusyPol={generator.statusyPol}
+                    wartosc={grupa.liczbaGodzin}
+                    ustawWartosc={(wartosc) => generator.aktualizujGrupe(grupa.id, (obecna) => ({ ...obecna, liczbaGodzin: wartosc }), `grupy.${indeks}.liczbaGodzin`)}
+                  />
+                  <PoleWyboru
+                    etykieta="Rodzaj godzin"
+                    opcje={['Dydaktyczne (45 min)', 'Edukacyjne (45 min)', 'Szkoleniowe (45 min)', 'Lekcyjne (45 min)', 'Zegarowe (60 min)', 'Niestandardowe']}
+                    pole={`grupy.${indeks}.rodzajGodzin`}
+                    statusyPol={generator.statusyPol}
+                    wartosc={grupa.rodzajGodzin}
+                    ustawWartosc={(wartosc) => generator.aktualizujGrupe(grupa.id, (obecna) => ({ ...obecna, rodzajGodzin: wartosc as typeof obecna.rodzajGodzin }), `grupy.${indeks}.rodzajGodzin`)}
+                  />
+                  <PoleTekstowe
+                    etykieta="Niestandardowa formuła godzin / opis harmonogramu"
+                    pole={`grupy.${indeks}.nazwaNiestandardowychGodzin`}
+                    statusyPol={generator.statusyPol}
+                    wartosc={grupa.nazwaNiestandardowychGodzin}
+                    ustawWartosc={(wartosc) => generator.aktualizujGrupe(grupa.id, (obecna) => ({ ...obecna, nazwaNiestandardowychGodzin: wartosc }), `grupy.${indeks}.nazwaNiestandardowychGodzin`)}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </SekcjaFormularza>
+
+        <SekcjaFormularza id="program-szkolenia" tytul="Program szkolenia">
+          <PoleTekstoweWielowierszowe
+            etykieta="Treść programu szkolenia"
+            pole="programSzkolenia"
+            statusyPol={generator.statusyPol}
+            wartosc={generator.daneFormularza.programSzkolenia}
+            ustawWartosc={(wartosc) => generator.aktualizujDane((dane) => ({ ...dane, programSzkolenia: wartosc }), 'programSzkolenia')}
+          />
+        </SekcjaFormularza>
+
+        <SekcjaFormularza id="uwagi" tytul="Uwagi">
+          <div className="szczegoly-siatka szczegoly-siatka--dwa">
+            <PoleTekstoweWielowierszowe etykieta="Uwagi wewnętrzne" pole="uwagi.wewnetrzne" statusyPol={generator.statusyPol} wartosc={generator.daneFormularza.uwagi.wewnetrzne} ustawWartosc={(wartosc) => generator.aktualizujDane((dane) => ({ ...dane, uwagi: { ...dane.uwagi, wewnetrzne: wartosc } }), 'uwagi.wewnetrzne')} />
+            <PoleTekstoweWielowierszowe etykieta="Informacje niepewne" pole="uwagi.informacjeNiepewne" statusyPol={generator.statusyPol} wartosc={generator.daneFormularza.uwagi.informacjeNiepewne} ustawWartosc={(wartosc) => generator.aktualizujDane((dane) => ({ ...dane, uwagi: { ...dane.uwagi, informacjeNiepewne: wartosc } }), 'uwagi.informacjeNiepewne')} />
+            <PoleTekstoweWielowierszowe etykieta="Uwagi Opiekuna" pole="uwagi.opiekuna" statusyPol={generator.statusyPol} wartosc={generator.daneFormularza.uwagi.opiekuna} ustawWartosc={(wartosc) => generator.aktualizujDane((dane) => ({ ...dane, uwagi: { ...dane.uwagi, opiekuna: wartosc } }), 'uwagi.opiekuna')} />
+            <PoleTekstoweWielowierszowe etykieta="Uwagi dla Klienta" pole="uwagi.dlaKlienta" statusyPol={generator.statusyPol} wartosc={generator.daneFormularza.uwagi.dlaKlienta} ustawWartosc={(wartosc) => generator.aktualizujDane((dane) => ({ ...dane, uwagi: { ...dane.uwagi, dlaKlienta: wartosc } }), 'uwagi.dlaKlienta')} />
+            <PoleTekstoweWielowierszowe etykieta="Uwagi dla Trenera" pole="uwagi.dlaTrenera" statusyPol={generator.statusyPol} wartosc={generator.daneFormularza.uwagi.dlaTrenera} ustawWartosc={(wartosc) => generator.aktualizujDane((dane) => ({ ...dane, uwagi: { ...dane.uwagi, dlaTrenera: wartosc } }), 'uwagi.dlaTrenera')} />
+            <PoleTekstoweWielowierszowe etykieta="Uwagi dla Wysyłaczy" pole="uwagi.dlaWysylaczy" statusyPol={generator.statusyPol} wartosc={generator.daneFormularza.uwagi.dlaWysylaczy} ustawWartosc={(wartosc) => generator.aktualizujDane((dane) => ({ ...dane, uwagi: { ...dane.uwagi, dlaWysylaczy: wartosc } }), 'uwagi.dlaWysylaczy')} />
+          </div>
+        </SekcjaFormularza>
         <SekcjaFormularza id="wysylka-paczki" tytul="Wysyłka paczki">
           <PrzelacznikTakNie
             etykieta="Wysyłka paczki dotyczy"

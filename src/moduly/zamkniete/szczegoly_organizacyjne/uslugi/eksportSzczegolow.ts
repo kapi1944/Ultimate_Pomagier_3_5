@@ -90,7 +90,7 @@ Dokumentacja zdjęciowa: ${formatujTakNie(dane.dodatkoweWymogi.dokumentacjaZdję
 Kary w harmonogramie: ${formatujTakNie(dane.dodatkoweWymogi.karyWHarmonogramie)}
 Nowe szkolenie za oceny: ${formatujTakNie(dane.dodatkoweWymogi.noweSzkolenieZaOcene)}
 KFS: ${formatujTakNie(dane.dodatkoweWymogi.kfs)}
-Uwagi dodatkowe: ${dane.dodatkoweWymogi.uwagi || '-'}
+Uwagi dodatkowe: ${dane.dodatkoweWymogi.uwagiDodatkowe || '-'}
 
 WYSYŁKA PACZKI
 Dotyczy: ${formatujTakNie(dane.wysylkaPaczkiDotyczy)}

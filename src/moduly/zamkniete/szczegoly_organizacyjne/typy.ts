@@ -117,9 +117,10 @@ export type DaneDodatkowychWymogow = {
   minutyWczesniej: number
   dokumentacjaZdjęciowa: boolean
   karyWHarmonogramie: boolean
+  opisKarZaNieterminowosc: string
   noweSzkolenieZaOcene: boolean
   kfs: boolean
-  uwagi: string
+  uwagiDodatkowe: string
   wzoryKlienta: WzoryKlienta
   szczegolyWzorowKlienta: SzczegolyWzorowKlienta
 }

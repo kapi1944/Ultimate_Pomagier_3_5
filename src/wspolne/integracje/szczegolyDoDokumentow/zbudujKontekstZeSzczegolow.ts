@@ -72,7 +72,7 @@ function zbudujGrupe(dane: DaneSzczegolowDoKontekstu, grupa: DaneSzczegolowDoKon
         [tekstLubNull(odbiorca.kodPocztowy), tekstLubNull(odbiorca.miasto)].filter(Boolean).join(' '),
         odbiorca.kraj,
       ]),
-      uwagi: tekstLubNull(dane.dane.dodatkoweWymogi.uwagi),
+      uwagi: tekstLubNull(dane.dane.dodatkoweWymogi.uwagiDodatkowe),
     },
   }
 }

@@ -22,6 +22,7 @@ import type {
   DaneDokumentacjiMaterialow,
   DaneFirmy,
   DaneFormularza,
+  DaneUwag,
   FormaSzkolenia,
   GrupaSzkoleniowa,
   KluczSekcjiSzczegolow,
@@ -91,7 +92,7 @@ const polaSekcji: Record<KluczSekcjiSzczegolow, string[]> = {
   wysylka: ['wysylkaPaczkiDotyczy', 'odbiorcaPaczki.'],
   dokumenty: ['dokumentacja.', 'logotypy.', 'programSzkolenia'],
   rozliczenia: ['grupy.cenaNetto', 'grupy.0.cenaNetto', 'grupy.vat', 'grupy.0.vat', 'grupy.terminPlatnosci', 'grupy.0.terminPlatnosci'],
-  uwagi: ['uwagi.', 'dodatkoweWymogi.uwagi'],
+  uwagi: ['uwagiWewnetrzne', 'informacjeNiepewne', 'uwagiOpiekuna', 'uwagiDlaKlienta', 'uwagiDlaTrenera', 'uwagiDlaWysylaczy', 'dodatkoweWymogi.uwagiDodatkoweDodatkowe'],
   metadane: ['status', 'statusSzkolenia', 'powodNiezrealizowania'],
 }
 
@@ -187,8 +188,9 @@ function mapujForme(wartosc: unknown): FormaSzkolenia {
   return wartosc === 'Online' ? 'Online' : 'Stacjonarne'
 }
 
-function normalizujDane(dane?: Partial<DaneFormularza>): DaneFormularza {
+function normalizujDane(dane?: Partial<DaneFormularza> & { uwagiWewnetrzne?: string; informacjeNiepewne?: string; uwagiOpiekuna?: string; uwagiDlaKlienta?: string; uwagiDlaTrenera?: string; uwagiDlaWysylaczy?: string }): DaneFormularza {
   const obecne = dane ?? {}
+  const uwagiStarsze: Partial<DaneUwag> = obecne.uwagi ?? {}
   const nabywca = scalFirme(poczatkoweDaneFormularza.nabywca, obecne.nabywca)
   const odbiorca = scalFirme(poczatkoweDaneFormularza.odbiorca, obecne.odbiorca)
   const czyNabywcaJestOdbiorca = Boolean(obecne.czyNabywcaJestOdbiorca)
@@ -201,6 +203,14 @@ function normalizujDane(dane?: Partial<DaneFormularza>): DaneFormularza {
     status: obecne.status ?? 'NIEPEŁNE',
     statusSzkolenia: obecne.statusSzkolenia ?? 'W PRZYGOTOWANIACH',
     powodNiezrealizowania: obecne.powodNiezrealizowania ?? '',
+    uwagi: {
+      wewnetrzne: uwagiStarsze.wewnetrzne ?? (obecne as { uwagiWewnetrzne?: string }).uwagiWewnetrzne ?? '',
+      informacjeNiepewne: uwagiStarsze.informacjeNiepewne ?? obecne.informacjeNiepewne ?? '',
+      opiekuna: uwagiStarsze.opiekuna ?? (obecne as { uwagiOpiekuna?: string }).uwagiOpiekuna ?? '',
+      dlaKlienta: uwagiStarsze.dlaKlienta ?? (obecne as { uwagiDlaKlienta?: string }).uwagiDlaKlienta ?? '',
+      dlaTrenera: uwagiStarsze.dlaTrenera ?? (obecne as { uwagiDlaTrenera?: string }).uwagiDlaTrenera ?? '',
+      dlaWysylaczy: uwagiStarsze.dlaWysylaczy ?? (obecne as { uwagiDlaWysylaczy?: string }).uwagiDlaWysylaczy ?? '',
+    },
     nabywca,
     odbiorca: czyNabywcaJestOdbiorca ? { ...nabywca } : odbiorca,
     czyNabywcaJestOdbiorca,
@@ -218,6 +228,7 @@ function normalizujDane(dane?: Partial<DaneFormularza>): DaneFormularza {
     dodatkoweWymogi: {
       ...poczatkoweDaneFormularza.dodatkoweWymogi,
       ...obecne.dodatkoweWymogi,
+      uwagiDodatkowe: obecne.dodatkoweWymogi?.uwagiDodatkowe ?? (obecne.dodatkoweWymogi as { uwagi?: string } | undefined)?.uwagi ?? '',
       wzoryKlienta: {
         ...poczatkoweWzoryKlienta,
         ...obecne.dodatkoweWymogi?.wzoryKlienta,
@@ -226,10 +237,6 @@ function normalizujDane(dane?: Partial<DaneFormularza>): DaneFormularza {
         ...poczatkoweSzczegolyWzorowKlienta,
         ...obecne.dodatkoweWymogi?.szczegolyWzorowKlienta,
       },
-    },
-    uwagi: {
-      ...poczatkoweDaneFormularza.uwagi,
-      ...obecne.uwagi,
     },
   }
 }
@@ -330,6 +337,7 @@ function scalDaneFormularza(obecne: DaneFormularza, czesciowe: Partial<DaneFormu
     logotypy: { ...obecne.logotypy, ...czesciowe.logotypy },
     dodatkoweWymogi: {
       ...obecne.dodatkoweWymogi,
+      uwagiDodatkowe: obecne.dodatkoweWymogi?.uwagiDodatkowe ?? (obecne.dodatkoweWymogi as { uwagi?: string } | undefined)?.uwagi ?? '',
       ...czesciowe.dodatkoweWymogi,
       wzoryKlienta: {
         ...obecne.dodatkoweWymogi.wzoryKlienta,
@@ -340,8 +348,7 @@ function scalDaneFormularza(obecne: DaneFormularza, czesciowe: Partial<DaneFormu
         ...czesciowe.dodatkoweWymogi?.szczegolyWzorowKlienta,
       },
     },
-    uwagi: { ...obecne.uwagi, ...czesciowe.uwagi },
-  })
+      })
 }
 
 function scalGrupe(obecna: GrupaSzkoleniowa, czesciowa: Partial<GrupaSzkoleniowa>): GrupaSzkoleniowa {
