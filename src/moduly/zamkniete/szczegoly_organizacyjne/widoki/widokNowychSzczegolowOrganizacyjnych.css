@@ -353,6 +353,7 @@
   display: inline-block;
   flex: 0 0 9px;
   height: 9px;
+  pointer-events: none;
   width: 9px;
 }
 
@@ -908,6 +909,44 @@
 .szczegoly-historia__wpis p {
   margin: 0;
   color: #b9d7c2;
+}
+
+.szczegoly-historia__porownanie {
+  display: grid;
+  gap: 8px;
+}
+
+.szczegoly-historia__porownanie article {
+  display: grid;
+  gap: 3px;
+  border-left: 3px solid rgba(156, 207, 171, 0.35);
+  padding-left: 9px;
+}
+
+.szczegoly-historia__sekcja {
+  color: #b9d7c2;
+  font-size: 0.78rem;
+}
+
+.szczegoly-historia__wartosc {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.szczegoly-historia__wartosc--starsza {
+  color: #fca5a5 !important;
+}
+
+.szczegoly-historia__wartosc--nowsza {
+  color: #86efac !important;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
 }
 
 .szczegoly-kopie button {

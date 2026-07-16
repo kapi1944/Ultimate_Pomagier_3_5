@@ -1,4 +1,6 @@
 import type { KeyboardEvent } from 'react'
+import { pobierzIdBleduPola } from './identyfikatoryPol'
+import { useBladPola } from './stanBledowPol'
 import '../widoki/widokNowychSzczegolowOrganizacyjnych.css'
 
 type WariantPrzelacznika = 'tak-nie' | 'aktywny-nieaktywny' | 'druk-online' | 'potwierdzony-niepotwierdzony'
@@ -8,6 +10,7 @@ type WlasciwosciPrzelacznika = {
   wlaczony: boolean
   ustawWlaczony: (wartosc: boolean) => void
   disabled?: boolean
+  pole?: string
   wariant?: WariantPrzelacznika
 }
 
@@ -18,8 +21,9 @@ const etykietyWariantow: Record<WariantPrzelacznika, { wlaczony: string; wylaczo
   'potwierdzony-niepotwierdzony': { wlaczony: '✓ Potwierdzony', wylaczony: '✕ Niepotwierdzony', klasa: 'szczegoly-przelacznik-Potwierdzony-Niepotwierdzony' },
 }
 
-export default function PrzelacznikTakNie({ etykieta, wlaczony, ustawWlaczony, disabled, wariant = 'tak-nie' }: WlasciwosciPrzelacznika) {
+export default function PrzelacznikTakNie({ etykieta, wlaczony, ustawWlaczony, disabled, pole, wariant = 'tak-nie' }: WlasciwosciPrzelacznika) {
   const ustawieniaWariantu = etykietyWariantow[wariant]
+  const blad = useBladPola(pole ?? '', disabled)
 
   function przelacz() {
     if (!disabled) {
@@ -37,6 +41,8 @@ export default function PrzelacznikTakNie({ etykieta, wlaczony, ustawWlaczony, d
   return (
     <button
       aria-checked={wlaczony}
+      aria-describedby={blad && pole ? pobierzIdBleduPola(pole) : undefined}
+      aria-invalid={Boolean(blad)}
       aria-label={etykieta}
       className={`szczegoly-przelacznik-tak-nie ${ustawieniaWariantu.klasa} ${wlaczony ? 'szczegoly-przelacznik-tak-nie--tak' : 'szczegoly-przelacznik-tak-nie--nie'}`}
       disabled={disabled}

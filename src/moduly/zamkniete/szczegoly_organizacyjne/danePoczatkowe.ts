@@ -47,16 +47,16 @@ export const poczatkowaFirma: DaneFirmy = {
 }
 
 export const poczatkowaDokumentacja: DaneDokumentacjiMaterialow = {
-  listaObecnosci: false,
-  ankiety: false,
-  certyfikaty: false,
-  program: false,
+  listaObecnosci: true,
+  ankiety: true,
+  certyfikaty: true,
+  program: true,
   kartaInformacyjna: false,
   podreczniki: false,
   materialyDodatkowe: false,
   projektTesty: false,
   dostepnoscCyfrowa: false,
-  logotypy: 'Nie dotyczy',
+  logotypy: 'Nie',
   plusJedenEgzemplarz: false,
   wzoryKlienta: { ...poczatkoweWzoryKlienta },
   szczegolyWzorowKlienta: { ...poczatkoweSzczegolyWzorowKlienta },
@@ -92,8 +92,8 @@ export const poczatkoweDaneFormularza: DaneFormularza = {
     podglad: '',
   },
   dodatkoweWymogi: {
-    wczesniejszyPrzyjazdTrenera: false,
-    minutyWczesniej: 0,
+    wczesniejszyPrzyjazdTrenera: true,
+    minutyWczesniej: 20,
     dokumentacjaZdjęciowa: false,
     karyWHarmonogramie: false,
     noweSzkolenieZaOcene: false,
