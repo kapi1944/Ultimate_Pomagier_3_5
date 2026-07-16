@@ -13,6 +13,7 @@ import {
   poczatkowiAdresaci,
 } from '../danePoczatkowe'
 import { dodajGrupeDoListy, przetworzUsuniecieGrupy } from '../logikaGrupSzkoleniowych'
+import { zbudujBledyDynamicznychPolGrupy } from '../logikaPolDynamicznych'
 import { polaWymaganePoImporcie, trenerzyKartotekiStartowi } from '../stale'
 import { czyKontoMozeWidziecKopie, pobierzAktywneKontoSzczegolow } from '../uzytkownicySzczegolow'
 import type {
@@ -410,9 +411,10 @@ function zbudujProblemyWalidacji(dane: DaneFormularza, grupy: GrupaSzkoleniowa[]
       dodaj('Grupy szkoleniowe', `${nazwaGrupy}: Liczba godzin`, `${nazwaGrupy}: liczba godzin nie może być ujemna`)
     }
 
-    if (grupa.rodzajGodzin === 'Niestandardowe' && (!Number.isFinite(grupa.liczbaMinutNiestandardowychGodzin) || grupa.liczbaMinutNiestandardowychGodzin < 1)) {
-      dodaj('Grupy szkoleniowe', `${nazwaGrupy}: Liczba minut trwania`, `${nazwaGrupy}: wpisz liczbę minut trwania minimum 1`)
-    }
+    const bledyDynamiczne = zbudujBledyDynamicznychPolGrupy(grupa)
+    bledyDynamiczne.forEach((blad) => {
+      dodaj('Grupy szkoleniowe', `grupy.${grupa.id}.${blad.pole}`, `${nazwaGrupy}: ${blad.komunikat}`)
+    })
 
     if (!Number.isFinite(grupa.cenaNetto)) {
       dodaj('Grupy szkoleniowe', `${nazwaGrupy}: Cena netto`, `${nazwaGrupy}: cena nie może zawierać liter`)

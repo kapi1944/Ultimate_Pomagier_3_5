@@ -8,6 +8,7 @@ import {
   usunGrupeZListy,
 } from '../src/moduly/zamkniete/szczegoly_organizacyjne/logikaGrupSzkoleniowych.ts'
 import type { GrupaSzkoleniowa } from '../src/moduly/zamkniete/szczegoly_organizacyjne/typy.ts'
+import { zbudujBledyDynamicznychPolGrupy } from '../src/moduly/zamkniete/szczegoly_organizacyjne/logikaPolDynamicznych.ts'
 
 function sprawdz(nazwa: string, testRegresji: () => void) {
   testRegresji()
@@ -85,4 +86,25 @@ sprawdz('zmiana rodzaju godzin nie kasuje ukrytych wartości niestandardowych', 
 
   assert.equal(ponownieNiestandardowa.nazwaNiestandardowychGodzin, 'Warsztat praktyczny')
   assert.equal(ponownieNiestandardowa.liczbaMinutNiestandardowychGodzin, 75)
+})
+
+sprawdz('walidacja pól dynamicznych rozróżnia grupy po stabilnym ID i pomija pola ukryte', () => {
+  const stacjonarnaBezMiejsca = { ...utworzGrupe('grupa-stacjonarna', 'Stacjonarna', 10), miejsce: '' }
+  const onlineBezMiejsca = { ...utworzGrupe('grupa-online', 'Online', 10), formaSzkolenia: 'Online' as const, miejsce: '' }
+  const niestandardowaBezDanych = {
+    ...utworzGrupe('grupa-niestandardowa', 'Niestandardowa', 10),
+    rodzajGodzin: 'Niestandardowe' as const,
+    nazwaNiestandardowychGodzin: '',
+    liczbaMinutNiestandardowychGodzin: 0,
+  }
+
+  assert.deepEqual(zbudujBledyDynamicznychPolGrupy(stacjonarnaBezMiejsca).map((blad) => [blad.idGrupy, blad.pole]), [['grupa-stacjonarna', 'miejsce']])
+  assert.deepEqual(zbudujBledyDynamicznychPolGrupy(onlineBezMiejsca), [])
+  assert.deepEqual(
+    zbudujBledyDynamicznychPolGrupy(niestandardowaBezDanych).map((blad) => [blad.idGrupy, blad.pole]),
+    [
+      ['grupa-niestandardowa', 'nazwaNiestandardowychGodzin'],
+      ['grupa-niestandardowa', 'liczbaMinutNiestandardowychGodzin'],
+    ],
+  )
 })
