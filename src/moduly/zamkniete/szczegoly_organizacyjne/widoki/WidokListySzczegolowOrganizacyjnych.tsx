@@ -95,11 +95,12 @@ export default function WidokListySzczegolowOrganizacyjnych({ otworzNoweSzczegol
 
   return (
     <section className="widok szczegoly-organizacyjne">
-      <header className="szczegoly-widok-naglowek">
-        <h1>Lista szczegółów organizacyjnych</h1>
-      </header>
+      <div className="szczegoly-obszar-roboczy">
+        <header className="szczegoly-widok-naglowek">
+          <h1>Lista szczegółów organizacyjnych</h1>
+        </header>
 
-      <div className="szczegoly-lista-rekordow">
+        <div className="szczegoly-lista-rekordow">
         {rekordy.length === 0 && <p className="szczegoly-komunikat">Brak opublikowanych szczegółów organizacyjnych.</p>}
         {rekordy.map((rekord) => (
           <article className="szczegoly-rekord" key={rekord.id} style={{ backgroundColor: pobierzKolorTlaOpiekuna(rekord.opiekunId) }}>
@@ -154,6 +155,7 @@ export default function WidokListySzczegolowOrganizacyjnych({ otworzNoweSzczegol
             </div>
           </article>
         ))}
+        </div>
       </div>
     </section>
   )

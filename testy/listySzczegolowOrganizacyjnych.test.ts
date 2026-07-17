@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import type { DaneFormularza, WersjaRoboczaGeneratora } from '../src/moduly/zamkniete/szczegoly_organizacyjne/typy.ts'
 import {
@@ -85,4 +86,16 @@ test('migracja rozpoznaje starszą kopię szczegółów bez typu dokumentu', () 
   migrujStarszeDokumenty()
 
   assert.deepEqual(pobierzKopieRobocze().map((kopia) => kopia.id), ['stare-szczegoly'])
+})
+
+test('widoki list szczegółów umieszczają zawartość w obszarze roboczym', () => {
+  const widoki = [
+    '../src/moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokKopiiRoboczychSzczegolowOrganizacyjnych.tsx',
+    '../src/moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokListySzczegolowOrganizacyjnych.tsx',
+  ]
+
+  widoki.forEach((sciezkaWidoku) => {
+    const kodWidoku = readFileSync(new URL(sciezkaWidoku, import.meta.url), 'utf8')
+    assert.match(kodWidoku, /className="szczegoly-obszar-roboczy"/)
+  })
 })
