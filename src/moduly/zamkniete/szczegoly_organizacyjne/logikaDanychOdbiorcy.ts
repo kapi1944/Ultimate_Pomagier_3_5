@@ -1,4 +1,4 @@
-import type { DaneFirmy, DaneFormularza, StatusPolaImportu, StatusyPolImportu } from './typy'
+import type { DaneFirmy, DaneFormularza, ProblemWalidacji, StatusPolaImportu, StatusyPolImportu } from './typy'
 
 const polaOdbiorcyZNabywcy: Partial<Record<keyof DaneFirmy, keyof DaneFirmy>> = {
   imieNazwiskoOdbiorcy: 'osobaKontaktowa',
@@ -15,6 +15,21 @@ function pobierzKluczNabywcy(kluczOdbiorcy: keyof DaneFirmy) {
 export function pobierzBrakujacePolaEfektywnegoOdbiorcy(dane: Pick<DaneFormularza, 'nabywca' | 'odbiorca' | 'czyNabywcaJestOdbiorca'>) {
   const odbiorca = pobierzEfektywneDaneOdbiorcy(dane)
   return (['nazwa', 'email'] as const).filter((klucz) => !odbiorca[klucz].trim())
+}
+
+export function zbudujBledyDanychKlienta(dane: Pick<DaneFormularza, 'nabywca' | 'odbiorca' | 'czyNabywcaJestOdbiorca'>): ProblemWalidacji[] {
+  const prefix = dane.czyNabywcaJestOdbiorca ? 'nabywca' : 'odbiorca'
+  const etykieta = dane.czyNabywcaJestOdbiorca ? 'Nabywca' : 'Odbiorca'
+
+  return pobierzBrakujacePolaEfektywnegoOdbiorcy(dane).map((pole) => ({
+    sekcja: 'Dane klienta',
+    pole: `${prefix}.${pole}`,
+    komunikat: pole === 'nazwa'
+      ? `${etykieta}: wpisz nazwę ${dane.czyNabywcaJestOdbiorca ? 'nabywcy' : 'firmy odbiorcy'}`
+      : `${etykieta}: wpisz adres email`,
+    poziom: 'blad' as const,
+    czyBlokuje: true,
+  }))
 }
 
 export function pobierzEfektywneStatusyPolOdbiorcy(

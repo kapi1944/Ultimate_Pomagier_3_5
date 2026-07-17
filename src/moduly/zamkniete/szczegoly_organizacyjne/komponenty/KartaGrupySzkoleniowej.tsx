@@ -15,7 +15,7 @@ import type {
   TrybCeny,
 } from '../typy'
 import { PoleLiczbowe, PoleTekstowe, PoleWyboru, ZnacznikBleduPola } from './PolaSzczegolow'
-import { pobierzIdBleduPola } from './identyfikatoryPol'
+import { pobierzIdBleduPola, pobierzIdPola } from './identyfikatoryPol'
 import { useBladPola } from './stanBledowPol'
 import { pobierzEtykieteGrupy, ustawFormeGrupy, ustawRodzajGodzinGrupy } from '../logikaGrupSzkoleniowych'
 import { pobierzZasadyPolaDynamicznego } from '../logikaPolDynamicznych'
@@ -125,6 +125,7 @@ function PoleCeny({
         <input
           aria-describedby={blad ? pobierzIdBleduPola(pole) : undefined}
           aria-invalid={Boolean(blad)}
+          id={pobierzIdPola(pole, grupa.id)}
           inputMode="decimal"
           value={wartoscWidoczna}
           onBlur={sformatujWartosc}
@@ -181,6 +182,7 @@ function PoleCenyZaGrupe({
         <input
           aria-describedby={blad ? pobierzIdBleduPola(pole) : undefined}
           aria-invalid={Boolean(blad)}
+          id={pobierzIdPola(pole, grupa.id, 'za-grupe')}
           inputMode="decimal"
           value={wartoscWidoczna}
           onBlur={sformatujWartosc}
@@ -234,6 +236,18 @@ export default function KartaGrupySzkoleniowej({
   usunGrupe,
 }: WlasciwosciKartyGrupy) {
   const [czyRozwinieta, ustawCzyRozwinieta] = useState(true)
+
+  useEffect(() => {
+    function otworzGrupeDlaPola(zdarzenie: Event) {
+      const pole = (zdarzenie as CustomEvent<{ pole?: string }>).detail?.pole
+      if (pole?.startsWith(`grupy.${indeks}.`)) {
+        ustawCzyRozwinieta(true)
+      }
+    }
+
+    window.addEventListener('szczegoly:otworz-pole', otworzGrupeDlaPola)
+    return () => window.removeEventListener('szczegoly:otworz-pole', otworzGrupeDlaPola)
+  }, [indeks])
   const [wersjaLokalizacji, ustawWersjeLokalizacji] = useState(0)
   const [poprawionyMiejscownik, ustawPoprawionyMiejscownik] = useState('')
   const wybranyTrener = grupa.trenerzy[0]
@@ -384,6 +398,7 @@ export default function KartaGrupySzkoleniowej({
           <div className="szczegoly-karta-grupy__pola">
             <PoleTekstowe
               etykieta="Data od"
+              idGrupy={grupa.id}
               pole={`grupy.${indeks}.dataOd`}
               statusyPol={statusyPol}
               typ="date"
@@ -392,6 +407,7 @@ export default function KartaGrupySzkoleniowej({
             />
             <PoleTekstowe
               etykieta="Data do"
+              idGrupy={grupa.id}
               pole={`grupy.${indeks}.dataDo`}
               statusyPol={statusyPol}
               typ="date"
@@ -400,6 +416,7 @@ export default function KartaGrupySzkoleniowej({
             />
             <PoleWyboru
               etykieta="Forma szkolenia"
+              idGrupy={grupa.id}
               opcje={opcjeFormy}
               pole={`grupy.${indeks}.formaSzkolenia`}
               statusyPol={statusyPol}
@@ -419,6 +436,7 @@ export default function KartaGrupySzkoleniowej({
                 aria-describedby={bladMiejsca ? pobierzIdBleduPola(poleMiejsca) : undefined}
                 aria-invalid={Boolean(bladMiejsca)}
                 disabled={grupa.formaSzkolenia === 'Online'}
+                id={pobierzIdPola(poleMiejsca, grupa.id)}
                 list={`lokalizacje-${grupa.id}`}
                 value={grupa.miejsce}
                 onChange={(zdarzenie) => ustawMiejsce(zdarzenie.target.value)}
@@ -448,6 +466,7 @@ export default function KartaGrupySzkoleniowej({
             </div>
             <PoleLiczbowe
               etykieta="Liczba godzin"
+              idGrupy={grupa.id}
               min={0}
               pole={`grupy.${indeks}.liczbaGodzin`}
               statusyPol={statusyPol}
@@ -456,6 +475,7 @@ export default function KartaGrupySzkoleniowej({
             />
             <PoleWyboru
               etykieta="Rodzaj godzin"
+              idGrupy={grupa.id}
               opcje={opcjeGodzin}
               pole={`grupy.${indeks}.rodzajGodzin`}
               statusyPol={statusyPol}
@@ -466,6 +486,7 @@ export default function KartaGrupySzkoleniowej({
               <>
                 <PoleTekstowe
                   etykieta="Nazwa rodzaju"
+                  idGrupy={grupa.id}
                   pole={`grupy.${indeks}.nazwaNiestandardowychGodzin`}
                   statusyPol={statusyPol}
                   wartosc={grupa.nazwaNiestandardowychGodzin}
@@ -479,6 +500,7 @@ export default function KartaGrupySzkoleniowej({
                 />
                 <PoleLiczbowe
                   etykieta="Liczba minut trwania"
+                  idGrupy={grupa.id}
                   min={1}
                   pole={`grupy.${indeks}.liczbaMinutNiestandardowychGodzin`}
                   statusyPol={statusyPol}
@@ -496,6 +518,7 @@ export default function KartaGrupySzkoleniowej({
             <PoleCeny grupa={grupa} indeks={indeks} statusyPol={statusyPol} aktualizujGrupe={aktualizujGrupe} />
             <PoleWyboru
               etykieta="Oświadczenie VAT"
+              idGrupy={grupa.id}
               opcje={opcjeVat}
               pole={`grupy.${indeks}.vat`}
               statusyPol={statusyPol}
@@ -506,6 +529,7 @@ export default function KartaGrupySzkoleniowej({
               <div className="szczegoly-karta-grupy__stos-pol">
                 <PoleWyboru
                   etykieta="Sposób naliczania ceny"
+                  idGrupy={grupa.id}
                   opcje={opcjeTrybuCeny}
                   pole={`grupy.${indeks}.trybCeny`}
                   statusyPol={statusyPol}
@@ -536,6 +560,7 @@ export default function KartaGrupySzkoleniowej({
               <input
                 aria-describedby={bladTrenerow ? pobierzIdBleduPola(poleTrenerow) : undefined}
                 aria-invalid={Boolean(bladTrenerow)}
+                id={pobierzIdPola(poleTrenerow, grupa.id)}
                 list={`trenerzy-${grupa.id}`}
                 placeholder="Wybierz trenera"
                 value={wartoscWyszukiwanegoTrenera}
@@ -551,6 +576,7 @@ export default function KartaGrupySzkoleniowej({
             </label>
             <PoleLiczbowe
               etykieta="Liczba uczestników"
+              idGrupy={grupa.id}
               min={1}
               pole={`grupy.${indeks}.liczbaUczestnikow`}
               statusyPol={statusyPol}
@@ -560,6 +586,7 @@ export default function KartaGrupySzkoleniowej({
             <PoleUczestnikowGrupy grupa={grupa} indeks={indeks} aktualizujGrupe={aktualizujGrupe} />
             <PoleTekstowe
               etykieta="Data umowy"
+              idGrupy={grupa.id}
               pole={`grupy.${indeks}.dataUmowy`}
               statusyPol={statusyPol}
               typ="date"
@@ -568,6 +595,7 @@ export default function KartaGrupySzkoleniowej({
             />
             <PoleTekstowe
               etykieta="Numer umowy"
+              idGrupy={grupa.id}
               pole={`grupy.${indeks}.numerUmowy`}
               statusyPol={statusyPol}
               wartosc={grupa.numerUmowy}
@@ -575,6 +603,7 @@ export default function KartaGrupySzkoleniowej({
             />
             <PoleLiczbowe
               etykieta="Termin płatności (dni)"
+              idGrupy={grupa.id}
               min={0}
               pole={`grupy.${indeks}.terminPlatnosci`}
               statusyPol={statusyPol}
@@ -583,6 +612,7 @@ export default function KartaGrupySzkoleniowej({
             />
             <PoleTekstowe
               etykieta={grupa.formaSzkolenia === 'Online' ? 'Kto zapewnia łącze' : 'Kto zapewnia salę'}
+              idGrupy={grupa.id}
               pole={`grupy.${indeks}.ktoZapewniaSale`}
               statusyPol={statusyPol}
               wartosc={grupa.ktoZapewniaSale}

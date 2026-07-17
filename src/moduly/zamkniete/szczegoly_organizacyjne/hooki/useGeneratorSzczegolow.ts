@@ -12,7 +12,7 @@ import {
   poczatkoweWzoryKlienta,
   poczatkowiAdresaci,
 } from '../danePoczatkowe'
-import { pobierzBrakujacePolaEfektywnegoOdbiorcy, pobierzEfektywneStatusyPolOdbiorcy } from '../logikaDanychOdbiorcy'
+import { zbudujBledyDanychKlienta, pobierzEfektywneStatusyPolOdbiorcy } from '../logikaDanychOdbiorcy'
 import { dodajGrupeDoListy, przetworzUsuniecieGrupy } from '../logikaGrupSzkoleniowych'
 import { zbudujBledyDynamicznychPolGrupy } from '../logikaPolDynamicznych'
 import { polaWymaganePoImporcie, trenerzyKartotekiStartowi } from '../stale'
@@ -54,12 +54,13 @@ import {
 } from '../uslugi/magazynWersjiRoboczych'
 import { parsujMailaSzczegolow } from '../uslugi/parserMailaSzczegolow'
 import { czyKontoMozeEdytowacSzczegoly } from '../uzytkownicySzczegolow'
+import { pobierzIdPola } from '../komponenty/identyfikatoryPol'
 
 const kluczTrenerowKartoteki = 'ultimate-pomagier.kartoteki.trenerzy'
 
 const etykietySekcji: Record<KluczSekcjiSzczegolow, string> = {
   podstawoweInformacje: 'Podstawowe informacje',
-  klient: 'Klient',
+  klient: 'Dane klienta',
   opiekun: 'Opiekun',
   trenerzy: 'Trenerzy',
   lokalizacja: 'Lokalizacja',
@@ -74,6 +75,7 @@ const etykietySekcji: Record<KluczSekcjiSzczegolow, string> = {
 
 const wymaganeSekcjeDoPublikacji: KluczSekcjiSzczegolow[] = [
   'podstawoweInformacje',
+  'klient',
   'opiekun',
   'trenerzy',
   'lokalizacja',
@@ -369,7 +371,9 @@ export function zbudujProblemyWalidacji(dane: DaneFormularza, grupy: GrupaSzkole
   const lokalizacje = pobierzLokalizacjeZMagazynu()
 
   function dodaj(sekcja: string, pole: string, komunikat: string, czyBlokuje = true, poziom: ProblemWalidacji['poziom'] = 'blad', polaPowiazane?: string[]) {
-    problemy.push({ sekcja, pole, polaPowiazane, komunikat, poziom, czyBlokuje })
+    const dopasowanieGrupy = /^grupy\.(\d+)\./.exec(pole)
+    const grupa = dopasowanieGrupy ? grupy[Number(dopasowanieGrupy[1])] : undefined
+    problemy.push({ sekcja, pole, idDocelowy: grupa ? pobierzIdPola(pole, grupa.id) : undefined, polaPowiazane, komunikat, poziom, czyBlokuje })
   }
 
   if (!dane.tytulSzkolenia.trim()) {
@@ -384,13 +388,7 @@ export function zbudujProblemyWalidacji(dane: DaneFormularza, grupy: GrupaSzkole
     dodaj('Podstawowe informacje', 'opiekunId', 'Opiekun: wybierz opiekuna')
   }
 
-  pobierzBrakujacePolaEfektywnegoOdbiorcy(dane).forEach((pole) => {
-    const komunikaty = {
-      nazwa: 'Odbiorca: wpisz nazwę firmy odbiorcy',
-      email: 'Odbiorca: wpisz adres email',
-    }
-    dodaj('Dane klienta', 'odbiorca.' + pole, komunikaty[pole])
-  })
+  problemy.push(...zbudujBledyDanychKlienta(dane))
 
   if (!grupy.length) {
     dodaj('Grupy szkoleniowe', 'Grupy', 'Dodaj co najmniej jedną grupę szkoleniową')
@@ -592,10 +590,17 @@ export function useGeneratorSzczegolow() {
     () => zbudujModelSekcyjny(daneFormularza, grupy, adresaci, efektywneStatusyPol, podstawoweProblemyWalidacji),
     [daneFormularza, grupy, adresaci, efektywneStatusyPol, podstawoweProblemyWalidacji],
   )
-  const problemyWalidacji = useMemo(
-    () => Object.values(modelSekcyjny).flatMap((sekcja) => [...sekcja.bledyKrytyczne, ...sekcja.ostrzezenia]),
-    [modelSekcyjny],
-  )
+  const problemyWalidacji = useMemo(() => {
+    const widziane = new Set<string>()
+    return Object.values(modelSekcyjny)
+      .flatMap((sekcja) => [...sekcja.bledyKrytyczne, ...sekcja.ostrzezenia])
+      .filter((problem) => {
+        const klucz = `${problem.sekcja}:${problem.pole}:${problem.kodBledu ?? problem.komunikat}`
+        if (widziane.has(klucz)) return false
+        widziane.add(klucz)
+        return true
+      })
+  }, [modelSekcyjny])
   const bledyPol = useMemo(() => {
     const wynik: Record<string, string> = {}
     podstawoweProblemyWalidacji.forEach(({ pole, polaPowiazane, komunikat }) => {

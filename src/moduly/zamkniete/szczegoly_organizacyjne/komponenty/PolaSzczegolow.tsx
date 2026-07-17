@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { etykietyStatusowPol, klasyStatusowPol } from '../stale'
 import type { StatusyPolImportu } from '../typy'
-import { pobierzIdBleduPola } from './identyfikatoryPol'
+import { pobierzIdBleduPola, pobierzIdPola } from './identyfikatoryPol'
 import { useBladPola } from './stanBledowPol'
 
 type WspolneWlasciwosciPola = {
@@ -10,6 +10,7 @@ type WspolneWlasciwosciPola = {
   statusyPol: StatusyPolImportu
   blad?: string
   disabled?: boolean
+  idGrupy?: string
   dzieci?: ReactNode
   children?: ReactNode
 }
@@ -106,6 +107,7 @@ export function PoleTekstowe({
   podpowiedzi,
   blad,
   disabled,
+  idGrupy,
 }: WlasciwosciPolaTekstowego) {
   const bladZWalidacji = useBladPola(pole, disabled)
   const komunikatBledu = blad ?? bladZWalidacji
@@ -115,6 +117,7 @@ export function PoleTekstowe({
         aria-describedby={komunikatBledu ? pobierzIdBleduPola(pole) : undefined}
         aria-invalid={Boolean(komunikatBledu)}
         disabled={disabled}
+        id={pobierzIdPola(pole, idGrupy)}
         list={listaPodpowiedziId}
         placeholder={placeholder}
         type={typ}
@@ -143,6 +146,7 @@ export function PoleLiczbowe({
   krok = 1,
   blad,
   disabled,
+  idGrupy,
 }: WlasciwosciPolaLiczbowego) {
   const bladZWalidacji = useBladPola(pole, disabled)
   const komunikatBledu = blad ?? bladZWalidacji
@@ -152,6 +156,7 @@ export function PoleLiczbowe({
         aria-describedby={komunikatBledu ? pobierzIdBleduPola(pole) : undefined}
         aria-invalid={Boolean(komunikatBledu)}
         disabled={disabled}
+        id={pobierzIdPola(pole, idGrupy)}
         max={max}
         min={min}
         step={krok}
@@ -175,6 +180,7 @@ export function PoleSuwak({
   return (
     <OpakowaniePola etykieta={`${etykieta}: ${wartosc}`} pole={pole} statusyPol={statusyPol}>
       <input
+        id={pobierzIdPola(pole)}
         max={max}
         min={min}
         type="range"
@@ -185,12 +191,12 @@ export function PoleSuwak({
   )
 }
 
-export function PoleWyboru({ etykieta, pole, statusyPol, wartosc, ustawWartosc, opcje, blad, disabled }: WlasciwosciPolaWyboru) {
+export function PoleWyboru({ etykieta, pole, statusyPol, wartosc, ustawWartosc, opcje, blad, disabled, idGrupy }: WlasciwosciPolaWyboru) {
   const bladZWalidacji = useBladPola(pole, disabled)
   const komunikatBledu = blad ?? bladZWalidacji
   return (
     <OpakowaniePola blad={komunikatBledu} disabled={disabled} etykieta={etykieta} pole={pole} statusyPol={statusyPol}>
-      <select aria-describedby={komunikatBledu ? pobierzIdBleduPola(pole) : undefined} aria-invalid={Boolean(komunikatBledu)} disabled={disabled} value={wartosc} onChange={(zdarzenie) => ustawWartosc(zdarzenie.target.value)}>
+      <select aria-describedby={komunikatBledu ? pobierzIdBleduPola(pole) : undefined} aria-invalid={Boolean(komunikatBledu)} disabled={disabled} id={pobierzIdPola(pole, idGrupy)} value={wartosc} onChange={(zdarzenie) => ustawWartosc(zdarzenie.target.value)}>
         {opcje.map((opcja) => (
           <option key={opcja} value={opcja}>
             {opcja}
@@ -210,6 +216,7 @@ export function PoleTekstoweWielowierszowe({
   placeholder,
   blad,
   disabled,
+  idGrupy,
 }: WlasciwosciPolaTekstowego) {
   const bladZWalidacji = useBladPola(pole, disabled)
   const komunikatBledu = blad ?? bladZWalidacji
@@ -219,6 +226,7 @@ export function PoleTekstoweWielowierszowe({
         aria-describedby={komunikatBledu ? pobierzIdBleduPola(pole) : undefined}
         aria-invalid={Boolean(komunikatBledu)}
         disabled={disabled}
+        id={pobierzIdPola(pole, idGrupy)}
         placeholder={placeholder}
         value={wartosc}
         onChange={(zdarzenie) => ustawWartosc(zdarzenie.target.value)}
@@ -238,7 +246,7 @@ export function PoleCheckbox({
   const blad = useBladPola(pole, disabled)
   return (
     <label className={`szczegoly-checkbox ${disabled ? 'szczegoly-checkbox--disabled' : ''}`}>
-      <input aria-describedby={blad ? pobierzIdBleduPola(pole) : undefined} aria-invalid={Boolean(blad)} checked={zaznaczone} disabled={disabled} type="checkbox" onChange={(zdarzenie) => ustawZaznaczone(zdarzenie.target.checked)} />
+      <input aria-describedby={blad ? pobierzIdBleduPola(pole) : undefined} aria-invalid={Boolean(blad)} checked={zaznaczone} disabled={disabled} id={pobierzIdPola(pole)} type="checkbox" onChange={(zdarzenie) => ustawZaznaczone(zdarzenie.target.checked)} />
       <span>{etykieta}<ZnacznikBleduPola blad={blad} /></span>
       <ZnacznikStatusu pole={pole} statusyPol={statusyPol} />
       {blad && <span className="szczegoly-pole__blad" id={pobierzIdBleduPola(pole)}>{blad}</span>}
