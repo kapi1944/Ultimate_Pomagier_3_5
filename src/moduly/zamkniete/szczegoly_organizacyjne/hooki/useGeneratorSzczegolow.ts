@@ -12,6 +12,7 @@ import {
   poczatkoweWzoryKlienta,
   poczatkowiAdresaci,
 } from '../danePoczatkowe'
+import { pobierzBrakujacePolaEfektywnegoOdbiorcy, pobierzEfektywneStatusyPolOdbiorcy } from '../logikaDanychOdbiorcy'
 import { dodajGrupeDoListy, przetworzUsuniecieGrupy } from '../logikaGrupSzkoleniowych'
 import { zbudujBledyDynamicznychPolGrupy } from '../logikaPolDynamicznych'
 import { polaWymaganePoImporcie, trenerzyKartotekiStartowi } from '../stale'
@@ -363,7 +364,7 @@ function pobierzWidoczneKopieRobocze(konto: ReturnType<typeof pobierzAktywneKont
   return pobierzKopieRobocze().filter((kopia) => czyKontoMozeWidziecKopie(konto, kopia))
 }
 
-function zbudujProblemyWalidacji(dane: DaneFormularza, grupy: GrupaSzkoleniowa[]): ProblemWalidacji[] {
+export function zbudujProblemyWalidacji(dane: DaneFormularza, grupy: GrupaSzkoleniowa[]): ProblemWalidacji[] {
   const problemy: ProblemWalidacji[] = []
   const lokalizacje = pobierzLokalizacjeZMagazynu()
 
@@ -382,6 +383,14 @@ function zbudujProblemyWalidacji(dane: DaneFormularza, grupy: GrupaSzkoleniowa[]
   if (!dane.opiekunId.trim()) {
     dodaj('Podstawowe informacje', 'opiekunId', 'Opiekun: wybierz opiekuna')
   }
+
+  pobierzBrakujacePolaEfektywnegoOdbiorcy(dane).forEach((pole) => {
+    const komunikaty = {
+      nazwa: 'Odbiorca: wpisz nazwę firmy odbiorcy',
+      email: 'Odbiorca: wpisz adres email',
+    }
+    dodaj('Dane klienta', 'odbiorca.' + pole, komunikaty[pole])
+  })
 
   if (!grupy.length) {
     dodaj('Grupy szkoleniowe', 'Grupy', 'Dodaj co najmniej jedną grupę szkoleniową')
@@ -575,9 +584,13 @@ export function useGeneratorSzczegolow() {
   const [autosaveDoDecyzji, ustawAutosaveDoDecyzji] = useState<AutosaveSzczegolow | null>(() => pobierzAutosaveSzczegolow())
   const [czyAutosaveAktywny, ustawCzyAutosaveAktywny] = useState(() => !pobierzAutosaveSzczegolow())
   const podstawoweProblemyWalidacji = useMemo(() => zbudujProblemyWalidacji(daneFormularza, grupy), [daneFormularza, grupy])
+  const efektywneStatusyPol = useMemo(
+    () => pobierzEfektywneStatusyPolOdbiorcy(daneFormularza, statusyPol),
+    [daneFormularza, statusyPol],
+  )
   const modelSekcyjny = useMemo(
-    () => zbudujModelSekcyjny(daneFormularza, grupy, adresaci, statusyPol, podstawoweProblemyWalidacji),
-    [daneFormularza, grupy, adresaci, statusyPol, podstawoweProblemyWalidacji],
+    () => zbudujModelSekcyjny(daneFormularza, grupy, adresaci, efektywneStatusyPol, podstawoweProblemyWalidacji),
+    [daneFormularza, grupy, adresaci, efektywneStatusyPol, podstawoweProblemyWalidacji],
   )
   const problemyWalidacji = useMemo(
     () => Object.values(modelSekcyjny).flatMap((sekcja) => [...sekcja.bledyKrytyczne, ...sekcja.ostrzezenia]),
@@ -987,7 +1000,7 @@ export function useGeneratorSzczegolow() {
     daneFormularza,
     grupy,
     adresaci,
-    statusyPol,
+    statusyPol: efektywneStatusyPol,
     trescMaila,
     rozpoznaneObszary,
     komunikat,

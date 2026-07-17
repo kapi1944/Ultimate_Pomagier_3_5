@@ -14,6 +14,7 @@ import { useBladPola } from '../komponenty/stanBledowPol'
 import SekcjaFormularza from '../komponenty/SekcjaFormularza'
 import { useGeneratorSzczegolow } from '../hooki/useGeneratorSzczegolow'
 import { porownajSnapshotyWersji } from '../logikaPorownaniaWersji'
+import { pobierzEfektywneDaneOdbiorcy } from '../logikaDanychOdbiorcy'
 import { opiekunowieSzczegolow } from '../uzytkownicySzczegolow'
 import type { DaneFirmy, DaneFormularza, OrganizatorSzkolenia, StatusLogotypow, WpisHistoriiSzczegolow } from '../typy'
 import './widokNowychSzczegolowOrganizacyjnych.css'
@@ -347,7 +348,6 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
         return {
           ...dane,
           nabywca,
-          odbiorca: dane.czyNabywcaJestOdbiorca ? { ...nabywca } : dane.odbiorca,
         }
       },
       `nabywca.${klucz}`,
@@ -372,7 +372,6 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
       (dane) => ({
         ...dane,
         czyNabywcaJestOdbiorca: wartosc,
-        odbiorca: wartosc ? { ...dane.nabywca } : dane.odbiorca,
       }),
       'czyNabywcaJestOdbiorca',
     )
@@ -695,7 +694,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
             />
             <PolaFirmy
               aktualizujPole={aktualizujOdbiorce}
-              dane={generator.daneFormularza.odbiorca}
+              dane={pobierzEfektywneDaneOdbiorcy(generator.daneFormularza)}
               disabled={generator.daneFormularza.czyNabywcaJestOdbiorca}
               miejscowosciDoPodpowiedzi={miejscowosciDoPodpowiedzi}
               prefix="odbiorca"
