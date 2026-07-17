@@ -888,6 +888,15 @@
   gap: 10px;
 }
 
+.szczegoly-historia__lista {
+  display: grid;
+  gap: 10px;
+}
+
+.szczegoly-historia__przelacznik {
+  width: 100%;
+}
+
 .szczegoly-historia__wpis {
   display: grid;
   gap: 8px;

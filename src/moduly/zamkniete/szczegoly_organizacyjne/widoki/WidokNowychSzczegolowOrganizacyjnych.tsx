@@ -17,6 +17,7 @@ import { porownajSnapshotyWersji } from '../logikaPorownaniaWersji'
 import { pobierzEfektywneDaneOdbiorcy } from '../logikaDanychOdbiorcy'
 import { opiekunowieSzczegolow } from '../uzytkownicySzczegolow'
 import type { DaneFirmy, DaneFormularza, OrganizatorSzkolenia, StatusLogotypow, WpisHistoriiSzczegolow } from '../typy'
+import { pobierzLiczbeUkrytychWpisowHistorii, pobierzWidoczneWpisyHistorii } from './widoczneWpisyHistorii'
 import './widokNowychSzczegolowOrganizacyjnych.css'
 
 const sekcjeNawigacji = [
@@ -269,6 +270,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
   const szczegolyOrganizacyjneId = generator.zrodloOpublikowanegoId ?? aktywnaWersja?.id ?? null
   const [podgladyWzorowKlienta, ustawPodgladyWzorowKlienta] = useState<Record<string, PodgladWzoruKlienta>>({})
   const [porownywanaWersjaId, ustawPorownywanaWersjaId] = useState<string | null>(null)
+  const [czyHistoriaRozwinieta, ustawCzyHistoriaRozwinieta] = useState(false)
   const liczbaProblemowBlokujacych = generator.problemyWalidacji.filter((problem) => problem.czyBlokuje).length
   const statusFormularza = `${generator.daneFormularza.status} | ${generator.czyFormularzKompletny ? 'Kompletny' : `Niepełny (${liczbaProblemowBlokujacych})`}`
   const miejscowosciDoPodpowiedzi = useMemo(
@@ -276,6 +278,8 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
     [],
   )
   const podpowiedziMiastaPaczki = wybierzPodpowiedziMiejscowosci(miejscowosciDoPodpowiedzi, generator.daneFormularza.odbiorcaPaczki.miasto)
+  const liczbaUkrytychWpisowHistorii = pobierzLiczbeUkrytychWpisowHistorii(generator.historiaSzczegolow)
+  const widoczneWpisyHistorii = pobierzWidoczneWpisyHistorii(generator.historiaSzczegolow, czyHistoriaRozwinieta)
   const wersjeHistorii = generator.historiaSzczegolow.filter((wpis) => wpis.typ === 'wersja')
   const porownywanaWersja = wersjeHistorii.find((wpis) => wpis.id === porownywanaWersjaId)
   const wersjeTegoDokumentu = porownywanaWersja ? wersjeHistorii.filter((wpis) => wpis.dokumentId === porownywanaWersja.dokumentId) : []
@@ -978,7 +982,8 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
         <SekcjaFormularza id="historia-wersji" tytul="Historia wersji i zdarzeń">
           <div className="szczegoly-historia">
             {generator.historiaSzczegolow.length === 0 && <p>Brak zapisanych wersji i zdarzeń.</p>}
-            {generator.historiaSzczegolow.map((wpis) => (
+            <div className="szczegoly-historia__lista" id="lista-historii-wersji">
+            {widoczneWpisyHistorii.map((wpis) => (
               <article className="szczegoly-historia__wpis" key={wpis.id}>
                 <div>
                   <strong>{wpis.etykietaWersji ?? wpis.typ}</strong>
@@ -1007,6 +1012,18 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
                 )}
               </article>
             ))}
+            </div>
+            {liczbaUkrytychWpisowHistorii > 0 && (
+              <button
+                aria-controls="lista-historii-wersji"
+                aria-expanded={czyHistoriaRozwinieta}
+                className="szczegoly-historia__przelacznik"
+                type="button"
+                onClick={() => ustawCzyHistoriaRozwinieta((obecnyStan) => !obecnyStan)}
+              >
+                {czyHistoriaRozwinieta ? 'Zwiń historię' : `Pokaż pełną historię (${liczbaUkrytychWpisowHistorii})`}
+              </button>
+            )}
           </div>
         </SekcjaFormularza>
 
