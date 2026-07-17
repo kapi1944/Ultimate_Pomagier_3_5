@@ -1,0 +1,112 @@
+import type { Uzytkownik } from './typyUzytkownikow'
+
+const dataStartowa = '2026-07-17T00:00:00.000Z'
+
+function utworzUzytkownikaStartowego(
+  dane: Omit<Uzytkownik, 'wymagaZmianyHasla' | 'wersjaUprawnien' | 'ostatnieLogowanie' | 'utworzono' | 'zaktualizowano'>,
+): Uzytkownik {
+  return {
+    ...dane,
+    odznaki: [...dane.odznaki],
+    wymagaZmianyHasla: false,
+    wersjaUprawnien: 1,
+    ostatnieLogowanie: null,
+    utworzono: dataStartowa,
+    zaktualizowano: dataStartowa,
+  }
+}
+
+export const daneStartoweUzytkownikow: Uzytkownik[] = [
+  utworzUzytkownikaStartowego({
+    id: 'architekt-systemu',
+    imie: 'Administrator',
+    nazwisko: 'Systemu',
+    email: 'administrator.systemu@pomagier.demo',
+    rola: 'ADMINISTRATOR',
+    organizacja: 'SEMPER',
+    odznaki: ['WYSYLACZ', 'AKCEPTUJACY', 'EKSPORTER', 'AUDYTOR'],
+    status: 'AKTYWNY',
+  }),
+  utworzUzytkownikaStartowego({
+    id: 'administrator-kacper-madej',
+    imie: 'Kacper',
+    nazwisko: 'Madej',
+    email: 'administrator@pomagier.demo',
+    rola: 'ADMINISTRATOR',
+    organizacja: 'SEMPER',
+    odznaki: [],
+    status: 'AKTYWNY',
+  }),
+  utworzUzytkownikaStartowego({
+    id: 'moderator-marta-kowalska',
+    imie: 'Marta',
+    nazwisko: 'Kowalska',
+    email: 'marta.kowalska@pomagier.demo',
+    rola: 'MODERATOR',
+    organizacja: 'IIST',
+    odznaki: ['AKCEPTUJACY'],
+    status: 'AKTYWNY',
+  }),
+  utworzUzytkownikaStartowego({
+    id: 'opiekun-anna-nowak',
+    imie: 'Anna',
+    nazwisko: 'Nowak',
+    email: 'anna.nowak@pomagier.demo',
+    rola: 'OPIEKUN',
+    organizacja: 'SEMPER',
+    odznaki: [],
+    status: 'AKTYWNY',
+  }),
+  utworzUzytkownikaStartowego({
+    id: 'opiekun-piotr-zielinski',
+    imie: 'Piotr',
+    nazwisko: 'Zielinski',
+    email: 'piotr.zielinski@pomagier.demo',
+    rola: 'OPIEKUN',
+    organizacja: 'IIST',
+    odznaki: [],
+    status: 'AKTYWNY',
+  }),
+  utworzUzytkownikaStartowego({
+    id: 'pracownik-joanna-wisniewska',
+    imie: 'Joanna',
+    nazwisko: 'Wisniewska',
+    email: 'joanna.wisniewska@pomagier.demo',
+    rola: 'PRACOWNIK',
+    organizacja: 'SEMPER',
+    odznaki: [],
+    status: 'AKTYWNY',
+  }),
+  utworzUzytkownikaStartowego({
+    id: 'trener-jan-kowal',
+    imie: 'Jan',
+    nazwisko: 'Kowal',
+    email: 'jan.kowal@pomagier.demo',
+    rola: 'TRENER',
+    organizacja: 'ZEWNETRZNY',
+    odznaki: [],
+    status: 'AKTYWNY',
+    przypisanyTrenerId: 'trener-1',
+  }),
+  utworzUzytkownikaStartowego({
+    id: 'koordynator-agnieszka-klient',
+    imie: 'Agnieszka',
+    nazwisko: 'Klient',
+    email: 'agnieszka@klient.demo',
+    rola: 'KOORDYNATOR_KLIENTA',
+    organizacja: 'KLIENT',
+    odznaki: [],
+    status: 'AKTYWNY',
+    przypisanyKlientId: 'klient-demo-1',
+  }),
+  utworzUzytkownikaStartowego({
+    id: 'gosc-demo',
+    imie: 'Gosc',
+    nazwisko: 'Demo',
+    email: 'gosc@pomagier.demo',
+    rola: 'GOSC',
+    organizacja: 'ZEWNETRZNY',
+    odznaki: [],
+    status: 'AKTYWNY',
+  }),
+]
