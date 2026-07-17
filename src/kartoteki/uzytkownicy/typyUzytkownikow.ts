@@ -1,4 +1,5 @@
 export type RolaUzytkownika =
+  | 'ARCHITEKT'
   | 'ADMINISTRATOR'
   | 'MODERATOR'
   | 'OPIEKUN'
@@ -50,6 +51,7 @@ export type BledyFormularza = Partial<Record<KluczBledu, string>>
 export type TrybFormularza = 'edycja' | 'nowy'
 
 export const etykietyRol: Record<RolaUzytkownika, string> = {
+  ARCHITEKT: 'Architekt',
   ADMINISTRATOR: 'Administrator',
   MODERATOR: 'Moderator',
   OPIEKUN: 'Opiekun',
@@ -60,6 +62,7 @@ export const etykietyRol: Record<RolaUzytkownika, string> = {
 }
 
 export const koloryRol: Record<RolaUzytkownika, string> = {
+  ARCHITEKT: '#7f1d1d',
   ADMINISTRATOR: '#b91c1c',
   MODERATOR: '#7c3aed',
   OPIEKUN: '#0369a1',
@@ -67,6 +70,32 @@ export const koloryRol: Record<RolaUzytkownika, string> = {
   TRENER: '#b45309',
   KOORDYNATOR_KLIENTA: '#9d174d',
   GOSC: '#475569',
+}
+
+export const poziomyRol: Record<RolaUzytkownika, number> = {
+  ARCHITEKT: 8,
+  ADMINISTRATOR: 7,
+  MODERATOR: 6,
+  OPIEKUN: 5,
+  PRACOWNIK: 4,
+  TRENER: 3,
+  KOORDYNATOR_KLIENTA: 2,
+  GOSC: 1,
+}
+
+export const domyslnyKolorProfilu = '#334155'
+
+export function pobierzPoziomRoli(rola: RolaUzytkownika) { return poziomyRol[rola] }
+export function pobierzNadrzednaRoleUzytkownika(uzytkownik: Pick<Uzytkownik, 'rola'>) { return uzytkownik.rola }
+export function czyJestArchitektem(uzytkownik: Pick<Uzytkownik, 'rola'> | null | undefined) { return uzytkownik?.rola === 'ARCHITEKT' }
+export function czyRolaJestCoNajmniej(rola: RolaUzytkownika, minimalnaRola: RolaUzytkownika) { return pobierzPoziomRoli(rola) >= pobierzPoziomRoli(minimalnaRola) }
+
+export function pobierzKolorTekstuDlaTla(kolor: string) {
+  const dopasowanie = /^#([0-9a-f]{6})$/i.exec(kolor)
+  if (!dopasowanie) return '#f8fafc'
+  const wartosc = Number.parseInt(dopasowanie[1], 16)
+  const jasnosc = ((wartosc >> 16) * 299 + ((wartosc >> 8) & 255) * 587 + (wartosc & 255) * 114) / 1000
+  return jasnosc > 150 ? '#111827' : '#f8fafc'
 }
 
 export const etykietyOrganizacji: Record<OrganizacjaUzytkownika, string> = {
@@ -97,4 +126,8 @@ export function pobierzInicjalyUzytkownika(uzytkownik: Pick<Uzytkownik, 'imie' |
 
 export function czyKontoJestAktywne(uzytkownik: Pick<Uzytkownik, 'status'> | null | undefined) {
   return uzytkownik?.status === 'AKTYWNY'
+}
+
+export function czyJestPracownikiemWewnetrznym(uzytkownik: Uzytkownik | null | undefined) {
+  return Boolean(czyKontoJestAktywne(uzytkownik) && (uzytkownik?.organizacja === 'SEMPER' || uzytkownik?.organizacja === 'IIST') && uzytkownik.rola !== 'KOORDYNATOR_KLIENTA' && uzytkownik.rola !== 'GOSC')
 }

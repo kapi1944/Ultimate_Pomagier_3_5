@@ -81,28 +81,7 @@
   gap: 4px;
 }
 
-.menu-boczne__profil {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 10px;
-  align-items: start;
-  padding: 12px;
-  border: 1px solid rgba(74, 222, 128, 0.3);
-  border-radius: 6px;
-  background: #03180c;
-}
-
-.menu-boczne__dane-profilu {
-  display: grid;
-  min-width: 0;
-  gap: 5px;
-}
-
-.menu-boczne__dane-profilu strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.menu-boczne__dane-profilu > span { color: #9ccfab; font-size: 0.78rem; }
-.menu-boczne__odznaki { display: flex; flex-wrap: wrap; gap: 4px; }
-.menu-boczne__wyloguj { grid-column: 1 / -1; border: 1px solid rgba(248, 113, 113, 0.7); border-radius: 5px; padding: 6px 8px; background: transparent; color: #fecaca; cursor: pointer; font: inherit; }
-.menu-boczne__wyloguj:hover { background: rgba(127, 29, 29, 0.35); }
+.uklad-aplikacji__kolumna-glowna { display: flex; min-width: 0; flex: 1; flex-direction: column; }
 
 .avatar-uzytkownika { display: grid; width: 38px; height: 38px; place-items: center; border-radius: 50%; color: #111827; font-weight: 800; }
 .odznaka-uzytkownika { display: inline-flex; width: fit-content; align-items: center; border-radius: 999px; padding: 3px 7px; color: #fff; font-size: 0.72rem; font-weight: 700; }
@@ -191,9 +170,13 @@
     padding-left 180ms ease;
 }
 
-.uklad-aplikacji:has(.menu-boczne--otwarte) .uklad-aplikacji__obszar-roboczy {
-  width: calc(100% - var(--szerokosc-menu-bocznego));
+.uklad-aplikacji--menu-przypiete .uklad-aplikacji__kolumna-glowna {
   margin-left: var(--szerokosc-menu-bocznego);
+}
+
+.uklad-aplikacji--menu-przypiete .uklad-aplikacji__obszar-roboczy {
+  width: 100%;
+  margin-left: 0;
   padding-left: 36px;
 }
 
@@ -227,7 +210,11 @@
     padding: 72px 24px 24px;
   }
 
-  .uklad-aplikacji:has(.menu-boczne--otwarte) .uklad-aplikacji__obszar-roboczy {
+  .uklad-aplikacji--menu-przypiete .uklad-aplikacji__kolumna-glowna {
+    margin-left: 0;
+  }
+
+  .uklad-aplikacji--menu-przypiete .uklad-aplikacji__obszar-roboczy {
     width: 100%;
     margin-left: 0;
     padding-left: 24px;

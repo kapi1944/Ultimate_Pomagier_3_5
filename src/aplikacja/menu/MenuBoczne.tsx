@@ -3,11 +3,6 @@ import type { WidokNawigacji } from '../nawigacja/typyNawigacji'
 import { pozycjeMenu, type PozycjaMenu } from './pozycjeMenu'
 import IkonaMenu from './IkonaMenu'
 import { pobierzTypIkonyMenu } from './ikonyPozycjiMenu'
-import { useKontekstUzytkownika } from '../logowanie/useKontekstUzytkownika'
-import AvatarUzytkownika from '../../kartoteki/uzytkownicy/komponenty/AvatarUzytkownika'
-import OdznakaRoli from '../../kartoteki/uzytkownicy/komponenty/OdznakaRoli'
-import OdznakaUzytkownika from '../../kartoteki/uzytkownicy/komponenty/OdznakaUzytkownika'
-import { etykietyOrganizacji, pobierzNazweWyswietlanaUzytkownika } from '../../kartoteki/uzytkownicy/typyUzytkownikow'
 
 const kluczPrzypieciaMenu = 'ultimatePomagier.menuPrzypiete'
 const kluczWysuwaniaZKrawedzi = 'ultimatePomagier.menuWysuwanieZKrawedzi'
@@ -15,6 +10,7 @@ const kluczWysuwaniaZKrawedzi = 'ultimatePomagier.menuWysuwanieZKrawedzi'
 type WlasciwosciMenuBocznego = {
   aktywnyWidok: WidokNawigacji
   ustawAktywnyWidok: (widok: WidokNawigacji) => void
+  poZmianieStanuMenu?: (stan: { czyPrzypiete: boolean; czyOtwarte: boolean }) => void
 }
 
 function czyPozycjaLubPotomekJestAktywny(pozycja: PozycjaMenu, aktywnyWidok: WidokNawigacji): boolean {
@@ -40,8 +36,8 @@ function pobierzPoczatkoweWysuwanieZKrawedzi() {
 export default function MenuBoczne({
   aktywnyWidok,
   ustawAktywnyWidok,
+  poZmianieStanuMenu,
 }: WlasciwosciMenuBocznego) {
-  const { zalogowanyUzytkownik, wyloguj } = useKontekstUzytkownika()
   const [czyMenuPrzypiete, ustawCzyMenuPrzypiete] = useState(pobierzPoczatkowePrzypiecieMenu)
   const [czyMenuOtwarte, ustawCzyMenuOtwarte] = useState(czyMenuPrzypiete)
   const [czyWysuwanieZKrawedziWlaczone, ustawCzyWysuwanieZKrawedziWlaczone] = useState(
@@ -65,6 +61,8 @@ export default function MenuBoczne({
       return
     }
   }, [czyWysuwanieZKrawedziWlaczone])
+
+  useEffect(() => { poZmianieStanuMenu?.({ czyPrzypiete: czyMenuPrzypiete, czyOtwarte: czyMenuOtwarte }) }, [czyMenuOtwarte, czyMenuPrzypiete, poZmianieStanuMenu])
 
   function otworzMenu() {
     ustawCzyMenuOtwarte(true)
@@ -175,18 +173,6 @@ export default function MenuBoczne({
             <strong>Ultimate Pomagier 3.0</strong>
             <span>V3-01</span>
           </div>
-          {zalogowanyUzytkownik && (
-            <section aria-label="Profil zalogowanego użytkownika" className="menu-boczne__profil">
-              <AvatarUzytkownika uzytkownik={zalogowanyUzytkownik} />
-              <div className="menu-boczne__dane-profilu">
-                <strong>{pobierzNazweWyswietlanaUzytkownika(zalogowanyUzytkownik)}</strong>
-                <OdznakaRoli kompaktowa rola={zalogowanyUzytkownik.rola} />
-                <span>{etykietyOrganizacji[zalogowanyUzytkownik.organizacja]}</span>
-                {zalogowanyUzytkownik.odznaki.length > 0 && <div className="menu-boczne__odznaki">{zalogowanyUzytkownik.odznaki.map((odznaka) => <OdznakaUzytkownika key={odznaka} kompaktowa odznaka={odznaka} />)}</div>}
-              </div>
-              <button className="menu-boczne__wyloguj" onClick={wyloguj} type="button">Wyloguj</button>
-            </section>
-          )}
         </div>
         <nav>
           <ul className="menu-boczne__lista">{pozycjeMenu.map((pozycja) => renderujPozycje(pozycja))}</ul>

@@ -1,4 +1,5 @@
 export type WidokNawigacji =
+  | 'profil_uzytkownika'
   | 'pulpit'
   | 'szkolenia-zamkniete'
   | 'generator-szczegolow'

@@ -13,7 +13,7 @@ globalThis.localStorage = {
 } as Storage
 
 const { daneStartoweUzytkownikow } = await import('../src/kartoteki/uzytkownicy/daneUzytkownikow.ts')
-const { kluczMagazynuUzytkownikow, pobierzAktywnychUzytkownikowWedlugRoli, pobierzUzytkownika, pobierzUzytkownikow, zapiszUzytkownikow, zainicjalizujMagazynUzytkownikow } = await import('../src/kartoteki/uzytkownicy/magazynUzytkownikow.ts')
+const { kluczMagazynuUzytkownikow, pobierzAktywnychUzytkownikowWedlugRoli, pobierzUzytkownika, pobierzUzytkownikow, zapiszUzytkownikow, wykonajMigracjeRoliArchitekta, zainicjalizujMagazynUzytkownikow, zaktualizujUzytkownikaPrzezAdministratora, zaktualizujUzytkownikaPrzezArchitekta } = await import('../src/kartoteki/uzytkownicy/magazynUzytkownikow.ts')
 const { czyJestAdministratorem, czyMozeAkceptowac, czyMozeEksportowac } = await import('../src/kartoteki/uzytkownicy/uprawnienia.ts')
 const { kluczSesjiUzytkownika, pobierzSesje, pobierzZalogowanegoUzytkownika, rozpocznijSesje, zakonczSesje } = await import('../src/aplikacja/logowanie/sesjaUzytkownika.ts')
 const { czyKontoMozeWidziecKopie, pobierzAktywneKontoSzczegolow, pobierzKolorTlaOpiekuna, pobierzKontoSzczegolow } = await import('../src/moduly/zamkniete/szczegoly_organizacyjne/uzytkownicySzczegolow.ts')
@@ -79,6 +79,26 @@ test('migracja starej sesji rozpoznaje konto i usuwa oba historyczne klucze', ()
   assert.equal(magazyn.has('ultimate-pomagier.aktywna-rola'), false)
 })
 
+test('migracja nadaje rolę Architekt wyłącznie Kacprowi i jest idempotentna', () => {
+  wyczyscStan()
+  const dane = daneStartoweUzytkownikow.map((uzytkownik) => uzytkownik.id === 'architekt-systemu' ? { ...uzytkownik, rola: 'ARCHITEKT' as const } : uzytkownik.id === 'administrator-kacper-madej' ? { ...uzytkownik, rola: 'ADMINISTRATOR' as const } : uzytkownik)
+  const pierwszaMigracja = wykonajMigracjeRoliArchitekta(dane)
+  assert.equal(pierwszaMigracja.uzytkownicy.filter((uzytkownik) => uzytkownik.rola === 'ARCHITEKT').length, 1)
+  assert.equal(pierwszaMigracja.uzytkownicy.find((uzytkownik) => uzytkownik.rola === 'ARCHITEKT')?.id, 'administrator-kacper-madej')
+  assert.equal(pierwszaMigracja.uzytkownicy.find((uzytkownik) => uzytkownik.id === 'architekt-systemu')?.rola, 'ADMINISTRATOR')
+  assert.equal(wykonajMigracjeRoliArchitekta(pierwszaMigracja.uzytkownicy).czyZmieniono, false)
+})
+
+test('Administrator nie edytuje Architekta, a Architekt może edytować Administratora', () => {
+  wyczyscStan()
+  const uzytkownicy = zainicjalizujMagazynUzytkownikow()
+  const architekt = uzytkownicy.find((uzytkownik) => uzytkownik.id === 'administrator-kacper-madej')!
+  const administrator = uzytkownicy.find((uzytkownik) => uzytkownik.id === 'architekt-systemu')!
+  assert.ok(zaktualizujUzytkownikaPrzezAdministratora(administrator, architekt.id, { pseudonim: 'Niedozwolone' }).blad)
+  assert.equal(zaktualizujUzytkownikaPrzezArchitekta(architekt, administrator.id, { pseudonim: 'Dozwolone' }).uzytkownik?.pseudonim, 'Dozwolone')
+  assert.ok(zaktualizujUzytkownikaPrzezArchitekta(architekt, architekt.id, { status: 'ZABLOKOWANY' }).blad)
+})
+
 test('adapter szczegółów zachowuje historyczne identyfikatory i kolory oraz nie daje nieznanemu dostępu', () => {
   wyczyscStan()
   zainicjalizujMagazynUzytkownikow()
@@ -102,7 +122,10 @@ test('struktura panelu i menu udostępnia lokalne logowanie, profil oraz dostęp
   const odznaka = readFileSync(new URL('../src/kartoteki/uzytkownicy/komponenty/OdznakaUzytkownika.tsx', import.meta.url), 'utf8')
   assert.doesNotMatch(panel, /type="password"/)
   assert.match(panel, /Lokalny tryb demonstracyjny/)
-  assert.match(menu, /Wyloguj/)
-  assert.match(menu, /AvatarUzytkownika/)
+  const naglowek = readFileSync(new URL('../src/aplikacja/layout/NaglowekAplikacji.tsx', import.meta.url), 'utf8')
+  assert.doesNotMatch(menu, /menu-boczne__profil/)
+  assert.doesNotMatch(menu, /AvatarUzytkownika/)
+  assert.match(naglowek, /Wyloguj/)
+  assert.match(naglowek, /AvatarUzytkownika/)
   assert.match(odznaka, /aria-label/)
 })

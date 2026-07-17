@@ -4,7 +4,7 @@ const dataStartowa = '2026-07-17T00:00:00.000Z'
 
 export const zwroty: Exclude<Zwrot, ''>[] = ['Pan', 'Pani']
 export const tytulyNaukowe: TytulNaukowy[] = ['', 'dr', 'dr hab.', 'mgr', 'inż.', 'mgr inż.', 'prof.']
-export const roleUzytkownikow: RolaUzytkownika[] = ['ADMINISTRATOR', 'MODERATOR', 'OPIEKUN', 'PRACOWNIK', 'TRENER', 'KOORDYNATOR_KLIENTA', 'GOSC']
+export const roleUzytkownikow: RolaUzytkownika[] = ['ARCHITEKT', 'ADMINISTRATOR', 'MODERATOR', 'OPIEKUN', 'PRACOWNIK', 'TRENER', 'KOORDYNATOR_KLIENTA', 'GOSC']
 
 function utworzUzytkownika(dane: Omit<Uzytkownik, 'utworzono' | 'zaktualizowano' | 'wersjaUprawnien' | 'wymagaZmianyHasla'>): Uzytkownik {
   return { ...dane, wymagaZmianyHasla: false, wersjaUprawnien: 1, utworzono: dataStartowa, zaktualizowano: dataStartowa }
@@ -18,7 +18,7 @@ export const daneStartoweUzytkownikow: Uzytkownik[] = [
   }),
   utworzUzytkownika({
     id: 'administrator-kacper-madej', zwrot: 'Pan', tytulNaukowy: 'mgr inż.', imie: 'Kacper', nazwisko: 'Madej', pseudonim: 'Kacper',
-    emaile: ['kacper.madej@pomagier.local', 'administrator@pomagier.local'], telefony: [{ prefiks: '+48', numer: '501 234 567' }], login: 'kacper.madej', rola: 'ADMINISTRATOR', organizacja: 'SEMPER',
+    emaile: ['kacper.madej@pomagier.local', 'administrator@pomagier.local'], telefony: [{ prefiks: '+48', numer: '501 234 567' }], login: 'kacper.madej', rola: 'ARCHITEKT', organizacja: 'SEMPER',
     odznaki: ['WYSYLACZ', 'AKCEPTUJACY', 'EKSPORTER', 'ROZLICZAJACY', 'AUDYTOR'], status: 'AKTYWNY', kolorProfilu: '#cc0000', aliasyHistoryczne: ['Kacper', 'administrator'],
   }),
   utworzUzytkownika({
