@@ -1,6 +1,5 @@
 import {
   walidujEmail,
-  walidujHaslo,
   walidujImieLubNazwisko,
   walidujLogin,
   walidujTelefonPolski,
@@ -59,11 +58,6 @@ export function walidujFormularz(
       bledy.login = 'Login musi mieć minimum 6 znaków i nie może zawierać spacji.'
     }
 
-    if (!formularz.haslo) {
-      bledy.haslo = 'Podaj hasło.'
-    } else if (!walidujHaslo(formularz.haslo)) {
-      bledy.haslo = 'Hasło musi mieć minimum 6 znaków i nie może zawierać spacji.'
-    }
   }
 
   return bledy

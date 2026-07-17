@@ -1,96 +1,27 @@
-import type { RolaUzytkownika } from '../../../kartoteki/uzytkownicy/typyUzytkownikow'
+import { pobierzUzytkownika, pobierzUzytkownikow } from '../../../kartoteki/uzytkownicy/magazynUzytkownikow'
+import { czyJestAdministratorem, czyMozeAkceptowac } from '../../../kartoteki/uzytkownicy/uprawnienia'
+import type { Uzytkownik } from '../../../kartoteki/uzytkownicy/typyUzytkownikow'
+import { pobierzNazweWyswietlanaUzytkownika } from '../../../kartoteki/uzytkownicy/typyUzytkownikow'
+import { pobierzZalogowanegoUzytkownika } from '../../../aplikacja/logowanie/sesjaUzytkownika'
 import type { OpublikowaneSzczegolyOrganizacyjne, WersjaRoboczaGeneratora } from './typy'
 
-export type KontoSzczegolow = {
-  id: string
-  nazwa: string
-  rola: RolaUzytkownika
-  kolorOpiekuna?: string
+export type KontoSzczegolow = Pick<Uzytkownik, 'id' | 'rola' | 'kolorProfilu' | 'status' | 'odznaki'> & { nazwa: string; kolorOpiekuna?: string }
+
+const nieznaneKonto: KontoSzczegolow = { id: '', nazwa: 'Nieznany użytkownik', rola: 'GOSC', kolorProfilu: '#94a3b8', status: 'NIEAKTYWNY', odznaki: [] }
+
+function mapujKonto(uzytkownik: Uzytkownik): KontoSzczegolow {
+  return { id: uzytkownik.id, nazwa: pobierzNazweWyswietlanaUzytkownika(uzytkownik), rola: uzytkownik.rola, kolorProfilu: uzytkownik.kolorProfilu, kolorOpiekuna: uzytkownik.rola === 'OPIEKUN' ? uzytkownik.kolorProfilu : undefined, status: uzytkownik.status, odznaki: [...uzytkownik.odznaki] }
 }
 
-export const kontaSzczegolow: KontoSzczegolow[] = [
-  { id: 'architekt', nazwa: 'Architekt', rola: 'Architekt' },
-  { id: 'Iza', nazwa: 'Iza', rola: 'Opiekun', kolorOpiekuna: '#ffe599' },
-  { id: 'Kamila', nazwa: 'Kamila', rola: 'Opiekun', kolorOpiekuna: '#6fa8dc' },
-  { id: 'Dawid', nazwa: 'Dawid', rola: 'Opiekun', kolorOpiekuna: '#f6b26b' },
-  { id: 'Kasia RB', nazwa: 'Kasia RB', rola: 'Opiekun', kolorOpiekuna: '#fce4d6' },
-]
+export const opiekunowieSzczegolow = pobierzUzytkownikow().filter((uzytkownik) => uzytkownik.rola === 'OPIEKUN' && uzytkownik.status === 'AKTYWNY').map(mapujKonto)
 
-export const opiekunowieSzczegolow = kontaSzczegolow.filter((konto) => konto.rola === 'Opiekun')
-
-function normalizujNazwe(wartosc: unknown) {
-  return String(wartosc ?? '')
-    .trim()
-    .toLocaleLowerCase('pl')
-}
-
-function znajdzKontoPoNazwie(wartosc: unknown) {
-  const nazwa = normalizujNazwe(wartosc)
-
-  return kontaSzczegolow.find(
-    (konto) =>
-      normalizujNazwe(konto.id) === nazwa ||
-      normalizujNazwe(konto.nazwa) === nazwa,
-  )
-}
-
-export function pobierzKontoSzczegolow(id: string) {
-  return kontaSzczegolow.find((konto) => konto.id === id)
-}
-
-export function pobierzNazweOpiekuna(id: string) {
-  return pobierzKontoSzczegolow(id)?.nazwa || 'Bez opiekuna'
-}
-
-export function pobierzKolorTlaOpiekuna(id: string) {
-  const kolor = pobierzKontoSzczegolow(id)?.kolorOpiekuna || '#d9ead3'
-
-  return `${kolor}cc`
-}
-
-export function pobierzAktywneKontoSzczegolow(): KontoSzczegolow {
-  try {
-    const zapisSesji = localStorage.getItem('ultimate-pomagier.zalogowany-uzytkownik')
-    const daneSesji = zapisSesji ? JSON.parse(zapisSesji) : null
-    const zapisRoli = localStorage.getItem('ultimate-pomagier.aktywna-rola')
-    const rola = typeof daneSesji?.rola === 'string' ? daneSesji.rola : zapisRoli
-
-    if (rola === 'Architekt') {
-      return kontaSzczegolow[0]
-    }
-
-    const konto =
-      znajdzKontoPoNazwie(daneSesji?.id) ||
-      znajdzKontoPoNazwie(daneSesji?.pseudonim) ||
-      znajdzKontoPoNazwie(daneSesji?.imie) ||
-      znajdzKontoPoNazwie(daneSesji?.login)
-
-    return konto ?? kontaSzczegolow[0]
-  } catch {
-    return kontaSzczegolow[0]
-  }
-}
-
-export function czyKontoArchitekta(konto: KontoSzczegolow) {
-  return konto.rola === 'Architekt'
-}
-
-export function czyKontoMozeWidziecKopie(konto: KontoSzczegolow, kopia: WersjaRoboczaGeneratora) {
-  return czyKontoArchitekta(konto) || kopia.autorId === konto.id || kopia.dane.opiekunId === konto.id
-}
-
-export function czyKontoMozeEdytowacKopie(konto: KontoSzczegolow, kopia: WersjaRoboczaGeneratora) {
-  return czyKontoArchitekta(konto) || kopia.dane.opiekunId === konto.id
-}
-
-export function czyKontoMozeZaakceptowacSzczegoly(konto: KontoSzczegolow, rekord: OpublikowaneSzczegolyOrganizacyjne) {
-  return czyKontoArchitekta(konto) || rekord.opiekunId === konto.id
-}
-
-export function czyKontoMozeCofnacStatus(konto: KontoSzczegolow, rekord: OpublikowaneSzczegolyOrganizacyjne) {
-  return czyKontoArchitekta(konto) || rekord.opiekunId === konto.id
-}
-
-export function czyKontoMozeEdytowacSzczegoly(konto: KontoSzczegolow, opiekunId: string) {
-  return czyKontoArchitekta(konto) || opiekunId === konto.id || !opiekunId
-}
+export function pobierzKontoSzczegolow(id: string) { const uzytkownik = pobierzUzytkownika(id); return uzytkownik ? mapujKonto(uzytkownik) : undefined }
+export function pobierzNazweOpiekuna(id: string) { return pobierzKontoSzczegolow(id)?.nazwa || (id ? 'Nieznany użytkownik' : 'Bez opiekuna') }
+export function pobierzKolorTlaOpiekuna(id: string) { return `${pobierzKontoSzczegolow(id)?.kolorOpiekuna || '#d9ead3'}cc` }
+export function pobierzAktywneKontoSzczegolow() { const uzytkownik = pobierzZalogowanegoUzytkownika(); return uzytkownik ? mapujKonto(uzytkownik) : nieznaneKonto }
+export function czyKontoArchitekta(konto: KontoSzczegolow) { return czyJestAdministratorem(pobierzUzytkownika(konto.id)) }
+export function czyKontoMozeWidziecKopie(konto: KontoSzczegolow, kopia: WersjaRoboczaGeneratora) { return czyKontoArchitekta(konto) || kopia.autorId === konto.id || kopia.dane.opiekunId === konto.id }
+export function czyKontoMozeEdytowacKopie(konto: KontoSzczegolow, kopia: WersjaRoboczaGeneratora) { return czyKontoArchitekta(konto) || kopia.dane.opiekunId === konto.id }
+export function czyKontoMozeZaakceptowacSzczegoly(konto: KontoSzczegolow, rekord: OpublikowaneSzczegolyOrganizacyjne) { return czyKontoArchitekta(konto) || (rekord.opiekunId === konto.id && czyMozeAkceptowac(pobierzUzytkownika(konto.id))) }
+export function czyKontoMozeCofnacStatus(konto: KontoSzczegolow, rekord: OpublikowaneSzczegolyOrganizacyjne) { return czyKontoMozeZaakceptowacSzczegoly(konto, rekord) }
+export function czyKontoMozeEdytowacSzczegoly(konto: KontoSzczegolow, opiekunId: string) { return czyKontoArchitekta(konto) || (Boolean(opiekunId) && opiekunId === konto.id) }
