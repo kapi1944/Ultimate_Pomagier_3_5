@@ -13,11 +13,13 @@ export type StatusUzytkownika = 'AKTYWNY' | 'ZABLOKOWANY' | 'NIEAKTYWNY'
 export type OdznakaUzytkownika = 'WYSYLACZ' | 'AKCEPTUJACY' | 'EKSPORTER' | 'ROZLICZAJACY' | 'AUDYTOR'
 export type Zwrot = '' | 'Pan' | 'Pani'
 export type TytulNaukowy = '' | 'dr' | 'dr hab.' | 'mgr' | 'inż.' | 'mgr inż.' | 'prof.'
-export type PrefiksTelefonu = '+48'
+export type PrefiksTelefonu = string
 
 export type Telefon = {
   prefiks: PrefiksTelefonu
   numer: string
+  krajIso2?: string
+  numerE164?: string
 }
 
 export type Uzytkownik = {
@@ -120,7 +122,6 @@ export function pobierzNazweWyswietlanaUzytkownika(uzytkownik: Pick<Uzytkownik, 
 export function pobierzInicjalyUzytkownika(uzytkownik: Pick<Uzytkownik, 'imie' | 'nazwisko' | 'pseudonim'>) {
   const czesci = `${uzytkownik.imie} ${uzytkownik.nazwisko}`.trim().split(/\s+/).filter(Boolean)
   const inicjaly = czesci.slice(0, 2).map((czesc) => czesc[0]).join('')
-
   return (inicjaly || uzytkownik.pseudonim.slice(0, 2) || '?').toLocaleUpperCase('pl')
 }
 
