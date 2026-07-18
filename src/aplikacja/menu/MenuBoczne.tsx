@@ -188,11 +188,15 @@ export default function MenuBoczne({
       czyAktywna ? 'menu-boczne__przycisk--aktywny' : '',
       czyAktywnaJakoRodzic ? 'menu-boczne__przycisk--rodzic-aktywny' : '',
     ].filter(Boolean).join(' ')
+    const klasyElementu = [
+      'menu-boczne__element',
+      czyRozwijalna && czyRozwinieta ? 'menu-boczne__element--rozwiniety' : '',
+    ].filter(Boolean).join(' ')
 
     return (
       <Fragment key={pozycja.id}>
         {pozycja.czySeparatorPrzed && <li aria-hidden="true" className="menu-boczne__separator" role="separator" />}
-        <li className="menu-boczne__element" data-poziom={poziom}>
+        <li className={klasyElementu} data-poziom={poziom}>
           <button
             aria-controls={idPanelu}
             aria-expanded={czyRozwijalna ? czyRozwinieta : undefined}

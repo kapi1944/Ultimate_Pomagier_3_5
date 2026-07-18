@@ -125,11 +125,18 @@
 }
 
 .menu-boczne__lista--dzieci {
-  gap: 4px;
-  padding: 5px 0 1px;
+  gap: 5px;
+  padding: 6px 0 2px;
 }
 
-.menu-boczne__element { position: relative; min-width: 0; }
+.menu-boczne__element {
+  position: relative;
+  min-width: 0;
+}
+
+.menu-boczne__element--rozwiniety {
+  margin-bottom: 12px;
+}
 
 .menu-boczne__separator {
   height: 1px;
@@ -141,17 +148,21 @@
   position: relative;
   z-index: 0;
   display: flex;
+  box-sizing: border-box;
   width: 100%;
-  min-height: 38px;
+  min-height: 40px;
   align-items: center;
   gap: 9px;
+  padding-top: 7px;
+  padding-right: 10px;
+  padding-bottom: 7px;
   border: 1px solid rgba(102, 187, 128, 0.34);
   border-radius: 7px;
   background: #072515;
   color: #d5f3dd;
   cursor: pointer;
   font: inherit;
-  line-height: 1.25;
+  line-height: 1.3;
   text-align: left;
   transform: scale(1);
   transform-origin: center;
@@ -167,13 +178,21 @@
   border-color: rgba(74, 222, 128, 0.5);
   background: #104428;
   color: #f2fff5;
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.055em;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.015em;
 }
 
-.menu-boczne__przycisk--poziom-1 { background: #0a301c; }
-.menu-boczne__przycisk--poziom-2 { background: #061f12; color: #c6e8cf; }
+.menu-boczne__przycisk--poziom-1 {
+  min-height: 42px;
+  background: #0a301c;
+}
+
+.menu-boczne__przycisk--poziom-2 {
+  min-height: 42px;
+  background: #061f12;
+  color: #c6e8cf;
+}
 
 .menu-boczne__przycisk--poziom-1::before,
 .menu-boczne__przycisk--poziom-2::before {
@@ -203,7 +222,7 @@
   background: #4ade80;
   box-shadow: inset 4px 0 0 #dcfce7;
   color: #052e12;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .menu-boczne__przycisk--aktywny:hover {
