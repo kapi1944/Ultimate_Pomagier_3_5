@@ -12,6 +12,7 @@
 .profil-uzytkownika__telefon { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 6px; }
 .profil-uzytkownika__zlozone-pole { display: flex; gap: 6px; align-items: center; }
 .profil-uzytkownika__zlozone-pole > :first-child { flex: 1; min-width: 0; }
+.profil-uzytkownika__zlozone-pole .pole-telefonu { flex: 1; min-width: 0; }
 .profil-uzytkownika__odznaki, .profil-uzytkownika__akcje, .profil-uzytkownika fieldset { display: flex; flex-wrap: wrap; gap: 8px; }
 .profil-uzytkownika button { border: 1px solid rgba(74,222,128,.45); border-radius: 6px; background: #0b2b17; color: #f4fff7; cursor: pointer; font: inherit; padding: 7px 10px; }
 .profil-uzytkownika button:focus-visible, .profil-uzytkownika input:focus-visible, .profil-uzytkownika select:focus-visible { outline: 2px solid #fef08a; outline-offset: 2px; }

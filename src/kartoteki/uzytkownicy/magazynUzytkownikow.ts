@@ -1,12 +1,13 @@
 import { daneStartoweUzytkownikow } from './daneUzytkownikow'
-import { walidujEmail, walidujTelefonPolski } from '../../wspolne/walidacja/walidatoryDanych'
+import { walidujEmail, walidujTelefonMiedzynarodowy } from '../../wspolne/walidacja/walidatoryDanych'
+import { normalizujTelefon } from '../../wspolne/telefon/telefon'
 import { czyJestArchitektem } from './typyUzytkownikow'
 import type { FormularzUzytkownika, RolaUzytkownika, Uzytkownik } from './typyUzytkownikow'
 
 export const kluczMagazynuUzytkownikow = 'ultimatePomagier.uzytkownicy.v1'
 
 function skopiujUzytkownika(uzytkownik: Uzytkownik): Uzytkownik {
-  return { ...uzytkownik, emaile: [...uzytkownik.emaile], telefony: uzytkownik.telefony.map((telefon) => ({ ...telefon })), odznaki: [...uzytkownik.odznaki], aliasyHistoryczne: [...uzytkownik.aliasyHistoryczne] }
+  return { ...uzytkownik, emaile: [...uzytkownik.emaile], telefony: uzytkownik.telefony.map(normalizujTelefon), odznaki: [...uzytkownik.odznaki], aliasyHistoryczne: [...uzytkownik.aliasyHistoryczne] }
 }
 
 function czyPoprawnyUzytkownik(wartosc: unknown): wartosc is Uzytkownik {
@@ -93,7 +94,7 @@ function czyZmianaWplywaNaUprawnienia(przed: Uzytkownik, po: Uzytkownik) {
 function walidujDaneProfilu(dane: DaneProfiluAdministracyjnego, uzytkownikId: string) {
   if (!dane.imie.trim() || !dane.nazwisko.trim()) return 'Imię i nazwisko są wymagane.'
   if (!dane.emaile.length || dane.emaile.some((email) => !walidujEmail(email.trim()))) return 'Podaj prawidłowy adres e-mail.'
-  if (dane.telefony.some((telefon) => !walidujTelefonPolski(telefon))) return 'Podaj prawidłowy numer telefonu.'
+  if (dane.telefony.some((telefon) => !walidujTelefonMiedzynarodowy(telefon))) return 'Podaj prawidłowy numer telefonu dla wybranego kraju.'
   if (!dane.login.trim() || !czyLoginJestDostepny(dane.login, uzytkownikId)) return 'Login jest zajęty lub nieprawidłowy.'
   if (dane.emaile.some((email) => !czyEmailJestDostepny(email, uzytkownikId))) return 'Adres e-mail jest już przypisany do innego użytkownika.'
   if (!czyPoprawnyKolor(dane.kolorProfilu)) return 'Kolor profilu musi mieć postać #RRGGBB.'

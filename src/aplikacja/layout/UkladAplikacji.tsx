@@ -61,9 +61,13 @@ const dostepneWidoki: WidokNawigacji[] = [
   'dokumenty_kopie_robocze',
   'replikator_dokumentow',
   'listy-obecnosci',
+  'listy_obecnosci_kopie_robocze',
   'ankiety',
+  'ankiety_kopie_robocze',
   'dyplomy',
+  'dyplomy_kopie_robocze',
   'karta-na-drzwi',
+  'karta_na_drzwi_kopie_robocze',
   'programy_szkolen',
   'programy_szkolen_kopie_robocze',
   'kartoteki',
@@ -159,12 +163,20 @@ function renderujWidok(
       return <WidokReplikatoraDokumentow />
     case 'listy-obecnosci':
       return <WidokListyObecnosciZDokumentu dokumentIdZTrasy={pobierzIdListyObecnosciZeSciezki()} />
+    case 'listy_obecnosci_kopie_robocze':
+      return <WidokKopiiRoboczychDokumentow tytul="Kopie robocze — Listy obecności" opis="Robocze Listy obecności ze wspólnego rejestru dokumentów." typyStale={['LISTA_OBECNOSCI']} otworzDokument={otworzDokument} />
     case 'ankiety':
       return <WidokAnkiet />
+    case 'ankiety_kopie_robocze':
+      return <WidokKopiiRoboczychDokumentow tytul="Kopie robocze — Ankiety" opis="Robocze Ankiety ze wspólnego rejestru dokumentów." typyStale={['ANKIETA']} otworzDokument={otworzDokument} />
     case 'dyplomy':
       return <WidokDyplomow />
+    case 'dyplomy_kopie_robocze':
+      return <WidokKopiiRoboczychDokumentow tytul="Kopie robocze — Dyplomy" opis="Robocze certyfikaty, zaświadczenia i dyplomy." typyStale={['CERTYFIKAT', 'ZASWIADCZENIE', 'DYPLOM']} otworzDokument={otworzDokument} />
     case 'karta-na-drzwi':
       return <WidokKartNaDrzwi />
+    case 'karta_na_drzwi_kopie_robocze':
+      return <WidokKopiiRoboczychDokumentow tytul="Kopie robocze — Karty na drzwi" opis="Robocze Karty na drzwi ze wspólnego rejestru dokumentów." typyStale={['KARTA_NA_DRZWI']} otworzDokument={otworzDokument} />
     case 'programy_szkolen':
       return <WidokProgramowSzkolen key={`${wersjaProgramu}-${pobierzIdProgramuZeSciezki() ?? 'nowy'}`} dokumentIdZTrasy={pobierzIdProgramuZeSciezki()} />
     case 'programy_szkolen_kopie_robocze':
@@ -294,13 +306,41 @@ export default function UkladAplikacji() {
       return
     }
 
+    const daneTekstowe = dokument.daneDokumentu && typeof dokument.daneDokumentu === 'object'
+      ? (dokument.daneDokumentu as { tekst?: unknown }).tekst
+      : undefined
+
+    if (dokument.typ === 'LISTA_OBECNOSCI' && typeof daneTekstowe === 'string') {
+      localStorage.setItem('ultimate-pomagier.listy-obecnosci.szkic', daneTekstowe)
+      localStorage.setItem('ultimate-pomagier.listy-obecnosci.szkic.dokumentId', dokument.id)
+      ustawWidok('listy-obecnosci')
+      return
+    }
+
+    if (dokument.typ === 'ANKIETA' && typeof daneTekstowe === 'string') {
+      localStorage.setItem('ultimate-pomagier.ankiety.szkic', daneTekstowe)
+      localStorage.setItem('ultimate-pomagier.ankiety.szkic.dokumentId', dokument.id)
+      ustawWidok('ankiety')
+      return
+    }
+
+    if (dokument.typ === 'KARTA_NA_DRZWI' && typeof daneTekstowe === 'string') {
+      localStorage.setItem('ultimate-pomagier.karta-na-drzwi.szkic', daneTekstowe)
+      localStorage.setItem('ultimate-pomagier.karta-na-drzwi.szkic.dokumentId', dokument.id)
+      ustawWidok('karta-na-drzwi')
+      return
+    }
+
+    if (dokument.typ === 'CERTYFIKAT' || dokument.typ === 'ZASWIADCZENIE' || dokument.typ === 'DYPLOM') {
+      localStorage.setItem('ultimate-pomagier.dyplomy.generator-pawla', JSON.stringify(dokument.daneDokumentu))
+      localStorage.setItem('ultimate-pomagier.dyplomy.generator-pawla.dokumentId', dokument.id)
+      ustawWidok('dyplomy')
+      return
+    }
+
     if (dokument.typ === 'LISTA_OBECNOSCI') {
       const sciezka = `/dokumenty/listy-obecnosci/${encodeURIComponent(dokument.id)}`
-
-      if (window.location.pathname !== sciezka) {
-        window.history.pushState({ widok: 'listy-obecnosci' }, '', sciezka)
-      }
-
+      if (window.location.pathname !== sciezka) window.history.pushState({ widok: 'listy-obecnosci' }, '', sciezka)
       ustawAktywnyWidok('listy-obecnosci')
       return
     }
