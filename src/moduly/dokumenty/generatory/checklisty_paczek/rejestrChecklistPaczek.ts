@@ -5,6 +5,7 @@ import { repozytoriumWspolnychDokumentow } from '../../../../wspolne/dokumenty/r
 import type { KontekstDokumentuSzkolenia } from '../../../../wspolne/integracje/szczegolyDoDokumentow'
 import type { RolaUzytkownika } from '../../../../kartoteki/uzytkownicy/typyUzytkownikow'
 import {
+  normalizujDaneChecklisty,
   type DaneChecklistyPaczki,
   type DaneOdbiorcyChecklisty,
   type MigawkaZrodlaChecklisty,
@@ -12,16 +13,20 @@ import {
   type ProsbaOWeryfikacje,
   type StatusChecklistyPaczki,
   type TypZalacznikaChecklisty,
+  type UwagaZeSzczegolow,
   type ZalacznikChecklisty,
   utworzDomyslneDaneChecklisty,
 } from './modelChecklistyPaczki'
 
 export type DokumentChecklistyPaczki = Dokument<DaneChecklistyPaczki, Record<string, never>>
 
-type DaneZrodlaChecklisty = {
+export type DaneZrodlaChecklisty = {
   opiekunId: string
   finansowanie: string
   odbiorca: DaneOdbiorcyChecklisty
+  logotypy?: Array<{ nazwa: string; podglad: string }>
+  uwagiZeSzczegolow?: UwagaZeSzczegolow[]
+  wzoryKlienta?: Record<string, string>
 }
 
 function utworzId(prefiks: string) {
@@ -31,7 +36,8 @@ function utworzId(prefiks: string) {
 function jakoDokumentChecklisty(dokument: Dokument<unknown, unknown>): DokumentChecklistyPaczki | null {
   if (dokument.typ !== 'CHECKLISTA_PACZKI' || !dokument.daneDokumentu || typeof dokument.daneDokumentu !== 'object') return null
   const dane = dokument.daneDokumentu as Partial<DaneChecklistyPaczki>
-  return typeof dane.identyfikator === 'string' && Array.isArray(dane.pozycje) && Array.isArray(dane.kategorie) ? dokument as DokumentChecklistyPaczki : null
+  if (typeof dane.identyfikator !== 'string' || !Array.isArray(dane.pozycje) || !Array.isArray(dane.kategorie)) return null
+  return { ...dokument, daneDokumentu: normalizujDaneChecklisty(dane as DaneChecklistyPaczki) } as DokumentChecklistyPaczki
 }
 
 function pobierzStatusWspolny(status: StatusChecklistyPaczki): StatusDokumentu {
@@ -46,9 +52,13 @@ function utworzMigawke(kontekst: KontekstDokumentuSzkolenia, grupaId: string, da
   const grupa = kontekst.grupy.find((pozycja) => pozycja.id === grupaId)
   if (!grupa) return null
   const lokalizacja = grupa.lokalizacje.find((pozycja) => Boolean(pozycja.nazwa))
+  const logotypy = daneZrodla.logotypy?.length
+    ? daneZrodla.logotypy
+    : kontekst.organizator.logoNazwaPliku ? [{ nazwa: kontekst.organizator.logoNazwaPliku, podglad: kontekst.organizator.logoPodglad ?? '' }] : []
   return {
     szczegolyOrganizacyjneId: kontekst.zrodlo.szczegolyOrganizacyjneId,
     grupaId,
+    nazwaGrupy: grupa.nazwa,
     odciskDanych: kontekst.zrodlo.odciskDanych,
     tytulSzkolenia: kontekst.szkolenie.tytul,
     klient: kontekst.klient.nazwa ?? '',
@@ -58,18 +68,37 @@ function utworzMigawke(kontekst: KontekstDokumentuSzkolenia, grupaId: string, da
     miejsce: lokalizacja?.nazwa ?? (grupa.tryb === 'Online' ? 'Online' : ''),
     uczestnicy: grupa.uczestnicy.map((uczestnik) => ({ id: uczestnik.id, nazwaPelna: uczestnik.nazwaPelna })),
     liczbaUczestnikow: grupa.liczbaUczestnikow,
-    logotypy: kontekst.organizator.logoNazwaPliku ? [{ nazwa: kontekst.organizator.logoNazwaPliku, podglad: kontekst.organizator.logoPodglad ?? '' }] : [],
+    logotypy,
     finansowanie: daneZrodla.finansowanie,
+    uwagiZeSzczegolow: daneZrodla.uwagiZeSzczegolow ?? [],
     odbiorca: daneZrodla.odbiorca,
   }
 }
 
 function pobierzTytul(migawka: MigawkaZrodlaChecklisty | null) {
-  return `Checklista paczki — ${migawka?.tytulSzkolenia || 'bez wskazanej grupy'}${migawka ? ` — ${migawka.grupaId}` : ''}`
+  return `Checklista paczki — ${migawka?.tytulSzkolenia || 'bez wskazanej grupy'}${migawka ? ` — ${migawka.nazwaGrupy}` : ''}`
 }
 
 function dodajWpisHistorii(dane: DaneChecklistyPaczki, typ: DaneChecklistyPaczki['historia'][number]['typ'], uzytkownikId: string | null, opis: string): DaneChecklistyPaczki {
   return { ...dane, historia: [...dane.historia, { id: utworzId('audyt'), typ, data: new Date().toISOString(), uzytkownikId, opis }] }
+}
+
+function pobierzKluczWzoruKlienta(nazwaPozycji: string) {
+  const nazwa = nazwaPozycji.toLocaleLowerCase('pl')
+  if (nazwa.includes('lista obecności')) return 'listaObecnosci'
+  if (nazwa.includes('ankiet')) return 'ankiety'
+  if (nazwa.includes('certyfikat')) return 'certyfikaty'
+  if (nazwa.includes('program') || nazwa.includes('teczki')) return 'program'
+  if (nazwa.includes('karta na drzwi')) return 'kartaInformacyjna'
+  if (nazwa.includes('podręczniki')) return 'podreczniki'
+  if (nazwa.includes('materiały dodatkowe')) return 'materialyDodatkowe'
+  if (nazwa.includes('pre/post')) return 'projektTesty'
+  return ''
+}
+
+function zastosujWzoryKlienta(dane: DaneChecklistyPaczki, wzoryKlienta?: Record<string, string>) {
+  if (!wzoryKlienta) return dane
+  return { ...dane, pozycje: dane.pozycje.map((pozycja) => ({ ...pozycja, wzorKlienta: wzoryKlienta[pobierzKluczWzoruKlienta(pozycja.nazwa)] ?? pozycja.wzorKlienta })) }
 }
 
 export function pobierzChecklistyPaczek() {
@@ -91,7 +120,7 @@ export function utworzChecklistePaczkiZeZrodla(kontekst: KontekstDokumentuSzkole
   const dokumenty = repozytoriumWspolnychDokumentow.pobierzWszystkie()
   const numerDzienny = pobierzKolejnyNumerDziennyDokumentu(dokumenty, 'CHECKLISTA_PACZKI')
   const identyfikator = utworzIdentyfikatorDokumentu('CHECKLISTA_PACZKI', numerDzienny, 1)
-  const dane = utworzDomyslneDaneChecklisty({ identyfikator, numerDzienny, migawka, wariantOnline: false, uzytkownikId })
+  const dane = zastosujWzoryKlienta(utworzDomyslneDaneChecklisty({ identyfikator, numerDzienny, migawka, wariantOnline: false, uzytkownikId }), daneZrodla.wzoryKlienta)
   return repozytoriumWspolnychDokumentow.utworz(utworzNowyDokument({
     typ: 'CHECKLISTA_PACZKI',
     tytul: pobierzTytul(migawka),
@@ -116,7 +145,7 @@ export function utworzRecznaChecklistePaczki(uzytkownikId: string | null) {
 export function zapiszChecklistePaczki(id: string, dane: DaneChecklistyPaczki, uzytkownikId: string | null, opis = 'Zapisano zmiany checklisty.') {
   const dokument = pobierzChecklistePaczki(id)
   if (!dokument || dokument.status === 'ZARCHIWIZOWANY') return null
-  const zaktualizowane = dodajWpisHistorii(dane, 'EDYCJA', uzytkownikId, opis)
+  const zaktualizowane = dodajWpisHistorii(normalizujDaneChecklisty(dane), 'EDYCJA', uzytkownikId, opis)
   return repozytoriumWspolnychDokumentow.aktualizuj(id, { daneDokumentu: zaktualizowane, status: pobierzStatusWspolny(zaktualizowane.statusChecklisty), tytul: pobierzTytul(zaktualizowane.migawkaZrodla) }) as DokumentChecklistyPaczki | null
 }
 
@@ -171,7 +200,7 @@ export function utworzProsbeOWeryfikacje(id: string, odUzytkownikaId: string, do
 
 export function otworzPonownieCheckliste(id: string, rola: RolaUzytkownika, uzytkownikId: string | null) {
   const dokument = pobierzChecklistePaczki(id)
-  if (!dokument || rola !== 'ADMINISTRATOR') return null
+  if (!dokument || (rola !== 'ADMINISTRATOR' && rola !== 'ARCHITEKT')) return null
   const dane = dodajWpisHistorii({ ...dokument.daneDokumentu, statusChecklisty: 'KOPIA_ROBOCZA' }, 'PONOWNE_OTWARCIE', uzytkownikId, 'Administrator ponownie otworzył checklistę.')
   return repozytoriumWspolnychDokumentow.aktualizuj(id, { daneDokumentu: dane, status: 'ROBOCZY', czyZarchiwizowany: false, zarchiwizowano: null }) as DokumentChecklistyPaczki | null
 }
@@ -183,8 +212,8 @@ export function duplikujChecklistePaczki(id: string, docelowaMigawka: MigawkaZro
   const identyfikator = utworzIdentyfikatorDokumentu('CHECKLISTA_PACZKI', numerDzienny, 1)
   const dane = utworzDomyslneDaneChecklisty({ identyfikator, numerDzienny, migawka: docelowaMigawka, uzytkownikId })
   dane.kategorie = zrodlo.daneDokumentu.kategorie.map((kategoria) => ({ ...kategoria }))
-  dane.pozycje = zrodlo.daneDokumentu.pozycje.map((pozycja: PozycjaChecklisty) => ({ ...pozycja, statusGotowosci: 'NIEGOTOWE', nadpisanieReczne: null, dodatkoweEgzemplarze: [...pozycja.dodatkoweEgzemplarze] }))
+  dane.pozycje = zrodlo.daneDokumentu.pozycje.map((pozycja: PozycjaChecklisty) => ({ ...pozycja, statusGotowosci: 'NIEGOTOWE', nadpisanieReczne: null, dodatkoweEgzemplarze: pozycja.dodatkoweEgzemplarze.map((dodatek) => ({ ...dodatek })) }))
   return repozytoriumWspolnychDokumentow.utworz(utworzNowyDokument({ typ: 'CHECKLISTA_PACZKI', tytul: pobierzTytul(docelowaMigawka), generatorId: 'checklisty_paczek', daneDokumentu: dane, ustawieniaDokumentu: {}, autorId: uzytkownikId, wlascicielId: docelowaMigawka.opiekunId, integralnosc: { idZrodlowychSzczegolow: docelowaMigawka.szczegolyOrganizacyjneId, znacznikDanychZrodlowych: docelowaMigawka.odciskDanych } })) as DokumentChecklistyPaczki
 }
 
-export type { DaneZrodlaChecklisty, TypZalacznikaChecklisty }
+export type { TypZalacznikaChecklisty }
