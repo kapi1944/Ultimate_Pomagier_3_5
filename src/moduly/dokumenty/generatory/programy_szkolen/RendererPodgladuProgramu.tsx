@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import type { BlokDokumentu, DokumentBlokowy } from '../../../../wspolne/dokumenty/modelBlokowy'
+import { pobierzGruboscTekstuPozycjiListyProgramu } from './stylPozycjiListyProgramu'
 
 type StylDniPodgladu = 'pasek' | 'naglowek'
 type SeparacjaModulowPodgladu = 'brak' | 'ramka' | 'linia' | 'separator-pytan'
@@ -102,7 +103,9 @@ export default function RendererPodgladuProgramu({
               }}
             >
               <span className="program-kartka-a4__marker">{pobierzMarker(blok, liczniki, stylListy)}</span>
-              <span>{renderujMarkdownInline(blok.tresc ?? '')}</span>
+              <span style={{ fontWeight: pobierzGruboscTekstuPozycjiListyProgramu(poziom, czyPogrubiacNaglowkiListyProgramu) }}>
+                {renderujMarkdownInline(blok.tresc ?? '')}
+              </span>
             </div>
           )
         })}
