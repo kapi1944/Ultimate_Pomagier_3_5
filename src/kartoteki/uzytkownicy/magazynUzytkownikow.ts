@@ -1,4 +1,4 @@
-import { daneStartoweUzytkownikow } from './daneUzytkownikow'
+import { daneStartoweUzytkownikow, utworzIdUzytkownika } from './daneUzytkownikow'
 import { walidujEmail, walidujTelefonMiedzynarodowy } from '../../wspolne/walidacja/walidatoryDanych'
 import { normalizujTelefon } from '../../wspolne/telefon/telefon'
 import { czyJestArchitektem } from './typyUzytkownikow'
@@ -7,7 +7,8 @@ import type { FormularzUzytkownika, RolaUzytkownika, Uzytkownik } from './typyUz
 export const kluczMagazynuUzytkownikow = 'ultimatePomagier.uzytkownicy.v1'
 
 function skopiujUzytkownika(uzytkownik: Uzytkownik): Uzytkownik {
-  return { ...uzytkownik, emaile: [...uzytkownik.emaile], telefony: uzytkownik.telefony.map(normalizujTelefon), odznaki: [...uzytkownik.odznaki], aliasyHistoryczne: [...uzytkownik.aliasyHistoryczne] }
+  const emaile = uzytkownik.emaile.map((email) => email.trim()).filter(Boolean)
+  return { ...uzytkownik, email: uzytkownik.email?.trim() || emaile[0] || '', emaile, telefony: uzytkownik.telefony.map(normalizujTelefon), odznaki: [...uzytkownik.odznaki], aliasyHistoryczne: [...uzytkownik.aliasyHistoryczne] }
 }
 
 function czyPoprawnyUzytkownik(wartosc: unknown): wartosc is Uzytkownik {
@@ -114,11 +115,11 @@ function zapiszAktualizacje(wykonujacy: Uzytkownik, uzytkownikId: string, dane: 
     ? ['zwrot', 'tytulNaukowy', 'imie', 'nazwisko', 'pseudonim', 'emaile', 'telefony'] as const
     : ['zwrot', 'tytulNaukowy', 'imie', 'nazwisko', 'pseudonim', 'emaile', 'telefony', 'login', 'rola', 'organizacja', 'odznaki', 'status', 'kolorProfilu', 'aliasyHistoryczne', 'przypisanyKlientId', 'przypisanyTrenerId', 'wymagaZmianyHasla'] as const
   const ograniczoneDane = Object.fromEntries(dozwolonePola.filter((pole) => pole in dane).map((pole) => [pole, dane[pole]])) as Partial<DaneProfiluAdministracyjnego>
-  const kandydat = { ...poprzedni, ...ograniczoneDane, id: poprzedni.id, utworzono: poprzedni.utworzono, ostatnieLogowanie: poprzedni.ostatnieLogowanie, wersjaUprawnien: poprzedni.wersjaUprawnien }
+  const kandydat = { ...poprzedni, ...ograniczoneDane, email: ograniczoneDane.emaile?.[0]?.trim() || poprzedni.email, id: poprzedni.id, utworzono: poprzedni.utworzono, ostatnieLogowanie: poprzedni.ostatnieLogowanie, wersjaUprawnien: poprzedni.wersjaUprawnien }
 
   if (kandydat.rola === 'ARCHITEKT' && kandydat.id !== 'administrator-kacper-madej') return { blad: 'Rolę Architekt może mieć wyłącznie Kacper Madej.' }
-  if (poprzedni.id === 'administrator-kacper-madej' && (kandydat.rola !== 'ARCHITEKT' || kandydat.status !== 'AKTYWNY' || kandydat.organizacja === 'KLIENT' || kandydat.organizacja === 'ZEWNĘTRZNY')) return { blad: 'Chronione konto Architekta musi pozostać aktywne, wewnętrzne i z rolą Architekt.' }
-  if (wykonujacy.id === poprzedni.id && wykonujacy.rola === 'ADMINISTRATOR' && (kandydat.rola !== 'ADMINISTRATOR' || kandydat.status !== 'AKTYWNY' || kandydat.organizacja === 'KLIENT' || kandydat.organizacja === 'ZEWNĘTRZNY')) return { blad: 'Administrator nie może osłabić własnego konta.' }
+  if (poprzedni.id === 'administrator-kacper-madej' && (kandydat.rola !== 'ARCHITEKT' || kandydat.status !== 'AKTYWNY' || kandydat.organizacja === 'KLIENT' || kandydat.organizacja === 'ZEWNETRZNY')) return { blad: 'Chronione konto Architekta musi pozostać aktywne, wewnętrzne i z rolą Architekt.' }
+  if (wykonujacy.id === poprzedni.id && wykonujacy.rola === 'ADMINISTRATOR' && (kandydat.rola !== 'ADMINISTRATOR' || kandydat.status !== 'AKTYWNY' || kandydat.organizacja === 'KLIENT' || kandydat.organizacja === 'ZEWNETRZNY')) return { blad: 'Administrator nie może osłabić własnego konta.' }
   const bladWalidacji = walidujDaneProfilu(kandydat, poprzedni.id)
   if (bladWalidacji) return { blad: bladWalidacji }
 
@@ -132,3 +133,14 @@ function zapiszAktualizacje(wykonujacy: Uzytkownik, uzytkownikId: string, dane: 
 export function zaktualizujWlasnyProfil(wykonujacy: Uzytkownik, uzytkownikId: string, dane: DaneWlasnegoProfilu) { return zapiszAktualizacje(wykonujacy, uzytkownikId, dane, 'wlasny') }
 export function zaktualizujUzytkownikaPrzezAdministratora(wykonujacy: Uzytkownik, uzytkownikId: string, dane: Partial<DaneProfiluAdministracyjnego>) { return zapiszAktualizacje(wykonujacy, uzytkownikId, dane, 'administrator') }
 export function zaktualizujUzytkownikaPrzezArchitekta(wykonujacy: Uzytkownik, uzytkownikId: string, dane: Partial<DaneProfiluAdministracyjnego>) { return zapiszAktualizacje(wykonujacy, uzytkownikId, dane, 'architekt') }
+
+export function utworzUzytkownikaPrzezAdministratora(wykonujacy: Uzytkownik, dane: FormularzUzytkownika): WynikAktualizacji {
+  if (wykonujacy.rola !== 'ADMINISTRATOR' && !czyJestArchitektem(wykonujacy)) return { blad: 'Brak uprawnień do utworzenia konta.' }
+  if (dane.rola === 'ARCHITEKT') return { blad: 'Rola Architekt jest chroniona i nie może zostać nadana podczas tworzenia konta.' }
+  const bladWalidacji = walidujDaneProfilu(dane, '')
+  if (bladWalidacji) return { blad: bladWalidacji }
+  const teraz = new Date().toISOString()
+  const uzytkownik: Uzytkownik = { ...dane, id: utworzIdUzytkownika(dane), email: dane.emaile[0].trim(), emaile: dane.emaile.map((email) => email.trim()), telefony: dane.telefony.map(normalizujTelefon), odznaki: [...dane.odznaki], aliasyHistoryczne: dane.aliasyHistoryczne.map((alias) => alias.trim()).filter(Boolean), wymagaZmianyHasla: false, wersjaUprawnien: 1, ostatnieLogowanie: null, utworzono: teraz, zaktualizowano: teraz }
+  if (!zapiszUzytkownikow([...pobierzUzytkownikow(), uzytkownik])) return { blad: 'Nie udało się zapisać nowego użytkownika.' }
+  return { uzytkownik: skopiujUzytkownika(uzytkownik) }
+}

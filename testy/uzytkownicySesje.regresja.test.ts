@@ -13,8 +13,8 @@ globalThis.localStorage = {
 } as Storage
 
 const { daneStartoweUzytkownikow } = await import('../src/kartoteki/uzytkownicy/daneUzytkownikow.ts')
-const { kluczMagazynuUzytkownikow, pobierzAktywnychUzytkownikowWedlugRoli, pobierzUzytkownika, pobierzUzytkownikow, zapiszUzytkownikow, wykonajMigracjeRoliArchitekta, zainicjalizujMagazynUzytkownikow, zaktualizujUzytkownikaPrzezAdministratora, zaktualizujUzytkownikaPrzezArchitekta } = await import('../src/kartoteki/uzytkownicy/magazynUzytkownikow.ts')
-const { czyJestAdministratorem, czyMozeAkceptowac, czyMozeEksportowac } = await import('../src/kartoteki/uzytkownicy/uprawnienia.ts')
+const { kluczMagazynuUzytkownikow, pobierzAktywnychUzytkownikowWedlugRoli, pobierzUzytkownika, pobierzUzytkownikow, zapiszUzytkownikow, utworzUzytkownikaPrzezAdministratora, wykonajMigracjeRoliArchitekta, zainicjalizujMagazynUzytkownikow, zaktualizujUzytkownikaPrzezAdministratora, zaktualizujUzytkownikaPrzezArchitekta } = await import('../src/kartoteki/uzytkownicy/magazynUzytkownikow.ts')
+const { czyJestAdministratorem, czyMozeAkceptowac, czyMozeEksportowac, czyMozeWysylac } = await import('../src/kartoteki/uzytkownicy/uprawnienia.ts')
 const { kluczSesjiUzytkownika, pobierzSesje, pobierzZalogowanegoUzytkownika, rozpocznijSesje, zakonczSesje } = await import('../src/aplikacja/logowanie/sesjaUzytkownika.ts')
 const { czyKontoMozeWidziecKopie, pobierzAktywneKontoSzczegolow, pobierzKolorTlaOpiekuna, pobierzKontoSzczegolow } = await import('../src/moduly/zamkniete/szczegoly_organizacyjne/uzytkownicySzczegolow.ts')
 
@@ -128,4 +128,24 @@ test('struktura panelu i menu udostępnia lokalne logowanie, profil oraz dostęp
   assert.match(naglowek, /Wyloguj/)
   assert.match(naglowek, /AvatarUzytkownika/)
   assert.match(odznaka, /aria-label/)
+})
+
+test('administrator tworzy konto w centralnym magazynie, a odznaka Wysyłacz działa po utworzeniu', () => {
+  wyczyscStan()
+  const uzytkownicy = zainicjalizujMagazynUzytkownikow()
+  const administrator = uzytkownicy.find((uzytkownik) => uzytkownik.id === 'architekt-systemu')!
+  const pracownik = uzytkownicy.find((uzytkownik) => uzytkownik.id === 'Iza')!
+  const dane = { zwrot: 'Pani', tytulNaukowy: '', imie: 'Nowa', nazwisko: 'Osoba', pseudonim: 'Nowa', emaile: ['nowa.osoba@pomagier.local'], telefony: [{ prefiks: '+48', numer: '512 345 678', krajIso2: 'PL', numerE164: '+48512345678' }], login: 'nowa.osoba', rola: 'PRACOWNIK', organizacja: 'SEMPER', odznaki: ['WYSYLACZ'], status: 'AKTYWNY', kolorProfilu: '#38761d', aliasyHistoryczne: [], wymagaZmianyHasla: false } as Parameters<typeof utworzUzytkownikaPrzezAdministratora>[1]
+  assert.ok(utworzUzytkownikaPrzezAdministratora(pracownik, dane).blad)
+  const wynik = utworzUzytkownikaPrzezAdministratora(administrator, dane)
+  assert.equal(wynik.uzytkownik?.email, 'nowa.osoba@pomagier.local')
+  assert.equal(czyMozeWysylac(wynik.uzytkownik), true)
+  assert.equal(pobierzUzytkownika('nowa.osoba')?.id, wynik.uzytkownik?.id)
+  assert.ok(utworzUzytkownikaPrzezAdministratora(administrator, { ...dane, rola: 'ARCHITEKT' }).blad)
+})
+
+test('widok użytkowników komunikuje lokalny tryb bez pola hasła', () => {
+  const widok = readFileSync(new URL('../src/kartoteki/uzytkownicy/WidokUzytkownikow.tsx', import.meta.url), 'utf8')
+  assert.match(widok, /Utwórz konto/)
+  assert.doesNotMatch(widok, /type="password"/)
 })

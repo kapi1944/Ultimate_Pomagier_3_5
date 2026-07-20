@@ -60,7 +60,7 @@ export type Uzytkownik = {
   zaktualizowano: string
 }
 
-export type FormularzUzytkownika = Omit<Uzytkownik, 'id' | 'ostatnieLogowanie' | 'utworzono' | 'zaktualizowano' | 'wersjaUprawnien'>
+export type FormularzUzytkownika = Omit<Uzytkownik, 'id' | 'email' | 'ostatnieLogowanie' | 'utworzono' | 'zaktualizowano' | 'wersjaUprawnien'>
 export type KluczBledu = keyof FormularzUzytkownika | `email-${number}` | `telefon-${number}`
 export type BledyFormularza = Partial<Record<KluczBledu, string>>
 export type TrybFormularza = 'edycja' | 'nowy'

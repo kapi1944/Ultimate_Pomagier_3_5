@@ -8,6 +8,7 @@ import { pobierzSciezkeGeneratora, pobierzWidokGeneratoraZeSciezki } from '../na
 import WidokKartotek, { type ZakladkaKartotek } from '../../kartoteki/WidokKartotek'
 import WidokProfiluUzytkownika from '../../kartoteki/uzytkownicy/WidokProfiluUzytkownika'
 import WidokKopiiRoboczychDokumentow from '../../moduly/dokumenty/WidokKopiiRoboczychDokumentow'
+import WidokUzytkownikow from '../../kartoteki/uzytkownicy/WidokUzytkownikow'
 import WidokWszystkichDokumentow from '../../moduly/dokumenty/WidokWszystkichDokumentow'
 import WidokAnkiet from '../../moduly/dokumenty/generatory/ankiety/WidokAnkiet'
 import WidokDyplomow from '../../moduly/dokumenty/generatory/dyplomy/WidokDyplomow'
@@ -75,6 +76,7 @@ const dostepneWidoki: WidokNawigacji[] = [
   'programy_szkolen_kopie_robocze',
   'kartoteki',
   'kartoteki_trenerzy',
+  'kartoteki_uzytkownicy',
   'kartoteki_klienci',
   'kartoteki_lokalizacje',
   'kartoteki_szablony_dokumentow',
@@ -208,6 +210,8 @@ function renderujWidok(
       return <WidokKartotek poZmianieZakladki={zmienZakladkeKartotek} />
     case 'kartoteki_trenerzy':
       return <WidokKartotek key="kartoteki_trenerzy" aktywnaZakladkaPoczatkowa="trenerzy" poZmianieZakladki={zmienZakladkeKartotek} />
+    case 'kartoteki_uzytkownicy':
+      return <WidokUzytkownikow otworzProfil={wybierzProfil} />
     case 'kartoteki_klienci':
       return <WidokKartotek key="kartoteki_klienci" aktywnaZakladkaPoczatkowa="klienci" poZmianieZakladki={zmienZakladkeKartotek} />
     case 'kartoteki_lokalizacje':

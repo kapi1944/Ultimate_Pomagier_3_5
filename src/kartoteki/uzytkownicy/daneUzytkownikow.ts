@@ -7,8 +7,8 @@ export const zwroty: Exclude<Zwrot, ''>[] = ['Pan', 'Pani']
 export const tytulyNaukowe: TytulNaukowy[] = ['', 'dr', 'dr hab.', 'mgr', 'inż.', 'mgr inż.', 'prof.']
 export const roleUzytkownikow: RolaUzytkownika[] = ['ARCHITEKT', 'ADMINISTRATOR', 'MODERATOR', 'OPIEKUN', 'PRACOWNIK', 'TRENER', 'KOORDYNATOR_KLIENTA', 'GOSC']
 
-function utworzUzytkownika(dane: Omit<Uzytkownik, 'utworzono' | 'zaktualizowano' | 'wersjaUprawnien' | 'wymagaZmianyHasla'>): Uzytkownik {
-  return { ...dane, telefony: dane.telefony.map(normalizujTelefon), wymagaZmianyHasla: false, wersjaUprawnien: 1, utworzono: dataStartowa, zaktualizowano: dataStartowa }
+function utworzUzytkownika(dane: Omit<Uzytkownik, 'email' | 'ostatnieLogowanie' | 'utworzono' | 'zaktualizowano' | 'wersjaUprawnien' | 'wymagaZmianyHasla'>): Uzytkownik {
+  return { ...dane, email: dane.emaile[0] ?? '', telefony: dane.telefony.map(normalizujTelefon), wymagaZmianyHasla: false, wersjaUprawnien: 1, ostatnieLogowanie: null, utworzono: dataStartowa, zaktualizowano: dataStartowa }
 }
 
 export const daneStartoweUzytkownikow: Uzytkownik[] = [
@@ -21,7 +21,7 @@ export const daneStartoweUzytkownikow: Uzytkownik[] = [
   utworzUzytkownika({ id: 'Dawid', zwrot: 'Pan', tytulNaukowy: '', imie: 'Dawid', nazwisko: '', pseudonim: 'Dawid', emaile: ['dawid@pomagier.local'], telefony: [{ prefiks: '+48', numer: '510 000 003' }], login: 'dawid', rola: 'OPIEKUN', organizacja: 'IIST', odznaki: ['AKCEPTUJACY'], status: 'AKTYWNY', kolorProfilu: '#f6b26b', aliasyHistoryczne: ['dawid'] }),
   utworzUzytkownika({ id: 'Kasia RB', zwrot: 'Pani', tytulNaukowy: '', imie: 'Kasia', nazwisko: 'RB', pseudonim: 'Kasia RB', emaile: ['kasia.rb@pomagier.local'], telefony: [{ prefiks: '+48', numer: '510 000 004' }], login: 'kasia.rb', rola: 'OPIEKUN', organizacja: 'SEMPER', odznaki: ['AKCEPTUJACY'], status: 'AKTYWNY', kolorProfilu: '#fce4d6', aliasyHistoryczne: ['kasia rb', 'Kasia'] }),
   utworzUzytkownika({ id: 'konto-zablokowane', zwrot: 'Pan', tytulNaukowy: '', imie: 'Konto', nazwisko: 'Zablokowane', pseudonim: 'Zablokowane', emaile: ['zablokowane@pomagier.local'], telefony: [{ prefiks: '+48', numer: '510 000 005' }], login: 'zablokowane', rola: 'PRACOWNIK', organizacja: 'SEMPER', odznaki: [], status: 'ZABLOKOWANY', kolorProfilu: '#999999', aliasyHistoryczne: [] }),
-  utworzUzytkownika({ id: 'konto-nieaktywne', zwrot: 'Pani', tytulNaukowy: '', imie: 'Konto', nazwisko: 'Nieaktywne', pseudonim: 'Nieaktywne', emaile: ['nieaktywne@pomagier.local'], telefony: [{ prefiks: '+48', numer: '510 000 006' }], login: 'nieaktywne', rola: 'GOSC', organizacja: 'ZEWNĘTRZNY', odznaki: [], status: 'NIEAKTYWNY', kolorProfilu: '#999999', aliasyHistoryczne: [] }),
+  utworzUzytkownika({ id: 'konto-nieaktywne', zwrot: 'Pani', tytulNaukowy: '', imie: 'Konto', nazwisko: 'Nieaktywne', pseudonim: 'Nieaktywne', emaile: ['nieaktywne@pomagier.local'], telefony: [{ prefiks: '+48', numer: '510 000 006' }], login: 'nieaktywne', rola: 'GOSC', organizacja: 'ZEWNETRZNY', odznaki: [], status: 'NIEAKTYWNY', kolorProfilu: '#999999', aliasyHistoryczne: [] }),
 ]
 
 export function utworzPustyFormularz(): FormularzUzytkownika {
@@ -32,13 +32,14 @@ export function mapujUzytkownikaNaFormularz(uzytkownik: Uzytkownik): FormularzUz
   const formularz = { ...uzytkownik, emaile: [...uzytkownik.emaile], telefony: uzytkownik.telefony.map(normalizujTelefon), odznaki: [...uzytkownik.odznaki], aliasyHistoryczne: [...uzytkownik.aliasyHistoryczne] }
   Reflect.deleteProperty(formularz, 'id')
   Reflect.deleteProperty(formularz, 'ostatnieLogowanie')
+  Reflect.deleteProperty(formularz, 'email')
   Reflect.deleteProperty(formularz, 'utworzono')
   Reflect.deleteProperty(formularz, 'zaktualizowano')
   Reflect.deleteProperty(formularz, 'wersjaUprawnien')
   return formularz as FormularzUzytkownika
 }
 
-export function przygotujDaneDoZapisu(formularz: FormularzUzytkownika): Omit<Uzytkownik, 'id' | 'ostatnieLogowanie' | 'utworzono' | 'zaktualizowano' | 'wersjaUprawnien'> {
+export function przygotujDaneDoZapisu(formularz: FormularzUzytkownika): Omit<Uzytkownik, 'id' | 'email' | 'ostatnieLogowanie' | 'utworzono' | 'zaktualizowano' | 'wersjaUprawnien'> {
   return { ...formularz, imie: formularz.imie.trim(), nazwisko: formularz.nazwisko.trim(), pseudonim: formularz.pseudonim.trim(), emaile: formularz.emaile.map((email) => email.trim()), telefony: formularz.telefony.map(normalizujTelefon), login: formularz.login.trim(), aliasyHistoryczne: formularz.aliasyHistoryczne.map((alias) => alias.trim()).filter(Boolean) }
 }
 

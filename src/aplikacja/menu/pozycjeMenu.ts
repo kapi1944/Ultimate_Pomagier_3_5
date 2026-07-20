@@ -71,6 +71,7 @@ export const pozycjeMenu: PozycjaMenu[] = [
       { id: 'kartoteki_klienci', widok: 'kartoteki_klienci', etykieta: 'Klienci' },
       { id: 'kartoteki_lokalizacje', widok: 'kartoteki_lokalizacje', etykieta: 'Lokalizacje' },
       { id: 'kartoteki_szablony_dokumentow', widok: 'kartoteki_szablony_dokumentow', etykieta: 'Szablony dokumentów' },
+      { id: 'kartoteki_uzytkownicy', widok: 'kartoteki_uzytkownicy', etykieta: 'Użytkownicy' },
     ],
   },
   {

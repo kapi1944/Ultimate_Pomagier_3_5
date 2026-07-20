@@ -1,0 +1,23 @@
+.uzytkownicy { display: grid; max-width: 1180px; gap: 18px; }
+.uzytkownicy > header, .uzytkownicy__karta, .uzytkownicy__lista { display: grid; gap: 12px; }
+.uzytkownicy__karta, .uzytkownicy__lista { padding: 18px; border: 1px solid rgba(74,222,128,.25); border-radius: 9px; background: #062313; }
+.uzytkownicy h1, .uzytkownicy h2, .uzytkownicy p { margin: 0; }
+.uzytkownicy__formularz { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.uzytkownicy__formularz > label { display: grid; gap: 6px; color: #c7ead0; }
+.uzytkownicy input, .uzytkownicy select { box-sizing: border-box; width: 100%; min-height: 38px; border: 1px solid rgba(156,207,171,.35); border-radius: 6px; background: #03180c; color: #f4fff7; font: inherit; padding: 7px 9px; }
+.uzytkownicy fieldset { display: flex; grid-column: 1 / -1; flex-wrap: wrap; gap: 10px; border: 1px solid rgba(156,207,171,.25); border-radius: 7px; }
+.uzytkownicy fieldset label { display: inline-flex; align-items: center; gap: 5px; }
+.uzytkownicy fieldset input { width: 16px; min-height: 16px; }
+.uzytkownicy__akcje { grid-column: 1 / -1; display: flex; gap: 8px; }
+.uzytkownicy button { min-height: 38px; border: 1px solid rgba(74,222,128,.45); border-radius: 6px; background: #0b2b17; color: #f4fff7; cursor: pointer; font: inherit; padding: 7px 10px; }
+.uzytkownicy button:hover { border-color: #86efac; background: #14532d; }
+.uzytkownicy button:focus-visible, .uzytkownicy input:focus-visible, .uzytkownicy select:focus-visible { outline: 2px solid #fef08a; outline-offset: 2px; }
+.uzytkownicy__lista { gap: 9px; }
+.uzytkownicy__wiersz { display: grid; grid-template-columns: auto minmax(180px, 1fr) minmax(180px, auto) auto; align-items: center; gap: 12px; padding: 12px; border: 1px solid rgba(156,207,171,.18); border-radius: 7px; background: #03180c; }
+.uzytkownicy__wiersz > div { display: grid; gap: 4px; }
+.uzytkownicy__wiersz span { color: #c7ead0; font-size: .9rem; }
+.uzytkownicy__wiersz .avatar-uzytkownika { width: 42px; height: 42px; }
+.uzytkownicy__odznaki { display: flex !important; flex-wrap: wrap; align-items: center; gap: 5px !important; }
+.uzytkownicy__sukces { color: #bbf7d0 !important; }
+.uzytkownicy__blad { color: #fecaca !important; }
+@media (max-width: 760px) { .uzytkownicy__formularz { grid-template-columns: 1fr; }.uzytkownicy__wiersz { grid-template-columns: auto minmax(0, 1fr); }.uzytkownicy__odznaki, .uzytkownicy__wiersz button { grid-column: 1 / -1; }.uzytkownicy fieldset { grid-column: auto; } }

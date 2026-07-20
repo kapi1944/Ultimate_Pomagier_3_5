@@ -29,3 +29,4 @@ export type WidokNawigacji =
   | 'kartoteki_lokalizacje'
   | 'kartoteki_szablony_dokumentow'
   | 'ustawienia'
+  | 'kartoteki_uzytkownicy'
