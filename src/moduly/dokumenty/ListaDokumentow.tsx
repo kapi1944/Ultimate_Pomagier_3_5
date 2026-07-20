@@ -21,6 +21,7 @@ const etykietyStatusow: Record<StatusDokumentu, string> = {
   ROBOCZY: 'Roboczy',
   GOTOWY: 'Gotowy',
   OPUBLIKOWANY: 'Opublikowany',
+  KOMPLETNY: 'Kompletny',
   ZARCHIWIZOWANY: 'Zarchiwizowany',
 }
 

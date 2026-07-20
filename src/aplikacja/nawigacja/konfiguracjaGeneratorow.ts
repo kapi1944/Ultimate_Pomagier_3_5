@@ -68,6 +68,15 @@ export const konfiguracjePodmenuGeneratorow: KonfiguracjaPodmenuGeneratora[] = [
     ],
   },
   {
+    klucz: 'generator-checklist-paczek',
+    miejsce: 'dokumenty',
+    etykieta: 'Checklisty paczek',
+    pozycje: [
+      { widok: 'checklisty_paczek', etykieta: 'Nowa checklista paczki', sciezka: '/dokumenty/checklisty-paczek' },
+      { widok: 'checklisty_paczek_kopie_robocze', etykieta: 'Kopie robocze', sciezka: '/dokumenty/checklisty-paczek/kopie-robocze' },
+    ],
+  },
+  {
     klucz: 'programy-szkolen',
     miejsce: 'dokumenty',
     etykieta: 'Programy szkoleń',
@@ -93,5 +102,6 @@ export function pobierzWidokGeneratoraZeSciezki(sciezka: string) {
 
   if (widok) return widok
   if (/^\/dokumenty\/listy-obecnosci\/[^/]+$/.test(sciezka)) return 'listy-obecnosci'
+  if (/^\/dokumenty\/checklisty-paczek\/[^/]+$/.test(sciezka)) return 'checklisty_paczek'
   return /^\/dokumenty\/programy-szkolen\/[^/]+$/.test(sciezka) ? 'programy_szkolen' : undefined
 }

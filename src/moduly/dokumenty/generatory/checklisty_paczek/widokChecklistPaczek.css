@@ -1,0 +1,14 @@
+.checklista-paczki section { margin-block: 1rem; }
+.checklista-paczki label { display: inline-flex; flex-direction: column; gap: .25rem; margin: .25rem .75rem .25rem 0; }
+.checklista-paczki article { display: flex; flex-wrap: wrap; gap: .5rem; align-items: end; padding: .75rem; margin-block: .5rem; border: 1px solid #cbd5e1; border-radius: .375rem; }
+.checklista-paczki__wydruk { display: none; }
+
+@media print {
+  body * { visibility: hidden; }
+  #wydruk-checklisty, #wydruk-checklisty * { visibility: visible; }
+  #wydruk-checklisty { display: block; position: absolute; inset: 0; color: #000; font-size: 11pt; }
+  #wydruk-checklisty table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
+  #wydruk-checklisty th, #wydruk-checklisty td { min-height: 1.8rem; padding: .3rem; border: 1px solid #000; text-align: left; vertical-align: top; }
+  #wydruk-checklisty th:last-child, #wydruk-checklisty td:last-child { width: 25%; }
+  #wydruk-checklisty section { break-inside: avoid; }
+}

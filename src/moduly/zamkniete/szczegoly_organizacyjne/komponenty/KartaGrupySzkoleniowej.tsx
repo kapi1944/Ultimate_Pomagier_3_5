@@ -31,6 +31,7 @@ type WlasciwosciKartyGrupy = {
   aktualizujGrupe: (id: string, aktualizacja: (grupa: GrupaSzkoleniowa) => GrupaSzkoleniowa, pole?: string) => void
   duplikujGrupe: (id: string) => void
   usunGrupe: (id: string, czyPotwierdzone: boolean) => void
+  utworzChecklistePaczki?: (id: string) => void
 }
 
 const opcjeFormy: FormaSzkolenia[] = ['Stacjonarne', 'Online']
@@ -234,6 +235,7 @@ export default function KartaGrupySzkoleniowej({
   aktualizujGrupe,
   duplikujGrupe,
   usunGrupe,
+  utworzChecklistePaczki,
 }: WlasciwosciKartyGrupy) {
   const [czyRozwinieta, ustawCzyRozwinieta] = useState(true)
 
@@ -387,6 +389,9 @@ export default function KartaGrupySzkoleniowej({
           <button type="button" onClick={() => duplikujGrupe(grupa.id)}>
             Duplikuj grupę
           </button>
+          {utworzChecklistePaczki && <button type="button" onClick={() => utworzChecklistePaczki(grupa.id)}>
+            Utwórz Checklistę paczki
+          </button>}
           <button disabled={liczbaGrup === 1} title={liczbaGrup === 1 ? 'Formularz musi zawierać co najmniej jedną grupę.' : undefined} type="button" onClick={usunGrupePoPotwierdzeniu}>
             Usuń grupę
           </button>

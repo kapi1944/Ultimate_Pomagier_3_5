@@ -12,6 +12,7 @@ import WidokWszystkichDokumentow from '../../moduly/dokumenty/WidokWszystkichDok
 import WidokAnkiet from '../../moduly/dokumenty/generatory/ankiety/WidokAnkiet'
 import WidokDyplomow from '../../moduly/dokumenty/generatory/dyplomy/WidokDyplomow'
 import WidokKartNaDrzwi from '../../moduly/dokumenty/generatory/karta_na_drzwi/WidokKartNaDrzwi'
+import WidokChecklistPaczek from '../../moduly/dokumenty/generatory/checklisty_paczek/WidokChecklistPaczek'
 import WidokListyObecnosciZDokumentu from '../../moduly/dokumenty/generatory/listy_obecnosci/WidokListyObecnosciZDokumentu'
 import { WidokProgramowSzkolen } from '../../moduly/dokumenty/generatory/programy_szkolen'
 import {
@@ -68,6 +69,8 @@ const dostepneWidoki: WidokNawigacji[] = [
   'dyplomy_kopie_robocze',
   'karta-na-drzwi',
   'karta_na_drzwi_kopie_robocze',
+  'checklisty_paczek',
+  'checklisty_paczek_kopie_robocze',
   'programy_szkolen',
   'programy_szkolen_kopie_robocze',
   'kartoteki',
@@ -111,6 +114,11 @@ function pobierzIdProgramuZeSciezki() {
 
 function pobierzIdListyObecnosciZeSciezki() {
   const dopasowanie = window.location.pathname.match(/^\/dokumenty\/listy-obecnosci\/([^/]+)$/)
+  return dopasowanie ? decodeURIComponent(dopasowanie[1]) : null
+}
+
+function pobierzIdChecklistyPaczkiZeSciezki() {
+  const dopasowanie = window.location.pathname.match(/^\/dokumenty\/checklisty-paczek\/([^/]+)$/)
   return dopasowanie ? decodeURIComponent(dopasowanie[1]) : null
 }
 
@@ -177,6 +185,10 @@ function renderujWidok(
       return <WidokKartNaDrzwi />
     case 'karta_na_drzwi_kopie_robocze':
       return <WidokKopiiRoboczychDokumentow tytul="Kopie robocze — Karty na drzwi" opis="Robocze Karty na drzwi ze wspólnego rejestru dokumentów." typyStale={['KARTA_NA_DRZWI']} otworzDokument={otworzDokument} />
+    case 'checklisty_paczek':
+      return <WidokChecklistPaczek dokumentIdZTrasy={pobierzIdChecklistyPaczkiZeSciezki()} />
+    case 'checklisty_paczek_kopie_robocze':
+      return <WidokKopiiRoboczychDokumentow tytul="Kopie robocze — Checklisty paczek" opis="Robocze Checklisty paczek ze wspólnego rejestru dokumentów." typyStale={['CHECKLISTA_PACZKI']} otworzDokument={otworzDokument} />
     case 'programy_szkolen':
       return <WidokProgramowSzkolen key={`${wersjaProgramu}-${pobierzIdProgramuZeSciezki() ?? 'nowy'}`} dokumentIdZTrasy={pobierzIdProgramuZeSciezki()} />
     case 'programy_szkolen_kopie_robocze':
@@ -342,6 +354,13 @@ export default function UkladAplikacji() {
       const sciezka = `/dokumenty/listy-obecnosci/${encodeURIComponent(dokument.id)}`
       if (window.location.pathname !== sciezka) window.history.pushState({ widok: 'listy-obecnosci' }, '', sciezka)
       ustawAktywnyWidok('listy-obecnosci')
+      return
+    }
+
+    if (dokument.typ === 'CHECKLISTA_PACZKI') {
+      const sciezka = `/dokumenty/checklisty-paczek/${encodeURIComponent(dokument.id)}`
+      if (window.location.pathname !== sciezka) window.history.pushState({ widok: 'checklisty_paczek' }, '', sciezka)
+      ustawAktywnyWidok('checklisty_paczek')
       return
     }
 

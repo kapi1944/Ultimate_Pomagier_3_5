@@ -19,6 +19,8 @@ export type WidokNawigacji =
   | 'dyplomy_kopie_robocze'
   | 'karta-na-drzwi'
   | 'karta_na_drzwi_kopie_robocze'
+  | 'checklisty_paczek'
+  | 'checklisty_paczek_kopie_robocze'
   | 'programy_szkolen'
   | 'programy_szkolen_kopie_robocze'
   | 'kartoteki'

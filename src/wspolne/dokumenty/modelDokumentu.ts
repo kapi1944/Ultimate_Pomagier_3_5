@@ -9,9 +9,10 @@ export type TypDokumentu =
   | 'PROTOKOL'
   | 'MATERIAL_DODATKOWY'
   | 'KARTA_NA_DRZWI'
+  | 'CHECKLISTA_PACZKI'
   | 'INNY'
 
-export type StatusDokumentu = 'ROBOCZY' | 'GOTOWY' | 'OPUBLIKOWANY' | 'ZARCHIWIZOWANY'
+export type StatusDokumentu = 'ROBOCZY' | 'GOTOWY' | 'OPUBLIKOWANY' | 'KOMPLETNY' | 'ZARCHIWIZOWANY'
 export type PowiazanieZeSzczegolami = 'SAMODZIELNY' | 'POWIAZANY_ZE_SZCZEGOLAMI'
 export type StanWartosciDokumentu = 'POBRANA_ZE_ZRODLA' | 'RECZNIE_NADPISANA' | 'NIEAKTUALNA_WZGLEM_ZRODLA'
 
@@ -34,10 +35,11 @@ export const typyDokumentow: TypDokumentu[] = [
   'PROTOKOL',
   'MATERIAL_DODATKOWY',
   'KARTA_NA_DRZWI',
+  'CHECKLISTA_PACZKI',
   'INNY',
 ]
 
-export const statusyDokumentow: StatusDokumentu[] = ['ROBOCZY', 'GOTOWY', 'OPUBLIKOWANY', 'ZARCHIWIZOWANY']
+export const statusyDokumentow: StatusDokumentu[] = ['ROBOCZY', 'GOTOWY', 'OPUBLIKOWANY', 'KOMPLETNY', 'ZARCHIWIZOWANY']
 
 export type Dokument<TDane, TUstawienia> = {
   id: string

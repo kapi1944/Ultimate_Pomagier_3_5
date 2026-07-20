@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type KeyboardEvent, type ReactNode } from 'react'
 import { pobierzLokalizacjeZMagazynu } from '../../../../kartoteki/lokalizacje/magazynLokalizacji'
+import { zbudujKontekstZeSzczegolow, przygotujZrodloZWersjiRoboczej } from '../../../../wspolne/integracje/szczegolyDoDokumentow'
+import { utworzChecklistePaczkiZeZrodla } from '../../../dokumenty/generatory/checklisty_paczek/rejestrChecklistPaczek'
 import KartaGrupySzkoleniowej from '../komponenty/KartaGrupySzkoleniowej'
 import { DostawcaBledowPol } from '../komponenty/KontekstBledowPol'
 import PoleMinutWczesniejszegoPrzyjazdu from '../komponenty/PoleMinutWczesniejszegoPrzyjazdu'
@@ -268,6 +270,32 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
   const [odswiezaczDokumentow, ustawOdswiezaczDokumentow] = useState(0)
   const aktywnaWersja = generator.kopieRobocze.find((kopia) => kopia.id === generator.aktywnaKopiaId) ?? null
   const szczegolyOrganizacyjneId = generator.zrodloOpublikowanegoId ?? aktywnaWersja?.id ?? null
+
+  function utworzChecklisteDlaGrupy(grupaId: string) {
+    if (!aktywnaWersja) {
+      return
+    }
+
+    const kontekst = zbudujKontekstZeSzczegolow(przygotujZrodloZWersjiRoboczej(aktywnaWersja))
+    const odbiorca = generator.daneFormularza.odbiorcaPaczki
+    const checklista = utworzChecklistePaczkiZeZrodla(kontekst, grupaId, {
+      opiekunId: generator.daneFormularza.opiekunId,
+      finansowanie: generator.daneFormularza.dodatkoweWymogi.uwagiDodatkowe,
+      odbiorca: { ...odbiorca, zrodloPropozycji: null },
+    }, aktywnaWersja.autorId)
+
+    if (checklista) {
+      ustawOdswiezaczDokumentow((obecny) => obecny + 1)
+    }
+  }
+
+  function otworzChecklistePaczki(id: string) {
+    const sciezka = `/dokumenty/checklisty-paczek/${encodeURIComponent(id)}`
+    if (window.location.pathname !== sciezka) {
+      window.history.pushState({ widok: 'checklisty_paczek' }, '', sciezka)
+    }
+    window.dispatchEvent(new PopStateEvent('popstate'))
+  }
   const [podgladyWzorowKlienta, ustawPodgladyWzorowKlienta] = useState<Record<string, PodgladWzoruKlienta>>({})
   const [porownywanaWersjaId, ustawPorownywanaWersjaId] = useState<string | null>(null)
   const [czyHistoriaRozwinieta, ustawCzyHistoriaRozwinieta] = useState(false)
@@ -574,7 +602,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
         otworzDokument={otworzListeObecnosci}
         poUtworzeniu={() => ustawOdswiezaczDokumentow((obecny) => obecny + 1)}
       />
-      <PanelDokumentowPowiazanych szczegolyOrganizacyjneId={szczegolyOrganizacyjneId} odswiezacz={odswiezaczDokumentow} otworzDokument={otworzListeObecnosci} />
+      <PanelDokumentowPowiazanych szczegolyOrganizacyjneId={szczegolyOrganizacyjneId} odswiezacz={odswiezaczDokumentow} otworzDokument={otworzListeObecnosci} otworzCheckliste={otworzChecklistePaczki} />
 
       {generator.autosaveDoDecyzji && (
         <div className="szczegoly-autosave">
@@ -659,6 +687,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
                 key={grupa.id}
                 statusyPol={generator.statusyPol}
                 trenerzyKartoteki={generator.trenerzyKartoteki}
+                utworzChecklistePaczki={utworzChecklisteDlaGrupy}
                 duplikujGrupe={generator.duplikujGrupe}
                 usunGrupe={generator.usunGrupe}
               />
