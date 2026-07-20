@@ -49,43 +49,45 @@ export default function WidokKopiiRoboczychSzczegolowOrganizacyjnych({ otworzNow
 
   return (
     <section className="widok szczegoly-organizacyjne">
-      <header className="szczegoly-widok-naglowek">
-        <h1>Kopie robocze szczegółów organizacyjnych</h1>
-      </header>
+      <div className="szczegoly-obszar-roboczy">
+        <header className="szczegoly-widok-naglowek">
+          <h1>Kopie robocze szczegółów organizacyjnych</h1>
+        </header>
 
-      <div className="szczegoly-lista-rekordow">
-        {widoczneKopie.length === 0 && <p className="szczegoly-komunikat">Brak dostępnych kopii roboczych.</p>}
-        {widoczneKopie.map((kopia) => (
-          <article className="szczegoly-rekord" key={kopia.id} style={{ backgroundColor: pobierzKolorTlaOpiekuna(kopia.dane.opiekunId) }}>
-            <div className="szczegoly-rekord__naglowek">
-              <div>
-                <h2>{kopia.dane.tytulSzkolenia || kopia.nazwa}</h2>
-                <p>{kopia.dane.nazwaKlienta || 'Bez klienta'}</p>
+        <div className="szczegoly-lista-rekordow">
+          {widoczneKopie.length === 0 && <p className="szczegoly-komunikat">Brak dostępnych kopii roboczych.</p>}
+          {widoczneKopie.map((kopia) => (
+            <article className="szczegoly-rekord" key={kopia.id} style={{ backgroundColor: pobierzKolorTlaOpiekuna(kopia.dane.opiekunId) }}>
+              <div className="szczegoly-rekord__naglowek">
+                <div>
+                  <h2>{kopia.dane.tytulSzkolenia || kopia.nazwa}</h2>
+                  <p>{kopia.dane.nazwaKlienta || 'Bez klienta'}</p>
+                </div>
+                <strong>{kopia.dane.status}</strong>
               </div>
-              <strong>{kopia.dane.status}</strong>
-            </div>
-            <div className="szczegoly-rekord__metadane">
-              <span>Nazwa kopii: {kopia.nazwa}</span>
-              <span>Opiekun: {pobierzNazweOpiekuna(kopia.dane.opiekunId)}</span>
-              <span>Autor: {kopia.autorNazwa}</span>
-              <span>Zapis: {formatujDate(kopia.dataZapisu)}</span>
-              <span>Grupy: {kopia.grupy.length}</span>
-              <span>Trenerzy: {pobierzTrenerow(kopia.grupy)}</span>
-            </div>
-            <div className="szczegoly-rekord__akcje">
-              {czyKontoMozeEdytowacKopie(konto, kopia) && (
-                <>
-                  <button type="button" onClick={() => edytujKopie(kopia)}>
-                    Edytuj
-                  </button>
-                  <button type="button" onClick={() => usunKopie(kopia)}>
-                    Usuń
-                  </button>
-                </>
-              )}
-            </div>
-          </article>
-        ))}
+              <div className="szczegoly-rekord__metadane">
+                <span>Nazwa kopii: {kopia.nazwa}</span>
+                <span>Opiekun: {pobierzNazweOpiekuna(kopia.dane.opiekunId)}</span>
+                <span>Autor: {kopia.autorNazwa}</span>
+                <span>Zapis: {formatujDate(kopia.dataZapisu)}</span>
+                <span>Grupy: {kopia.grupy.length}</span>
+                <span>Trenerzy: {pobierzTrenerow(kopia.grupy)}</span>
+              </div>
+              <div className="szczegoly-rekord__akcje">
+                {czyKontoMozeEdytowacKopie(konto, kopia) && (
+                  <>
+                    <button type="button" onClick={() => edytujKopie(kopia)}>
+                      Edytuj
+                    </button>
+                    <button type="button" onClick={() => usunKopie(kopia)}>
+                      Usuń
+                    </button>
+                  </>
+                )}
+              </div>
+            </article>
+          ))}
+        </div>
       </div>
     </section>
   )

@@ -35,25 +35,46 @@ export const konfiguracjePodmenuGeneratorow: KonfiguracjaPodmenuGeneratora[] = [
     klucz: 'generator-list-obecnosci',
     miejsce: 'dokumenty',
     etykieta: 'Listy obecności',
-    pozycje: [{ widok: 'listy-obecnosci', etykieta: 'Nowa lista obecności', sciezka: '/dokumenty/listy-obecnosci' }],
+    pozycje: [
+      { widok: 'listy-obecnosci', etykieta: 'Nowa lista obecności', sciezka: '/dokumenty/listy-obecnosci' },
+      { widok: 'listy_obecnosci_kopie_robocze', etykieta: 'Kopie robocze', sciezka: '/dokumenty/listy-obecnosci/kopie-robocze' },
+    ],
   },
   {
     klucz: 'generator-ankiet',
     miejsce: 'dokumenty',
     etykieta: 'Ankiety',
-    pozycje: [{ widok: 'ankiety', etykieta: 'Nowa ankieta', sciezka: '/dokumenty/ankiety' }],
+    pozycje: [
+      { widok: 'ankiety', etykieta: 'Nowa ankieta', sciezka: '/dokumenty/ankiety' },
+      { widok: 'ankiety_kopie_robocze', etykieta: 'Kopie robocze', sciezka: '/dokumenty/ankiety/kopie-robocze' },
+    ],
   },
   {
     klucz: 'generator-dyplomow',
     miejsce: 'dokumenty',
     etykieta: 'Dyplomy',
-    pozycje: [{ widok: 'dyplomy', etykieta: 'Nowy dyplom', sciezka: '/dokumenty/dyplomy' }],
+    pozycje: [
+      { widok: 'dyplomy', etykieta: 'Nowy dyplom', sciezka: '/dokumenty/dyplomy' },
+      { widok: 'dyplomy_kopie_robocze', etykieta: 'Kopie robocze', sciezka: '/dokumenty/dyplomy/kopie-robocze' },
+    ],
   },
   {
     klucz: 'generator-kart-na-drzwi',
     miejsce: 'dokumenty',
     etykieta: 'Karta na drzwi',
-    pozycje: [{ widok: 'karta-na-drzwi', etykieta: 'Nowa karta na drzwi', sciezka: '/dokumenty/karta-na-drzwi' }],
+    pozycje: [
+      { widok: 'karta-na-drzwi', etykieta: 'Nowa karta na drzwi', sciezka: '/dokumenty/karta-na-drzwi' },
+      { widok: 'karta_na_drzwi_kopie_robocze', etykieta: 'Kopie robocze', sciezka: '/dokumenty/karta-na-drzwi/kopie-robocze' },
+    ],
+  },
+  {
+    klucz: 'generator-checklist-paczek',
+    miejsce: 'dokumenty',
+    etykieta: 'Checklisty paczek',
+    pozycje: [
+      { widok: 'checklisty_paczek', etykieta: 'Nowa checklista paczki', sciezka: '/dokumenty/checklisty-paczek' },
+      { widok: 'checklisty_paczek_kopie_robocze', etykieta: 'Kopie robocze', sciezka: '/dokumenty/checklisty-paczek/kopie-robocze' },
+    ],
   },
   {
     klucz: 'programy-szkolen',
@@ -71,19 +92,16 @@ export function pobierzKonfiguracjePodmenuGeneratorow(miejsce: MiejscePodmenuGen
 }
 
 export function pobierzSciezkeGeneratora(widok: WidokNawigacji) {
-  return [...pozycjeRejestruDokumentow, ...konfiguracjePodmenuGeneratorow.flatMap((konfiguracja) => konfiguracja.pozycje)].find((pozycja) => pozycja.widok === widok)?.sciezka
+  return [...pozycjeRejestruDokumentow, ...konfiguracjePodmenuGeneratorow.flatMap((konfiguracja) => konfiguracja.pozycje)]
+    .find((pozycja) => pozycja.widok === widok)?.sciezka
 }
 
 export function pobierzWidokGeneratoraZeSciezki(sciezka: string) {
-  const widok = [...pozycjeRejestruDokumentow, ...konfiguracjePodmenuGeneratorow.flatMap((konfiguracja) => konfiguracja.pozycje)].find((pozycja) => pozycja.sciezka === sciezka)?.widok
+  const widok = [...pozycjeRejestruDokumentow, ...konfiguracjePodmenuGeneratorow.flatMap((konfiguracja) => konfiguracja.pozycje)]
+    .find((pozycja) => pozycja.sciezka === sciezka)?.widok
 
-  if (widok) {
-    return widok
-  }
-
-  if (/^\/dokumenty\/listy-obecnosci\/[^/]+$/.test(sciezka)) {
-    return 'listy-obecnosci'
-  }
-
+  if (widok) return widok
+  if (/^\/dokumenty\/listy-obecnosci\/[^/]+$/.test(sciezka)) return 'listy-obecnosci'
+  if (/^\/dokumenty\/checklisty-paczek\/[^/]+$/.test(sciezka)) return 'checklisty_paczek'
   return /^\/dokumenty\/programy-szkolen\/[^/]+$/.test(sciezka) ? 'programy_szkolen' : undefined
 }

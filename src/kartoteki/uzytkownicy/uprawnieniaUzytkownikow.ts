@@ -1,11 +1,11 @@
 import type { TrybFormularza, Uzytkownik } from './typyUzytkownikow'
 
 export function czyUzytkownikMozeDodac(zalogowanyUzytkownik: Uzytkownik) {
-  return zalogowanyUzytkownik.rola !== 'Opiekun'
+  return zalogowanyUzytkownik.rola === 'ADMINISTRATOR'
 }
 
 export function czyUzytkownikMozeEdytowac(zalogowanyUzytkownik: Uzytkownik, edytowanyUzytkownik: Uzytkownik) {
-  return zalogowanyUzytkownik.rola !== 'Opiekun' || edytowanyUzytkownik.id === zalogowanyUzytkownik.id
+  return zalogowanyUzytkownik.rola === 'ADMINISTRATOR' || edytowanyUzytkownik.id === zalogowanyUzytkownik.id
 }
 
 export function czyLogowaniePowinnoBycZablokowane(
@@ -13,11 +13,10 @@ export function czyLogowaniePowinnoBycZablokowane(
   zalogowanyUzytkownik: Uzytkownik,
   edytowanyUzytkownik: Uzytkownik | undefined,
 ) {
-  // Architekt jest kontem technicznym do pełnej edycji, pozostali nie zmieniają danych logowania Administratora.
   return (
     trybFormularza === 'edycja' &&
-    edytowanyUzytkownik?.rola === 'Administrator' &&
+    edytowanyUzytkownik?.rola === 'ADMINISTRATOR' &&
     edytowanyUzytkownik.id !== zalogowanyUzytkownik.id &&
-    zalogowanyUzytkownik.rola !== 'Architekt'
+    zalogowanyUzytkownik.rola !== 'ADMINISTRATOR'
   )
 }

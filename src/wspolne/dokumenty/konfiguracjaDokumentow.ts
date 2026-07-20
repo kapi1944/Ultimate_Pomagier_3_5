@@ -19,6 +19,7 @@ export const konfiguracjeTypowDokumentow: KonfiguracjaTypuDokumentu[] = [
   { typ: 'PROTOKOL', etykieta: 'Protokol', generatorId: null, sciezkaGeneratora: null, czyGeneratorDziala: false },
   { typ: 'MATERIAL_DODATKOWY', etykieta: 'Material dodatkowy', generatorId: 'replikator_dokumentow', sciezkaGeneratora: null, czyGeneratorDziala: true },
   { typ: 'KARTA_NA_DRZWI', etykieta: 'Karta na drzwi', generatorId: 'karta_na_drzwi', sciezkaGeneratora: '/dokumenty/karta-na-drzwi', czyGeneratorDziala: true },
+  { typ: 'CHECKLISTA_PACZKI', etykieta: 'Checklista paczki', generatorId: 'checklisty_paczek', sciezkaGeneratora: '/dokumenty/checklisty-paczek', czyGeneratorDziala: true },
   { typ: 'INNY', etykieta: 'Inny dokument', generatorId: 'replikator_dokumentow', sciezkaGeneratora: null, czyGeneratorDziala: true },
 ]
 

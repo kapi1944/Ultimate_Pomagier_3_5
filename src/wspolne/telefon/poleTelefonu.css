@@ -1,0 +1,5 @@
+.pole-telefonu { display: grid; grid-template-columns: minmax(170px, .8fr) minmax(150px, 1fr); gap: 6px; align-items: start; }
+.pole-telefonu__prefiks { grid-column: 1; }
+.pole-telefonu__blad { grid-column: 1 / -1; color: #fecaca; line-height: 1.3; }
+.pole-telefonu [aria-invalid="true"] { border-color: #f87171 !important; }
+@media (max-width: 620px) { .pole-telefonu { grid-template-columns: 1fr; }.pole-telefonu__prefiks, .pole-telefonu__blad { grid-column: 1; } }

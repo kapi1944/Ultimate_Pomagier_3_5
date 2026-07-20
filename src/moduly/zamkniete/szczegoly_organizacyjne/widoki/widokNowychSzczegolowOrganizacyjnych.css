@@ -582,6 +582,92 @@
   padding-left: 18px;
 }
 
+.szczegoly-problemy .szczegoly-checklista {
+  padding-left: 0;
+  list-style: none;
+}
+
+.szczegoly-checklista__pozycja {
+  display: grid;
+  gap: 7px;
+}
+
+.szczegoly-checklista__naglowek {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  padding: 5px 4px;
+  text-align: left;
+  font: inherit;
+}
+
+button.szczegoly-checklista__naglowek {
+  cursor: pointer;
+}
+
+button.szczegoly-checklista__naglowek:hover {
+  background: rgba(156, 207, 171, 0.1);
+}
+
+.szczegoly-checklista__pozycja--blad > .szczegoly-checklista__naglowek {
+  color: #fecaca;
+}
+
+.szczegoly-checklista__pozycja--ok > .szczegoly-checklista__naglowek {
+  color: #bbf7d0;
+}
+
+.szczegoly-checklista__strzalka {
+  font-size: 0.74rem;
+}
+
+.szczegoly-checklista__przycisk-zbiorczy {
+  justify-self: start;
+  border-color: rgba(156, 207, 171, 0.35);
+  background: transparent;
+  color: #d1fae5;
+  padding: 4px 7px;
+  font-size: 0.8rem;
+}
+
+.szczegoly-checklista__blad {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  padding: 2px 0;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font: inherit;
+}
+
+.szczegoly-checklista__blad:hover {
+  color: #fff;
+}
+
+.szczegoly-checklista__naglowek:focus-visible,
+.szczegoly-checklista__blad:focus-visible,
+.szczegoly-checklista__przycisk-zbiorczy:focus-visible {
+  outline: 2px solid #fef08a;
+  outline-offset: 2px;
+}
+
+.szczegoly-pole--wskazane {
+  animation: szczegoly-wskazanie-pola 1.3s ease-out;
+}
+
+@keyframes szczegoly-wskazanie-pola {
+  0%, 45% { box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.8); }
+  100% { box-shadow: none; }
+}
+
 .szczegoly-problem--blad {
   color: #fecaca;
 }

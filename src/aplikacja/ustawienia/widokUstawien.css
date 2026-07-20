@@ -1,0 +1,13 @@
+.ustawienia { display: grid; max-width: 920px; gap: 18px; }
+.ustawienia > header { display: grid; gap: 6px; }
+.ustawienia__karta { display: grid; gap: 14px; padding: 18px; border: 1px solid rgba(74,222,128,.3); border-radius: 10px; background: #062313; }
+.ustawienia__karta h2, .ustawienia__karta p { margin: 0; }
+.ustawienia__wiersz { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 12px; border: 1px solid rgba(156,207,171,.22); border-radius: 8px; background: #03180c; }
+.ustawienia__wiersz span { display: grid; gap: 3px; }
+.ustawienia__wiersz small { color: #9ccfab; }
+.ustawienia__wiersz input { width: 20px; height: 20px; }
+.ustawienia__pole { display: grid; max-width: 360px; gap: 6px; }
+.ustawienia select, .ustawienia button { min-height: 38px; border: 1px solid rgba(74,222,128,.45); border-radius: 7px; background: #0b2b17; color: #f4fff7; font: inherit; padding: 8px 11px; }
+.ustawienia button { width: fit-content; cursor: pointer; }
+.ustawienia button:hover { border-color: #86efac; background: #14532d; }
+.ustawienia__komunikat { color: #bbf7d0 !important; }

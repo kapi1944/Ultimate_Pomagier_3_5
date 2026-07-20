@@ -1,6 +1,10 @@
+import { czyTelefonMiedzynarodowyPoprawny, pobierzCyfry } from '../telefon/telefon'
+
 export type DaneTelefonu = {
   prefiks: string
   numer: string
+  krajIso2?: string
+  numerE164?: string
 }
 
 const wzorzecImienia = /^[A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż]+(?:[ -][A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż]+)*$/
@@ -8,7 +12,7 @@ const wzorzecEmail = /^[^\s@ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]+@[^\s@ąćęł
 const wzorzecBezSpacji = /^\S+$/
 
 export function normalizujNumerTelefonu(numer: string) {
-  return numer.replace(/[\s-]/g, '')
+  return pobierzCyfry(numer)
 }
 
 export function walidujImieLubNazwisko(wartosc: string) {
@@ -20,14 +24,15 @@ export function walidujEmail(email: string) {
 }
 
 export function walidujTelefonPolski(telefon: DaneTelefonu) {
-  const numer = normalizujNumerTelefonu(telefon.numer)
+  return telefon.prefiks === '+48' && /^\d{9}$/.test(normalizujNumerTelefonu(telefon.numer))
+}
 
-  return telefon.prefiks === '+48' && /^\d{9}$/.test(numer)
+export function walidujTelefonMiedzynarodowy(telefon: DaneTelefonu) {
+  return czyTelefonMiedzynarodowyPoprawny(telefon)
 }
 
 export function walidujLogin(login: string) {
   const czystyLogin = login.trim()
-
   return czystyLogin.length >= 6 && wzorzecBezSpacji.test(czystyLogin)
 }
 

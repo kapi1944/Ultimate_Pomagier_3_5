@@ -1,5 +1,7 @@
-import { useMemo, useState } from 'react'
-import type { ModelSekcyjnySzczegolow, ProblemWalidacji } from '../typy'
+import { useEffect, useMemo, useReducer, useState } from 'react'
+import type { KluczSekcjiSzczegolow, ModelSekcyjnySzczegolow, ProblemWalidacji } from '../typy'
+import { czyWszystkieListyBledowRozwiniete, synchronizujRozwinieteSekcje, zbudujPozycjeChecklistyPublikacji } from './logikaChecklistyPublikacji'
+import { przejdzDoPolaFormularza } from './nawigacjaDoPola'
 
 type WlasciwosciPaneluProblemow = {
   problemy: ProblemWalidacji[]
@@ -10,8 +12,27 @@ type WlasciwosciPaneluProblemow = {
   zaakceptujPolaNiepewne?: () => void
 }
 
+type AkcjaRozwinietychSekcji =
+  | { typ: 'przelacz'; klucz: KluczSekcjiSzczegolow }
+  | { typ: 'ustawWszystkie'; klucze: KluczSekcjiSzczegolow[] }
+  | { typ: 'synchronizuj'; pozycje: ReturnType<typeof zbudujPozycjeChecklistyPublikacji> }
+
+function zredukujRozwinieteSekcje(obecne: Set<KluczSekcjiSzczegolow>, akcja: AkcjaRozwinietychSekcji) {
+  if (akcja.typ === 'synchronizuj') return synchronizujRozwinieteSekcje(akcja.pozycje, obecne)
+  if (akcja.typ === 'ustawWszystkie') return new Set(akcja.klucze)
+
+  const kolejne = new Set(obecne)
+  if (kolejne.has(akcja.klucz)) kolejne.delete(akcja.klucz)
+  else kolejne.add(akcja.klucz)
+  return kolejne
+}
+
 function formatujDate(data?: string) {
   return data ? new Date(data).toLocaleString('pl-PL') : 'Brak autosave'
+}
+
+function liczbaUnikalnychProblemowBlokujacych(problemy: ProblemWalidacji[]) {
+  return new Set(problemy.filter((problem) => problem.czyBlokuje).map((problem) => `${problem.sekcja}:${problem.pole}:${problem.kodBledu ?? problem.komunikat}`)).size
 }
 
 export default function PanelWykrytychProblemow({
@@ -23,16 +44,23 @@ export default function PanelWykrytychProblemow({
   zaakceptujPolaNiepewne,
 }: WlasciwosciPaneluProblemow) {
   const [czyRozwiniety, ustawCzyRozwiniety] = useState(true)
-  const problemyWedlugSekcji = useMemo(() => {
-    return problemy.reduce<Record<string, ProblemWalidacji[]>>((grupy, problem) => {
-      grupy[problem.sekcja] = [...(grupy[problem.sekcja] ?? []), problem]
-      return grupy
-    }, {})
-  }, [problemy])
+  const [rozwinieteSekcje, wyslijAkcjeRozwinietychSekcji] = useReducer(zredukujRozwinieteSekcje, new Set<KluczSekcjiSzczegolow>())
+  const pozycjeChecklisty = useMemo(() => (modelSekcyjny ? zbudujPozycjeChecklistyPublikacji(modelSekcyjny) : []), [modelSekcyjny])
+  const pozycjeZBledami = pozycjeChecklisty.filter((pozycja) => pozycja.bledy.length > 0)
+  const wszystkieListyRozwiniete = czyWszystkieListyBledowRozwiniete(pozycjeChecklisty, rozwinieteSekcje)
+  const liczbaBlokujacych = liczbaUnikalnychProblemowBlokujacych(problemy)
 
-  const liczbaBlokujacych = problemy.filter((problem) => problem.czyBlokuje).length
-  const sekcje = modelSekcyjny ? Object.values(modelSekcyjny) : []
-  const wymaganeSekcje = sekcje.filter((sekcja) => sekcja.wymaganaDoPublikacji)
+  useEffect(() => {
+    wyslijAkcjeRozwinietychSekcji({ typ: 'synchronizuj', pozycje: pozycjeChecklisty })
+  }, [pozycjeChecklisty])
+
+  function przelaczSekcje(klucz: KluczSekcjiSzczegolow) {
+    wyslijAkcjeRozwinietychSekcji({ typ: 'przelacz', klucz })
+  }
+
+  function przelaczWszystkieSekcje() {
+    wyslijAkcjeRozwinietychSekcji({ typ: 'ustawWszystkie', klucze: wszystkieListyRozwiniete ? [] : pozycjeZBledami.map((pozycja) => pozycja.klucz) })
+  }
 
   return (
     <div className={`szczegoly-problemy ${liczbaBlokujacych ? 'szczegoly-problemy--blad' : 'szczegoly-problemy--ok'}`}>
@@ -66,17 +94,50 @@ export default function PanelWykrytychProblemow({
             </section>
           )}
 
-          {wymaganeSekcje.length > 0 && (
+          {pozycjeChecklisty.length > 0 && (
             <section className="szczegoly-problemy__sekcja">
               <h3>Checklista publikacji</h3>
-              <ul>
-                {wymaganeSekcje.map((sekcja) => (
-                  <li className={sekcja.statusKompletnosci === 'kompletna' ? 'szczegoly-problem--informacja' : 'szczegoly-problem--blad'} key={sekcja.klucz}>
-                    <a href={`#${sekcja.klucz === 'podstawoweInformacje' ? 'podstawowe-informacje' : sekcja.klucz === 'grupySzkoleniowe' ? 'grupy-szkoleniowe' : 'wykryte-problemy'}`}>
-                      {sekcja.statusKompletnosci === 'kompletna' ? '✓' : '⚠'} {sekcja.etykieta}
-                    </a>
-                  </li>
-                ))}
+              {pozycjeZBledami.length > 0 && (
+                <button className="szczegoly-checklista__przycisk-zbiorczy" type="button" onClick={przelaczWszystkieSekcje}>
+                  {wszystkieListyRozwiniete ? 'Zwiń wszystkie' : 'Rozwiń wszystkie'}
+                </button>
+              )}
+              <ul className="szczegoly-checklista">
+                {pozycjeChecklisty.map((pozycja) => {
+                  const czyMaBledy = pozycja.bledy.length > 0
+                  const czyRozwinieta = rozwinieteSekcje.has(pozycja.klucz)
+                  const idListyBledow = `checklista-bledy-${pozycja.klucz}`
+
+                  return (
+                    <li className={`szczegoly-checklista__pozycja ${czyMaBledy ? 'szczegoly-checklista__pozycja--blad' : 'szczegoly-checklista__pozycja--ok'}`} key={pozycja.klucz}>
+                      {czyMaBledy ? (
+                        <button aria-controls={idListyBledow} aria-expanded={czyRozwinieta} className="szczegoly-checklista__naglowek" type="button" onClick={() => przelaczSekcje(pozycja.klucz)}>
+                          <span aria-hidden="true">●</span>
+                          <span>{pozycja.etykieta} ({pozycja.bledy.length})</span>
+                          <span aria-hidden="true" className="szczegoly-checklista__strzalka">{czyRozwinieta ? '▲' : '▼'}</span>
+                          <span className="sr-only">{czyRozwinieta ? 'Zwiń listę błędów' : 'Rozwiń listę błędów'}</span>
+                        </button>
+                      ) : (
+                        <div className="szczegoly-checklista__naglowek">
+                          <span aria-hidden="true">✓</span>
+                          <span>{pozycja.etykieta}</span>
+                          <span className="sr-only">Sekcja poprawna</span>
+                        </div>
+                      )}
+                      {czyMaBledy && (
+                        <ul hidden={!czyRozwinieta} id={idListyBledow}>
+                          {pozycja.bledy.map((blad) => (
+                            <li className={`szczegoly-problem szczegoly-problem--${blad.poziom}`} key={`${pozycja.klucz}-${blad.pole}`}>
+                              <button className="szczegoly-checklista__blad" type="button" onClick={() => przejdzDoPolaFormularza(blad.pole, pozycja.idSekcjiFormularza, blad.idDocelowy)}>
+                                {blad.komunikat}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </li>
+                  )
+                })}
               </ul>
             </section>
           )}
@@ -97,23 +158,6 @@ export default function PanelWykrytychProblemow({
                 </button>
               )}
             </section>
-          )}
-
-          {problemy.length ? (
-            Object.entries(problemyWedlugSekcji).map(([sekcja, pozycje]) => (
-              <section className="szczegoly-problemy__sekcja" key={sekcja}>
-                <h3>{sekcja}</h3>
-                <ul>
-                  {pozycje.map((problem) => (
-                    <li className={`szczegoly-problem szczegoly-problem--${problem.poziom}`} key={`${problem.pole}-${problem.komunikat}`}>
-                      {problem.komunikat}
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ))
-          ) : (
-            <p>Wymagane pola są uzupełnione poprawnie.</p>
           )}
         </div>
       )}

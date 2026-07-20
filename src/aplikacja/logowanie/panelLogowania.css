@@ -34,7 +34,7 @@
   font-weight: 700;
 }
 
-.panel-logowania__formularz input {
+.panel-logowania__formularz select {
   border: 1px solid rgba(74, 222, 128, 0.35);
   border-radius: 6px;
   padding: 10px 12px;
@@ -43,7 +43,7 @@
   font: inherit;
 }
 
-.panel-logowania__formularz input:focus {
+.panel-logowania__formularz select:focus {
   outline: 2px solid rgba(74, 222, 128, 0.55);
   outline-offset: 2px;
 }
@@ -61,4 +61,19 @@
 
 .panel-logowania__blad {
   color: #fecaca;
+}
+
+.panel-logowania__logo {
+  display: block;
+  width: min(100%, 220px);
+  margin-bottom: 16px;
+}
+
+.panel-logowania__profil {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid rgba(74, 222, 128, 0.25);
+  border-radius: 6px;
+  background: #03180c;
 }

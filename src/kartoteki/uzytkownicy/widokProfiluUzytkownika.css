@@ -1,0 +1,20 @@
+.profil-uzytkownika { display: grid; gap: 18px; max-width: 1180px; }
+.profil-uzytkownika__wybor, .profil-uzytkownika__pole { display: grid; gap: 6px; color: #c7ead0; }
+.profil-uzytkownika select, .profil-uzytkownika input { width: 100%; min-height: 36px; border: 1px solid rgba(156,207,171,.35); border-radius: 6px; background: #03180c; color: #f4fff7; font: inherit; padding: 7px 9px; }
+.profil-uzytkownika__naglowek, .profil-uzytkownika__kolumny, .profil-uzytkownika__formularz, .profil-uzytkownika__formularz section { display: grid; gap: 14px; }
+.profil-uzytkownika__naglowek { grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; border: 1px solid rgba(74,222,128,.25); border-radius: 8px; background: #062313; padding: 18px; }
+.profil-uzytkownika__naglowek .avatar-uzytkownika { width: 76px; height: 76px; font-size: 1.35rem; }
+.profil-uzytkownika__naglowek h1, .profil-uzytkownika__naglowek p, .profil-uzytkownika__kolumny p { margin: 0; }
+.profil-uzytkownika__naglowek div { display: grid; gap: 6px; }
+.profil-uzytkownika__kolumny { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.profil-uzytkownika__kolumny section, .profil-uzytkownika__formularz section { border: 1px solid rgba(74,222,128,.2); border-radius: 8px; background: #062313; padding: 16px; }
+.profil-uzytkownika__siatka { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.profil-uzytkownika__telefon { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 6px; }
+.profil-uzytkownika__zlozone-pole { display: flex; gap: 6px; align-items: center; }
+.profil-uzytkownika__zlozone-pole > :first-child { flex: 1; min-width: 0; }
+.profil-uzytkownika__zlozone-pole .pole-telefonu { flex: 1; min-width: 0; }
+.profil-uzytkownika__odznaki, .profil-uzytkownika__akcje, .profil-uzytkownika fieldset { display: flex; flex-wrap: wrap; gap: 8px; }
+.profil-uzytkownika button { border: 1px solid rgba(74,222,128,.45); border-radius: 6px; background: #0b2b17; color: #f4fff7; cursor: pointer; font: inherit; padding: 7px 10px; }
+.profil-uzytkownika button:focus-visible, .profil-uzytkownika input:focus-visible, .profil-uzytkownika select:focus-visible { outline: 2px solid #fef08a; outline-offset: 2px; }
+.profil-uzytkownika__sukces { color: #bbf7d0 !important; }.profil-uzytkownika__blad { color: #fecaca !important; }
+@media (max-width: 760px) { .profil-uzytkownika__naglowek, .profil-uzytkownika__kolumny, .profil-uzytkownika__siatka { grid-template-columns: 1fr; } }

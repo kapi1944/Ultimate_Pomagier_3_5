@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useKontekstUzytkownika } from '../../../aplikacja/logowanie/useKontekstUzytkownika'
 import { zapiszDokumentRoboczyGeneratora } from '../../../wspolne/dokumenty/zapisDokumentuGeneratora'
 import './prostyGeneratorDokumentu.css'
 
@@ -18,12 +19,7 @@ const konfiguracjeRejestru: Record<string, { typ: 'LISTA_OBECNOSCI' | 'ANKIETA' 
 }
 
 function zabezpieczHtml(tekst: string) {
-  return tekst
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;')
+  return tekst.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;')
 }
 
 export default function ProstyGeneratorDokumentu({
@@ -34,22 +30,59 @@ export default function ProstyGeneratorDokumentu({
   kluczLocalStorage,
   generujDokument,
 }: KonfiguracjaGeneratora) {
-  const [daneWejsciowe, ustawDaneWejsciowe] = useState(() => {
-    return localStorage.getItem(kluczLocalStorage) ?? tekstPrzykladowy
-  })
+  const { zalogowanyUzytkownik } = useKontekstUzytkownika()
+  const zalogowanyUzytkownikId = zalogowanyUzytkownik?.id
+  const [daneWejsciowe, ustawDaneWejsciowe] = useState(() => localStorage.getItem(kluczLocalStorage) ?? tekstPrzykladowy)
   const [komunikat, ustawKomunikat] = useState('Szkic zapisany lokalnie.')
-  const [idDokumentu, ustawIdDokumentu] = useState(() => localStorage.getItem(kluczLocalStorage + '.dokumentId'))
+  const [idDokumentu, ustawIdDokumentu] = useState<string | null>(() => localStorage.getItem(`${kluczLocalStorage}.dokumentId`))
+  const czyZmienionoPrzezUzytkownika = useRef(false)
   const wygenerowanyDokument = useMemo(() => generujDokument(daneWejsciowe), [daneWejsciowe, generujDokument])
 
   useEffect(() => {
     localStorage.setItem(kluczLocalStorage, daneWejsciowe)
-  }, [daneWejsciowe, kluczLocalStorage])
+    if (!czyZmienionoPrzezUzytkownika.current) return
 
-  function obsluzGenerowanie() {
+    const konfiguracja = konfiguracjeRejestru[kluczLocalStorage]
+    if (!konfiguracja) return
+
+    const identyfikator = window.setTimeout(() => {
+      try {
+        const dokument = zapiszDokumentRoboczyGeneratora({
+          id: idDokumentu,
+          ...konfiguracja,
+          tytul,
+          daneDokumentu: { tekst: daneWejsciowe },
+          ustawieniaDokumentu: {},
+          autorId: zalogowanyUzytkownikId,
+          wlascicielId: zalogowanyUzytkownikId,
+        })
+
+        if (dokument) {
+          ustawIdDokumentu(dokument.id)
+          localStorage.setItem(`${kluczLocalStorage}.dokumentId`, dokument.id)
+          ustawKomunikat('Automatycznie zapisano kopię roboczą.')
+        }
+      } catch {
+        ustawKomunikat('Szkic lokalny zapisano, ale automatyczny zapis w rejestrze nie powiódł się.')
+      }
+    }, 650)
+
+    return () => window.clearTimeout(identyfikator)
+  }, [daneWejsciowe, idDokumentu, kluczLocalStorage, tytul, zalogowanyUzytkownikId])
+
+  function zapiszWRejestr() {
     try {
       const konfiguracja = konfiguracjeRejestru[kluczLocalStorage]
       const dokument = konfiguracja
-        ? zapiszDokumentRoboczyGeneratora({ id: idDokumentu, ...konfiguracja, tytul, daneDokumentu: { tekst: daneWejsciowe }, ustawieniaDokumentu: {} })
+        ? zapiszDokumentRoboczyGeneratora({
+            id: idDokumentu,
+            ...konfiguracja,
+            tytul,
+            daneDokumentu: { tekst: daneWejsciowe },
+            ustawieniaDokumentu: {},
+            autorId: zalogowanyUzytkownikId,
+            wlascicielId: zalogowanyUzytkownikId,
+          })
         : null
 
       if (dokument) {
@@ -61,6 +94,7 @@ export default function ProstyGeneratorDokumentu({
       ustawKomunikat('Podgląd jest aktualny, ale nie udało się zapisać dokumentu roboczego.')
     }
   }
+
   async function obsluzKopiowanie() {
     if (!wygenerowanyDokument.trim()) {
       ustawKomunikat('Najpierw wygeneruj dokument.')
@@ -82,80 +116,50 @@ export default function ProstyGeneratorDokumentu({
     }
 
     const oknoDruku = window.open('', '_blank', 'width=900,height=700')
-
     if (!oknoDruku) {
       ustawKomunikat('Nie udało się otworzyć okna drukowania.')
       return
     }
 
-    oknoDruku.document.write(`
-      <!doctype html>
-      <html lang="pl">
-        <head>
-          <meta charset="utf-8" />
-          <title>${zabezpieczHtml(tytul)}</title>
-          <style>
-            body { font-family: Arial, sans-serif; margin: 32px; color: #111827; }
-            pre { white-space: pre-wrap; font-family: inherit; line-height: 1.5; }
-          </style>
-        </head>
-        <body>
-          <pre>${zabezpieczHtml(wygenerowanyDokument)}</pre>
-        </body>
-      </html>
-    `)
+    oknoDruku.document.write(`<!doctype html><html lang="pl"><head><meta charset="utf-8" /><title>${zabezpieczHtml(tytul)}</title><style>body{font-family:Arial,sans-serif;margin:32px;color:#111827}pre{white-space:pre-wrap;font-family:inherit;line-height:1.5}</style></head><body><pre>${zabezpieczHtml(wygenerowanyDokument)}</pre></body></html>`)
     oknoDruku.document.close()
     oknoDruku.focus()
     oknoDruku.print()
   }
 
   function obsluzCzyszczenie() {
+    czyZmienionoPrzezUzytkownika.current = false
     ustawDaneWejsciowe('')
+    ustawIdDokumentu(null)
     localStorage.removeItem(kluczLocalStorage)
-    ustawKomunikat('Wyczyszczono dane i zapisany szkic.')
+    localStorage.removeItem(`${kluczLocalStorage}.dokumentId`)
+    ustawKomunikat('Wyczyszczono generator. Poprzednia kopia pozostaje w rejestrze.')
   }
 
   return (
     <section className="widok prosty-generator">
-      <header className="prosty-generator__naglowek">
-        <h1>{tytul}</h1>
-        <p>{opis}</p>
-      </header>
-
+      <header className="prosty-generator__naglowek"><h1>{tytul}</h1><p>{opis}</p></header>
       <div className="prosty-generator__siatka">
         <section className="prosty-generator__panel">
-          <label className="prosty-generator__etykieta" htmlFor={`${kluczLocalStorage}-dane`}>
-            {etykietaDanychWejsciowych}
-          </label>
+          <label className="prosty-generator__etykieta" htmlFor={`${kluczLocalStorage}-dane`}>{etykietaDanychWejsciowych}</label>
           <textarea
             className="prosty-generator__textarea"
             id={`${kluczLocalStorage}-dane`}
-            onChange={(zdarzenie) => ustawDaneWejsciowe(zdarzenie.target.value)}
+            onChange={(zdarzenie) => {
+              czyZmienionoPrzezUzytkownika.current = true
+              ustawDaneWejsciowe(zdarzenie.target.value)
+            }}
             value={daneWejsciowe}
           />
-
           <div className="prosty-generator__akcje">
-            <button type="button" onClick={obsluzGenerowanie}>
-              Generuj
-            </button>
-            <button type="button" onClick={obsluzKopiowanie}>
-              Kopiuj wynik
-            </button>
-            <button type="button" onClick={obsluzDrukowanie}>
-              Drukuj
-            </button>
-            <button type="button" onClick={obsluzCzyszczenie}>
-              Wyczyść
-            </button>
+            <button type="button" onClick={zapiszWRejestr}>Generuj i zapisz</button>
+            <button type="button" onClick={obsluzKopiowanie}>Kopiuj wynik</button>
+            <button type="button" onClick={obsluzDrukowanie}>Drukuj</button>
+            <button type="button" onClick={obsluzCzyszczenie}>Nowy / wyczyść</button>
           </div>
-
-          <p className="prosty-generator__komunikat">{komunikat}</p>
+          <p aria-live="polite" className="prosty-generator__komunikat">{komunikat}</p>
         </section>
-
-        <section className="prosty-generator__panel">
-          <h2>Wygenerowany dokument</h2>
-          <pre className="prosty-generator__wynik">{wygenerowanyDokument}</pre>
-        </section>
+        <section className="prosty-generator__panel"><h2>Wygenerowany dokument</h2><pre className="prosty-generator__wynik">{wygenerowanyDokument}</pre></section>
       </div>
     </section>
   )
