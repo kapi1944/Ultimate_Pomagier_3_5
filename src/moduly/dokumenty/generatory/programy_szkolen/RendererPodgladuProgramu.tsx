@@ -99,7 +99,6 @@ export default function RendererPodgladuProgramu({
               key={blok.id}
               style={{
                 marginLeft: `${Math.min(poziom, 8) * 22}px`,
-                fontWeight: czyPogrubiacNaglowkiListyProgramu && poziom === 0 ? 700 : 400,
               }}
             >
               <span className="program-kartka-a4__marker">{pobierzMarker(blok, liczniki, stylListy)}</span>
