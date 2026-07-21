@@ -73,6 +73,7 @@ type DaneNumeracji = {
 
 type ZapisDyplomow = DaneNumeracji & {
   trybTytulu: TrybTytuluDyplomu
+  czyPogrubionyTyp: boolean
   motywKoloru: MotywKoloruDyplomu
   kolorMotywu: string
   tytulSzkolenia: string
@@ -242,17 +243,26 @@ function ograniczMarginesDodatku(wartosc: unknown, domyslnaWartosc: number) {
   return Math.min(24, Math.max(0, Math.round(liczba * 10) / 10))
 }
 
-function pobierzMarginesDodatku(wartosc: number, domyslnaWartosc: number) {
-  return `${ograniczMarginesDodatku(wartosc, domyslnaWartosc)}%`
-}
+function pobierzUstawieniaNaglowka(wartosc: number, przesuniecieDodatku: number) {
+  const margines = ograniczMarginesDodatku(wartosc, 9.2)
+  const przesuniecieNaglowka = (margines - 9.2) * 0.5
 
+  return {
+    przesuniecieNaglowka: `${przesuniecieNaglowka}%`,
+    pozycjaDodatku: `${9.05 + przesuniecieDodatku / 2 + przesuniecieNaglowka / 2}%`,
+  }
+}
+function pobierzPrzesuniecieStopki(wartosc: number) {
+  const margines = ograniczMarginesDodatku(wartosc, 7.6)
+  return `${Math.max(0, 2 + (margines - 7.6) * 0.5)}%`
+}
 function pobierzPrzesuniecieDodatku(wartosc: number, czyDodatekWybrany: boolean) {
   if (!czyDodatekWybrany) {
-    return '0%'
+    return 0
   }
 
   const procent = ograniczProcent(wartosc, 70)
-  return `${Math.min(7.2, Math.max(3.4, procent * 0.072))}%`
+  return Math.min(7.2, Math.max(3.4, procent * 0.072))
 }
 
 function pobierzStylMotywuDyplomu(
@@ -267,20 +277,20 @@ function pobierzStylMotywuDyplomu(
   >,
   dodatki: { czyDodatekGorny?: boolean; czyDodatekDolny?: boolean } = {},
 ): CSSProperties {
+  const przesuniecieDodatkuGornego = pobierzPrzesuniecieDodatku(dane.szerokoscDodatkuGornego, Boolean(dodatki.czyDodatekGorny))
+  const przesuniecieDodatkuDolnego = pobierzPrzesuniecieDodatku(dane.szerokoscDodatkuDolnego, Boolean(dodatki.czyDodatekDolny))
+  const ustawieniaNaglowka = pobierzUstawieniaNaglowka(dane.marginesDodatkuGornego, przesuniecieDodatkuGornego)
+  const przesuniecieStopki = pobierzPrzesuniecieStopki(dane.marginesDodatkuDolnego)
+
   return {
     '--semper-czerwony': pobierzKolorMotywuDyplomu(dane),
     '--szerokosc-dodatku-gornego': pobierzSzerokoscDodatku(dane.szerokoscDodatkuGornego),
     '--szerokosc-dodatku-dolnego': pobierzSzerokoscDodatku(dane.szerokoscDodatkuDolnego),
-    '--margines-dodatku-gornego': pobierzMarginesDodatku(dane.marginesDodatkuGornego, 9.2),
-    '--margines-dodatku-dolnego': pobierzMarginesDodatku(dane.marginesDodatkuDolnego, 7.6),
-    '--przesuniecie-dodatku-gornego': pobierzPrzesuniecieDodatku(
-      dane.szerokoscDodatkuGornego,
-      Boolean(dodatki.czyDodatekGorny),
-    ),
-    '--przesuniecie-dodatku-dolnego': pobierzPrzesuniecieDodatku(
-      dane.szerokoscDodatkuDolnego,
-      Boolean(dodatki.czyDodatekDolny),
-    ),
+    '--przesuniecie-naglowka': ustawieniaNaglowka.przesuniecieNaglowka,
+    '--pozycja-dodatku-gornego': ustawieniaNaglowka.pozycjaDodatku,
+    '--przesuniecie-stopki': przesuniecieStopki,
+    '--przesuniecie-dodatku-gornego': `${przesuniecieDodatkuGornego}%`,
+    '--przesuniecie-dodatku-dolnego': `${przesuniecieDodatkuDolnego}%`,
   } as CSSProperties
 }
 
@@ -488,6 +498,7 @@ function utworzDomyslnyZapis(): ZapisDyplomow {
   return {
     ...daneNumeracji,
     trybTytulu: 'certyfikat',
+    czyPogrubionyTyp: false,
     motywKoloru: 'semper',
     kolorMotywu: koloryFirmoweDyplomu.semper,
     tytulSzkolenia:
@@ -551,6 +562,7 @@ function wczytajZapisDyplomow(): ZapisDyplomow {
       dodatki: Array.isArray(dane.dodatki) ? dane.dodatki : [],
       motywKoloru: mapujMotywKoloruDyplomu(dane.motywKoloru),
       kolorMotywu: czyKolorHex(dane.kolorMotywu ?? '') ? String(dane.kolorMotywu) : domyslnyZapis.kolorMotywu,
+      czyPogrubionyTyp: dane.czyPogrubionyTyp ?? domyslnyZapis.czyPogrubionyTyp,
       rodzajGodzin: mapujRodzajGodzin(dane.rodzajGodzin),
       niestandardowyRodzajGodzin: dane.niestandardowyRodzajGodzin ?? '',
       szerokoscDodatkuGornego: ograniczProcent(
@@ -873,6 +885,7 @@ function StronaDyplomu({ dane, uczestnik }: { dane: ZapisDyplomow; uczestnik: Uc
     `dyplom-kartka dyplom-kartka--${dane.trybTytulu}`,
     dodatekGorny ? 'dyplom-kartka--z-dodatkiem-gornym' : '',
     dodatekDolny ? 'dyplom-kartka--z-dodatkiem-dolnym' : '',
+    dane.czyPogrubionyTyp ? 'dyplom-kartka--typ-pogrubiony' : '',
   ]
     .filter(Boolean)
     .join(' ')
@@ -964,6 +977,7 @@ export default function WidokDyplomow() {
   const [idWybranegoDodatkuDolnego, ustawIdWybranegoDodatkuDolnego] = useState('')
   const [trybPodgladuStron, ustawTrybPodgladuStron] = useState<TrybPodgladuStron>('pierwsza')
   const [ukladPodgladuStron, ustawUkladPodgladuStron] = useState<UkladPodgladuStron>('pod_soba')
+  const [czyPanelUstawienOtwarty, ustawCzyPanelUstawienOtwarty] = useState(false)
   const [indeksUczestnikaPierwszejStrony, ustawIndeksUczestnikaPierwszejStrony] = useState(0)
   const uczestnicyDoDruku = useMemo(
     () => dane.uczestnicy.filter((uczestnik) => uczestnik.imieNazwisko.trim()),
@@ -976,6 +990,15 @@ export default function WidokDyplomow() {
   const uczestnikDrugiejStrony = uczestnicyDrugiejStrony[0] ?? uczestnicyDoDruku[0] ?? utworzUczestnika('', 0, dane)
   const uczestnikPierwszejStrony = uczestnicyDoDruku[indeksPierwszejStrony] ?? uczestnikDrugiejStrony
   const problemy = useMemo(() => sprawdzDane(dane), [dane])
+  const checklistaDanych = [
+    { etykieta: 'Uczestnik', uzupelnione: uczestnicyDoDruku.length > 0 },
+    { etykieta: 'Tytuł szkolenia', uzupelnione: Boolean(dane.tytulSzkolenia.trim()) },
+    { etykieta: 'Termin szkolenia', uzupelnione: dane.wybraneDaty.length > 0 },
+    { etykieta: 'Liczba godzin', uzupelnione: Boolean(dane.liczbaGodzin) && Number(dane.liczbaGodzin) > 0 },
+    { etykieta: 'Ekspert / trener', uzupelnione: Boolean(dane.trener.trim()) },
+    { etykieta: 'Miejsce szkolenia', uzupelnione: dane.trybSzkolenia === 'online' || Boolean(dane.miejsceSzkolenia.trim()) },
+    { etykieta: 'Numery rejestru uczestników', uzupelnione: uczestnicyDoDruku.length > 0 && uczestnicyDoDruku.every((uczestnik) => uczestnik.numerRejestru.trim()) },
+  ]
   const miejscowosciDoPodpowiedzi = useMemo(
     () =>
       [...new Set(pobierzLokalizacjeZMagazynu().map((lokalizacja) => lokalizacja.nazwa))].sort((pierwsza, druga) =>
@@ -1378,6 +1401,7 @@ export default function WidokDyplomow() {
     ustawDane((aktualne) => ({
       ...aktualne,
       rozmiarTytulu: domyslnyZapis.rozmiarTytulu,
+      czyPogrubionyTyp: domyslnyZapis.czyPogrubionyTyp,
       szerokoscDodatkuGornego: domyslnyZapis.szerokoscDodatkuGornego,
       szerokoscDodatkuDolnego: domyslnyZapis.szerokoscDodatkuDolnego,
       marginesDodatkuGornego: domyslnyZapis.marginesDodatkuGornego,
@@ -1411,7 +1435,7 @@ export default function WidokDyplomow() {
   }
 
   return (
-    <section className="widok dyplomy">
+    <section className={`widok dyplomy${czyPanelUstawienOtwarty ? ' dyplomy--panel-ustawien-otwarty' : ''}`}>
       <header className="dyplomy__naglowek">
         <div>
           <h1>Generator Dyplomów</h1>
@@ -1419,6 +1443,9 @@ export default function WidokDyplomow() {
         </div>
 
         <div className="dyplomy__akcje">
+          <button aria-controls="panel-ustawien-dyplomu" aria-expanded={czyPanelUstawienOtwarty} className="dyplomy__przycisk" onClick={() => ustawCzyPanelUstawienOtwarty((czyOtwarty) => !czyOtwarty)} type="button">
+            Ustawienia dyplomu
+          </button>
           <button className="dyplomy__przycisk dyplomy__przycisk--glowny" onClick={drukujDyplomy} type="button">
             Drukuj / PDF
           </button>
@@ -1435,10 +1462,15 @@ export default function WidokDyplomow() {
         {komunikat}
       </div>
 
+      <div aria-hidden="true" className="dyplomy__strefa-aktywacji" onMouseEnter={() => ustawCzyPanelUstawienOtwarty(true)} />
+
       <div className="dyplomy__uklad">
         <div className="dyplomy__panel-pracy">
-          <section className="dyplomy__sekcja">
-            <h2>Dokument</h2>
+          <section aria-label="Ustawienia dyplomu" className="dyplomy__sekcja dyplomy__sekcja--ustawienia" id="panel-ustawien-dyplomu">
+            <div className="dyplomy__ustawienia-naglowek">
+              <h2>Ustawienia dyplomu</h2>
+              <button aria-label="Zamknij ustawienia dyplomu" className="dyplomy__przycisk dyplomy__przycisk--maly" onClick={() => ustawCzyPanelUstawienOtwarty(false)} type="button">Zamknij</button>
+            </div>
             <div className="dyplomy__siatka dyplomy__siatka--trzy">
               <div className="dyplomy__pole dyplomy__pole--pelne">
                 <span>Typ widocznego tytułu</span>
@@ -1458,6 +1490,11 @@ export default function WidokDyplomow() {
                 </div>
               </div>
 
+              <label className="dyplomy__pole dyplomy__pole--checkbox">
+                <input checked={dane.czyPogrubionyTyp} onChange={(zdarzenie) => zmienPole('czyPogrubionyTyp', zdarzenie.target.checked)} type="checkbox" />
+                <span>Pogrubiony nagłówek</span>
+              </label>
+
               <label className="dyplomy__pole">
                 <span>Motyw dyplomu</span>
                 <select
@@ -1476,6 +1513,8 @@ export default function WidokDyplomow() {
                     <span>Kolor z palety</span>
                     <input
                       onChange={(zdarzenie) => zmienKolorMotywu(zdarzenie.target.value)}
+                      className="dyplomy__pole-koloru"
+                      style={{ backgroundColor: czyKolorHex(dane.kolorMotywu) ? dane.kolorMotywu : koloryFirmoweDyplomu.semper }}
                       type="color"
                       value={czyKolorHex(dane.kolorMotywu) ? dane.kolorMotywu : koloryFirmoweDyplomu.semper}
                     />
@@ -1593,6 +1632,18 @@ export default function WidokDyplomow() {
                 </label>
               )}
             </div>
+
+            <section className="dyplomy__checklista" aria-live="polite">
+              <h3>Checklista danych</h3>
+              <p>{problemy.length ? `Do uzupełnienia: ${problemy.length}.` : 'Wszystkie wymagane dane są uzupełnione.'}</p>
+              <ul>
+                {checklistaDanych.map((pozycja) => (
+                  <li className={pozycja.uzupelnione ? 'dyplomy__checklista-pozycja--gotowa' : 'dyplomy__checklista-pozycja--brak'} key={pozycja.etykieta}>
+                    <span aria-hidden="true">{pozycja.uzupelnione ? '✓' : '!'}</span> {pozycja.etykieta}
+                  </li>
+                ))}
+              </ul>
+            </section>
           </section>
 
           <section className="dyplomy__sekcja">
@@ -1979,7 +2030,7 @@ export default function WidokDyplomow() {
                   />
                 </label>
                 <label className="dyplomy__pole">
-                  <span>Margines górny: {dane.marginesDodatkuGornego}%</span>
+                  <span>Odstęp nagłówka: {dane.marginesDodatkuGornego}%</span>
                   <input
                     max={24}
                     min={0}
@@ -2018,7 +2069,7 @@ export default function WidokDyplomow() {
                   />
                 </label>
                 <label className="dyplomy__pole">
-                  <span>Margines dolny: {dane.marginesDodatkuDolnego}%</span>
+                  <span>Odstęp stopki: {dane.marginesDodatkuDolnego}%</span>
                   <input
                     max={24}
                     min={0}

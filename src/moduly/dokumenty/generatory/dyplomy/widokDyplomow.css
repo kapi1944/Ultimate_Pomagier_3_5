@@ -1,7 +1,14 @@
 .dyplomy {
+  --szerokosc-panelu-ustawien: min(420px, calc(100vw - 22px));
+
   display: grid;
   gap: 18px;
   color: #f4fff7;
+  transition: margin-right 220ms ease;
+}
+
+.dyplomy--panel-ustawien-otwarty {
+  margin-right: var(--szerokosc-panelu-ustawien);
 }
 
 .dyplomy *,
@@ -82,6 +89,7 @@
 
 .dyplomy__uklad {
   display: grid;
+  min-width: 0;
   grid-template-columns: minmax(500px, 1fr) minmax(360px, 680px);
   gap: 20px;
   align-items: start;
@@ -106,6 +114,113 @@
   background: #082b14;
 }
 
+.dyplomy__strefa-aktywacji {
+  position: fixed;
+  inset: 0 0 0 auto;
+  z-index: 30;
+  width: 14px;
+}
+
+.dyplomy--panel-ustawien-otwarty .dyplomy__strefa-aktywacji {
+  pointer-events: none;
+}
+
+.dyplomy__sekcja--ustawienia {
+  position: fixed;
+  inset: 0 0 0 auto;
+  z-index: 32;
+  width: var(--szerokosc-panelu-ustawien);
+  height: 100vh;
+  overflow-y: auto;
+  border-radius: 0;
+  box-shadow: -18px 0 36px rgba(0, 0, 0, 0.36);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(100%);
+  transition: opacity 180ms ease, transform 220ms ease;
+}
+
+.dyplomy--panel-ustawien-otwarty .dyplomy__sekcja--ustawienia {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+}
+
+.dyplomy__ustawienia-naglowek {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.dyplomy__ustawienia-naglowek h2 {
+  margin-bottom: 0;
+}
+
+.dyplomy__checklista {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(74, 222, 128, 0.25);
+}
+
+.dyplomy__checklista h3,
+.dyplomy__checklista p,
+.dyplomy__checklista ul {
+  margin: 0;
+}
+
+.dyplomy__checklista h3 {
+  color: #e7fff0;
+  font-size: 0.92rem;
+}
+
+.dyplomy__checklista p {
+  color: #c7ead0;
+  font-size: 0.82rem;
+}
+
+.dyplomy__checklista ul {
+  display: grid;
+  gap: 6px;
+  padding: 0;
+  list-style: none;
+}
+
+.dyplomy__checklista li {
+  font-size: 0.86rem;
+}
+
+.dyplomy__checklista li span {
+  display: inline-grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  margin-right: 5px;
+  border-radius: 50%;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.dyplomy__checklista-pozycja--gotowa {
+  color: #bbf7d0;
+}
+
+.dyplomy__checklista-pozycja--gotowa span {
+  background: #166534;
+  color: #f0fdf4;
+}
+
+.dyplomy__checklista-pozycja--brak {
+  color: #fecaca;
+}
+
+.dyplomy__checklista-pozycja--brak span {
+  background: #991b1b;
+  color: #fff1f2;
+}
 .dyplomy__sekcja h2,
 .dyplomy__status h2 {
   margin: 0 0 14px;
@@ -229,6 +344,22 @@
   accent-color: #4ade80;
 }
 
+.dyplomy__pole input[type='color'] {
+  min-height: 42px;
+  padding: 3px;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.dyplomy__pole input[type='color']::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.dyplomy__pole input[type='color']::-webkit-color-swatch {
+  border: 0;
+  border-radius: 3px;
+}
 .dyplomy__pole input[type='range'] {
   padding: 0;
 }
@@ -562,12 +693,13 @@
 }
 
 .dyplom-kartka__dodatek--gora {
-  top: var(--margines-dodatku-gornego, 9.2%);
+  top: var(--pozycja-dodatku-gornego, 9.05%);
+  transform: translate(-50%, -50%);
   width: var(--szerokosc-dodatku-gornego, 61.6%);
 }
 
 .dyplom-kartka__dodatek--dol {
-  bottom: var(--margines-dodatku-dolnego, 7.6%);
+  bottom: 1.2%;
   width: var(--szerokosc-dodatku-dolnego, 61.6%);
 }
 
@@ -613,7 +745,7 @@
 .dyplom-kartka__naglowek-ozdobny {
   position: absolute;
   left: 6.03%;
-  top: calc(12.51% + var(--przesuniecie-dodatku-gornego, 0%));
+  top: calc(12.51% + var(--przesuniecie-dodatku-gornego, 0%) + var(--przesuniecie-naglowka, 0%));
   z-index: 2;
   width: 87.93%;
   height: 13.95%;
@@ -629,7 +761,8 @@
   font-family: "Bradley Hand ITC", "Segoe Print", "Comic Sans MS", cursive;
   font-size: clamp(48px, 7vw, 82px);
   font-style: italic;
-  font-weight: 400;
+  font-weight: normal;
+  font-synthesis: none;
   letter-spacing: 0;
   line-height: 0.9;
   text-align: right;
@@ -637,9 +770,13 @@
   white-space: nowrap;
 }
 
+.dyplom-kartka--typ-pogrubiony .dyplom-kartka__typ {
+  font-weight: 700;
+  font-synthesis: weight;
+}
+
 .dyplom-kartka--certyfikat .dyplom-kartka__typ {
   font-family: "Bradley Hand ITC", "Segoe Print", "Comic Sans MS", cursive;
-  font-weight: 400;
 }
 
 .dyplom-kartka--zaswiadczenie .dyplom-kartka__typ {
@@ -647,7 +784,6 @@
   right: 2%;
   font-size: clamp(32px, 4.9vw, 56px);
   font-synthesis: none;
-  font-weight: 400;
 }
 
 .dyplom-kartka--dyplom .dyplom-kartka__typ {
@@ -676,7 +812,7 @@
 
 .dyplom-kartka__glowna {
   position: absolute;
-  top: calc(28.5% + var(--przesuniecie-dodatku-gornego, 0%));
+  top: calc(28.5% + var(--przesuniecie-dodatku-gornego, 0%) + var(--przesuniecie-naglowka, 0%));
   left: 6%;
   z-index: 2;
   display: block;
@@ -762,7 +898,7 @@
 
 .dyplom-kartka__stopka {
   position: absolute;
-  top: calc(70.6% - var(--przesuniecie-dodatku-dolnego, 0%));
+  top: calc(70.6% - var(--przesuniecie-dodatku-dolnego, 0%) - var(--przesuniecie-stopki, 0%));
   right: 0;
   left: 0;
   z-index: 2;
@@ -913,6 +1049,12 @@
 }
 
 @media (max-width: 760px) {
+  .dyplomy--panel-ustawien-otwarty { margin-right: 0; }
+
+  .dyplomy__strefa-aktywacji { display: none; }
+
+  .dyplomy__sekcja--ustawienia { width: min(380px, 92vw); }
+
   .dyplomy__siatka--dwie,
   .dyplomy__siatka--trzy,
   .dyplomy__kalendarz-naglowek,
@@ -951,6 +1093,8 @@
   }
 
   .menu-boczne,
+  .dyplomy__strefa-aktywacji,
+  .dyplomy__sekcja--ustawienia,
   .dyplomy__naglowek,
   .dyplomy__komunikat,
   .dyplomy__uklad {
