@@ -467,7 +467,7 @@ export function utworzKopieRoboczaZOpublikowanychSzczegolow(rekord: Opublikowane
     zrodloOpublikowanegoId: rekord.id,
     dane: {
       ...rekord.dane,
-      status: 'PEŁNE',
+      status: statusPelny,
     },
     grupy,
     adresaci: rekord.adresaci,
@@ -476,4 +476,40 @@ export function utworzKopieRoboczaZOpublikowanychSzczegolow(rekord: Opublikowane
 
   zapiszWersjeRobocza(kopia)
   return kopia
+}
+
+const statusPelny = ('PE' + String.fromCharCode(0x0141) + 'NE') as DaneFormularza['status']
+
+function sklonujWartosc<Typ>(wartosc: Typ): Typ {
+  return JSON.parse(JSON.stringify(wartosc)) as Typ
+}
+
+export function duplikujOpublikowaneSzczegoly(rekord: OpublikowaneSzczegolyOrganizacyjne, konto: KontoSzczegolow) {
+  const kopia = zbudujWersjeRobocza(
+    { ...sklonujWartosc(rekord.dane), status: statusPelny },
+    sklonujWartosc(rekord.grupy),
+    sklonujWartosc(rekord.adresaci),
+    sklonujWartosc(rekord.statusyPol),
+    konto,
+  )
+  kopia.nazwa = `[Kopia robocza] Kopia - ${rekord.dane.tytulSzkolenia || rekord.nazwa}`
+  zapiszWersjeRobocza(kopia)
+  return kopia
+}
+
+export function duplikujKopieRobocza(kopiaZrodlowa: WersjaRoboczaGeneratora, konto: KontoSzczegolow) {
+  const kopia = zbudujWersjeRobocza(
+    { ...sklonujWartosc(kopiaZrodlowa.dane), status: statusPelny },
+    sklonujWartosc(kopiaZrodlowa.grupy),
+    sklonujWartosc(kopiaZrodlowa.adresaci),
+    sklonujWartosc(kopiaZrodlowa.statusyPol),
+    konto,
+  )
+  kopia.nazwa = `[Kopia robocza] Kopia - ${kopiaZrodlowa.dane.tytulSzkolenia || kopiaZrodlowa.nazwa}`
+  zapiszWersjeRobocza(kopia)
+  return kopia
+}
+
+export function usunOpublikowaneSzczegoly(id: string) {
+  return repozytoriumWspolnychDokumentow.usunMiekko(id)
 }

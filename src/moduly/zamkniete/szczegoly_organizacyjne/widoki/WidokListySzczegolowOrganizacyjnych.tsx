@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react'
+﻿import { useMemo, useState } from 'react'
 import type { OpublikowaneSzczegolyOrganizacyjne } from '../typy'
+import { AkcjeRekordu } from '../../../../wspolne/komponenty/AkcjeRekordu'
 import {
   czyKontoMozeCofnacStatus,
   czyKontoMozeZaakceptowacSzczegoly,
@@ -10,6 +11,8 @@ import {
 } from '../uzytkownicySzczegolow'
 import {
   pobierzOpublikowaneSzczegoly,
+  duplikujOpublikowaneSzczegoly,
+  usunOpublikowaneSzczegoly,
   ustawStatusSzkoleniaOpublikowanychSzczegolow,
   ustawStatusOpublikowanychSzczegolow,
   utworzKopieRoboczaZOpublikowanychSzczegolow,
@@ -31,16 +34,30 @@ function pobierzTrenerow(grupy: { trenerzy: { imieNazwisko: string }[] }[]) {
   return trenerzy.length ? trenerzy.join(', ') : 'Bez trenera'
 }
 
+function czyStatusOczekujacy(status: string) {
+  return status === 'OCZEKUJ' + String.fromCharCode(0x0104) + 'CE'
+}
 export default function WidokListySzczegolowOrganizacyjnych({ otworzNoweSzczegoly }: WlasciwosciWidokuListy) {
   const konto = useMemo(() => pobierzAktywneKontoSzczegolow(), [])
   const [rekordy, ustawRekordy] = useState(() => pobierzOpublikowaneSzczegoly())
+  const [podgladRekorduId, ustawPodgladRekorduId] = useState<string | null>(null)
 
+  function duplikujRekord(rekord: OpublikowaneSzczegolyOrganizacyjne) {
+    duplikujOpublikowaneSzczegoly(rekord, konto)
+    otworzNoweSzczegoly()
+  }
+
+  function usunRekord(rekord: OpublikowaneSzczegolyOrganizacyjne) {
+    if (window.confirm('Usunac opublikowane Szczegoly organizacyjne?') && usunOpublikowaneSzczegoly(rekord.id)) {
+      ustawRekordy(pobierzOpublikowaneSzczegoly())
+    }
+  }
   function zaakceptujSzczegoly(rekord: OpublikowaneSzczegolyOrganizacyjne) {
-    if (rekord.status !== 'OCZEKUJĄCE' || !czyKontoMozeZaakceptowacSzczegoly(konto, rekord)) {
+    if (!czyStatusOczekujacy(rekord.status) || !czyKontoMozeZaakceptowacSzczegoly(konto, rekord)) {
       return
     }
 
-    ustawRekordy(ustawStatusOpublikowanychSzczegolow(rekord.id, 'ZAAKCEPTOWANE', { konto, komentarz: 'Zaakceptowano szczegóły organizacyjne.' }))
+    ustawRekordy(ustawStatusOpublikowanychSzczegolow(rekord.id, 'ZAAKCEPTOWANE', { konto, komentarz: 'Zaakceptowano szczegĂłĹ‚y organizacyjne.' }))
   }
 
   function utworzAktualizacje(rekord: OpublikowaneSzczegolyOrganizacyjne) {
@@ -58,7 +75,7 @@ export default function WidokListySzczegolowOrganizacyjnych({ otworzNoweSzczegol
       return
     }
 
-    ustawRekordy(ustawStatusOpublikowanychSzczegolow(rekord.id, 'GOTOWE', { konto, komentarz: 'Oznaczono szczegóły jako gotowe.' }))
+    ustawRekordy(ustawStatusOpublikowanychSzczegolow(rekord.id, 'GOTOWE', { konto, komentarz: 'Oznaczono szczegĂłĹ‚y jako gotowe.' }))
   }
 
   function cofnijStatus(rekord: OpublikowaneSzczegolyOrganizacyjne) {
@@ -67,7 +84,7 @@ export default function WidokListySzczegolowOrganizacyjnych({ otworzNoweSzczegol
       return
     }
 
-    const komentarz = window.prompt('Podaj komentarz cofnięcia statusu:')
+    const komentarz = window.prompt('Podaj komentarz cofniÄ™cia statusu:')
 
     if (!komentarz?.trim()) {
       return
@@ -83,7 +100,7 @@ export default function WidokListySzczegolowOrganizacyjnych({ otworzNoweSzczegol
 
     const komentarz =
       statusSzkolenia === 'NIEZREALIZOWANE'
-        ? window.prompt('Podaj powód ustawienia statusu Niezrealizowane:')
+        ? window.prompt('Podaj powĂłd ustawienia statusu Niezrealizowane:')
         : `Zmieniono status szkolenia na ${statusSzkolenia}.`
 
     if (statusSzkolenia === 'NIEZREALIZOWANE' && !komentarz?.trim()) {
@@ -97,11 +114,11 @@ export default function WidokListySzczegolowOrganizacyjnych({ otworzNoweSzczegol
     <section className="widok szczegoly-organizacyjne">
       <div className="szczegoly-obszar-roboczy">
         <header className="szczegoly-widok-naglowek">
-          <h1>Lista szczegółów organizacyjnych</h1>
+          <h1>Lista szczegĂłĹ‚Ăłw organizacyjnych</h1>
         </header>
 
         <div className="szczegoly-lista-rekordow">
-        {rekordy.length === 0 && <p className="szczegoly-komunikat">Brak opublikowanych szczegółów organizacyjnych.</p>}
+        {rekordy.length === 0 && <p className="szczegoly-komunikat">Brak opublikowanych szczegĂłĹ‚Ăłw organizacyjnych.</p>}
         {rekordy.map((rekord) => (
           <article className="szczegoly-rekord" key={rekord.id} style={{ backgroundColor: pobierzKolorTlaOpiekuna(rekord.opiekunId) }}>
             <div className="szczegoly-rekord__naglowek">
@@ -122,7 +139,7 @@ export default function WidokListySzczegolowOrganizacyjnych({ otworzNoweSzczegol
               <span>Status szkolenia: {rekord.statusSzkolenia ?? rekord.dane.statusSzkolenia}</span>
             </div>
             <div className="szczegoly-rekord__akcje">
-              {rekord.status === 'OCZEKUJĄCE' && czyKontoMozeZaakceptowacSzczegoly(konto, rekord) && (
+              {czyStatusOczekujacy(rekord.status) && czyKontoMozeZaakceptowacSzczegoly(konto, rekord) && (
                 <button type="button" onClick={() => zaakceptujSzczegoly(rekord)}>
                   Oznacz jako zaakceptowane
                 </button>
@@ -149,11 +166,11 @@ export default function WidokListySzczegolowOrganizacyjnych({ otworzNoweSzczegol
               </label>
               {czyMoznaUtworzycAktualizacje(rekord.status) && (
                 <button type="button" onClick={() => utworzAktualizacje(rekord)}>
-                  {rekord.opiekunId === konto.id || czyKontoArchitekta(konto) ? 'Utwórz aktualizację' : 'Utwórz formularz bez grup'}
+                  {rekord.opiekunId === konto.id || czyKontoArchitekta(konto) ? 'UtwĂłrz aktualizacjÄ™' : 'UtwĂłrz formularz bez grup'}
                 </button>
               )}
-            </div>
-          </article>
+              <AkcjeRekordu podglad={() => ustawPodgladRekorduId(rekord.id)} edytuj={() => utworzAktualizacje(rekord)} duplikuj={() => duplikujRekord(rekord)} usun={() => usunRekord(rekord)} />            </div>
+            {podgladRekorduId === rekord.id && <p className="szczegoly-komunikat">Podglad: {rekord.dane.tytulSzkolenia || rekord.nazwa} · {rekord.grupy.length} grup.</p>}          </article>
         ))}
         </div>
       </div>

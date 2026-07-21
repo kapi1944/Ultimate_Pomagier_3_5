@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react'
+﻿import { useMemo, useState } from 'react'
 import type { WersjaRoboczaGeneratora } from '../typy'
+import { AkcjeRekordu } from '../../../../wspolne/komponenty/AkcjeRekordu'
 import {
   czyKontoMozeEdytowacKopie,
   czyKontoMozeWidziecKopie,
@@ -7,7 +8,7 @@ import {
   pobierzKolorTlaOpiekuna,
   pobierzNazweOpiekuna,
 } from '../uzytkownicySzczegolow'
-import { pobierzAktualnaWersjeRobocza, pobierzKopieRobocze, ustawAktualnaWersjeRobocza, usunKopieRobocza } from '../uslugi/magazynWersjiRoboczych'
+import { duplikujKopieRobocza, pobierzAktualnaWersjeRobocza, pobierzKopieRobocze, ustawAktualnaWersjeRobocza, usunKopieRobocza } from '../uslugi/magazynWersjiRoboczych'
 import './widokNowychSzczegolowOrganizacyjnych.css'
 
 type WlasciwosciWidokuKopii = {
@@ -26,9 +27,15 @@ function pobierzTrenerow(grupy: { trenerzy: { imieNazwisko: string }[] }[]) {
 export default function WidokKopiiRoboczychSzczegolowOrganizacyjnych({ otworzNoweSzczegoly }: WlasciwosciWidokuKopii) {
   const konto = useMemo(() => pobierzAktywneKontoSzczegolow(), [])
   const [kopie, ustawKopie] = useState(() => pobierzKopieRobocze())
+  const [podgladKopiiId, ustawPodgladKopiiId] = useState<string | null>(null)
   const aktualnaKopia = pobierzAktualnaWersjeRobocza()
   const widoczneKopie = kopie.filter((kopia) => kopia.id === aktualnaKopia?.id || czyKontoMozeWidziecKopie(konto, kopia))
 
+  function duplikujKopie(kopia: WersjaRoboczaGeneratora) {
+    if (!czyKontoMozeEdytowacKopie(konto, kopia)) return
+    duplikujKopieRobocza(kopia, konto)
+    ustawKopie(pobierzKopieRobocze())
+  }
   function usunKopie(kopia: WersjaRoboczaGeneratora) {
     if (!czyKontoMozeEdytowacKopie(konto, kopia)) {
       return
@@ -51,11 +58,11 @@ export default function WidokKopiiRoboczychSzczegolowOrganizacyjnych({ otworzNow
     <section className="widok szczegoly-organizacyjne">
       <div className="szczegoly-obszar-roboczy">
         <header className="szczegoly-widok-naglowek">
-          <h1>Kopie robocze szczegółów organizacyjnych</h1>
+          <h1>Kopie robocze szczegĂłĹ‚Ăłw organizacyjnych</h1>
         </header>
 
         <div className="szczegoly-lista-rekordow">
-          {widoczneKopie.length === 0 && <p className="szczegoly-komunikat">Brak dostępnych kopii roboczych.</p>}
+          {widoczneKopie.length === 0 && <p className="szczegoly-komunikat">Brak dostÄ™pnych kopii roboczych.</p>}
           {widoczneKopie.map((kopia) => (
             <article className="szczegoly-rekord" key={kopia.id} style={{ backgroundColor: pobierzKolorTlaOpiekuna(kopia.dane.opiekunId) }}>
               <div className="szczegoly-rekord__naglowek">
@@ -74,18 +81,9 @@ export default function WidokKopiiRoboczychSzczegolowOrganizacyjnych({ otworzNow
                 <span>Trenerzy: {pobierzTrenerow(kopia.grupy)}</span>
               </div>
               <div className="szczegoly-rekord__akcje">
-                {czyKontoMozeEdytowacKopie(konto, kopia) && (
-                  <>
-                    <button type="button" onClick={() => edytujKopie(kopia)}>
-                      Edytuj
-                    </button>
-                    <button type="button" onClick={() => usunKopie(kopia)}>
-                      Usuń
-                    </button>
-                  </>
-                )}
+                <AkcjeRekordu podglad={() => ustawPodgladKopiiId(kopia.id)} edytuj={() => edytujKopie(kopia)} duplikuj={() => duplikujKopie(kopia)} usun={() => usunKopie(kopia)} />
               </div>
-            </article>
+            {podgladKopiiId === kopia.id && <p className="szczegoly-komunikat">Podglad: {kopia.dane.tytulSzkolenia || kopia.nazwa} · {kopia.grupy.length} grup.</p>}            </article>
           ))}
         </div>
       </div>

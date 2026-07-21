@@ -1,0 +1,5 @@
+.akcje-rekordu { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.akcje-rekordu__przycisk { display: inline-flex; align-items: center; gap: 8px; min-height: 34px; padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; color: #1e293b; cursor: pointer; font: inherit; }
+.akcje-rekordu__przycisk:hover, .akcje-rekordu__przycisk:focus-visible { border-color: #2563eb; background: #eff6ff; outline: none; }
+.akcje-rekordu__przycisk--usun:hover, .akcje-rekordu__przycisk--usun:focus-visible { border-color: #dc2626; background: #fef2f2; }
+.akcje-rekordu__ikona { width: 17px; height: 17px; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+﻿import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import WidokUstawien from '../ustawienia/WidokUstawien'
 import MenuBoczne from '../menu/MenuBoczne'
 import NaglowekAplikacji from './NaglowekAplikacji'
@@ -14,6 +14,7 @@ import WidokAnkiet from '../../moduly/dokumenty/generatory/ankiety/WidokAnkiet'
 import WidokDyplomow from '../../moduly/dokumenty/generatory/dyplomy/WidokDyplomow'
 import WidokKartNaDrzwi from '../../moduly/dokumenty/generatory/karta_na_drzwi/WidokKartNaDrzwi'
 import WidokChecklistPaczek from '../../moduly/dokumenty/generatory/checklisty_paczek/WidokChecklistPaczek'
+import WidokKopiiRoboczychChecklistPaczek from '../../moduly/dokumenty/generatory/checklisty_paczek/WidokKopiiRoboczychChecklistPaczek'
 import WidokListyObecnosciZDokumentu from '../../moduly/dokumenty/generatory/listy_obecnosci/WidokListyObecnosciZDokumentu'
 import { WidokProgramowSzkolen } from '../../moduly/dokumenty/generatory/programy_szkolen'
 import {
@@ -174,30 +175,30 @@ function renderujWidok(
     case 'listy-obecnosci':
       return <WidokListyObecnosciZDokumentu dokumentIdZTrasy={pobierzIdListyObecnosciZeSciezki()} />
     case 'listy_obecnosci_kopie_robocze':
-      return <WidokKopiiRoboczychDokumentow tytul="Kopie robocze — Listy obecności" opis="Robocze Listy obecności ze wspólnego rejestru dokumentów." typyStale={['LISTA_OBECNOSCI']} otworzDokument={otworzDokument} />
+      return <WidokKopiiRoboczychDokumentow tytul="Kopie robocze â€” Listy obecnoĹ›ci" opis="Robocze Listy obecnoĹ›ci ze wspĂłlnego rejestru dokumentĂłw." typyStale={['LISTA_OBECNOSCI']} otworzDokument={otworzDokument} />
     case 'ankiety':
       return <WidokAnkiet />
     case 'ankiety_kopie_robocze':
-      return <WidokKopiiRoboczychDokumentow tytul="Kopie robocze — Ankiety" opis="Robocze Ankiety ze wspólnego rejestru dokumentów." typyStale={['ANKIETA']} otworzDokument={otworzDokument} />
+      return <WidokKopiiRoboczychDokumentow tytul="Kopie robocze â€” Ankiety" opis="Robocze Ankiety ze wspĂłlnego rejestru dokumentĂłw." typyStale={['ANKIETA']} otworzDokument={otworzDokument} />
     case 'dyplomy':
       return <WidokDyplomow />
     case 'dyplomy_kopie_robocze':
-      return <WidokKopiiRoboczychDokumentow tytul="Kopie robocze — Dyplomy" opis="Robocze certyfikaty, zaświadczenia i dyplomy." typyStale={['CERTYFIKAT', 'ZASWIADCZENIE', 'DYPLOM']} otworzDokument={otworzDokument} />
+      return <WidokKopiiRoboczychDokumentow tytul="Kopie robocze â€” Dyplomy" opis="Robocze certyfikaty, zaĹ›wiadczenia i dyplomy." typyStale={['CERTYFIKAT', 'ZASWIADCZENIE', 'DYPLOM']} otworzDokument={otworzDokument} />
     case 'karta-na-drzwi':
       return <WidokKartNaDrzwi />
     case 'karta_na_drzwi_kopie_robocze':
-      return <WidokKopiiRoboczychDokumentow tytul="Kopie robocze — Karty na drzwi" opis="Robocze Karty na drzwi ze wspólnego rejestru dokumentów." typyStale={['KARTA_NA_DRZWI']} otworzDokument={otworzDokument} />
+      return <WidokKopiiRoboczychDokumentow tytul="Kopie robocze â€” Karty na drzwi" opis="Robocze Karty na drzwi ze wspĂłlnego rejestru dokumentĂłw." typyStale={['KARTA_NA_DRZWI']} otworzDokument={otworzDokument} />
     case 'checklisty_paczek':
       return <WidokChecklistPaczek dokumentIdZTrasy={pobierzIdChecklistyPaczkiZeSciezki()} />
     case 'checklisty_paczek_kopie_robocze':
-      return <WidokKopiiRoboczychDokumentow tytul="Kopie robocze — Checklisty paczek" opis="Robocze Checklisty paczek ze wspólnego rejestru dokumentów." typyStale={['CHECKLISTA_PACZKI']} otworzDokument={otworzDokument} />
+      return <WidokKopiiRoboczychChecklistPaczek />
     case 'programy_szkolen':
       return <WidokProgramowSzkolen key={`${wersjaProgramu}-${pobierzIdProgramuZeSciezki() ?? 'nowy'}`} dokumentIdZTrasy={pobierzIdProgramuZeSciezki()} />
     case 'programy_szkolen_kopie_robocze':
       return (
         <WidokKopiiRoboczychGeneratora
           typGeneratora="programy_szkolen"
-          tytul="Programy szkoleń"
+          tytul="Programy szkoleĹ„"
           pobierzKopie={pobierzKopieRoboczeProgramu}
           otworzKopie={(kopia) => {
             otworzKopieRoboczaProgramu(kopia)
@@ -422,9 +423,9 @@ export default function UkladAplikacji() {
         <section className="program-panel-roboczy program-szkolen__komunikat" role="dialog" aria-modal="true" aria-label="Niezapisane zmiany">
           <strong>Masz niezapisane zmiany {czyWylogowanieDoPotwierdzenia || aktywnyWidok === 'profil_uzytkownika' ? 'profilu' : 'programu'}.</strong>
           <div className="program-szkolen__akcje">
-            <button type="button" onClick={() => { ustawWidokDoPotwierdzenia(null); ustawCzyWylogowanieDoPotwierdzenia(false) }}>Wróć do edycji</button>
+            <button type="button" onClick={() => { ustawWidokDoPotwierdzenia(null); ustawCzyWylogowanieDoPotwierdzenia(false) }}>WrĂłÄ‡ do edycji</button>
             {!czyWylogowanieDoPotwierdzenia && <button type="button" onClick={zapiszIWyjdz}>Zapisz i kontynuuj</button>}
-            <button type="button" onClick={wyjdzBezZapisywania}>Odrzuć zmiany</button>
+            <button type="button" onClick={wyjdzBezZapisywania}>OdrzuÄ‡ zmiany</button>
           </div>
         </section>
       )}

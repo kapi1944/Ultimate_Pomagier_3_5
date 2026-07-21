@@ -4,6 +4,7 @@ import { pobierzKolejnyNumerDziennyDokumentu, utworzIdentyfikatorDokumentu } fro
 import { repozytoriumWspolnychDokumentow } from '../../../../wspolne/dokumenty/rejestrDokumentow'
 import type { KontekstDokumentuSzkolenia } from '../../../../wspolne/integracje/szczegolyDoDokumentow'
 import type { RolaUzytkownika } from '../../../../kartoteki/uzytkownicy/typyUzytkownikow'
+import { pobierzOpublikowaneSzczegoly } from '../../../zamkniete/szczegoly_organizacyjne/uslugi/magazynWersjiRoboczych'
 import {
   normalizujDaneChecklisty,
   type DaneChecklistyPaczki,
@@ -103,6 +104,10 @@ function zastosujWzoryKlienta(dane: DaneChecklistyPaczki, wzoryKlienta?: Record<
 
 export function pobierzChecklistyPaczek() {
   return repozytoriumWspolnychDokumentow.pobierzWszystkie().map(jakoDokumentChecklisty).filter((dokument): dokument is DokumentChecklistyPaczki => dokument !== null)
+}
+
+export function pobierzOpublikowaneSzczegolyDoChecklisty() {
+  return pobierzOpublikowaneSzczegoly()
 }
 
 export function pobierzChecklistePaczki(id: string) {
@@ -217,3 +222,13 @@ export function duplikujChecklistePaczki(id: string, docelowaMigawka: MigawkaZro
 }
 
 export type { TypZalacznikaChecklisty }
+
+
+export function duplikujIstniejacaChecklistePaczki(id: string, uzytkownikId: string | null) {
+  const zrodlo = pobierzChecklistePaczki(id)
+  return zrodlo?.daneDokumentu.migawkaZrodla ? duplikujChecklistePaczki(id, zrodlo.daneDokumentu.migawkaZrodla, uzytkownikId) : null
+}
+
+export function usunChecklistePaczki(id: string) {
+  return repozytoriumWspolnychDokumentow.usunMiekko(id)
+}
