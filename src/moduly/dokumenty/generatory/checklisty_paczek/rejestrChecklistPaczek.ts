@@ -2,9 +2,14 @@ import type { Dokument, StatusDokumentu } from '../../../../wspolne/dokumenty/mo
 import { utworzNowyDokument } from '../../../../wspolne/dokumenty/modelDokumentu'
 import { pobierzKolejnyNumerDziennyDokumentu, utworzIdentyfikatorDokumentu } from '../../../../wspolne/dokumenty/nazwyDokumentow'
 import { repozytoriumWspolnychDokumentow } from '../../../../wspolne/dokumenty/rejestrDokumentow'
-import type { KontekstDokumentuSzkolenia } from '../../../../wspolne/integracje/szczegolyDoDokumentow'
+import {
+  przygotujZrodloZOpublikowanychSzczegolow,
+  przygotujZrodloZWersjiRoboczej,
+  type DaneSzczegolowDoKontekstu,
+  type KontekstDokumentuSzkolenia,
+} from '../../../../wspolne/integracje/szczegolyDoDokumentow/index.ts'
 import type { RolaUzytkownika } from '../../../../kartoteki/uzytkownicy/typyUzytkownikow'
-import { pobierzOpublikowaneSzczegoly } from '../../../zamkniete/szczegoly_organizacyjne/uslugi/magazynWersjiRoboczych'
+import type { DaneFormularza, GrupaSzkoleniowa, OpublikowaneSzczegolyOrganizacyjne, WersjaRoboczaGeneratora } from '../../../zamkniete/szczegoly_organizacyjne/typy'
 import {
   normalizujDaneChecklisty,
   type DaneChecklistyPaczki,
@@ -28,6 +33,16 @@ export type DaneZrodlaChecklisty = {
   logotypy?: Array<{ nazwa: string; podglad: string }>
   uwagiZeSzczegolow?: UwagaZeSzczegolow[]
   wzoryKlienta?: Record<string, string>
+}
+
+export type SzczegolyDoChecklisty = {
+  id: string
+  nazwa: string
+  dane: DaneFormularza
+  grupy: GrupaSzkoleniowa[]
+  opiekunId: string
+  czyKopiaRobocza: boolean
+  zrodloKontekstu: DaneSzczegolowDoKontekstu
 }
 
 function utworzId(prefiks: string) {
@@ -106,8 +121,60 @@ export function pobierzChecklistyPaczek() {
   return repozytoriumWspolnychDokumentow.pobierzWszystkie().map(jakoDokumentChecklisty).filter((dokument): dokument is DokumentChecklistyPaczki => dokument !== null)
 }
 
-export function pobierzOpublikowaneSzczegolyDoChecklisty() {
-  return pobierzOpublikowaneSzczegoly()
+function czyWersjaRoboczaSzczegolow(wartosc: unknown): wartosc is WersjaRoboczaGeneratora {
+  return Boolean(
+    wartosc
+      && typeof wartosc === 'object'
+      && Array.isArray((wartosc as WersjaRoboczaGeneratora).grupy)
+      && typeof (wartosc as WersjaRoboczaGeneratora).dokumentId === 'string'
+      && (wartosc as WersjaRoboczaGeneratora).dane,
+  )
+}
+
+function czyOpublikowaneSzczegoly(wartosc: unknown): wartosc is OpublikowaneSzczegolyOrganizacyjne {
+  return Boolean(
+    wartosc
+      && typeof wartosc === 'object'
+      && Array.isArray((wartosc as OpublikowaneSzczegolyOrganizacyjne).grupy)
+      && typeof (wartosc as OpublikowaneSzczegolyOrganizacyjne).id === 'string'
+      && (wartosc as OpublikowaneSzczegolyOrganizacyjne).dane,
+  )
+}
+
+export function pobierzSzczegolyDoChecklisty(): SzczegolyDoChecklisty[] {
+  return repozytoriumWspolnychDokumentow
+    .pobierzWszystkie()
+    .filter((dokument) => dokument.typ === 'SZCZEGOLY_ORGANIZACYJNE' && dokument.generatorId === 'szczegoly_organizacyjne' && !dokument.czyUsunietyMiekko)
+    .flatMap((dokument): SzczegolyDoChecklisty[] => {
+      if (czyWersjaRoboczaSzczegolow(dokument.daneDokumentu)) {
+        const wersja = dokument.daneDokumentu
+        return [{
+          id: dokument.id,
+          nazwa: wersja.dane.tytulSzkolenia || wersja.nazwa,
+          dane: wersja.dane,
+          grupy: wersja.grupy,
+          opiekunId: wersja.dane.opiekunId,
+          czyKopiaRobocza: true,
+          zrodloKontekstu: przygotujZrodloZWersjiRoboczej(wersja),
+        }]
+      }
+
+      if (czyOpublikowaneSzczegoly(dokument.daneDokumentu)) {
+        const szczegoly = dokument.daneDokumentu
+        return [{
+          id: dokument.id,
+          nazwa: szczegoly.dane.tytulSzkolenia || szczegoly.nazwa,
+          dane: szczegoly.dane,
+          grupy: szczegoly.grupy,
+          opiekunId: szczegoly.opiekunId,
+          czyKopiaRobocza: false,
+          zrodloKontekstu: przygotujZrodloZOpublikowanychSzczegolow(szczegoly),
+        }]
+      }
+
+      return []
+    })
+    .filter((szczegoly) => szczegoly.grupy.length > 0)
 }
 
 export function pobierzChecklistePaczki(id: string) {

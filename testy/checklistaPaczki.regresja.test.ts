@@ -210,7 +210,7 @@ test('waga i wysokość nie blokują finalizacji', () => {
 test('widok wymaga grupy, przekierowuje do edycji i drukuje tylko dane przeznaczone do druku', () => {
   const widok = readFileSync(new URL('../src/moduly/dokumenty/generatory/checklisty_paczek/WidokChecklistPaczek.tsx', import.meta.url), 'utf8')
   assert.match(widok, /Krok 2\. Grupa szkoleniowa/)
-  assert.match(widok, /disabled=\{!wybraneSzczegolyId \|\| !wybranaGrupaId\}/)
+  assert.match(widok, /disabled=\{!wybraneSzczegoly \|\| !wybranaGrupa\}/)
   assert.match(widok, /otworzCheckliste\(wynik\.id\)/)
   const poczatekDruku = widok.indexOf('function DrukChecklisty')
   const koniecDruku = widok.indexOf('export default function WidokChecklistPaczek')

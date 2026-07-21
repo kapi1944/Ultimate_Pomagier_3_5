@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { WersjaRoboczaGeneratora } from '../typy'
 import { AkcjeRekordu } from '../../../../wspolne/komponenty/AkcjeRekordu'
 import {
@@ -58,11 +58,11 @@ export default function WidokKopiiRoboczychSzczegolowOrganizacyjnych({ otworzNow
     <section className="widok szczegoly-organizacyjne">
       <div className="szczegoly-obszar-roboczy">
         <header className="szczegoly-widok-naglowek">
-          <h1>Kopie robocze szczegĂłĹ‚Ăłw organizacyjnych</h1>
+          <h1>Kopie robocze szczegółów organizacyjnych</h1>
         </header>
 
         <div className="szczegoly-lista-rekordow">
-          {widoczneKopie.length === 0 && <p className="szczegoly-komunikat">Brak dostÄ™pnych kopii roboczych.</p>}
+          {widoczneKopie.length === 0 && <p className="szczegoly-komunikat">Brak dostępnych kopii roboczych.</p>}
           {widoczneKopie.map((kopia) => (
             <article className="szczegoly-rekord" key={kopia.id} style={{ backgroundColor: pobierzKolorTlaOpiekuna(kopia.dane.opiekunId) }}>
               <div className="szczegoly-rekord__naglowek">

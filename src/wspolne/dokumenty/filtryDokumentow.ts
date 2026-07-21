@@ -20,6 +20,32 @@ function normalizujTekst(wartosc: string) {
   return wartosc.trim().toLocaleLowerCase('pl-PL')
 }
 
+function pobierzTekstZPola(wartosc: unknown): string {
+  if (typeof wartosc === 'string') return wartosc
+  if (Array.isArray(wartosc)) return wartosc.map(pobierzTekstZPola).join(' ')
+  if (!wartosc || typeof wartosc !== 'object') return ''
+  return Object.values(wartosc as Record<string, unknown>).map(pobierzTekstZPola).join(' ')
+}
+
+function pobierzTekstDanychDokumentu(daneDokumentu: unknown) {
+  if (!daneDokumentu || typeof daneDokumentu !== 'object') return ''
+  const dane = daneDokumentu as Record<string, unknown>
+  const migawka = dane.migawkaZrodla && typeof dane.migawkaZrodla === 'object' ? dane.migawkaZrodla as Record<string, unknown> : {}
+  return [
+    dane.tytulSzkolenia,
+    dane.nazwaKlienta,
+    dane.trener,
+    dane.trenerzy,
+    dane.nazwaGrupy,
+    dane.klient,
+    dane.opiekunId,
+    migawka.tytulSzkolenia,
+    migawka.klient,
+    migawka.trenerzy,
+    migawka.nazwaGrupy,
+  ].map(pobierzTekstZPola).join(' ')
+}
+
 function czyDataNalezyDoZakresu(data: string, dataOd?: string, dataDo?: string) {
   const czas = Date.parse(data)
   const od = dataOd ? Date.parse(`${dataOd}T00:00:00`) : Number.NEGATIVE_INFINITY
@@ -33,7 +59,7 @@ export function filtrujDokumenty(dokumenty: Dokument<unknown, unknown>[], filtr:
 
   return dokumenty.filter((dokument) => {
     const etykietaTypu = pobierzKonfiguracjeTypuDokumentu(dokument.typ)?.etykieta ?? dokument.typ
-    const indeksTekstowy = normalizujTekst(`${dokument.tytul} ${dokument.id} ${dokument.generatorId} ${etykietaTypu}`)
+    const indeksTekstowy = normalizujTekst(`${dokument.tytul} ${dokument.id} ${dokument.generatorId} ${dokument.szkolenieId ?? ''} ${dokument.klientId ?? ''} ${dokument.wlascicielId ?? ''} ${etykietaTypu} ${pobierzTekstDanychDokumentu(dokument.daneDokumentu)}`)
 
     return (
       (!filtr.typ || dokument.typ === filtr.typ) &&

@@ -113,6 +113,50 @@
   padding: 16px;
 }
 
+.lista-dokumentow__karta--dyplom {
+  display: grid;
+  grid-template-columns: 172px minmax(0, 1fr);
+  align-items: stretch;
+}
+
+.lista-dokumentow__miniatura-dyplomu {
+  display: grid;
+  min-width: 0;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(74, 222, 128, 0.2);
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.lista-dokumentow__miniatura-dyplomu img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 210 / 297;
+  object-fit: cover;
+}
+
+.lista-dokumentow__placeholder-dyplomu {
+  display: grid;
+  width: 100%;
+  min-height: 168px;
+  place-items: center;
+  background: linear-gradient(135deg, #f8fafc, #dbeafe);
+  color: #1e3a5f;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.lista-dokumentow__tresc-dyplomu {
+  display: grid;
+  min-width: 0;
+  gap: 12px;
+}
+
+.lista-dokumentow__metadane--dyplom {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .lista-dokumentow__karta-naglowek {
   display: flex;
   justify-content: space-between;
@@ -166,6 +210,10 @@
   .lista-dokumentow__metadane {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .lista-dokumentow__karta--dyplom {
+    grid-template-columns: 124px minmax(0, 1fr);
+  }
 }
 
 @media (max-width: 440px) {
@@ -175,5 +223,13 @@
 
   .lista-dokumentow__karta-naglowek {
     flex-direction: column;
+  }
+
+  .lista-dokumentow__karta--dyplom {
+    grid-template-columns: 1fr;
+  }
+
+  .lista-dokumentow__miniatura-dyplomu {
+    max-width: 180px;
   }
 }

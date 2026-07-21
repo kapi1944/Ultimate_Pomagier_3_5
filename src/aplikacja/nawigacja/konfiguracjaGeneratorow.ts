@@ -38,6 +38,7 @@ export const konfiguracjePodmenuGeneratorow: KonfiguracjaPodmenuGeneratora[] = [
     pozycje: [
       { widok: 'listy-obecnosci', etykieta: 'Nowa lista obecności', sciezka: '/dokumenty/listy-obecnosci' },
       { widok: 'listy_obecnosci_kopie_robocze', etykieta: 'Kopie robocze', sciezka: '/dokumenty/listy-obecnosci/kopie-robocze' },
+      { widok: 'listy_obecnosci_wszystkie', etykieta: 'Wszystkie listy obecności', sciezka: '/dokumenty/listy-obecnosci/wszystkie' },
     ],
   },
   {
@@ -47,6 +48,7 @@ export const konfiguracjePodmenuGeneratorow: KonfiguracjaPodmenuGeneratora[] = [
     pozycje: [
       { widok: 'ankiety', etykieta: 'Nowa ankieta', sciezka: '/dokumenty/ankiety' },
       { widok: 'ankiety_kopie_robocze', etykieta: 'Kopie robocze', sciezka: '/dokumenty/ankiety/kopie-robocze' },
+      { widok: 'ankiety_wszystkie', etykieta: 'Wszystkie ankiety', sciezka: '/dokumenty/ankiety/wszystkie' },
     ],
   },
   {
@@ -56,6 +58,7 @@ export const konfiguracjePodmenuGeneratorow: KonfiguracjaPodmenuGeneratora[] = [
     pozycje: [
       { widok: 'dyplomy', etykieta: 'Nowy dyplom', sciezka: '/dokumenty/dyplomy' },
       { widok: 'dyplomy_kopie_robocze', etykieta: 'Kopie robocze', sciezka: '/dokumenty/dyplomy/kopie-robocze' },
+      { widok: 'dyplomy_wszystkie', etykieta: 'Wszystkie dyplomy', sciezka: '/dokumenty/dyplomy/wszystkie' },
     ],
   },
   {
@@ -65,6 +68,7 @@ export const konfiguracjePodmenuGeneratorow: KonfiguracjaPodmenuGeneratora[] = [
     pozycje: [
       { widok: 'karta-na-drzwi', etykieta: 'Nowa karta na drzwi', sciezka: '/dokumenty/karta-na-drzwi' },
       { widok: 'karta_na_drzwi_kopie_robocze', etykieta: 'Kopie robocze', sciezka: '/dokumenty/karta-na-drzwi/kopie-robocze' },
+      { widok: 'karta_na_drzwi_wszystkie', etykieta: 'Wszystkie karty na drzwi', sciezka: '/dokumenty/karta-na-drzwi/wszystkie' },
     ],
   },
   {
@@ -74,6 +78,7 @@ export const konfiguracjePodmenuGeneratorow: KonfiguracjaPodmenuGeneratora[] = [
     pozycje: [
       { widok: 'checklisty_paczek', etykieta: 'Nowa checklista paczki', sciezka: '/dokumenty/checklisty-paczek' },
       { widok: 'checklisty_paczek_kopie_robocze', etykieta: 'Kopie robocze', sciezka: '/dokumenty/checklisty-paczek/kopie-robocze' },
+      { widok: 'checklisty_paczek_wszystkie', etykieta: 'Wszystkie checklisty paczek', sciezka: '/dokumenty/checklisty-paczek/wszystkie' },
     ],
   },
   {
