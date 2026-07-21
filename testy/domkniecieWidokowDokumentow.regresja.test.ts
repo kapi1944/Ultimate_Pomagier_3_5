@@ -97,14 +97,16 @@ test('wspólna lista filtruje typ, status, tekst, datę i sortowanie bez mieszan
   assert.deepEqual(sortujDokumenty([ankieta, dyplom], 'TYTUL_ROSNACO').map((dokument) => dokument.id), ['dyplom-1', 'ankieta-1'])
 })
 
-test('Kopie robocze i Wszystkie Dyplomy korzystają z jednej karty z miniaturą lub placeholderem', () => {
+test('Kopie robocze i Wszystkie Dyplomy korzystają z jednej karty z miniaturą pierwszej strony', () => {
   const lista = odczytajZrodlo('../src/moduly/dokumenty/ListaDokumentow.tsx')
   const karta = odczytajZrodlo('../src/moduly/dokumenty/KartaDokumentuDyplomu.tsx')
   const uklad = odczytajZrodlo('../src/aplikacja/layout/UkladAplikacji.tsx')
 
   assert.match(lista, /KartaDokumentuDyplomu/)
   assert.match(karta, /lista-dokumentow__miniatura-dyplomu/)
-  assert.match(karta, /lista-dokumentow__placeholder-dyplomu/)
+  assert.match(karta, /lista-dokumentow__podglad-pierwszej-strony-dyplomu/)
+  assert.match(karta, /Miniatura pierwszej strony/)
+  assert.match(karta, /Imię i nazwisko/)
   assert.match(karta, /onError/)
   assert.match(uklad, /Kopie robocze — Dyplomy/)
   assert.match(uklad, /Wszystkie dyplomy/)

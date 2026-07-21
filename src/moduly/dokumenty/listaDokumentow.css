@@ -122,7 +122,9 @@
 .lista-dokumentow__miniatura-dyplomu {
   display: grid;
   min-width: 0;
-  place-items: center;
+  position: relative;
+  align-self: start;
+  aspect-ratio: 210 / 297;
   overflow: hidden;
   border: 1px solid rgba(74, 222, 128, 0.2);
   border-radius: 6px;
@@ -130,21 +132,74 @@
 }
 
 .lista-dokumentow__miniatura-dyplomu img {
-  display: block;
+  position: absolute;
+  inset: 0;
   width: 100%;
-  aspect-ratio: 210 / 297;
+  height: 100%;
   object-fit: cover;
 }
 
-.lista-dokumentow__placeholder-dyplomu {
+.lista-dokumentow__podglad-pierwszej-strony-dyplomu {
+  position: relative;
+  z-index: 1;
   display: grid;
   width: 100%;
-  min-height: 168px;
-  place-items: center;
-  background: linear-gradient(135deg, #f8fafc, #dbeafe);
+  height: 100%;
+  grid-template-rows: auto auto 1fr auto;
+  gap: 7px;
+  padding: 10px 8px 8px;
+  box-sizing: border-box;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(219, 234, 254, 0.88));
   color: #1e3a5f;
-  font-size: 0.8rem;
+  text-align: center;
+}
+
+.lista-dokumentow__podglad-rejestr {
+  font-size: 0.42rem;
+  text-align: left;
+}
+
+.lista-dokumentow__podglad-naglowek-dyplomu,
+.lista-dokumentow__podglad-tresc-dyplomu {
+  display: grid;
+  gap: 4px;
+}
+
+.lista-dokumentow__podglad-naglowek-dyplomu strong {
+  font-size: 0.77rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.lista-dokumentow__podglad-naglowek-dyplomu span,
+.lista-dokumentow__podglad-tresc-dyplomu span {
+  font-size: 0.42rem;
+  letter-spacing: 0.05em;
+}
+
+.lista-dokumentow__podglad-tresc-dyplomu {
+  align-content: center;
+}
+
+.lista-dokumentow__podglad-tresc-dyplomu strong {
+  font-size: 0.64rem;
+}
+
+.lista-dokumentow__podglad-tresc-dyplomu em {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  color: #31527c;
+  font-size: 0.48rem;
+  font-style: normal;
+  line-height: 1.25;
+}
+
+.lista-dokumentow__podglad-stopka-dyplomu {
+  font-size: 0.54rem;
   font-weight: 700;
+  letter-spacing: 0.14em;
 }
 
 .lista-dokumentow__tresc-dyplomu {
