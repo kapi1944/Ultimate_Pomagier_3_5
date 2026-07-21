@@ -73,7 +73,7 @@ test('nowa Checklista ma kategorie i pozycje zgodne z papierowym wzorem', () => 
   const dane = utworzDomyslneDaneChecklisty({ identyfikator: 'test', numerDzienny: 1 })
   assert.deepEqual(dane.kategorie.map((kategoria) => kategoria.nazwa), ['Materiały', 'Teczki', 'Pakiet CRM', 'Gadżety', 'Inne'])
   for (const nazwa of ['Prezentacje', 'Podręczniki / materiały szkoleniowe', 'Materiały dodatkowe', 'Pre/Post-testy', 'Teczki', 'Lista obecności', 'Ankiety', 'Certyfikaty / Dyplomy', 'Karta na drzwi', 'Długopisy', 'Torby']) assert.ok(dane.pozycje.some((pozycja) => pozycja.nazwa === nazwa), `Brak domyślnej pozycji: ${nazwa}`)
-  assert.match(pobierzPozycje(dane, 'Teczki').uwagiDrukowane, /Program szkolenia/)
+  assert.equal(pobierzPozycje(dane, 'Teczki').uwagiDrukowane, '')
 })
 
 test('reguły ilości pokazują wynik biznesowy oraz zachowują ręczne nadpisanie', () => {
@@ -217,6 +217,11 @@ test('widok wymaga grupy, przekierowuje do edycji i drukuje tylko dane przeznacz
   const druk = widok.slice(poczatekDruku, koniecDruku)
   assert.match(druk, /id="wydruk-checklisty"/)
   assert.match(druk, /Podpis Opiekuna/)
+  assert.match(druk, /checklista-paczki__wydruk-sklad-teczki/)
+  assert.match(druk, /Program szkolenia/)
+  assert.match(druk, /Notatnik/)
+  assert.match(druk, /Wizytówka/)
+  assert.match(druk, /checklista-paczki__wydruk-tabela-wysylki/)
   assert.match(druk, /Array\.from\(\{ length: 2 \}/)
   assert.match(druk, /uwagiDrukowane/)
   assert.doesNotMatch(druk, /notatkiWewnetrzne/)
