@@ -222,6 +222,7 @@ test('widok wymaga grupy, przekierowuje do edycji i drukuje tylko dane przeznacz
   assert.match(druk, /Notatnik/)
   assert.match(druk, /Wizytówka/)
   assert.match(druk, /checklista-paczki__wydruk-tabela-wysylki/)
+  for (const klasaKoloru of ['materialy', 'teczki', 'pakiet-crm', 'gadzety', 'inne']) assert.match(widok, new RegExp(`checklista-paczki__wydruk-tabela--${klasaKoloru}`))
   assert.match(druk, /Array\.from\(\{ length: 2 \}/)
   assert.match(druk, /uwagiDrukowane/)
   assert.doesNotMatch(druk, /notatkiWewnetrzne/)

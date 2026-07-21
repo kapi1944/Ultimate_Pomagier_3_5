@@ -171,6 +171,11 @@
 .checklista-paczki__wydruk th:nth-child(3), .checklista-paczki__wydruk td:nth-child(3) { width: 16%; }
 .checklista-paczki__wydruk th:nth-child(4), .checklista-paczki__wydruk td:nth-child(4) { width: 19%; }
 .checklista-paczki__wydruk th:nth-child(5), .checklista-paczki__wydruk td:nth-child(5) { width: 20%; }
+.checklista-paczki__wydruk-tabela--materialy th, .checklista-paczki__wydruk-tabela--materialy td { background: #dceaf7; }
+.checklista-paczki__wydruk-tabela--teczki th, .checklista-paczki__wydruk-tabela--teczki td { background: #fff1c9; }
+.checklista-paczki__wydruk-tabela--pakiet-crm th, .checklista-paczki__wydruk-tabela--pakiet-crm td { background: #e0efd8; }
+.checklista-paczki__wydruk-tabela--gadzety th, .checklista-paczki__wydruk-tabela--gadzety td { background: #f9e1d0; }
+.checklista-paczki__wydruk-tabela--inne th, .checklista-paczki__wydruk-tabela--inne td { background: #f7cfb2; }
 .checklista-paczki__wydruk-sklad-teczki { margin: 2px 0 0; padding-left: 14px; }
 .checklista-paczki__wydruk-sklad-teczki li { margin: 0; }
 .checklista-paczki__wydruk-uwagi, .checklista-paczki__wydruk-wysylka { margin-top: 8px; padding: 6px; border: 1px solid #222; }

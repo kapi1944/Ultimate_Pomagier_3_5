@@ -155,6 +155,17 @@ function EdytorPozycji({ dane, pozycja, zablokowana, zapisz }: { dane: DaneCheck
   </article>
 }
 
+function pobierzKlaseKoloruKategoriiWydruku(nazwaKategorii: string) {
+  const klasy: Record<string, string> = {
+    Materiały: 'checklista-paczki__wydruk-tabela--materialy',
+    Teczki: 'checklista-paczki__wydruk-tabela--teczki',
+    'Pakiet CRM': 'checklista-paczki__wydruk-tabela--pakiet-crm',
+    Gadżety: 'checklista-paczki__wydruk-tabela--gadzety',
+    Inne: 'checklista-paczki__wydruk-tabela--inne',
+  }
+  return klasy[nazwaKategorii] ?? ''
+}
+
 function DrukChecklisty({ dane, nazwaOpiekuna, nazwaWysylacza }: { dane: DaneChecklistyPaczki; nazwaOpiekuna: string; nazwaWysylacza: string }) {
   const migawka = dane.migawkaZrodla
   const uczestnicy = migawka?.liczbaUczestnikow ?? 0
@@ -167,7 +178,7 @@ function DrukChecklisty({ dane, nazwaOpiekuna, nazwaWysylacza }: { dane: DaneChe
     <section className="checklista-paczki__wydruk-logotypy"><strong>Logotypy:</strong>{migawka?.logotypy.length ? <div>{migawka.logotypy.map((logo) => logo.podglad ? <img alt={logo.nazwa} key={logo.nazwa} src={logo.podglad} /> : <span key={logo.nazwa}>{logo.nazwa}</span>)}</div> : <span>brak</span>}<strong>Finansowanie:</strong><span>{migawka?.finansowanie || 'brak'}</span></section>
     {kategorie.map((kategoria) => {
       const pozycje = dane.pozycje.filter((pozycja) => pozycja.kategoriaId === kategoria.id && czyPozycjaJestAktywna(pozycja)).sort((pierwsza, druga) => pierwsza.kolejnosc - druga.kolejnosc)
-      return <table key={kategoria.id}><thead><tr><th colSpan={5}>{kategoria.nazwa}</th></tr><tr><th>Materiał</th><th>Ilość</th><th>Wzór klienta</th><th>Uwagi dodatkowe</th><th>Podpis Opiekuna</th></tr></thead><tbody>{pozycje.map((pozycja) => { const czyTeczki = kategoria.nazwa === 'Teczki' && pozycja.nazwa === 'Teczki'; return <tr key={pozycja.id}><td>{czyTeczki ? <><span>Teczki</span><ul className="checklista-paczki__wydruk-sklad-teczki"><li>Program szkolenia</li><li>Notatnik</li><li>Wizytówka</li></ul></> : <>{pozycja.nazwa}{pozycja.czyOnline ? ' (online)' : ''}</>}</td><td>{formatujIloscPozycji(pozycja, uczestnicy, dni)}</td><td>{pozycja.wzorKlienta || 'brak'}</td><td>{czyTeczki ? '' : pozycja.uwagiDrukowane}</td><td /></tr> })}{kategoria.nazwa === 'Inne' && Array.from({ length: 2 }, (_, indeks) => <tr key={`pusty-${indeks}`}><td>&nbsp;</td><td /><td /><td /><td /></tr>)}</tbody></table>
+      return <table className={pobierzKlaseKoloruKategoriiWydruku(kategoria.nazwa)} key={kategoria.id}><thead><tr><th colSpan={5}>{kategoria.nazwa}</th></tr><tr><th>Materiał</th><th>Ilość</th><th>Wzór klienta</th><th>Uwagi dodatkowe</th><th>Podpis Opiekuna</th></tr></thead><tbody>{pozycje.map((pozycja) => { const czyTeczki = kategoria.nazwa === 'Teczki' && pozycja.nazwa === 'Teczki'; return <tr key={pozycja.id}><td>{czyTeczki ? <><span>Teczki</span><ul className="checklista-paczki__wydruk-sklad-teczki"><li>Program szkolenia</li><li>Notatnik</li><li>Wizytówka</li></ul></> : <>{pozycja.nazwa}{pozycja.czyOnline ? ' (online)' : ''}</>}</td><td>{formatujIloscPozycji(pozycja, uczestnicy, dni)}</td><td>{pozycja.wzorKlienta || 'brak'}</td><td>{czyTeczki ? '' : pozycja.uwagiDrukowane}</td><td /></tr> })}{kategoria.nazwa === 'Inne' && Array.from({ length: 2 }, (_, indeks) => <tr key={`pusty-${indeks}`}><td>&nbsp;</td><td /><td /><td /><td /></tr>)}</tbody></table>
     })}
     <section className="checklista-paczki__wydruk-uwagi"><h3>Uwagi ze Szczegółów</h3>{migawka?.uwagiZeSzczegolow.length ? migawka.uwagiZeSzczegolow.map((uwaga) => <p key={`${uwaga.etykieta}-${uwaga.tresc}`}><strong>{uwaga.etykieta}:</strong> {uwaga.tresc}</p>) : <p>brak</p>}</section>
     <section className="checklista-paczki__wydruk-wysylka"><h3>Wysyłka paczki</h3><p><strong>Adres do wysyłki paczki:</strong> {formatujAdres(dane.daneOdbiorcy) || 'brak'}</p><p><strong>Odbiorca paczki:</strong> {dane.daneOdbiorcy.imieNazwisko || dane.daneOdbiorcy.nazwaFirmy || 'brak'}</p><table className="checklista-paczki__wydruk-tabela-wysylki"><tbody><tr><th>Waga paczki:</th><td>{dane.waga || '—'}</td><th>Wysokość paczki:</th><td>{dane.wysokosc || '—'}</td></tr><tr><th>Data wysłania:</th><td>{dane.dataWyslania || '—'}</td><th>Podpis pakującego:</th><td><span className="checklista-paczki__wydruk-podpis-pakujacego">{podpisPakujacego}</span></td></tr></tbody></table></section>
