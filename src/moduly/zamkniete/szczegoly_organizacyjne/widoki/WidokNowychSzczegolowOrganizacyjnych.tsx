@@ -43,6 +43,7 @@ const sekcjeNawigacji = [
 const opcjeOpiekunow = ['', ...opiekunowieSzczegolow.map((opiekun) => opiekun.id)]
 const kluczPrzypieciaPaneluJakosci = 'ultimatePomagier.panelJakosciPrzypiety'
 const kluczWysuwaniaPaneluJakosci = 'ultimatePomagier.panelJakosciWysuwanieZKrawedzi'
+const zdarzenieZmianyPreferencjiPaneluJakosci = 'ultimatePomagier:zmianaPreferencjiPaneluJakosci'
 const idPaneluJakosci = 'panel-kontroli-jakosci'
 
 const pozycjePakietu = [
@@ -66,9 +67,10 @@ const pozycjeWymogowMaterialow = [
 
 function pobierzPoczatkowePrzypieciePaneluJakosci() {
   try {
-    return localStorage.getItem(kluczPrzypieciaPaneluJakosci) === 'true'
+    const wartosc = localStorage.getItem(kluczPrzypieciaPaneluJakosci)
+    return wartosc === null ? true : wartosc === 'true'
   } catch {
-    return false
+    return true
   }
 }
 
@@ -336,6 +338,17 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
       return
     }
   }, [czyWysuwaniePaneluJakosciWlaczone])
+  useEffect(() => {
+    function odswiezPreferencjePaneluJakosci() {
+      const czyPrzypiety = pobierzPoczatkowePrzypieciePaneluJakosci()
+      ustawCzyPanelJakosciPrzypiety(czyPrzypiety)
+      ustawCzyPanelJakosciOtwarty(czyPrzypiety)
+      ustawCzyWysuwaniePaneluJakosciWlaczone(pobierzPoczatkoweWysuwaniePaneluJakosci())
+    }
+
+    window.addEventListener(zdarzenieZmianyPreferencjiPaneluJakosci, odswiezPreferencjePaneluJakosci)
+    return () => window.removeEventListener(zdarzenieZmianyPreferencjiPaneluJakosci, odswiezPreferencjePaneluJakosci)
+  }, [])
 
   function otworzPanelJakosci() {
     ustawCzyPanelJakosciOtwarty(true)

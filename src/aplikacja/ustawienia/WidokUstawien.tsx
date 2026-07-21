@@ -11,6 +11,10 @@ import {
 } from '../menu/preferencjeMenu'
 import './widokUstawien.css'
 
+const kluczPrzypieciaPaneluJakosci = 'ultimatePomagier.panelJakosciPrzypiety'
+const kluczWysuwaniaPaneluJakosci = 'ultimatePomagier.panelJakosciWysuwanieZKrawedzi'
+const zdarzenieZmianyPreferencjiPaneluJakosci = 'ultimatePomagier:zmianaPreferencjiPaneluJakosci'
+
 function pobierzBoolean(klucz: string, wartoscDomyslna: boolean) {
   try {
     const wartosc = localStorage.getItem(klucz)
@@ -26,6 +30,8 @@ export default function WidokUstawien() {
   const preferencje = pobierzPreferencjeDrzewaMenu(uzytkownikId)
   const [czyPrzypiete, ustawCzyPrzypiete] = useState(() => pobierzBoolean(kluczPrzypieciaMenu, false))
   const [czyWysuwanie, ustawCzyWysuwanie] = useState(() => pobierzBoolean(kluczWysuwaniaZKrawedzi, true))
+  const [czyPanelJakosciPrzypiety, ustawCzyPanelJakosciPrzypiety] = useState(() => pobierzBoolean(kluczPrzypieciaPaneluJakosci, true))
+  const [czyWysuwaniePaneluJakosci, ustawCzyWysuwaniePaneluJakosci] = useState(() => pobierzBoolean(kluczWysuwaniaPaneluJakosci, true))
   const [trybMenu, ustawTrybMenu] = useState<TrybWidokuMenu>(preferencje.tryb)
   const [komunikat, ustawKomunikat] = useState('')
 
@@ -45,6 +51,21 @@ export default function WidokUstawien() {
     zapiszBoolean(kluczWysuwaniaZKrawedzi, wartosc)
   }
 
+  function zapiszPreferencjePaneluJakosci(klucz: string, wartosc: boolean) {
+    localStorage.setItem(klucz, String(wartosc))
+    window.dispatchEvent(new Event(zdarzenieZmianyPreferencjiPaneluJakosci))
+    ustawKomunikat('Zapisano ustawienia prawego panelu.')
+  }
+
+  function zmienPrzypieciePaneluJakosci(wartosc: boolean) {
+    ustawCzyPanelJakosciPrzypiety(wartosc)
+    zapiszPreferencjePaneluJakosci(kluczPrzypieciaPaneluJakosci, wartosc)
+  }
+
+  function zmienWysuwaniePaneluJakosci(wartosc: boolean) {
+    ustawCzyWysuwaniePaneluJakosci(wartosc)
+    zapiszPreferencjePaneluJakosci(kluczWysuwaniaPaneluJakosci, wartosc)
+  }
   function zmienTrybMenu(wartosc: TrybWidokuMenu) {
     ustawTrybMenu(wartosc)
     zapiszPreferencjeDrzewaMenu(uzytkownikId, {
@@ -100,6 +121,18 @@ export default function WidokUstawien() {
           </select>
         </label>
         <button type="button" onClick={resetujDrzewo}>Zresetuj rozwinięte sekcje</button>
+      </section>
+
+      <section className="ustawienia__karta">
+        <h2>Prawy panel</h2>
+        <label className="ustawienia__wiersz">
+          <span><strong>Przypięty panel kontroli jakości</strong><small>Panel jest stale widoczny w generatorze szczegółów organizacyjnych.</small></span>
+          <input checked={czyPanelJakosciPrzypiety} onChange={(zdarzenie) => zmienPrzypieciePaneluJakosci(zdarzenie.target.checked)} type="checkbox" />
+        </label>
+        <label className="ustawienia__wiersz">
+          <span><strong>Wysuwanie z prawej krawędzi</strong><small>Gdy panel nie jest przypięty, otwiera się po najechaniu na prawą krawędź ekranu.</small></span>
+          <input checked={czyWysuwaniePaneluJakosci} onChange={(zdarzenie) => zmienWysuwaniePaneluJakosci(zdarzenie.target.checked)} type="checkbox" />
+        </label>
       </section>
 
       <section className="ustawienia__karta">
