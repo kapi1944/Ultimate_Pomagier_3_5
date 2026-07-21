@@ -758,7 +758,7 @@
   right: 0;
   left: 0;
   color: var(--semper-czerwony);
-  font-family: "Bradley Hand ITC", "Segoe Print", "Comic Sans MS", cursive;
+  font-family: var(--czcionka-typu, "Ink Free", "Segoe Print", cursive);
   font-size: clamp(48px, 7vw, 82px);
   font-style: italic;
   font-weight: normal;
@@ -775,12 +775,7 @@
   font-synthesis: weight;
 }
 
-.dyplom-kartka--certyfikat .dyplom-kartka__typ {
-  font-family: "Bradley Hand ITC", "Segoe Print", "Comic Sans MS", cursive;
-}
-
 .dyplom-kartka--zaswiadczenie .dyplom-kartka__typ {
-  font-family: "Segoe Script", "Comic Sans MS", cursive;
   right: 2%;
   font-size: clamp(32px, 4.9vw, 56px);
   font-synthesis: none;
@@ -1016,7 +1011,7 @@
 
 .dyplom-kartka__naglowek-drugiej span {
   color: var(--semper-czerwony);
-  font-family: "Bradley Hand ITC", "Segoe Print", "Comic Sans MS", cursive;
+  font-family: var(--czcionka-typu, "Ink Free", "Segoe Print", cursive);
   font-style: italic;
   font-weight: 800;
 }
@@ -1153,7 +1148,6 @@
   }
 
   .dyplom-kartka--zaswiadczenie .dyplom-kartka__typ {
-    font-family: "Segoe Script", "Comic Sans MS", cursive !important;
     right: 2% !important;
     font-size: 52px !important;
     font-synthesis: none !important;

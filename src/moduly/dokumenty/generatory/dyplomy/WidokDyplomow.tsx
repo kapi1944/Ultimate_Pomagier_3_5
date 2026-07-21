@@ -73,6 +73,7 @@ type DaneNumeracji = {
 
 type ZapisDyplomow = DaneNumeracji & {
   trybTytulu: TrybTytuluDyplomu
+  czcionkaTypu: string
   czyPogrubionyTyp: boolean
   motywKoloru: MotywKoloruDyplomu
   kolorMotywu: string
@@ -211,6 +212,9 @@ function mapujMotywKoloruDyplomu(wartosc: unknown): MotywKoloruDyplomu {
   return wartosc === 'semper' || wartosc === 'iist' || wartosc === 'dowolny' ? wartosc : 'semper'
 }
 
+function pobierzCzcionkeTypu(wartosc: string) {
+  return wartosc.trim() || 'Ink Free'
+}
 function pobierzKolorMotywuDyplomu(dane: Pick<ZapisDyplomow, 'motywKoloru' | 'kolorMotywu'>) {
   if (dane.motywKoloru === 'dowolny') {
     return czyKolorHex(dane.kolorMotywu) ? dane.kolorMotywu.trim() : koloryFirmoweDyplomu.semper
@@ -270,6 +274,7 @@ function pobierzStylMotywuDyplomu(
     ZapisDyplomow,
     | 'motywKoloru'
     | 'kolorMotywu'
+    | 'czcionkaTypu'
     | 'szerokoscDodatkuGornego'
     | 'szerokoscDodatkuDolnego'
     | 'marginesDodatkuGornego'
@@ -284,6 +289,7 @@ function pobierzStylMotywuDyplomu(
 
   return {
     '--semper-czerwony': pobierzKolorMotywuDyplomu(dane),
+    '--czcionka-typu': pobierzCzcionkeTypu(dane.czcionkaTypu),
     '--szerokosc-dodatku-gornego': pobierzSzerokoscDodatku(dane.szerokoscDodatkuGornego),
     '--szerokosc-dodatku-dolnego': pobierzSzerokoscDodatku(dane.szerokoscDodatkuDolnego),
     '--przesuniecie-naglowka': ustawieniaNaglowka.przesuniecieNaglowka,
@@ -498,6 +504,7 @@ function utworzDomyslnyZapis(): ZapisDyplomow {
   return {
     ...daneNumeracji,
     trybTytulu: 'certyfikat',
+    czcionkaTypu: 'Ink Free',
     czyPogrubionyTyp: false,
     motywKoloru: 'semper',
     kolorMotywu: koloryFirmoweDyplomu.semper,
@@ -563,6 +570,7 @@ function wczytajZapisDyplomow(): ZapisDyplomow {
       motywKoloru: mapujMotywKoloruDyplomu(dane.motywKoloru),
       kolorMotywu: czyKolorHex(dane.kolorMotywu ?? '') ? String(dane.kolorMotywu) : domyslnyZapis.kolorMotywu,
       czyPogrubionyTyp: dane.czyPogrubionyTyp ?? domyslnyZapis.czyPogrubionyTyp,
+      czcionkaTypu: pobierzCzcionkeTypu(dane.czcionkaTypu ?? domyslnyZapis.czcionkaTypu),
       rodzajGodzin: mapujRodzajGodzin(dane.rodzajGodzin),
       niestandardowyRodzajGodzin: dane.niestandardowyRodzajGodzin ?? '',
       szerokoscDodatkuGornego: ograniczProcent(
@@ -1401,6 +1409,7 @@ export default function WidokDyplomow() {
     ustawDane((aktualne) => ({
       ...aktualne,
       rozmiarTytulu: domyslnyZapis.rozmiarTytulu,
+      czcionkaTypu: domyslnyZapis.czcionkaTypu,
       czyPogrubionyTyp: domyslnyZapis.czyPogrubionyTyp,
       szerokoscDodatkuGornego: domyslnyZapis.szerokoscDodatkuGornego,
       szerokoscDodatkuDolnego: domyslnyZapis.szerokoscDodatkuDolnego,
@@ -1489,6 +1498,18 @@ export default function WidokDyplomow() {
                   ))}
                 </div>
               </div>
+
+              <label className="dyplomy__pole">
+                <span>Czcionka nagłówka</span>
+                <input list="dyplomy-czcionki-typu" onChange={(zdarzenie) => zmienPole('czcionkaTypu', zdarzenie.target.value)} type="text" value={dane.czcionkaTypu} />
+                <datalist id="dyplomy-czcionki-typu">
+                  <option value="Ink Free" />
+                  <option value="Bradley Hand ITC" />
+                  <option value="Segoe Print" />
+                  <option value="Segoe Script" />
+                  <option value="Comic Sans MS" />
+                </datalist>
+              </label>
 
               <label className="dyplomy__pole dyplomy__pole--checkbox">
                 <input checked={dane.czyPogrubionyTyp} onChange={(zdarzenie) => zmienPole('czyPogrubionyTyp', zdarzenie.target.checked)} type="checkbox" />
