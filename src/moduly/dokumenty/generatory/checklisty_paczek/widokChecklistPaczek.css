@@ -113,10 +113,18 @@
 .checklista-paczki__wiersz { display: grid; grid-template-columns: minmax(145px, .8fr) minmax(200px, 1.45fr) minmax(185px, 1.15fr) minmax(135px, .85fr) minmax(195px, 1.15fr); gap: 10px; min-width: 0; }
 .checklista-paczki__naglowki-tabeli { padding: 8px 10px; border-radius: 7px; background: #0b3b1d; color: #e8fff0; font-size: .82rem; font-weight: 700; text-transform: uppercase; }
 .checklista-paczki__kategoria { margin-top: 14px; overflow: hidden; border: 1px solid var(--checklista-obramowanie); border-radius: 8px; }
-.checklista-paczki__kategoria > h3 { margin: 0; padding: 9px 12px; background: rgba(11, 59, 29, .78); color: var(--checklista-akcent); font-size: .95rem; }
+.checklista-paczki__kategoria > h3 { margin: 0; background: rgba(11, 59, 29, .78); color: var(--checklista-akcent); font-size: .95rem; }
+.checklista-paczki__przelacznik-kategorii { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 39px; padding: 9px 12px; border: 0; background: transparent; color: inherit; cursor: pointer; font: inherit; font-weight: inherit; text-align: left; }
+.checklista-paczki__przelacznik-kategorii:hover { background: rgba(156, 207, 171, .12); }
+.checklista-paczki__przelacznik-kategorii:focus-visible { outline: 2px solid #e8fff0; outline-offset: -3px; }
+.checklista-paczki__chevron-kategorii { display: inline-block; transition: transform 220ms ease; }
+.checklista-paczki__chevron-kategorii--zwinieta { transform: rotate(-90deg); }
+.checklista-paczki__zawartosc-kategorii { display: grid; grid-template-rows: 1fr; opacity: 1; transition: grid-template-rows 220ms ease, opacity 180ms ease; }
+.checklista-paczki__zawartosc-kategorii--zwinieta { grid-template-rows: 0fr; opacity: 0; }
+.checklista-paczki__zawartosc-kategorii-wewnetrzna { min-height: 0; overflow: hidden; }
 .checklista-paczki__pusta-kategoria { padding: 12px; margin-bottom: 0; }
 .checklista-paczki__wiersz { align-items: start; padding: 12px; border-top: 1px solid rgba(156, 207, 171, .16); background: rgba(3, 24, 12, .42); }
-.checklista-paczki__kategoria > h3 + .checklista-paczki__wiersz { border-top: 0; }
+.checklista-paczki__zawartosc-kategorii-wewnetrzna > .checklista-paczki__wiersz:first-child { border-top: 0; }
 .checklista-paczki__kolumna-status,
 .checklista-paczki__kolumna-material,
 .checklista-paczki__kolumna-ilosc,
@@ -207,6 +215,10 @@
   .checklista-paczki__kolumna-status { grid-column: auto; }
   .checklista-paczki__wydruk { padding: 7mm; font-size: 8px; }
   .checklista-paczki__wydruk h2 { font-size: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .checklista-paczki__chevron-kategorii, .checklista-paczki__zawartosc-kategorii { transition-duration: .01ms; }
 }
 
 @media print {
