@@ -50,6 +50,23 @@ Moduł 2: Ćwiczenia praktyczne
   assert.equal(policzPunkty(program), 3)
 })
 
+sprawdz('nagłówek modułu z przypadkowym punktorem nie staje się punktem poprzedniego modułu', () => {
+  const program = parsujTekstProgramu(`
+Dzień II
+Moduł 7. Budowanie partnerskich relacji z kontrahentami
+• negocjacje win-win,
+• długofalowa współpraca biznesowa,
+• Moduł 8. Warsztaty praktyczne – case studies
+• symulacje negocjacji w podgrupach,
+• analiza rzeczywistych sytuacji biznesowych,
+`)
+
+  assert.equal(program.dni[0].moduly.length, 2)
+  assert.equal(program.dni[0].moduly[0].tytul, 'Moduł 7: Budowanie partnerskich relacji z kontrahentami')
+  assert.equal(program.dni[0].moduly[1].tytul, 'Moduł 8: Warsztaty praktyczne – case studies')
+  assert.equal(program.dni[0].moduly[1].podpunkty.length, 2)
+})
+
 sprawdz('program 2-dniowy z separatorem kolejnych pytań zachowuje dni i moduły', () => {
   const program = parsujTekstProgramu(`
 Dzień 1: Analiza potrzeb

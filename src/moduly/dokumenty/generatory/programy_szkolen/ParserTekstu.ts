@@ -564,6 +564,7 @@ export function parsujTekstProgramu(tresc: string): ProgramSzkolenia {
     }
 
     const modul = wiersz.tresc.match(wzorzecModulu)
+      ?? wiersz.surowy.match(wzorzecPunktora)?.[2].match(wzorzecModulu)
 
     if (modul) {
       dodajModul(zbudujTytulModulu(modul, wiersz.tresc), 'techniczny')
