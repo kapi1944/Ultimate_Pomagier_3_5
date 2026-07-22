@@ -101,9 +101,7 @@ function pobierzPoczatkowyWidok(): WidokNawigacji {
       return widokZeSciezki
     }
 
-    const zapisanyWidok = localStorage.getItem(kluczAktywnegoWidoku)
-
-    return czyWidokNawigacji(zapisanyWidok) ? zapisanyWidok : 'pulpit'
+    return 'pulpit'
   } catch {
     return 'pulpit'
   }
@@ -151,12 +149,14 @@ function renderujWidok(
   uzytkownikIdProfilu: string | null,
   wybierzProfil: (uzytkownikId: string) => void,
   ustawCzyProfilMaNiezapisaneZmiany: (czyMaNiezapisaneZmiany: boolean) => void,
+  otworzRekordPulpitu: () => void,
+  otworzPaczkePulpitu: () => void,
 ): ReactNode {
   switch (widok) {
     case 'profil_uzytkownika':
       return <WidokProfiluUzytkownika key={uzytkownikIdProfilu ?? 'wlasny'} ustawCzyMaNiezapisaneZmiany={ustawCzyProfilMaNiezapisaneZmiany} uzytkownikId={uzytkownikIdProfilu} wybierzProfil={wybierzProfil} />
     case 'pulpit':
-      return <WidokPulpitu />
+      return <WidokPulpitu otworzPaczke={otworzPaczkePulpitu} otworzRekordZrodlowy={otworzRekordPulpitu} />
     case 'szkolenia-zamkniete':
       return <WidokSzkolenZamknietych />
     case 'generator-szczegolow':
@@ -431,7 +431,7 @@ export default function UkladAplikacji() {
       <MenuBoczne aktywnyWidok={aktywnyWidok} poZmianieStanuMenu={zglosStanMenu} ustawAktywnyWidok={ustawWidok} />
       <div className="uklad-aplikacji__kolumna-glowna">
         <NaglowekAplikacji otworzProfil={() => otworzProfil()} wyloguj={obsluzWylogowanie} />
-        <main className="uklad-aplikacji__obszar-roboczy">{renderujWidok(aktywnyWidok, zmienZakladkeKartotek, ustawWidok, wersjaProgramu, otworzDokument, uzytkownikIdProfilu, (uzytkownikId) => otworzProfil(uzytkownikId), ustawCzyProfilMaNiezapisaneZmiany)}</main>
+        <main className="uklad-aplikacji__obszar-roboczy">{renderujWidok(aktywnyWidok, zmienZakladkeKartotek, ustawWidok, wersjaProgramu, otworzDokument, uzytkownikIdProfilu, (uzytkownikId) => otworzProfil(uzytkownikId), ustawCzyProfilMaNiezapisaneZmiany, () => ustawWidok('zamkniete_szczegoly_organizacyjne_lista'), () => ustawWidok('checklisty_paczek'))}</main>
       </div>
       {(widokDoPotwierdzenia || czyWylogowanieDoPotwierdzenia) && (
         <section className="program-panel-roboczy program-szkolen__komunikat" role="dialog" aria-modal="true" aria-label="Niezapisane zmiany">
