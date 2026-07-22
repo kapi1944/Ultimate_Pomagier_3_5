@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { parsujTekstProgramu } from '../src/moduly/dokumenty/generatory/programy_szkolen/ParserTekstu.ts'
+import { pobierzTytulDokumentuProgramu } from '../src/moduly/dokumenty/generatory/programy_szkolen/tytulDokumentuProgramu.ts'
 
 function policzPunkty(program: ReturnType<typeof parsujTekstProgramu>) {
   return program.dni.reduce(
@@ -90,4 +91,55 @@ Dzień 3: Podsumowanie
   assert.equal(policzPunkty(program), 5)
   assert.equal(program.dni[0].moduly[0].podpunkty[1].poziom, 1)
   assert.equal(program.dni[1].moduly[0].podpunkty[1].tresc, 'Omówienie rezultatów')
+})
+
+sprawdz('dedykowany tytuł nie usuwa pierwszego modułu programu', () => {
+  const program = parsujTekstProgramu(`Wprowadzenie do szkolenia;
+• Powitanie uczestników.
+• Zapoznanie uczestników z planem.`)
+
+  assert.equal(pobierzTytulDokumentuProgramu('Profesjonalna obsługa klienta'), 'Profesjonalna obsługa klienta')
+  assert.equal(program.dni[0].moduly[0].tytul, 'Wprowadzenie do szkolenia;')
+  assert.equal(policzPunkty(program), 2)
+})
+
+sprawdz('pierwszy nagłówek dnia pozostaje częścią programu', () => {
+  const program = parsujTekstProgramu(`Dzień 1
+Wprowadzenie do szkolenia;
+• Powitanie uczestników.`)
+
+  assert.equal(pobierzTytulDokumentuProgramu('Profesjonalna obsługa klienta'), 'Profesjonalna obsługa klienta')
+  assert.equal(program.dni[0].tytul, 'Dzień 1')
+  assert.equal(program.dni[0].moduly[0].tytul, 'Wprowadzenie do szkolenia;')
+})
+
+sprawdz('pusta wartość tytułu nie przejmuje pierwszej linii treści', () => {
+  const program = parsujTekstProgramu(`Wprowadzenie do szkolenia;
+• Powitanie uczestników.`)
+
+  assert.equal(pobierzTytulDokumentuProgramu(''), 'Program szkolenia')
+  assert.equal(program.dni[0].moduly[0].tytul, 'Wprowadzenie do szkolenia;')
+})
+
+sprawdz('puste linie przed dniem nie zmieniają jego klasyfikacji', () => {
+  const program = parsujTekstProgramu(`
+
+Dzień 1
+Wprowadzenie do szkolenia;
+• Powitanie uczestników.`)
+
+  assert.equal(program.dni[0].tytul, 'Dzień 1')
+  assert.equal(program.dni[0].moduly[0].tytul, 'Wprowadzenie do szkolenia;')
+})
+
+sprawdz('zmiana tytułu dokumentu nie zmienia sparsowanej struktury programu', () => {
+  const program = parsujTekstProgramu(`Dzień 1
+Wprowadzenie do szkolenia;
+• Powitanie uczestników.`)
+  const strukturaPrzedZmianaTytulu = JSON.stringify(program.dni)
+
+  assert.equal(pobierzTytulDokumentuProgramu('Pierwszy tytuł'), 'Pierwszy tytuł')
+  assert.equal(pobierzTytulDokumentuProgramu('Zmieniony tytuł'), 'Zmieniony tytuł')
+  assert.equal(JSON.stringify(program.dni), strukturaPrzedZmianaTytulu)
+  assert.equal(program.dni[0].moduly[0].tytul, 'Wprowadzenie do szkolenia;')
 })

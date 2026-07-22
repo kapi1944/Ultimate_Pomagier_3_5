@@ -47,8 +47,6 @@ export interface OstrzezenieParsera {
 }
 
 export interface ProgramSzkolenia {
-  tytul: string
-  tytulProgramuLubDnia?: string
   dni: DzienProgramu[]
   listaProsta: PozycjaListyProgramu[]
   blokiStandardowe: BlokiStandardoweProgramu
@@ -178,7 +176,7 @@ function utworzProblemParsera(ostrzezenie: OstrzezenieParsera, indeks: number): 
 
 function zbudujDokumentBlokowyProgramu(program: Omit<ProgramSzkolenia, 'dokumentBlokowy'>): DokumentBlokowy {
   const struktura: BlokDokumentu[] = [
-    utworzBlok('tytul-programu', 'Tytul', program.tytul, []),
+    utworzBlok('tytul-programu', 'Tytul', 'Program szkolenia', []),
     ...program.dni.map((dzien) =>
       utworzBlok(
         dzien.id,
@@ -224,7 +222,7 @@ function zbudujDokumentBlokowyProgramu(program: Omit<ProgramSzkolenia, 'dokument
     id: 'program-szkolenia-z-parsera',
     typ: 'program_szkolenia',
     dane: {
-      tytulSzkolenia: program.tytul,
+      tytulSzkolenia: 'Program szkolenia',
       organizator: 'SEMPER',
     },
     struktura,
@@ -456,14 +454,13 @@ function czyKandydatNaNaglowek(wiersz: WierszProgramu, nastepny?: WierszProgramu
       czyZnacznikProgramu(nastepny) &&
       wiersz.tresc.length <= 120 &&
       !czyZaczynaSieMalaLitera(wiersz.tresc) &&
-      !czyZamykaMysl(wiersz.tresc) &&
+      (!czyZamykaMysl(wiersz.tresc) || wiersz.tresc.endsWith(';')) &&
       !rozpoznajTypElementu(wiersz.tresc),
   )
 }
 
 function utworzProgram(): Omit<ProgramSzkolenia, 'dokumentBlokowy'> {
   return {
-    tytul: 'Program szkolenia',
     dni: [],
     listaProsta: [],
     blokiStandardowe: {
@@ -487,7 +484,6 @@ export function parsujTekstProgramu(tresc: string): ProgramSzkolenia {
   let licznikModulow = 0
   let licznikPodpunktow = 0
   let licznikOstrzezen = 0
-  let czyUstawionoTytul = false
   let czyWykrytoRzymskie = false
   let czyWykrytoArabskie = false
 
@@ -675,10 +671,8 @@ export function parsujTekstProgramu(tresc: string): ProgramSzkolenia {
       continue
     }
 
-    if (!czyUstawionoTytul && !aktualnyDzien && !aktualnyModul) {
-      program.tytul = wiersz.tresc
-      program.tytulProgramuLubDnia = wiersz.tresc
-      czyUstawionoTytul = true
+    if (czyKandydatNaNaglowek(wiersz, nastepny)) {
+      dodajModul(wiersz.tresc, 'nienumerowany')
       continue
     }
 
@@ -687,12 +681,6 @@ export function parsujTekstProgramu(tresc: string): ProgramSzkolenia {
 
     if (dzienDoUzupelnienia && !dzienDoUzupelnienia.czyDomyslny && !dzienDoUzupelnienia.tytulDnia && !modulDoSprawdzenia) {
       dzienDoUzupelnienia.tytulDnia = wiersz.tresc
-      program.tytulProgramuLubDnia = program.tytulProgramuLubDnia ?? wiersz.tresc
-      continue
-    }
-
-    if (czyKandydatNaNaglowek(wiersz, nastepny)) {
-      dodajModul(wiersz.tresc, 'nienumerowany')
       continue
     }
 
@@ -706,10 +694,6 @@ export function parsujTekstProgramu(tresc: string): ProgramSzkolenia {
     }
 
     dodajNiepewnyPodpunkt(wiersz)
-  }
-
-  if (!program.dni.length && czyUstawionoTytul) {
-    dodajDzien('Program', undefined, true)
   }
 
   for (const dzien of program.dni) {

@@ -33,14 +33,36 @@ export function pobierzPodzialStronA4(wysokoscObrazuPx: number, szerokoscObrazuP
   return strony
 }
 
+export function pobierzStronyDokumentu(obszarDokumentu: HTMLElement) {
+  return Array.from(obszarDokumentu.querySelectorAll<HTMLElement>('[data-strona-dokumentu]'))
+}
+
 export async function pobierzPdfDokumentu({ obszarDokumentu, nazwaPliku, marginesMm = 12 }: UstawieniaEksportuPdf) {
+  const stronyDokumentu = pobierzStronyDokumentu(obszarDokumentu)
+  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true })
+
+  if (stronyDokumentu.length) {
+    for (const [indeks, stronaDokumentu] of stronyDokumentu.entries()) {
+      const kanwaStrony = await html2canvas(stronaDokumentu, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        useCORS: true,
+      })
+
+      if (indeks > 0) pdf.addPage('a4', 'portrait')
+      pdf.addImage(kanwaStrony.toDataURL('image/png'), 'PNG', 0, 0, 210, 297, undefined, 'FAST')
+    }
+
+    pdf.save(utworzNazwePlikuPdf(nazwaPliku))
+    return
+  }
+
   const kanwa = await html2canvas(obszarDokumentu, {
     backgroundColor: '#ffffff',
     scale: 2,
     useCORS: true,
     ignoreElements: (element) => element.hasAttribute('data-pomin-w-eksporcie'),
   })
-  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true })
   const szerokoscDrukuMm = 210 - marginesMm * 2
   const strony = pobierzPodzialStronA4(kanwa.height, kanwa.width, marginesMm)
 

@@ -20,6 +20,7 @@ import {
   type ProblemDokumentu,
 } from '../../../../wspolne/dokumenty/modelBlokowy'
 import { parsujTekstProgramu } from './ParserTekstu'
+import { pobierzTytulDokumentuProgramu } from './tytulDokumentuProgramu'
 import RendererPodgladuProgramu from './RendererPodgladuProgramu'
 import RendererStronSemper from './RendererStronSemper'
 import {
@@ -112,12 +113,12 @@ const domyslneUstawienia: UstawieniaProgramu = {
   kolorReczny: false,
   formatowanieSkryptowe: true,
   stylDni: 'pasek',
-  separacjaModulow: 'ramka',
+  separacjaModulow: 'separator-pytan',
   stylPodpunktow: 'punktory',
   stylListyGlownej: 'numeracja',
   stylePoziomowListy: ['•', '◦', '▪'],
   gruboscObramowaniaTytulu: 1,
-  formatCudzyslowu: 'dolny-gorny',
+  formatCudzyslowu: 'gorny-gorny',
   szerokoscLogotypu: 90,
   czyPogrubiacNaglowkiListyProgramu: true,
 }
@@ -673,10 +674,10 @@ const styleProgramuSzkolenia = `
   position: relative;
   display: flex;
   flex-direction: column;
-  width: 210mm;
-  min-height: 297mm;
+  width: var(--program-szerokosc-strony);
+  min-height: var(--program-wysokosc-strony);
   max-width: 100%;
-  padding: 14mm 15mm 35mm;
+  padding: var(--program-odstep-gorny) var(--program-odstep-poziomy) calc(var(--program-wysokosc-stopki) + 6mm);
   overflow: hidden;
   background: #fff;
   color: #4f4f4f;
@@ -690,8 +691,8 @@ const styleProgramuSzkolenia = `
   grid-template-columns: .7fr 1.6fr 1.45fr .95fr;
   align-items: center;
   min-height: 18mm;
-  margin: -14mm -15mm 7mm;
-  padding: 3mm 15mm;
+  margin: calc(-1 * var(--program-odstep-gorny)) calc(-1 * var(--program-odstep-poziomy)) 7mm;
+  padding: 3mm var(--program-odstep-poziomy);
   color: #888;
   font-size: 8.5pt;
 }
@@ -777,7 +778,7 @@ const styleProgramuSzkolenia = `
   right: 0;
   bottom: 0;
   left: 0;
-  min-height: 29mm;
+  min-height: var(--program-wysokosc-stopki);
   color: #858585;
   font-size: 7.8pt;
 }
@@ -793,7 +794,7 @@ const styleProgramuSzkolenia = `
   align-items: center;
   justify-content: space-between;
   gap: 24mm;
-  padding: 3mm 15mm;
+  padding: 3mm var(--program-odstep-poziomy);
   background: #efefef;
   line-height: 1.35;
 }
@@ -858,8 +859,8 @@ const styleProgramuSzkolenia = `
   }
 
   .program-semper__strona {
-    width: 210mm !important;
-    min-height: 297mm !important;
+    width: var(--program-szerokosc-strony) !important;
+    min-height: var(--program-wysokosc-strony) !important;
     max-width: none !important;
     margin: 0 !important;
     box-shadow: none !important;
@@ -887,7 +888,7 @@ const styleProgramuSzkolenia = `
 
 @page {
   size: A4 portrait;
-  margin: 14mm;
+  margin: 0;
 }
 
 @media print {
@@ -924,8 +925,8 @@ const styleProgramuSzkolenia = `
   }
 
   .program-semper__strona {
-    width: 210mm !important;
-    min-height: 297mm !important;
+    width: var(--program-szerokosc-strony) !important;
+    min-height: var(--program-wysokosc-strony) !important;
     max-width: none !important;
     margin: 0 !important;
     box-shadow: none !important;
@@ -1105,7 +1106,7 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
   const { tytulSzkolenia, trescProgramu, trescProgramuHtml, czyWynikParsowaniaZatwierdzony, ustawienia, logotypProgramu, linkLogotypu } = daneProgramu
 
   const program = useMemo(() => parsujTekstProgramu(trescProgramu), [trescProgramu])
-  const tytulDokumentu = tytulSzkolenia.trim() || program.tytul
+  const tytulDokumentu = pobierzTytulDokumentuProgramu(tytulSzkolenia)
   const kolorNiepoprawny = !sprawdzHex(ustawienia.kolorAkcentuProgramu)
   const dokumentProgramu = useMemo<DokumentBlokowy>(() => {
     const organizator = ustawienia.profilFirmy === 'iist' ? 'IIST' : 'SEMPER'
@@ -1574,7 +1575,7 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
           <AkcjeEksportuPdf
             className="program-szkolen__akcje-eksportu"
             czyMoznaEksportowac={czyMoznaEksportowacProgram}
-            nazwaPliku={`Program_szkolenia_${program.tytul || 'bez_tytulu'}`}
+            nazwaPliku={`Program_szkolenia_${tytulDokumentu || 'bez_tytulu'}`}
             obszarDokumentu={obszarPodgladuRef}
           />
           {aktywnaKopiaId ? (

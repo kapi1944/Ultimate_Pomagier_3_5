@@ -1,4 +1,6 @@
+import type { CSSProperties } from 'react'
 import type { DokumentBlokowy } from '../../../../wspolne/dokumenty/modelBlokowy'
+import { geometriaStronyProgramu, pobierzWymiaryStronyProgramu } from './geometriaStronyProgramu'
 import logotypSemper from './zasoby/logotyp-semper.png'
 import mapaPolskiSemper from './zasoby/mapa-polski-semper.png'
 import RendererPodgladuProgramu from './RendererPodgladuProgramu'
@@ -40,15 +42,23 @@ export default function RendererStronSemper({ dokument, preset, profilFirmy, tyt
   const elementy = pobierzElementyIdentyfikacjiProgramu(preset, nadpisania)
   const profil = profileOrganizatorowProgramu[profilFirmy]
   const strony = pobierzStrony(dokument, tytul.length)
+  const wymiaryStrony = pobierzWymiaryStronyProgramu()
+  const stylGeometrii = {
+    '--program-szerokosc-strony': wymiaryStrony.szerokosc,
+    '--program-wysokosc-strony': wymiaryStrony.wysokosc,
+    '--program-odstep-gorny': `${geometriaStronyProgramu.odstepGornyMm}mm`,
+    '--program-odstep-poziomy': `${geometriaStronyProgramu.odstepPoziomyMm}mm`,
+    '--program-wysokosc-stopki': `${geometriaStronyProgramu.wysokoscStopkiMm}mm`,
+  } as CSSProperties
 
   return (
-    <div className={`program-semper program-semper--${preset.toLowerCase()}`} data-testid="program-semper">
+    <div className={`program-semper program-semper--${preset.toLowerCase()}`} data-testid="program-semper" style={stylGeometrii}>
       {strony.map((struktura, indeksStrony) => {
         const pierwszaStrona = indeksStrony === 0
         const dokumentStrony = { ...dokument, struktura }
 
         return (
-          <article className="program-semper__strona" data-testid="program-semper-strona" key={`strona-${indeksStrony}`}>
+          <article className="program-semper__strona" data-strona-dokumentu data-testid="program-semper-strona" key={`strona-${indeksStrony}`}>
             {elementy.naglowekKontaktowy && (
               <header className="program-semper__naglowek" data-testid="program-semper-naglowek">
                 {elementy.gornySzaryPas && <div className="program-semper__pas" aria-hidden="true" />}
