@@ -354,3 +354,19 @@ test('brak rejestru zakupow nie powoduje crasha, a zapis zachowuje zglaszajacego
   assert.equal(zapisane[0]?.utworzonePrzezId, 'aktualny-uzytkownik')
   assert.equal(zapisane[0]?.status, 'KUPIONE')
 })
+
+
+test('marker deadline rozróżnia kolorem Zadaniodawcę i Zadaniobiorcę', () => {
+  const widok = readFileSync('src/moduly/zamkniete/pulpit/WidokPulpitu.tsx', 'utf8')
+  const css = readFileSync('src/moduly/zamkniete/pulpit/pulpit.css', 'utf8')
+
+  assert.match(widok, /--kolor-zadaniodawcy/)
+  assert.match(widok, /--kolor-zadaniobiorcy/)
+  assert.match(widok, /zadanie\.zadaniodawcaId/)
+  assert.match(widok, /zadanie\.zadaniobiorcaId/)
+
+  assert.match(css, /background:\s*var\(--kolor-zadaniobiorcy\)/)
+  assert.match(css, /background:\s*var\(--kolor-zadaniodawcy\)/)
+  assert.match(css, /width:\s*12px/)
+  assert.match(css, /height:\s*12px/)
+})

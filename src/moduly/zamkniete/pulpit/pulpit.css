@@ -98,6 +98,7 @@
 
 .pulpit-deadline {
   --kolor-zadaniodawcy: #38bdf8;
+  --kolor-zadaniobiorcy: #9a3412;
   position: absolute;
   z-index: 18;
   top: 0;
@@ -146,18 +147,20 @@
   height: 22px;
   place-items: center;
   border: 3px solid #fed7aa;
-  background: #9a3412;
+  background: var(--kolor-zadaniobiorcy);
   transform: rotate(45deg);
   box-shadow: 0 0 0 2px #431407, 0 0 10px rgba(251, 146, 60, .7);
 }
 
 .pulpit-deadline__romb span {
-  width: 9px;
-  height: 9px;
+  width: 12px;
+  height: 12px;
   border: 2px solid #fff;
   border-radius: 50%;
   background: var(--kolor-zadaniodawcy);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, .5);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, .6),
+    0 0 7px var(--kolor-zadaniodawcy);
 }
 
 .pulpit-deadline__etykieta {

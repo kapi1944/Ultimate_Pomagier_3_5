@@ -190,11 +190,29 @@ function KartaZadania({ zadanie, teraz, uzytkownicy, otworz, wykonaj, zmienGodzi
 
 function MarkerDeadline({ zadanie, uzytkownicy, otworz }: { zadanie: ZadaniePulpitu; uzytkownicy: Uzytkownik[]; otworz: () => void }) {
   const zadaniodawca = uzytkownicy.find((uzytkownik) => uzytkownik.id === zadanie.zadaniodawcaId)
-  const kolor = pobierzKolorZadaniodawcy(zadanie.zadaniodawcaId, zadaniodawca?.kolorProfilu)
+  const zadaniobiorca = uzytkownicy.find((uzytkownik) => uzytkownik.id === zadanie.zadaniobiorcaId)
+
+  const kolorZadaniodawcy = pobierzKolorZadaniodawcy(
+    zadanie.zadaniodawcaId,
+    zadaniodawca?.kolorProfilu,
+  )
+  const kolorZadaniobiorcy = pobierzKolorZadaniodawcy(
+    zadanie.zadaniobiorcaId,
+    zadaniobiorca?.kolorProfilu,
+  )
+
   const identyfikatorTooltipa = 'deadline-tooltip-' + zadanie.id
   const pozycja = pozycjaGodzinyNaOsi(zadanie.godzina!)
   const klasaKrawedzi = pozycja <= 5 ? ' pulpit-deadline--lewo' : pozycja >= 95 ? ' pulpit-deadline--prawo' : ''
-  return <div className={'pulpit-deadline' + klasaKrawedzi} style={{ left: pozycja + '%', '--kolor-zadaniodawcy': kolor } as CSSProperties}>
+
+  return <div
+    className={'pulpit-deadline' + klasaKrawedzi}
+    style={{
+      left: pozycja + '%',
+      '--kolor-zadaniodawcy': kolorZadaniodawcy,
+      '--kolor-zadaniobiorcy': kolorZadaniobiorcy,
+    } as CSSProperties}
+  >
     <button aria-describedby={identyfikatorTooltipa} aria-label={'Deadline: ' + zadanie.tytul + ', ' + zadanie.godzina} className="pulpit-deadline__przycisk" onClick={otworz} type="button">
       {zadanie.priorytet === 'ASAP' && <span aria-hidden="true" className="pulpit-deadline__plomien">{'\u{1F525}'}</span>}
       <span aria-hidden="true" className="pulpit-deadline__romb"><span /></span>
