@@ -351,3 +351,85 @@
 .pulpit-formularz-zakupu textarea { box-sizing: border-box; width: 100%; min-height: 90px; border: 1px solid rgba(134, 239, 172, .45); border-radius: 6px; background: #03180c; color: #f4fff7; font: inherit; padding: 7px; resize: vertical; }
 .pulpit-formularz-zakupu textarea:focus-visible { outline: 2px solid #fef08a; outline-offset: 2px; }
 .pulpit-formularz-zakupu__blad { margin: 0; color: #fecaca; font-weight: 700; }
+
+/* Edycja zadania w bocznym panelu — formularz ma osobny,
+   zwarty układ dopasowany do szerokości drawera. */
+.pulpit-drawer__edycja {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.pulpit-drawer__edycja > h3 {
+  margin: 0;
+}
+
+.pulpit-drawer__edycja .pulpit-formularz-zadania {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%;
+  box-sizing: border-box;
+  gap: 12px;
+  align-items: start;
+}
+
+.pulpit-drawer__edycja .pulpit-formularz-zadania > label {
+  grid-column: auto;
+  min-width: 0;
+}
+
+.pulpit-drawer__edycja .pulpit-formularz-zadania__nazwa {
+  grid-column: 1 / -1 !important;
+}
+
+.pulpit-drawer__edycja .pulpit-formularz-zadania > label:nth-of-type(5) {
+  grid-column: 1 / -1;
+}
+
+.pulpit-drawer__edycja .pulpit-formularz-zadania label > input,
+.pulpit-drawer__edycja .pulpit-formularz-zadania label > select {
+  width: 100%;
+  min-width: 0;
+}
+
+.pulpit-drawer__edycja .pulpit-przypomnienia {
+  grid-column: 1 / -1;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.pulpit-drawer__edycja .pulpit-przypomnienie {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.pulpit-drawer__edycja .pulpit-formularz-zadania__blad {
+  grid-column: 1 / -1;
+}
+
+.pulpit-drawer__edycja .pulpit-modal__akcje {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pulpit-drawer__edycja .pulpit-formularz-zadania__zapisz {
+  grid-column: auto;
+}
+
+@media (max-width: 440px) {
+  .pulpit-drawer {
+    padding-inline: 18px;
+  }
+
+  .pulpit-drawer__edycja .pulpit-formularz-zadania {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pulpit-drawer__edycja .pulpit-formularz-zadania > label,
+  .pulpit-drawer__edycja .pulpit-formularz-zadania__nazwa,
+  .pulpit-drawer__edycja .pulpit-formularz-zadania > label:nth-of-type(5) {
+    grid-column: 1 !important;
+  }
+}

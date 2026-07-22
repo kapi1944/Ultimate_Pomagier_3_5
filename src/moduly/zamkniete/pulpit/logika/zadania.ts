@@ -58,6 +58,18 @@ export function czyMoznaOznaczycZadanieRecznie(zadanie: ZadaniePulpitu) {
   return !zadanie.czyAutomatyczne && zadanie.status === 'OTWARTE'
 }
 
+export function czyMoznaEdytowacZadanie(
+  zadanie: ZadaniePulpitu,
+  uzytkownikId: string | null | undefined,
+) {
+  return Boolean(
+    uzytkownikId
+    && !zadanie.czyAutomatyczne
+    && zadanie.status === 'OTWARTE'
+    && zadanie.zadaniodawcaId === uzytkownikId
+  )
+}
+
 export function czyMoznaWybracZadaniodawce(rola: RolaUzytkownika | null | undefined) {
   return rola === 'ADMINISTRATOR' || rola === 'ARCHITEKT'
 }

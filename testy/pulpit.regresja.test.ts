@@ -7,9 +7,9 @@ import { czyPaczkaOpozniona, czyPaczkaWidoczna, czyWysylkaWymagaDodatkowegoPotwi
 import { obliczLicznikiPulpitu } from '../src/moduly/zamkniete/pulpit/logika/podsumowaniePulpitu.ts'
 import { obliczLiczbeAktywnychZapotrzebowanZakupowych, odmienRzeczDoZakupu, pobierzTekstLicznikaZakupow, walidujNoweZapotrzebowanieZakupowe } from '../src/moduly/zamkniete/pulpit/logika/zapotrzebowaniaZakupowe.ts'
 import { generujZadaniaAutomatyczne } from '../src/moduly/zamkniete/pulpit/logika/zadaniaAutomatyczne.ts'
-import { czyMoznaOznaczycZadanieRecznie, czyMoznaWybracZadaniodawce, czyZadanieOpoznione, czyZadanieWidoczneDlaUzytkownika, pobierzEtykieteStatusuZadania, pobierzZadaniaDeadline, rozstrzygnijPrzypisanieZadania, sortujZadaniaBezGodziny, walidujPrzypomnienia } from '../src/moduly/zamkniete/pulpit/logika/zadania.ts'
+import { czyMoznaEdytowacZadanie, czyMoznaOznaczycZadanieRecznie, czyMoznaWybracZadaniodawce, czyZadanieOpoznione, czyZadanieWidoczneDlaUzytkownika, pobierzEtykieteStatusuZadania, pobierzZadaniaDeadline, rozstrzygnijPrzypisanieZadania, sortujZadaniaBezGodziny, walidujPrzypomnienia } from '../src/moduly/zamkniete/pulpit/logika/zadania.ts'
 import type { PaczkaPulpitu, StatusZapotrzebowaniaZakupowego, ZadaniePulpitu, ZapotrzebowanieZakupowe } from '../src/moduly/zamkniete/pulpit/modele/pulpit.ts'
-import { normalizujZadaniePulpitu, pobierzStanPulpitu, zapiszZapotrzebowanieZakupowe } from '../src/moduly/zamkniete/pulpit/uslugi/magazynPulpitu.ts'
+import { edytujZadanieRecznePrzezZadaniodawce, normalizujZadaniePulpitu, pobierzStanPulpitu, zapiszZadanieReczne, zapiszZapotrzebowanieZakupowe } from '../src/moduly/zamkniete/pulpit/uslugi/magazynPulpitu.ts'
 
 const teraz = new Date('2026-07-22T14:00:00')
 const zadanie = (zmiany: Partial<ZadaniePulpitu> = {}): ZadaniePulpitu => ({ id: 'zadanie', tytul: 'Zadanie', data: '2026-07-22', utworzono: '2026-07-22T08:00:00.000Z', status: 'OTWARTE', priorytet: 'ZWYKLE', typZrodla: 'RECZNE', typZadania: 'ZADANIE_WLASNE', wlascicielId: 'anna', zadaniodawcaId: 'anna', zadaniobiorcaId: 'anna', przypomnienia: [], czyAutomatyczne: false, czyTerminKrytyczny: false, ...zmiany })
@@ -166,6 +166,117 @@ test('można zapisać kilka różnych przypomnień, ale nie duplikaty', () => {
   assert.equal(walidujPrzypomnienia(rozne), null)
   assert.match(walidujPrzypomnienia([...rozne, { id: 'duplikat', wartosc: 15, jednostka: 'MINUTY' }]) ?? '', /identyczne/)
   assert.match(walidujPrzypomnienia([{ id: 'bledne', wartosc: 0, jednostka: 'DNI' }]) ?? '', /większa od zera/)
+})
+
+test('tylko Zadaniodawca może edytować otwarte ręczne zadanie', () => {
+  const otwarte = zadanie({
+    zadaniodawcaId: 'jan',
+    zadaniobiorcaId: 'anna',
+  })
+
+  assert.equal(czyMoznaEdytowacZadanie(otwarte, 'jan'), true)
+  assert.equal(czyMoznaEdytowacZadanie(otwarte, 'anna'), false)
+  assert.equal(czyMoznaEdytowacZadanie(otwarte, 'obcy'), false)
+  assert.equal(czyMoznaEdytowacZadanie({ ...otwarte, status: 'WYKONANE' }, 'jan'), false)
+  assert.equal(czyMoznaEdytowacZadanie({ ...otwarte, czyAutomatyczne: true }, 'jan'), false)
+})
+
+test('magazyn chroni edycję i zachowuje historyczne metadane zadania', () => {
+  const magazyn = new Map<string, string>()
+  globalThis.localStorage = {
+    getItem: (klucz: string) => magazyn.get(klucz) ?? null,
+    setItem: (klucz: string, wartosc: string) => magazyn.set(klucz, wartosc),
+    removeItem: (klucz: string) => magazyn.delete(klucz),
+    clear: () => magazyn.clear(),
+    key: () => null,
+    length: 0,
+  } as Storage
+
+  const oryginalne = zadanie({
+    id: 'edytowane',
+    tytul: 'Stary tytuł',
+    zadaniodawcaId: 'jan',
+    zadaniobiorcaId: 'anna',
+    wlascicielId: 'anna',
+    utworzono: '2026-07-20T08:00:00.000Z',
+  })
+
+  zapiszZadanieReczne(oryginalne)
+
+  const niedozwolone = edytujZadanieRecznePrzezZadaniodawce(
+    oryginalne.id,
+    'anna',
+    {
+      tytul: 'Niedozwolona zmiana',
+      data: '2026-07-23',
+      godzina: '10:00',
+      priorytet: 'PILNE',
+      zadaniobiorcaId: 'anna',
+      przypomnienia: [],
+      powiazaneSzkolenieId: undefined,
+    },
+  )
+
+  assert.equal(niedozwolone, null)
+  assert.equal(pobierzStanPulpitu().zadaniaReczne[0]?.tytul, 'Stary tytuł')
+
+  const zaktualizowane = edytujZadanieRecznePrzezZadaniodawce(
+    oryginalne.id,
+    'jan',
+    {
+      tytul: 'Nowy tytuł',
+      data: '2026-07-24',
+      godzina: '12:30',
+      priorytet: 'ASAP',
+      zadaniobiorcaId: 'ewa',
+      przypomnienia: [{ id: 'p1', wartosc: 15, jednostka: 'MINUTY' }],
+      powiazaneSzkolenieId: 'szkolenie-1',
+    },
+  )
+
+  assert.ok(zaktualizowane)
+  assert.equal(zaktualizowane.id, oryginalne.id)
+  assert.equal(zaktualizowane.zadaniodawcaId, 'jan')
+  assert.equal(zaktualizowane.utworzono, '2026-07-20T08:00:00.000Z')
+  assert.equal(zaktualizowane.tytul, 'Nowy tytuł')
+  assert.equal(zaktualizowane.data, '2026-07-24')
+  assert.equal(zaktualizowane.godzina, '12:30')
+  assert.equal(zaktualizowane.zadaniobiorcaId, 'ewa')
+  assert.equal(zaktualizowane.wlascicielId, 'ewa')
+
+  zapiszZadanieReczne({
+    ...zaktualizowane,
+    status: 'WYKONANE',
+    wykonano: '2026-07-22T21:15:00.000Z',
+  })
+
+  const poWykonaniu = edytujZadanieRecznePrzezZadaniodawce(
+    oryginalne.id,
+    'jan',
+    {
+      tytul: 'Nie wolno',
+      data: '2026-07-25',
+      godzina: '13:00',
+      priorytet: 'ZWYKLE',
+      zadaniobiorcaId: 'jan',
+      przypomnienia: [],
+      powiazaneSzkolenieId: undefined,
+    },
+  )
+
+  assert.equal(poWykonaniu, null)
+
+  const wykonane = pobierzStanPulpitu().zadaniaReczne[0]
+  assert.equal(wykonane?.tytul, 'Nowy tytuł')
+  assert.equal(wykonane?.wykonano, '2026-07-22T21:15:00.000Z')
+})
+
+test('widok zapisuje moment wykonania i pokazuje brak czasu tylko dla starych danych', () => {
+  const widok = readFileSync('src/moduly/zamkniete/pulpit/WidokPulpitu.tsx', 'utf8')
+  assert.match(widok, /wykonano: new Date\(\)\.toISOString\(\)/)
+  assert.match(widok, /Brak danych o czasie wykonania/)
+  assert.match(widok, /Edytuj zadanie/)
+  assert.match(widok, /Zapisz zmiany/)
 })
 
 test('stare zadanie bez nowych pól jest bezpiecznie normalizowane', () => {

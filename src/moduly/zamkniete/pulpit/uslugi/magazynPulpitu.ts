@@ -112,6 +112,56 @@ export function zapiszZadanieReczne(zadanie: ZadaniePulpitu) {
   return zapiszStanPulpitu({ ...stan, zadaniaReczne: istnieje ? stan.zadaniaReczne.map((obecne) => obecne.id === zadanie.id ? zadanie : obecne) : [...stan.zadaniaReczne, zadanie] })
 }
 
+export type EdytowalnePolaZadania = Pick<
+  ZadaniePulpitu,
+  'tytul'
+  | 'data'
+  | 'godzina'
+  | 'priorytet'
+  | 'zadaniobiorcaId'
+  | 'przypomnienia'
+  | 'powiazaneSzkolenieId'
+>
+
+export function edytujZadanieRecznePrzezZadaniodawce(
+  zadanieId: string,
+  uzytkownikId: string,
+  zmiany: EdytowalnePolaZadania,
+): ZadaniePulpitu | null {
+  const stan = pobierzStanPulpitu()
+  const obecne = stan.zadaniaReczne.find((zadanie) => zadanie.id === zadanieId)
+
+  if (
+    !obecne
+    || obecne.czyAutomatyczne
+    || obecne.status !== 'OTWARTE'
+    || obecne.zadaniodawcaId !== uzytkownikId
+  ) {
+    return null
+  }
+
+  const zaktualizowane: ZadaniePulpitu = {
+    ...obecne,
+    tytul: zmiany.tytul,
+    data: zmiany.data,
+    godzina: zmiany.godzina,
+    priorytet: zmiany.priorytet,
+    zadaniobiorcaId: zmiany.zadaniobiorcaId,
+    wlascicielId: zmiany.zadaniobiorcaId,
+    przypomnienia: zmiany.przypomnienia,
+    powiazaneSzkolenieId: zmiany.powiazaneSzkolenieId,
+  }
+
+  const zapisano = zapiszStanPulpitu({
+    ...stan,
+    zadaniaReczne: stan.zadaniaReczne.map((zadanie) =>
+      zadanie.id === zadanieId ? zaktualizowane : zadanie
+    ),
+  })
+
+  return zapisano ? zaktualizowane : null
+}
+
 export function oznaczPaczkeJakoWyslana(idPaczki: string) {
   const stan = pobierzStanPulpitu()
   return zapiszStanPulpitu({ ...stan, wyslanePaczki: { ...stan.wyslanePaczki, [idPaczki]: new Date().toISOString() } })

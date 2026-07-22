@@ -10,9 +10,9 @@ import { generujZadaniaAutomatyczne } from './logika/zadaniaAutomatyczne'
 import { czyMoznaZmienicKontekstPulpitu } from './logika/kontekstPulpitu'
 import { obliczLicznikiPulpitu } from './logika/podsumowaniePulpitu'
 import { obliczLiczbeAktywnychZapotrzebowanZakupowych, odmienRzeczDoZakupu, pobierzAktywneZapotrzebowaniaZakupowe, pobierzTekstLicznikaZakupow, walidujNoweZapotrzebowanieZakupowe } from './logika/zapotrzebowaniaZakupowe'
-import { czyMoznaOznaczycZadanieRecznie, czyMoznaWybracZadaniodawce, czyZadanieDotyczyDnia, czyZadanieOpoznione, czyZadanieWidoczneDlaUzytkownika, pobierzEtykieteStatusuZadania, pobierzKolorZadaniodawcy, pobierzZadaniaDeadline, rozstrzygnijPrzypisanieZadania, sortujZadaniaBezGodziny, walidujPrzypomnienia } from './logika/zadania'
+import { czyMoznaEdytowacZadanie, czyMoznaOznaczycZadanieRecznie, czyMoznaWybracZadaniodawce, czyZadanieDotyczyDnia, czyZadanieOpoznione, czyZadanieWidoczneDlaUzytkownika, pobierzEtykieteStatusuZadania, pobierzKolorZadaniodawcy, pobierzZadaniaDeadline, rozstrzygnijPrzypisanieZadania, sortujZadaniaBezGodziny, walidujPrzypomnienia } from './logika/zadania'
 import type { JednostkaPrzypomnienia, PaczkaPulpitu, PrzypomnienieZadania, ZadaniePulpitu, ZapotrzebowanieZakupowe } from './modele/pulpit'
-import { oznaczPaczkeJakoWyslana, pobierzStanPulpitu, usunZadanieReczne, zapiszZadanieReczne, zapiszZapotrzebowanieZakupowe } from './uslugi/magazynPulpitu'
+import { edytujZadanieRecznePrzezZadaniodawce, oznaczPaczkeJakoWyslana, pobierzStanPulpitu, usunZadanieReczne, zapiszZadanieReczne, zapiszZapotrzebowanieZakupowe } from './uslugi/magazynPulpitu'
 import './pulpit.css'
 
 type FiltrPulpitu = 'WSZYSTKIE' | 'DO_ZROBIENIA' | 'PILNE' | 'PACZKI' | 'BLOKADY'
@@ -70,6 +70,32 @@ function pustyFormularz(data: string, uzytkownikId: string): FormularzZadania {
     szkolenieId: '',
     przypomnienia: [],
   }
+}
+
+function formularzZZadania(zadanie: ZadaniePulpitu): FormularzZadania {
+  return {
+    tytul: zadanie.tytul,
+    data: zadanie.data,
+    godzina: zadanie.godzina ?? '',
+    priorytet: zadanie.priorytet,
+    zadaniodawcaId: zadanie.zadaniodawcaId,
+    zadaniobiorcaId: zadanie.zadaniobiorcaId === zadanie.zadaniodawcaId ? '' : zadanie.zadaniobiorcaId,
+    szkolenieId: zadanie.powiazaneSzkolenieId ?? '',
+    przypomnienia: zadanie.przypomnienia.map((przypomnienie) => ({ ...przypomnienie })),
+  }
+}
+
+function formatujMoment(dataIso: string) {
+  const data = new Date(dataIso)
+  if (Number.isNaN(data.getTime())) return 'Brak danych o czasie wykonania'
+
+  return new Intl.DateTimeFormat('pl-PL', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(data)
 }
 
 function pobierzNazweOsoby(uzytkownicy: Uzytkownik[], uzytkownikId: string) {
@@ -184,7 +210,7 @@ function MarkerDeadline({ zadanie, uzytkownicy, otworz }: { zadanie: ZadaniePulp
   </div>
 }
 
-function FormularzDodawaniaZadania({ formularz, ustawFormularz, uzytkownicy, szkolenia, czyWyborZadaniodawcy, blad, zapisz }: {
+function FormularzDodawaniaZadania({ formularz, ustawFormularz, uzytkownicy, szkolenia, czyWyborZadaniodawcy, blad, zapisz, anuluj, etykietaZapisu = 'Zapisz' }: {
   formularz: FormularzZadania
   ustawFormularz: (formularz: FormularzZadania) => void
   uzytkownicy: Uzytkownik[]
@@ -192,6 +218,8 @@ function FormularzDodawaniaZadania({ formularz, ustawFormularz, uzytkownicy, szk
   czyWyborZadaniodawcy: boolean
   blad: string
   zapisz: () => void
+  anuluj?: () => void
+  etykietaZapisu?: string
 }) {
   function dodajPrzypomnienie() {
     const propozycje: Array<Omit<PrzypomnienieZadania, 'id'>> = [
@@ -225,7 +253,12 @@ function FormularzDodawaniaZadania({ formularz, ustawFormularz, uzytkownicy, szk
       <button onClick={dodajPrzypomnienie} type="button">+ Dodaj przypomnienie</button>
     </fieldset>
     {blad && <p className="pulpit-formularz-zadania__blad" role="alert">{blad}</p>}
-    <button className="pulpit-przycisk-glowny pulpit-formularz-zadania__zapisz" type="submit">Zapisz</button>
+    {anuluj
+      ? <div className="pulpit-modal__akcje">
+          <button onClick={anuluj} type="button">Anuluj</button>
+          <button className="pulpit-przycisk-glowny pulpit-formularz-zadania__zapisz" type="submit">{etykietaZapisu}</button>
+        </div>
+      : <button className="pulpit-przycisk-glowny pulpit-formularz-zadania__zapisz" type="submit">{etykietaZapisu}</button>}
   </form>
 }
 
@@ -268,6 +301,9 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
   const [stan, ustawStan] = useState(pobierzStanPulpitu)
   const [wybranyUzytkownikId, ustawWybranegoUzytkownikaId] = useState(zalogowanyUzytkownik?.id ?? '')
   const [wybraneZadanie, ustawWybraneZadanie] = useState<ZadaniePulpitu | null>(null)
+  const [edytowaneZadanieId, ustawEdytowaneZadanieId] = useState<string | null>(null)
+  const [formularzEdycji, ustawFormularzEdycji] = useState<FormularzZadania | null>(null)
+  const [bladEdycji, ustawBladEdycji] = useState('')
   const [paczkaDoPotwierdzenia, ustawPaczkeDoPotwierdzenia] = useState<PaczkaPulpitu | null>(null)
   const [czyDodawanieZadania, ustawCzyDodawanieZadania] = useState(false)
   const [czyWykazZakupowOtwarty, ustawCzyWykazZakupowOtwarty] = useState(false)
@@ -302,9 +338,90 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
 
   function odswiezStan() { ustawStan(pobierzStanPulpitu()) }
   function zmienZadanie(zadanie: ZadaniePulpitu) { zapiszZadanieReczne(zadanie); ustawWybraneZadanie((obecne) => obecne?.id === zadanie.id ? zadanie : obecne); odswiezStan() }
-  function oznaczWykonane(zadanie: ZadaniePulpitu) { zmienZadanie({ ...zadanie, status: 'WYKONANE', wykonano: new Date().toISOString() }) }
-  function zmienGodzine(zadanie: ZadaniePulpitu, godzina: string) { zmienZadanie({ ...zadanie, godzina: godzina || undefined }) }
-  function odlozZadanie(zadanie: ZadaniePulpitu, nowaData: string) { zmienZadanie({ ...zadanie, data: nowaData, odlozonoDo: nowaData }) }
+  function oznaczWykonane(zadanie: ZadaniePulpitu) {
+    if (zadanie.status === 'WYKONANE') return
+    zmienZadanie({ ...zadanie, status: 'WYKONANE', wykonano: new Date().toISOString() })
+    ustawEdytowaneZadanieId(null)
+    ustawFormularzEdycji(null)
+    ustawBladEdycji('')
+  }
+
+  function zmienGodzine(zadanie: ZadaniePulpitu, godzina: string) {
+    zmienZadanie({ ...zadanie, godzina: godzina || undefined })
+  }
+
+  function odlozZadanie(zadanie: ZadaniePulpitu, nowaData: string) {
+    zmienZadanie({ ...zadanie, data: nowaData, odlozonoDo: nowaData })
+  }
+
+  function rozpocznijEdycjeZadania(zadanie: ZadaniePulpitu) {
+    if (!czyMoznaEdytowacZadanie(zadanie, zalogowanyUzytkownik?.id)) return
+
+    ustawFormularzEdycji(formularzZZadania(zadanie))
+    ustawEdytowaneZadanieId(zadanie.id)
+    ustawBladEdycji('')
+  }
+
+  function anulujEdycjeZadania() {
+    ustawEdytowaneZadanieId(null)
+    ustawFormularzEdycji(null)
+    ustawBladEdycji('')
+  }
+
+  function zapiszEdycjeZadania() {
+    if (
+      !wybraneZadanie
+      || !formularzEdycji
+      || !zalogowanyUzytkownik
+      || edytowaneZadanieId !== wybraneZadanie.id
+    ) return
+
+    if (!formularzEdycji.tytul.trim()) {
+      ustawBladEdycji('Nazwa zadania jest wymagana.')
+      return
+    }
+
+    const bladPrzypomnien = walidujPrzypomnienia(formularzEdycji.przypomnienia)
+    if (bladPrzypomnien) {
+      ustawBladEdycji(bladPrzypomnien)
+      return
+    }
+
+    const zadaniobiorcaId =
+      formularzEdycji.zadaniobiorcaId || wybraneZadanie.zadaniodawcaId
+
+    if (!aktywniUzytkownicy.some((uzytkownik) => uzytkownik.id === zadaniobiorcaId)) {
+      ustawBladEdycji('Wybrany Zadaniobiorca nie jest dostępny.')
+      return
+    }
+
+    const zaktualizowane = edytujZadanieRecznePrzezZadaniodawce(
+      wybraneZadanie.id,
+      zalogowanyUzytkownik.id,
+      {
+        tytul: formularzEdycji.tytul.trim(),
+        data: formularzEdycji.data,
+        godzina: formularzEdycji.godzina || undefined,
+        priorytet: formularzEdycji.priorytet,
+        zadaniobiorcaId,
+        przypomnienia: formularzEdycji.przypomnienia.map((przypomnienie) => ({ ...przypomnienie })),
+        powiazaneSzkolenieId: formularzEdycji.szkolenieId || undefined,
+      },
+    )
+
+    if (!zaktualizowane) {
+      ustawBladEdycji(
+        'Nie można zapisać zmian. Zadanie mogło zostać wykonane albo nie masz już prawa do jego edycji.'
+      )
+      odswiezStan()
+      return
+    }
+
+    ustawWybraneZadanie(zaktualizowane)
+    anulujEdycjeZadania()
+    odswiezStan()
+  }
+
   function przelaczFiltr(nowyFiltr: FiltrPulpitu) { ustawFiltr((obecny) => obecny === nowyFiltr ? 'WSZYSTKIE' : nowyFiltr) }
   function otworzDodawanie() {
     ustawNoweZadanie(pustyFormularz(data, zalogowanyUzytkownik?.id ?? ''))
@@ -386,8 +503,21 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
   const pokazZadania = filtr !== 'PACZKI'
   const pokazPaczki = filtr === 'WSZYSTKIE' || filtr === 'PACZKI'
   const zadaniaDoPokazania = filtr === 'PILNE' ? zadaniaBezGodziny.filter((zadanie) => zadanie.priorytet === 'PILNE' || zadanie.priorytet === 'ASAP' || czyZadanieOpoznione(zadanie, teraz)) : filtr === 'BLOKADY' ? zadaniaBezGodziny.filter((zadanie) => zadanie.czyAutomatyczne) : zadaniaBezGodziny
-  const czyMoznaModyfikowacWybrane = Boolean(wybraneZadanie && !wybraneZadanie.czyAutomatyczne && wybraneZadanie.zadaniobiorcaId === zalogowanyUzytkownik?.id)
-  const czyMoznaUsunacWybrane = Boolean(wybraneZadanie && !wybraneZadanie.czyAutomatyczne && wybraneZadanie.zadaniodawcaId === zalogowanyUzytkownik?.id)
+  const czyMoznaWykonacWybrane = Boolean(
+    wybraneZadanie
+    && !wybraneZadanie.czyAutomatyczne
+    && wybraneZadanie.status === 'OTWARTE'
+    && wybraneZadanie.zadaniobiorcaId === zalogowanyUzytkownik?.id
+  )
+  const czyMoznaEdytowacWybrane = Boolean(
+    wybraneZadanie
+    && czyMoznaEdytowacZadanie(wybraneZadanie, zalogowanyUzytkownik?.id)
+  )
+  const czyMoznaUsunacWybrane = Boolean(
+    wybraneZadanie
+    && !wybraneZadanie.czyAutomatyczne
+    && wybraneZadanie.zadaniodawcaId === zalogowanyUzytkownik?.id
+  )
 
   return <section className="widok pulpit" aria-label="Pulpit bieżącej pracy">
     <header className="pulpit__naglowek">
@@ -429,7 +559,8 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
         {czyDodawanieZadania && czyObserwowanyJestZalogowanym && <FormularzDodawaniaZadania blad={bladFormularza} czyWyborZadaniodawcy={czyWyborZadaniodawcy} formularz={noweZadanie} szkolenia={szkoleniaDostepne} ustawFormularz={ustawNoweZadanie} uzytkownicy={aktywniUzytkownicy} zapisz={dodajZadanie} />}
         {zadaniaDoPokazania.length ? <div className="pulpit-lista-zadan">{zadaniaDoPokazania.map((zadanie) => {
           const czyWykonawca = zadanie.zadaniobiorcaId === zalogowanyUzytkownik?.id
-          return <KartaZadania key={zadanie.id} zadanie={zadanie} teraz={teraz} uzytkownicy={uzytkownicy} otworz={() => ustawWybraneZadanie(zadanie)} wykonaj={zadanie.czyAutomatyczne || !czyWykonawca ? undefined : () => oznaczWykonane(zadanie)} zmienGodzine={zadanie.czyAutomatyczne || !czyWykonawca ? undefined : (godzina) => zmienGodzine(zadanie, godzina)} odloz={zadanie.czyAutomatyczne || zadanie.czyTerminKrytyczny || !czyWykonawca ? undefined : (nowaData) => odlozZadanie(zadanie, nowaData)} />
+          const czyZadaniodawca = czyMoznaEdytowacZadanie(zadanie, zalogowanyUzytkownik?.id)
+          return <KartaZadania key={zadanie.id} zadanie={zadanie} teraz={teraz} uzytkownicy={uzytkownicy} otworz={() => ustawWybraneZadanie(zadanie)} wykonaj={zadanie.czyAutomatyczne || !czyWykonawca ? undefined : () => oznaczWykonane(zadanie)} zmienGodzine={!czyZadaniodawca ? undefined : (godzina) => zmienGodzine(zadanie, godzina)} odloz={zadanie.czyTerminKrytyczny || !czyZadaniodawca ? undefined : (nowaData) => odlozZadanie(zadanie, nowaData)} />
         })}</div> : <p className="pulpit-pusty">Brak zadań bez przypisanej godziny.</p>}
       </div>
       {zadaniaWykonane.length > 0 && <details className="pulpit-wykonane"><summary>Wykonane ({zadaniaWykonane.length})</summary>{zadaniaWykonane.map((zadanie) => <KartaZadania key={zadanie.id} zadanie={zadanie} teraz={teraz} uzytkownicy={uzytkownicy} otworz={() => ustawWybraneZadanie(zadanie)} />)}</details>}
@@ -479,13 +610,33 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
         <div><dt>Przypomnienia</dt><dd>{wybraneZadanie.przypomnienia.length ? wybraneZadanie.przypomnienia.map(etykietaPrzypomnienia).join(', ') : 'Brak'}</dd></div>
         <div><dt>Źródło</dt><dd>{wybraneZadanie.czyAutomatyczne ? 'Automatyczna reguła szkolenia' : 'Ręczne zadanie'}</dd></div>
         <div><dt>Powiązane szkolenie</dt><dd>{wybraneZadanie.powiazaneSzkolenieId || 'Brak'}</dd></div>
+        {wybraneZadanie.status === 'WYKONANE' && <div><dt>Wykonano</dt><dd>{wybraneZadanie.wykonano ? formatujMoment(wybraneZadanie.wykonano) : 'Brak danych o czasie wykonania'}</dd></div>}
       </dl>
-      {czyMoznaModyfikowacWybrane && <div className="pulpit-drawer__akcje">
-        <label htmlFor="pulpit-drawer-godzina">Godzina deadline<input id="pulpit-drawer-godzina" onChange={(zdarzenie) => zmienGodzine(wybraneZadanie, zdarzenie.target.value)} type="time" value={wybraneZadanie.godzina ?? ''} /></label>
-        <button onClick={() => odlozZadanie(wybraneZadanie, przesunDate(wybraneZadanie.data, 1))} type="button">Odłóż o dzień</button>
+
+      {czyMoznaEdytowacWybrane && edytowaneZadanieId !== wybraneZadanie.id && <div className="pulpit-drawer__akcje">
+        <button onClick={() => rozpocznijEdycjeZadania(wybraneZadanie)} type="button">Edytuj zadanie</button>
+      </div>}
+
+      {czyMoznaEdytowacWybrane && edytowaneZadanieId === wybraneZadanie.id && formularzEdycji && <div className="pulpit-drawer__edycja">
+        <h3>Edytuj zadanie</h3>
+        <FormularzDodawaniaZadania
+          anuluj={anulujEdycjeZadania}
+          blad={bladEdycji}
+          czyWyborZadaniodawcy={false}
+          etykietaZapisu="Zapisz zmiany"
+          formularz={formularzEdycji}
+          szkolenia={szkoleniaDostepne}
+          ustawFormularz={ustawFormularzEdycji}
+          uzytkownicy={aktywniUzytkownicy}
+          zapisz={zapiszEdycjeZadania}
+        />
+      </div>}
+
+      {czyMoznaWykonacWybrane && <div className="pulpit-drawer__akcje">
         <button className="pulpit-przycisk-glowny" onClick={() => oznaczWykonane(wybraneZadanie)} type="button">{'\u2713'} Wykonane</button>
       </div>}
-      {czyMoznaUsunacWybrane && <button className="pulpit-przycisk-niebezpieczny" onClick={() => { usunZadanieReczne(wybraneZadanie.id); ustawWybraneZadanie(null); odswiezStan() }} type="button">Usuń zadanie</button>}
+
+      {czyMoznaUsunacWybrane && <button className="pulpit-przycisk-niebezpieczny" onClick={() => { usunZadanieReczne(wybraneZadanie.id); ustawWybraneZadanie(null); anulujEdycjeZadania(); odswiezStan() }} type="button">Usuń zadanie</button>}
       {wybraneZadanie.powiazaneSzkolenieId && <button className="pulpit-przycisk-glowny" onClick={() => otworzRekordZrodlowy?.(wybraneZadanie.powiazaneSzkolenieId)} type="button">Przejdź do rekordu źródłowego</button>}
     </aside>}
 
