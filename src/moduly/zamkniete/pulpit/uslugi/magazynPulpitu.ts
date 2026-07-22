@@ -1,9 +1,9 @@
-import type { JednostkaPrzypomnienia, PrzypomnienieZadania, StanPulpitu, ZadaniePulpitu } from '../modele/pulpit'
+import type { JednostkaPrzypomnienia, PrzypomnienieZadania, StanPulpitu, StatusZapotrzebowaniaZakupowego, ZadaniePulpitu, ZapotrzebowanieZakupowe } from '../modele/pulpit'
 
 const kluczStanuPulpitu = 'ultimatePomagier.pulpit.v1'
 
 function pustyStan(): StanPulpitu {
-  return { zadaniaReczne: [], wyslanePaczki: {} }
+  return { zadaniaReczne: [], wyslanePaczki: {}, zapotrzebowaniaZakupowe: [] }
 }
 
 function tekst(wartosc: unknown) {
@@ -65,6 +65,23 @@ export function normalizujZadaniePulpitu(wartosc: unknown): ZadaniePulpitu | nul
   }
 }
 
+function normalizujStatusZapotrzebowaniaZakupowego(wartosc: unknown): StatusZapotrzebowaniaZakupowego | null {
+  if (wartosc === 'ZGLOSZONE' || wartosc === 'DO_ZAKUPU' || wartosc === 'W_REALIZACJI' || wartosc === 'KUPIONE' || wartosc === 'ANULOWANE' || wartosc === 'ZAMKNIETE' || wartosc === 'ARCHIWALNE') return wartosc
+  return null
+}
+
+export function normalizujZapotrzebowanieZakupowe(wartosc: unknown): ZapotrzebowanieZakupowe | null {
+  if (!wartosc || typeof wartosc !== 'object') return null
+  const dane = wartosc as Record<string, unknown>
+  const id = tekst(dane.id)
+  const nazwa = tekst(dane.nazwa)
+  const ilosc = Number(dane.ilosc)
+  const status = normalizujStatusZapotrzebowaniaZakupowego(dane.status)
+  const utworzonePrzezId = tekst(dane.utworzonePrzezId)
+  const utworzonoAt = tekst(dane.utworzonoAt)
+  if (!id || !nazwa || !Number.isFinite(ilosc) || ilosc <= 0 || !status || !utworzonePrzezId || !utworzonoAt) return null
+  return { id, nazwa, ilosc, status, uwagi: tekst(dane.uwagi) || undefined, utworzonePrzezId, utworzonoAt }
+}
 export function pobierzStanPulpitu(): StanPulpitu {
   try {
     const zapis = localStorage.getItem(kluczStanuPulpitu)
@@ -75,6 +92,9 @@ export function pobierzStanPulpitu(): StanPulpitu {
         .map(normalizujZadaniePulpitu)
         .filter((zadanie): zadanie is ZadaniePulpitu => Boolean(zadanie)),
       wyslanePaczki: stan.wyslanePaczki && typeof stan.wyslanePaczki === 'object' ? stan.wyslanePaczki : {},
+      zapotrzebowaniaZakupowe: (Array.isArray(stan.zapotrzebowaniaZakupowe) ? stan.zapotrzebowaniaZakupowe : [])
+        .map(normalizujZapotrzebowanieZakupowe)
+        .filter((zapotrzebowanie): zapotrzebowanie is ZapotrzebowanieZakupowe => Boolean(zapotrzebowanie)),
     }
   } catch {
     return pustyStan()
@@ -99,4 +119,10 @@ export function oznaczPaczkeJakoWyslana(idPaczki: string) {
 export function usunZadanieReczne(zadanieId: string) {
   const stan = pobierzStanPulpitu()
   return zapiszStanPulpitu({ ...stan, zadaniaReczne: stan.zadaniaReczne.filter((zadanie) => zadanie.id !== zadanieId) })
+}
+
+export function zapiszZapotrzebowanieZakupowe(zapotrzebowanie: ZapotrzebowanieZakupowe) {
+  const stan = pobierzStanPulpitu()
+  const istnieje = stan.zapotrzebowaniaZakupowe.some((obecne) => obecne.id === zapotrzebowanie.id)
+  return zapiszStanPulpitu({ ...stan, zapotrzebowaniaZakupowe: istnieje ? stan.zapotrzebowaniaZakupowe.map((obecne) => obecne.id === zapotrzebowanie.id ? zapotrzebowanie : obecne) : [...stan.zapotrzebowaniaZakupowe, zapotrzebowanie] })
 }

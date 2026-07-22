@@ -1,13 +1,15 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import { obliczPostepCzasuDnia, pobierzStanWskaznikaCzasu, pozycjaGodzinyNaOsi } from '../src/moduly/zamkniete/pulpit/logika/czasDnia.ts'
 import { czyMoznaZmienicKontekstPulpitu } from '../src/moduly/zamkniete/pulpit/logika/kontekstPulpitu.ts'
 import { czyPaczkaOpozniona, czyPaczkaWidoczna, czyWysylkaWymagaDodatkowegoPotwierdzenia, pobierzGotowoscPaczki, sortujPaczki } from '../src/moduly/zamkniete/pulpit/logika/paczki.ts'
 import { obliczLicznikiPulpitu } from '../src/moduly/zamkniete/pulpit/logika/podsumowaniePulpitu.ts'
+import { obliczLiczbeAktywnychZapotrzebowanZakupowych, odmienRzeczDoZakupu, pobierzTekstLicznikaZakupow, walidujNoweZapotrzebowanieZakupowe } from '../src/moduly/zamkniete/pulpit/logika/zapotrzebowaniaZakupowe.ts'
 import { generujZadaniaAutomatyczne } from '../src/moduly/zamkniete/pulpit/logika/zadaniaAutomatyczne.ts'
 import { czyMoznaOznaczycZadanieRecznie, czyMoznaWybracZadaniodawce, czyZadanieOpoznione, czyZadanieWidoczneDlaUzytkownika, pobierzEtykieteStatusuZadania, pobierzZadaniaDeadline, rozstrzygnijPrzypisanieZadania, sortujZadaniaBezGodziny, walidujPrzypomnienia } from '../src/moduly/zamkniete/pulpit/logika/zadania.ts'
-import type { PaczkaPulpitu, ZadaniePulpitu } from '../src/moduly/zamkniete/pulpit/modele/pulpit.ts'
-import { normalizujZadaniePulpitu } from '../src/moduly/zamkniete/pulpit/uslugi/magazynPulpitu.ts'
+import type { PaczkaPulpitu, StatusZapotrzebowaniaZakupowego, ZadaniePulpitu, ZapotrzebowanieZakupowe } from '../src/moduly/zamkniete/pulpit/modele/pulpit.ts'
+import { normalizujZadaniePulpitu, pobierzStanPulpitu, zapiszZapotrzebowanieZakupowe } from '../src/moduly/zamkniete/pulpit/uslugi/magazynPulpitu.ts'
 
 const teraz = new Date('2026-07-22T14:00:00')
 const zadanie = (zmiany: Partial<ZadaniePulpitu> = {}): ZadaniePulpitu => ({ id: 'zadanie', tytul: 'Zadanie', data: '2026-07-22', utworzono: '2026-07-22T08:00:00.000Z', status: 'OTWARTE', priorytet: 'ZWYKLE', typZrodla: 'RECZNE', typZadania: 'ZADANIE_WLASNE', wlascicielId: 'anna', zadaniodawcaId: 'anna', zadaniobiorcaId: 'anna', przypomnienia: [], czyAutomatyczne: false, czyTerminKrytyczny: false, ...zmiany })
@@ -184,4 +186,56 @@ test('stare zadanie bez nowych pól jest bezpiecznie normalizowane', () => {
   assert.equal(stare.zadaniodawcaId, 'anna')
   assert.equal(stare.zadaniobiorcaId, 'anna')
   assert.deepEqual(stare.przypomnienia, [])
+})
+
+const zapotrzebowanie = (zmiany: Partial<ZapotrzebowanieZakupowe> = {}): ZapotrzebowanieZakupowe => ({ id: 'zakup', nazwa: 'Papier A4', ilosc: 1, status: 'ZGLOSZONE', utworzonePrzezId: 'kacper', utworzonoAt: '2026-07-22T08:00:00.000Z', ...zmiany })
+
+test('kafelek ZAKUPY i formularz sa obecne w widoku Pulpitu', () => {
+  const widok = readFileSync('src/moduly/zamkniete/pulpit/WidokPulpitu.tsx', 'utf8')
+  assert.match(widok, /ZAKUPY/)
+  assert.match(widok, /pulpit-zakup-nazwa/)
+  assert.match(widok, /zapiszZapotrzebowanieZakupowe/)
+  assert.doesNotMatch(widok, /liczbaZakupow\s*=/)
+})
+
+test('licznik zakupow liczy pozycje aktywne, a nie ilosc sztuk', () => {
+  assert.equal(obliczLiczbeAktywnychZapotrzebowanZakupowych([]), 0)
+  assert.equal(obliczLiczbeAktywnychZapotrzebowanZakupowych([zapotrzebowanie({ ilosc: 10 })]), 1)
+  assert.equal(obliczLiczbeAktywnychZapotrzebowanZakupowych([zapotrzebowanie({ id: 'pierwsze' }), zapotrzebowanie({ id: 'drugie' }), zapotrzebowanie({ id: 'trzecie' })]), 3)
+})
+
+test('tylko wskazane statusy zapotrzebowan sa aktywne', () => {
+  const aktywne: StatusZapotrzebowaniaZakupowego[] = ['ZGLOSZONE', 'DO_ZAKUPU', 'W_REALIZACJI']
+  const nieaktywne: StatusZapotrzebowaniaZakupowego[] = ['KUPIONE', 'ANULOWANE', 'ZAMKNIETE', 'ARCHIWALNE']
+  for (const status of aktywne) assert.equal(obliczLiczbeAktywnychZapotrzebowanZakupowych([zapotrzebowanie({ status })]), 1)
+  for (const status of nieaktywne) assert.equal(obliczLiczbeAktywnychZapotrzebowanZakupowych([zapotrzebowanie({ status })]), 0)
+})
+
+test('walidacja zakupu odrzuca pusta nazwe oraz ilosc zero i ujemna', () => {
+  assert.ok(walidujNoweZapotrzebowanieZakupowe('   ', 1))
+  assert.ok(walidujNoweZapotrzebowanieZakupowe('Papier A4', 0))
+  assert.ok(walidujNoweZapotrzebowanieZakupowe('Papier A4', -1))
+  assert.equal(walidujNoweZapotrzebowanieZakupowe('Papier A4', 10), null)
+})
+
+test('odmiana rzeczy do zakupu i licznik 999 plus sa poprawne', () => {
+  assert.equal(odmienRzeczDoZakupu(1), 'rzecz do zakupu')
+  for (const liczba of [0, 2, 3, 4, 5, 11, 12, 14, 21, 22, 24, 25, 101, 102, 105]) {
+    assert.equal(odmienRzeczDoZakupu(liczba), 'rzeczy do zakupu')
+  }
+  assert.equal(pobierzTekstLicznikaZakupow(999), '999')
+  assert.equal(pobierzTekstLicznikaZakupow(1000), '999+')
+})
+
+test('brak rejestru zakupow nie powoduje crasha, a zapis zachowuje zglaszajacego i historie statusu', () => {
+  const magazyn = new Map<string, string>()
+  globalThis.localStorage = { getItem: (klucz: string) => magazyn.get(klucz) ?? null, setItem: (klucz: string, wartosc: string) => magazyn.set(klucz, wartosc), removeItem: (klucz: string) => magazyn.delete(klucz), clear: () => magazyn.clear(), key: () => null, length: 0 } as Storage
+  assert.deepEqual(pobierzStanPulpitu().zapotrzebowaniaZakupowe, [])
+  const zgloszone = zapotrzebowanie({ id: 'papier', utworzonePrzezId: 'aktualny-uzytkownik', ilosc: 10 })
+  zapiszZapotrzebowanieZakupowe(zgloszone)
+  zapiszZapotrzebowanieZakupowe({ ...zgloszone, status: 'KUPIONE' })
+  const zapisane = pobierzStanPulpitu().zapotrzebowaniaZakupowe
+  assert.equal(zapisane.length, 1)
+  assert.equal(zapisane[0]?.utworzonePrzezId, 'aktualny-uzytkownik')
+  assert.equal(zapisane[0]?.status, 'KUPIONE')
 })

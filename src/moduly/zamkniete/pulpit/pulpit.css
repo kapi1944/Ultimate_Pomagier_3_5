@@ -4,7 +4,7 @@
 .pulpit__wybor-kontekstu, .pulpit-formularz-zadania label { display: grid; gap: 5px; color: #b9d7c2; font-size: .82rem; }
 .pulpit select, .pulpit input, .pulpit button { font: inherit; }
 .pulpit select, .pulpit input { box-sizing: border-box; min-height: 35px; border: 1px solid rgba(134, 239, 172, .45); border-radius: 6px; background: #03180c; color: #f4fff7; padding: 7px; }
-.pulpit-kafelki { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.pulpit-kafelki { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
 .pulpit-kafelek { display: grid; gap: 5px; min-height: 130px; padding: 18px; border: 1px solid rgba(74, 222, 128, .35); border-radius: 10px; background: #062615; color: #ecfdf3; cursor: pointer; text-align: left; }
 .pulpit-kafelek:hover, .pulpit-kafelek--aktywny { border-color: #86efac; background: #104428; }
 .pulpit-kafelek strong { font-size: 2.3rem; line-height: 1; }.pulpit-kafelek span { font-weight: 800; letter-spacing: .04em; }.pulpit-kafelek small { color: #a7d7b3; }
@@ -333,3 +333,21 @@
   .pulpit-deadline__plomien { animation: none; }
   .pulpit-deadline__tooltip { transition: none; }
 }
+
+.pulpit-kafelek--zakupy { border-color: rgba(56, 189, 248, .55); background: #06243a; }
+.pulpit-kafelek--zakupy:hover { border-color: #7dd3fc; background: #0c3a5a; }
+.pulpit-kafelek__naglowek { display: flex; align-items: center; gap: 8px; font-weight: 800; letter-spacing: .04em; }
+.pulpit-kafelek__ikona { width: 22px; height: 22px; color: #7dd3fc; }
+.pulpit-kafelek--zakupy em { color: #bae6fd; font-size: .8rem; font-style: normal; font-weight: 700; }
+.pulpit-drawer__naglowek { display: flex; align-items: start; justify-content: space-between; gap: 12px; padding-right: 28px; }
+.pulpit-drawer__naglowek p { margin: 5px 0 0; color: #9ccfab; }
+.pulpit-zapotrzebowania { display: grid; gap: 12px; }
+.pulpit-zapotrzebowanie { display: grid; gap: 7px; padding: 14px; border: 1px solid rgba(125, 211, 252, .35); border-radius: 8px; background: #06243a; }
+.pulpit-zapotrzebowanie h3, .pulpit-zapotrzebowanie p { margin: 0; }
+.pulpit-zapotrzebowanie p { color: #cbe8f8; }
+.pulpit-zapotrzebowanie__akcje { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.pulpit-formularz-zakupu { display: grid; gap: 14px; }
+.pulpit-formularz-zakupu label { display: grid; gap: 5px; color: #b9d7c2; font-size: .9rem; }
+.pulpit-formularz-zakupu textarea { box-sizing: border-box; width: 100%; min-height: 90px; border: 1px solid rgba(134, 239, 172, .45); border-radius: 6px; background: #03180c; color: #f4fff7; font: inherit; padding: 7px; resize: vertical; }
+.pulpit-formularz-zakupu textarea:focus-visible { outline: 2px solid #fef08a; outline-offset: 2px; }
+.pulpit-formularz-zakupu__blad { margin: 0; color: #fecaca; font-weight: 700; }

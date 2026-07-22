@@ -37,6 +37,19 @@ export type ZadaniePulpitu = {
 export type StanPulpitu = {
   zadaniaReczne: ZadaniePulpitu[]
   wyslanePaczki: Record<string, string>
+  zapotrzebowaniaZakupowe: ZapotrzebowanieZakupowe[]
+}
+
+export type StatusZapotrzebowaniaZakupowego = 'ZGLOSZONE' | 'DO_ZAKUPU' | 'W_REALIZACJI' | 'KUPIONE' | 'ANULOWANE' | 'ZAMKNIETE' | 'ARCHIWALNE'
+
+export type ZapotrzebowanieZakupowe = {
+  id: string
+  nazwa: string
+  ilosc: number
+  status: StatusZapotrzebowaniaZakupowego
+  uwagi?: string
+  utworzonePrzezId: string
+  utworzonoAt: string
 }
 
 export type PaczkaPulpitu = {

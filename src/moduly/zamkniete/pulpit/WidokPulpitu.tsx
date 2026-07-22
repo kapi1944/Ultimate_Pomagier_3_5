@@ -9,9 +9,10 @@ import { czyPaczkaOpozniona, czyPaczkaWidoczna, czyWysylkaWymagaDodatkowegoPotwi
 import { generujZadaniaAutomatyczne } from './logika/zadaniaAutomatyczne'
 import { czyMoznaZmienicKontekstPulpitu } from './logika/kontekstPulpitu'
 import { obliczLicznikiPulpitu } from './logika/podsumowaniePulpitu'
+import { obliczLiczbeAktywnychZapotrzebowanZakupowych, odmienRzeczDoZakupu, pobierzAktywneZapotrzebowaniaZakupowe, pobierzTekstLicznikaZakupow, walidujNoweZapotrzebowanieZakupowe } from './logika/zapotrzebowaniaZakupowe'
 import { czyMoznaOznaczycZadanieRecznie, czyMoznaWybracZadaniodawce, czyZadanieDotyczyDnia, czyZadanieOpoznione, czyZadanieWidoczneDlaUzytkownika, pobierzEtykieteStatusuZadania, pobierzKolorZadaniodawcy, pobierzZadaniaDeadline, rozstrzygnijPrzypisanieZadania, sortujZadaniaBezGodziny, walidujPrzypomnienia } from './logika/zadania'
-import type { JednostkaPrzypomnienia, PaczkaPulpitu, PrzypomnienieZadania, ZadaniePulpitu } from './modele/pulpit'
-import { oznaczPaczkeJakoWyslana, pobierzStanPulpitu, usunZadanieReczne, zapiszZadanieReczne } from './uslugi/magazynPulpitu'
+import type { JednostkaPrzypomnienia, PaczkaPulpitu, PrzypomnienieZadania, ZadaniePulpitu, ZapotrzebowanieZakupowe } from './modele/pulpit'
+import { oznaczPaczkeJakoWyslana, pobierzStanPulpitu, usunZadanieReczne, zapiszZadanieReczne, zapiszZapotrzebowanieZakupowe } from './uslugi/magazynPulpitu'
 import './pulpit.css'
 
 type FiltrPulpitu = 'WSZYSTKIE' | 'DO_ZROBIENIA' | 'PILNE' | 'PACZKI' | 'BLOKADY'
@@ -228,6 +229,37 @@ function FormularzDodawaniaZadania({ formularz, ustawFormularz, uzytkownicy, szk
   </form>
 }
 
+type FormularzZakupu = {
+  nazwa: string
+  ilosc: string
+  uwagi: string
+}
+
+function pustyFormularzZakupu(): FormularzZakupu {
+  return { nazwa: '', ilosc: '1', uwagi: '' }
+}
+
+function utworzIdZapotrzebowaniaZakupowego() {
+  return 'zapotrzebowanie-zakupowe-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8)
+}
+
+function formatujDateGodzine(data: string) {
+  return new Intl.DateTimeFormat('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(data))
+}
+
+function IkonaZakupow() {
+  return <svg aria-hidden="true" className="pulpit-kafelek__ikona" fill="none" viewBox="0 0 24 24"><path d="M3 4h2l2.2 10.1a2 2 0 0 0 2 1.6h7.9a2 2 0 0 0 1.9-1.4L21 7H7" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" /><circle cx="10" cy="19" fill="currentColor" r="1.3" /><circle cx="17" cy="19" fill="currentColor" r="1.3" /></svg>
+}
+
+function FormularzZakupu({ formularz, ustawFormularz, blad, zapisz, anuluj }: { formularz: FormularzZakupu; ustawFormularz: (formularz: FormularzZakupu) => void; blad: string; zapisz: () => void; anuluj: () => void }) {
+  return <form className="pulpit-formularz-zakupu" onSubmit={(zdarzenie) => { zdarzenie.preventDefault(); zapisz() }}>
+    <label htmlFor="pulpit-zakup-nazwa">Co jest potrzebne?<input aria-invalid={Boolean(blad)} id="pulpit-zakup-nazwa" onChange={(zdarzenie) => ustawFormularz({ ...formularz, nazwa: zdarzenie.target.value })} value={formularz.nazwa} /></label>
+    <label htmlFor="pulpit-zakup-ilosc">{'Ilo\u{15b}\u{107}'}<input id="pulpit-zakup-ilosc" min="0.000001" onChange={(zdarzenie) => ustawFormularz({ ...formularz, ilosc: zdarzenie.target.value })} required step="any" type="number" value={formularz.ilosc} /></label>
+    <label htmlFor="pulpit-zakup-uwagi">Uwagi<textarea id="pulpit-zakup-uwagi" onChange={(zdarzenie) => ustawFormularz({ ...formularz, uwagi: zdarzenie.target.value })} value={formularz.uwagi} /></label>
+    {blad && <p className="pulpit-formularz-zakupu__blad" role="alert">{blad}</p>}
+    <div className="pulpit-modal__akcje"><button onClick={anuluj} type="button">Anuluj</button><button className="pulpit-przycisk-glowny" type="submit">{'Zg\u{142}o\u{15b}'}</button></div>
+  </form>
+}
 export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: WlasciwosciPulpitu) {
   const { zalogowanyUzytkownik, aktywniUzytkownicy } = useKontekstUzytkownika()
   const [teraz, ustawTeraz] = useState(() => new Date())
@@ -238,8 +270,12 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
   const [wybraneZadanie, ustawWybraneZadanie] = useState<ZadaniePulpitu | null>(null)
   const [paczkaDoPotwierdzenia, ustawPaczkeDoPotwierdzenia] = useState<PaczkaPulpitu | null>(null)
   const [czyDodawanieZadania, ustawCzyDodawanieZadania] = useState(false)
+  const [czyWykazZakupowOtwarty, ustawCzyWykazZakupowOtwarty] = useState(false)
+  const [czyDodawanieZakupu, ustawCzyDodawanieZakupu] = useState(false)
   const [bladFormularza, ustawBladFormularza] = useState('')
+  const [bladFormularzaZakupu, ustawBladFormularzaZakupu] = useState('')
   const [noweZadanie, ustawNoweZadanie] = useState(() => pustyFormularz(dataTekstowa(new Date()), zalogowanyUzytkownik?.id ?? ''))
+  const [nowyZakup, ustawNowyZakup] = useState<FormularzZakupu>(pustyFormularzZakupu)
   const uzytkownicy = pobierzUzytkownikow()
   const szkoleniaDostepne = useMemo(() => pobierzSzczegolyDoChecklisty().map((szczegoly) => ({ id: szczegoly.id, nazwa: szczegoly.nazwa })), [])
 
@@ -259,6 +295,8 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
   const paczkiWidoczne = sortujPaczki(paczki.filter((paczka) => czyPaczkaWidoczna(paczka, teraz)), teraz)
   const pilne = zadania.filter((zadanie) => zadanie.status === 'OTWARTE' && (zadanie.priorytet === 'PILNE' || zadanie.priorytet === 'ASAP' || czyZadanieOpoznione(zadanie, teraz)))
   const liczniki = obliczLicznikiPulpitu(zadania, paczki, teraz, data)
+  const aktywneZapotrzebowaniaZakupowe = useMemo(() => pobierzAktywneZapotrzebowaniaZakupowe(stan.zapotrzebowaniaZakupowe), [stan.zapotrzebowaniaZakupowe])
+  const liczbaAktywnychZapotrzebowanZakupowych = obliczLiczbeAktywnychZapotrzebowanZakupowych(stan.zapotrzebowaniaZakupowe)
   const czyObserwowanyJestZalogowanym = wybranyUzytkownikId === zalogowanyUzytkownik?.id
   const wskaznikCzasu = pobierzStanWskaznikaCzasu(teraz)
 
@@ -314,6 +352,37 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
     ustawCzyDodawanieZadania(false)
   }
 
+  function otworzDodawanieZakupu() {
+    ustawNowyZakup(pustyFormularzZakupu())
+    ustawBladFormularzaZakupu('')
+    ustawCzyDodawanieZakupu(true)
+  }
+  function dodajZapotrzebowanieZakupowe() {
+    if (!zalogowanyUzytkownik) return
+    const ilosc = Number(nowyZakup.ilosc)
+    const blad = walidujNoweZapotrzebowanieZakupowe(nowyZakup.nazwa, ilosc)
+    if (blad) {
+      ustawBladFormularzaZakupu(blad)
+      return
+    }
+    zapiszZapotrzebowanieZakupowe({
+      id: utworzIdZapotrzebowaniaZakupowego(),
+      nazwa: nowyZakup.nazwa.trim(),
+      ilosc,
+      status: 'ZGLOSZONE',
+      uwagi: nowyZakup.uwagi.trim() || undefined,
+      utworzonePrzezId: zalogowanyUzytkownik.id,
+      utworzonoAt: new Date().toISOString(),
+    })
+    ustawCzyDodawanieZakupu(false)
+    ustawNowyZakup(pustyFormularzZakupu())
+    ustawBladFormularzaZakupu('')
+    odswiezStan()
+  }
+  function zmienStatusZapotrzebowaniaZakupowego(zapotrzebowanie: ZapotrzebowanieZakupowe, status: ZapotrzebowanieZakupowe['status']) {
+    zapiszZapotrzebowanieZakupowe({ ...zapotrzebowanie, status })
+    odswiezStan()
+  }
   const pokazZadania = filtr !== 'PACZKI'
   const pokazPaczki = filtr === 'WSZYSTKIE' || filtr === 'PACZKI'
   const zadaniaDoPokazania = filtr === 'PILNE' ? zadaniaBezGodziny.filter((zadanie) => zadanie.priorytet === 'PILNE' || zadanie.priorytet === 'ASAP' || czyZadanieOpoznione(zadanie, teraz)) : filtr === 'BLOKADY' ? zadaniaBezGodziny.filter((zadanie) => zadanie.czyAutomatyczne) : zadaniaBezGodziny
@@ -331,6 +400,7 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
       <button className={filtr === 'PILNE' ? 'pulpit-kafelek pulpit-kafelek--aktywny' : 'pulpit-kafelek'} onClick={() => przelaczFiltr('PILNE')} type="button"><strong>{liczniki.pilne}</strong><span>PILNE</span><small>{pilne.filter((zadanie) => czyZadanieOpoznione(zadanie, teraz)).length} opóźnione</small></button>
       <button className={filtr === 'PACZKI' ? 'pulpit-kafelek pulpit-kafelek--aktywny' : 'pulpit-kafelek'} onClick={() => przelaczFiltr('PACZKI')} type="button"><strong>{liczniki.paczki}</strong><span>PACZKI</span><small>w ciągu {liczbaDniWidocznosciPaczki} dni</small></button>
       <button className={filtr === 'BLOKADY' ? 'pulpit-kafelek pulpit-kafelek--aktywny' : 'pulpit-kafelek'} onClick={() => przelaczFiltr('BLOKADY')} type="button"><strong>{liczniki.blokady}</strong><span>BLOKADY</span><small>wymagają uwagi</small></button>
+      <button aria-label={'Zakupy: ' + liczbaAktywnychZapotrzebowanZakupowych + ' ' + odmienRzeczDoZakupu(liczbaAktywnychZapotrzebowanZakupowych)} className="pulpit-kafelek pulpit-kafelek--zakupy" onClick={() => ustawCzyWykazZakupowOtwarty(true)} type="button"><span className="pulpit-kafelek__naglowek"><IkonaZakupow />ZAKUPY</span><strong>{pobierzTekstLicznikaZakupow(liczbaAktywnychZapotrzebowanZakupowych)}</strong><small>{odmienRzeczDoZakupu(liczbaAktywnychZapotrzebowanZakupowych)}</small><em>{'+ Zg\u{142}o\u{15b} zakup'}</em></button>
     </section>
 
     {pokazZadania && <section className="pulpit-sekcja" aria-labelledby="plan-dnia">
@@ -377,6 +447,24 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
       })}</div> : <p className="pulpit-pusty">Brak paczek w oknie wysyłki.</p>}
     </section>}
 
+    {czyWykazZakupowOtwarty && <aside aria-label="Aktualne zapotrzebowania zakupowe" className="pulpit-drawer pulpit-drawer--zakupy">
+      <button aria-label={'Zamknij wykaz zakup\u{f3}w'} className="pulpit-drawer__zamknij" onClick={() => ustawCzyWykazZakupowOtwarty(false)} type="button">x</button>
+      <div className="pulpit-drawer__naglowek"><div><h2>Zakupy</h2><p>{'Aktywne zapotrzebowania ca\u{142}ej organizacji.'}</p></div><button className="pulpit-przycisk-glowny" onClick={otworzDodawanieZakupu} type="button">{'+ Zg\u{142}o\u{15b} zakup'}</button></div>
+      {aktywneZapotrzebowaniaZakupowe.length ? <div className="pulpit-zapotrzebowania">{aktywneZapotrzebowaniaZakupowe.map((zapotrzebowanie) => <article className="pulpit-zapotrzebowanie" key={zapotrzebowanie.id}>
+        <span className="pulpit-status">{zapotrzebowanie.status}</span>
+        <h3>{zapotrzebowanie.nazwa}</h3>
+        <p>{'Ilo\u{15b}\u{107}'}: {zapotrzebowanie.ilosc}</p>
+        <p>{'Zg\u{142}osi\u{142}'}: {pobierzNazweOsoby(uzytkownicy, zapotrzebowanie.utworzonePrzezId)}</p>
+        <p>{formatujDateGodzine(zapotrzebowanie.utworzonoAt)}</p>
+        {zapotrzebowanie.uwagi && <p>Uwagi: {zapotrzebowanie.uwagi}</p>}
+        <div className="pulpit-zapotrzebowanie__akcje"><button onClick={() => zmienStatusZapotrzebowaniaZakupowego(zapotrzebowanie, 'KUPIONE')} type="button">Oznacz jako kupione</button><button className="pulpit-przycisk-niebezpieczny" onClick={() => zmienStatusZapotrzebowaniaZakupowego(zapotrzebowanie, 'ANULOWANE')} type="button">Anuluj</button></div>
+      </article>)}</div> : <p className="pulpit-pusty">{'Brak aktywnych zapotrzebowa\u{144} zakupowych.'}</p>}
+    </aside>}
+
+    {czyDodawanieZakupu && <section aria-label={'Zg\u{142}oszenie zakupu'} aria-modal="true" className="pulpit-modal" role="dialog"><div>
+      <h2>{'Zg\u{142}o\u{15b} zakup'}</h2>
+      <FormularzZakupu anuluj={() => ustawCzyDodawanieZakupu(false)} blad={bladFormularzaZakupu} formularz={nowyZakup} ustawFormularz={ustawNowyZakup} zapisz={dodajZapotrzebowanieZakupowe} />
+    </div></section>}
     {wybraneZadanie && <aside aria-label="Szczegóły zadania" className="pulpit-drawer">
       <button aria-label="Zamknij szczegóły zadania" className="pulpit-drawer__zamknij" onClick={() => ustawWybraneZadanie(null)} type="button">×</button>
       <span className="pulpit-status">{pobierzEtykieteStatusuZadania(wybraneZadanie, teraz)}</span>
