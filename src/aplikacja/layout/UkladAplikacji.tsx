@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import WidokUstawien from '../ustawienia/WidokUstawien'
+import {
+  pobierzUstawieniaAplikacji,
+  zastosujUstawieniaAplikacji,
+  zdarzenieZmianyUstawienAplikacji,
+} from '../ustawienia/magazynUstawienAplikacji'
 import MenuBoczne from '../menu/MenuBoczne'
 import NaglowekAplikacji from './NaglowekAplikacji'
 import { useKontekstUzytkownika } from '../logowanie/useKontekstUzytkownika'
@@ -250,6 +255,19 @@ export default function UkladAplikacji() {
 
   useEffect(() => {
     migrujStarszeDokumenty()
+  }, [])
+
+  useEffect(() => {
+    function zastosujZapisaneUstawienia() {
+      zastosujUstawieniaAplikacji(pobierzUstawieniaAplikacji())
+    }
+
+    zastosujZapisaneUstawienia()
+    window.addEventListener(zdarzenieZmianyUstawienAplikacji, zastosujZapisaneUstawienia)
+
+    return () => {
+      window.removeEventListener(zdarzenieZmianyUstawienAplikacji, zastosujZapisaneUstawienia)
+    }
   }, [])
 
   function wykonajZmianeWidoku(widok: WidokNawigacji, opcje: OpcjeZmianyWidoku = {}) {

@@ -302,3 +302,37 @@
   .uklad-aplikacji--menu-przypiete .uklad-aplikacji__kolumna-glowna { margin-left: 0; }
   .uklad-aplikacji--menu-przypiete .uklad-aplikacji__obszar-roboczy { width: 100%; margin-left: 0; padding-left: 24px; }
 }
+
+/* SYSTEM USTAWIEŃ APLIKACJI */
+.uklad-aplikacji {
+  background: var(--ui-tlo);
+  color: var(--ui-tekst);
+}
+
+.menu-boczne {
+  border-right-color: var(--ui-obramowanie);
+  background: var(--ui-panel);
+  transition-duration: var(--ui-transition-ms);
+}
+
+.menu-boczne__naglowek {
+  border-bottom-color: var(--ui-obramowanie);
+}
+
+.menu-boczne__przycisk,
+.menu-boczne__przycisk-naglowka,
+.menu-boczne__tryb,
+.menu-boczne__tryb button {
+  border-radius: var(--ui-promien-pola);
+}
+
+.menu-boczne__przycisk {
+  border-color: var(--ui-obramowanie);
+  background: var(--ui-powierzchnia);
+  color: var(--ui-tekst);
+  transition-duration: var(--ui-transition-ms);
+}
+
+.menu-boczne__przycisk:hover {
+  transform: scale(var(--ui-hover-scale));
+}

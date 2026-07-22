@@ -438,3 +438,73 @@
     grid-column: 1 !important;
   }
 }
+
+/* USTAWIENIA SYSTEMOWE PULPITU */
+.pulpit {
+  gap: calc(var(--ui-density-gap) * 1.3333);
+}
+
+.pulpit select,
+.pulpit input,
+.pulpit button:not(.pulpit-deadline__przycisk) {
+  border-radius: var(--ui-promien-pola);
+  transition-duration: var(--ui-transition-ms);
+}
+
+.pulpit select,
+.pulpit input {
+  border-color: var(--ui-obramowanie);
+  background: var(--ui-pole);
+  color: var(--ui-tekst);
+}
+
+.pulpit-kafelek,
+.pulpit-zadanie,
+.pulpit-paczka,
+.pulpit-modal > div {
+  border-radius: var(--ui-promien-karty);
+  border-color: var(--ui-obramowanie);
+  background: var(--ui-powierzchnia);
+  color: var(--ui-tekst);
+}
+
+.pulpit-sekcja,
+.pulpit-drawer {
+  border-color: var(--ui-obramowanie);
+  background: var(--ui-panel);
+  color: var(--ui-tekst);
+}
+
+.pulpit button:not(.pulpit-deadline__przycisk):not(.pulpit-zadanie__tresc):hover {
+  transform: scale(var(--ui-hover-scale));
+}
+
+.pulpit-przycisk-glowny {
+  border-color: var(--ui-akcent) !important;
+  background: var(--ui-akcent) !important;
+}
+
+.pulpit-os-czasu__postep {
+  background: var(--ui-akcent);
+}
+
+.pulpit-deadline__romb {
+  width: var(--pulpit-deadline-size);
+  height: var(--pulpit-deadline-size);
+  border-width: var(--pulpit-deadline-border);
+  border-style: solid;
+  border-color: var(--kolor-zadaniobiorcy);
+  background: transparent;
+  box-shadow:
+    0 0 0 2px rgba(255, 247, 237, .9),
+    0 0 var(--pulpit-deadline-glow) var(--kolor-zadaniobiorcy);
+}
+
+.pulpit-deadline__romb span {
+  width: var(--pulpit-deadline-dot-size);
+  height: var(--pulpit-deadline-dot-size);
+}
+
+html[data-ui-pokaz-plomien-asap="false"] .pulpit-deadline__plomien {
+  display: none;
+}

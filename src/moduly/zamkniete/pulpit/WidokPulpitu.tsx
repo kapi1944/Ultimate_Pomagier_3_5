@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { useKontekstUzytkownika } from '../../../aplikacja/logowanie/useKontekstUzytkownika'
+import { pobierzUstawieniaAplikacji } from '../../../aplikacja/ustawienia/magazynUstawienAplikacji'
 import { pobierzUzytkownikow } from '../../../kartoteki/uzytkownicy/magazynUzytkownikow'
 import { pobierzNazweUzytkownika, pobierzNazweWyswietlanaUzytkownika, type Uzytkownik } from '../../../kartoteki/uzytkownicy/typyUzytkownikow'
 import { pobierzChecklistyPaczek, pobierzSzczegolyDoChecklisty } from '../../dokumenty/generatory/checklisty_paczek/rejestrChecklistPaczek'
 import { czyPozycjaJestAktywna } from '../../dokumenty/generatory/checklisty_paczek/modelChecklistyPaczki'
-import { etykietyOsiCzasu, pobierzStanWskaznikaCzasu, pozycjaGodzinyNaOsi } from './logika/czasDnia'
+import { pobierzEtykietyOsiCzasu, pobierzStanWskaznikaCzasu, pozycjaGodzinyNaOsi, type ZakresDniaPracy } from './logika/czasDnia'
 import { czyPaczkaOpozniona, czyPaczkaWidoczna, czyWysylkaWymagaDodatkowegoPotwierdzenia, liczbaDniWidocznosciPaczki, pobierzGotowoscPaczki, pobierzTerminWzglednyPaczki, sortujPaczki } from './logika/paczki'
 import { generujZadaniaAutomatyczne } from './logika/zadaniaAutomatyczne'
 import { czyMoznaZmienicKontekstPulpitu } from './logika/kontekstPulpitu'
@@ -188,7 +189,7 @@ function KartaZadania({ zadanie, teraz, uzytkownicy, otworz, wykonaj, zmienGodzi
   </article>
 }
 
-function MarkerDeadline({ zadanie, uzytkownicy, otworz }: { zadanie: ZadaniePulpitu; uzytkownicy: Uzytkownik[]; otworz: () => void }) {
+function MarkerDeadline({ zadanie, uzytkownicy, otworz, zakresDniaPracy }: { zadanie: ZadaniePulpitu; uzytkownicy: Uzytkownik[]; otworz: () => void; zakresDniaPracy: ZakresDniaPracy }) {
   const zadaniodawca = uzytkownicy.find((uzytkownik) => uzytkownik.id === zadanie.zadaniodawcaId)
   const zadaniobiorca = uzytkownicy.find((uzytkownik) => uzytkownik.id === zadanie.zadaniobiorcaId)
 
@@ -202,7 +203,7 @@ function MarkerDeadline({ zadanie, uzytkownicy, otworz }: { zadanie: ZadaniePulp
   )
 
   const identyfikatorTooltipa = 'deadline-tooltip-' + zadanie.id
-  const pozycja = pozycjaGodzinyNaOsi(zadanie.godzina!)
+  const pozycja = pozycjaGodzinyNaOsi(zadanie.godzina!, zakresDniaPracy)
   const klasaKrawedzi = pozycja <= 5 ? ' pulpit-deadline--lewo' : pozycja >= 95 ? ' pulpit-deadline--prawo' : ''
 
   return <div
@@ -331,6 +332,11 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
   const [noweZadanie, ustawNoweZadanie] = useState(() => pustyFormularz(dataTekstowa(new Date()), zalogowanyUzytkownik?.id ?? ''))
   const [nowyZakup, ustawNowyZakup] = useState<FormularzZakupu>(pustyFormularzZakupu)
   const uzytkownicy = pobierzUzytkownikow()
+  const ustawieniaAplikacji = pobierzUstawieniaAplikacji()
+  const zakresDniaPracy: ZakresDniaPracy = {
+    poczatek: ustawieniaAplikacji.pulpit.poczatekDnia,
+    koniec: ustawieniaAplikacji.pulpit.koniecDnia,
+  }
   const szkoleniaDostepne = useMemo(() => pobierzSzczegolyDoChecklisty().map((szczegoly) => ({ id: szczegoly.id, nazwa: szczegoly.nazwa })), [])
 
   useEffect(() => {
@@ -352,7 +358,8 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
   const aktywneZapotrzebowaniaZakupowe = useMemo(() => pobierzAktywneZapotrzebowaniaZakupowe(stan.zapotrzebowaniaZakupowe), [stan.zapotrzebowaniaZakupowe])
   const liczbaAktywnychZapotrzebowanZakupowych = obliczLiczbeAktywnychZapotrzebowanZakupowych(stan.zapotrzebowaniaZakupowe)
   const czyObserwowanyJestZalogowanym = wybranyUzytkownikId === zalogowanyUzytkownik?.id
-  const wskaznikCzasu = pobierzStanWskaznikaCzasu(teraz)
+  const wskaznikCzasu = pobierzStanWskaznikaCzasu(teraz, zakresDniaPracy)
+  const etykietyOsi = pobierzEtykietyOsiCzasu(zakresDniaPracy)
 
   function odswiezStan() { ustawStan(pobierzStanPulpitu()) }
   function zmienZadanie(zadanie: ZadaniePulpitu) { zapiszZadanieReczne(zadanie); ustawWybraneZadanie((obecne) => obecne?.id === zadanie.id ? zadanie : obecne); odswiezStan() }
@@ -605,15 +612,15 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
           <input aria-label="Wybierz datę planu" onChange={(zdarzenie) => ustawDate(zdarzenie.target.value)} type="date" value={data} />
         </div>
       </div>
-      <div className="pulpit-os-czasu" aria-label="Oś czasu od 07:45 do 16:00">
+      <div className="pulpit-os-czasu" aria-label={'Oś czasu od ' + zakresDniaPracy.poczatek + ' do ' + zakresDniaPracy.koniec}>
         <div className="pulpit-os-czasu__linia">
           <div className="pulpit-os-czasu__postep" style={{ width: wskaznikCzasu.pozycja + '%' }} />
           {data === dataTekstowa(teraz) && <div className="pulpit-os-czasu__wskaznik" style={{ left: wskaznikCzasu.pozycja + '%' }}>
             <span className={'pulpit-os-czasu__etykieta-teraz pulpit-os-czasu__etykieta-teraz--' + wskaznikCzasu.wyrownanieEtykiety.toLocaleLowerCase('pl')}>{wskaznikCzasu.etykieta}</span>
           </div>}
         </div>
-        <div className="pulpit-os-czasu__etykiety">{etykietyOsiCzasu.map((etykieta) => <span key={etykieta}>{etykieta}</span>)}</div>
-        <div className="pulpit-os-czasu__zadania">{zadaniaGodzinowe.map((zadanie) => <MarkerDeadline key={zadanie.id} otworz={() => ustawWybraneZadanie(zadanie)} uzytkownicy={uzytkownicy} zadanie={zadanie} />)}</div>
+        <div className="pulpit-os-czasu__etykiety">{etykietyOsi.map((etykieta) => <span key={etykieta}>{etykieta}</span>)}</div>
+        <div className="pulpit-os-czasu__zadania">{zadaniaGodzinowe.map((zadanie) => <MarkerDeadline key={zadanie.id} otworz={() => ustawWybraneZadanie(zadanie)} uzytkownicy={uzytkownicy} zadanie={zadanie} zakresDniaPracy={zakresDniaPracy} />)}</div>
       </div>
 
       <div className="pulpit-podsekcja">

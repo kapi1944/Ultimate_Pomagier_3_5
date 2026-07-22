@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
-import { obliczPostepCzasuDnia, pobierzStanWskaznikaCzasu, pozycjaGodzinyNaOsi } from '../src/moduly/zamkniete/pulpit/logika/czasDnia.ts'
+import { obliczPostepCzasuDnia, pobierzEtykietyOsiCzasu, pobierzStanWskaznikaCzasu, pozycjaGodzinyNaOsi } from '../src/moduly/zamkniete/pulpit/logika/czasDnia.ts'
+import { domyslneUstawieniaAplikacji, normalizujUstawieniaAplikacji } from '../src/aplikacja/ustawienia/modelUstawienAplikacji.ts'
+import { eksportujUstawieniaAplikacji, importujUstawieniaAplikacji, pobierzUstawieniaAplikacji, zapiszUstawieniaAplikacji } from '../src/aplikacja/ustawienia/magazynUstawienAplikacji.ts'
 import { czyMoznaZmienicKontekstPulpitu } from '../src/moduly/zamkniete/pulpit/logika/kontekstPulpitu.ts'
 import { czyPaczkaOpozniona, czyPaczkaWidoczna, czyWysylkaWymagaDodatkowegoPotwierdzenia, pobierzGotowoscPaczki, sortujPaczki } from '../src/moduly/zamkniete/pulpit/logika/paczki.ts'
 import { obliczLicznikiPulpitu } from '../src/moduly/zamkniete/pulpit/logika/podsumowaniePulpitu.ts'
@@ -372,4 +374,130 @@ test('marker deadline rozróżnia kolorem Zadaniodawcę i Zadaniobiorcę', () =>
   assert.match(css, /background:\s*var\(--kolor-zadaniodawcy\)/)
   assert.match(css, /width:\s*16px/)
   assert.match(css, /height:\s*16px/)
+})
+
+
+test('zakres dnia pracy może zostać zmieniony bez psucia domyślnego 07:45–16:00', () => {
+  const zakres = { poczatek: '08:00', koniec: '17:00' }
+
+  assert.equal(obliczPostepCzasuDnia(new Date('2026-07-22T08:00:00'), zakres), 0)
+  assert.equal(obliczPostepCzasuDnia(new Date('2026-07-22T12:30:00'), zakres), 50)
+  assert.equal(obliczPostepCzasuDnia(new Date('2026-07-22T17:00:00'), zakres), 100)
+
+  assert.equal(pobierzStanWskaznikaCzasu(new Date('2026-07-22T07:59:00'), zakres).etykieta, 'PREFAJRANT')
+  assert.equal(pobierzStanWskaznikaCzasu(new Date('2026-07-22T08:00:00'), zakres).etykieta, 'TERAZ')
+  assert.equal(pobierzStanWskaznikaCzasu(new Date('2026-07-22T17:00:00'), zakres).etykieta, 'FAJRANT')
+
+  const etykiety = pobierzEtykietyOsiCzasu(zakres)
+  assert.equal(etykiety[0], '08:00')
+  assert.equal(etykiety.at(-1), '17:00')
+  assert.equal(pozycjaGodzinyNaOsi('12:30', zakres), 50)
+})
+
+test('system ustawień aplikacji ma bezpieczne wartości domyślne i ogranicza zakresy', () => {
+  const ustawienia = normalizujUstawieniaAplikacji({
+    wersja: 1,
+    wyglad: {
+      paleta: 'NIEISTNIEJACA',
+      gestosc: 'STANDARDOWA',
+      promienKart: 999,
+      promienPol: -10,
+      czasPrzejsciaMs: 9999,
+      skalaHover: 2,
+    },
+    pulpit: {
+      poczatekDnia: '18:00',
+      koniecDnia: '08:00',
+      deadline: {
+        rozmiarRombu: 999,
+        gruboscObramowania: 99,
+        rozmiarKropki: 99,
+        poswiata: 'MOCNA',
+        pokazPlomienAsap: false,
+      },
+    },
+    dostepnosc: {
+      ograniczAnimacje: true,
+    },
+  })
+
+  assert.equal(ustawienia.wyglad.paleta, 'DOMYSLNA')
+  assert.equal(ustawienia.wyglad.promienKart, 32)
+  assert.equal(ustawienia.wyglad.promienPol, 0)
+  assert.equal(ustawienia.wyglad.czasPrzejsciaMs, 600)
+  assert.equal(ustawienia.wyglad.skalaHover, 1.1)
+
+  assert.equal(ustawienia.pulpit.poczatekDnia, '07:45')
+  assert.equal(ustawienia.pulpit.koniecDnia, '16:00')
+  assert.equal(ustawienia.pulpit.deadline.rozmiarRombu, 48)
+  assert.equal(ustawienia.pulpit.deadline.gruboscObramowania, 8)
+  assert.equal(ustawienia.pulpit.deadline.rozmiarKropki, 24)
+  assert.equal(ustawienia.dostepnosc.ograniczAnimacje, true)
+})
+
+test('ustawienia zapisują się jako jeden wersjonowany rekord i poprawnie importują JSON', () => {
+  const magazyn = new Map<string, string>()
+
+  globalThis.localStorage = {
+    getItem: (klucz: string) => magazyn.get(klucz) ?? null,
+    setItem: (klucz: string, wartosc: string) => magazyn.set(klucz, wartosc),
+    removeItem: (klucz: string) => magazyn.delete(klucz),
+    clear: () => magazyn.clear(),
+    key: (indeks: number) => Array.from(magazyn.keys())[indeks] ?? null,
+    get length() { return magazyn.size },
+  } as Storage
+
+  const zmienione = normalizujUstawieniaAplikacji({
+    ...domyslneUstawieniaAplikacji,
+    wyglad: {
+      ...domyslneUstawieniaAplikacji.wyglad,
+      paleta: 'CRM',
+      promienKart: 14,
+    },
+    pulpit: {
+      ...domyslneUstawieniaAplikacji.pulpit,
+      poczatekDnia: '08:00',
+      koniecDnia: '17:00',
+      deadline: {
+        ...domyslneUstawieniaAplikacji.pulpit.deadline,
+        rozmiarRombu: 34,
+      },
+    },
+  })
+
+  assert.equal(zapiszUstawieniaAplikacji(zmienione), true)
+
+  const odczytane = pobierzUstawieniaAplikacji()
+  assert.equal(odczytane.wyglad.paleta, 'CRM')
+  assert.equal(odczytane.wyglad.promienKart, 14)
+  assert.equal(odczytane.pulpit.poczatekDnia, '08:00')
+  assert.equal(odczytane.pulpit.deadline.rozmiarRombu, 34)
+
+  const eksport = eksportujUstawieniaAplikacji(odczytane)
+  const importPoprawny = importujUstawieniaAplikacji(eksport)
+  assert.equal(importPoprawny.ok, true)
+
+  const importBlednyJson = importujUstawieniaAplikacji('{')
+  assert.equal(importBlednyJson.ok, false)
+
+  const importZlaWersja = importujUstawieniaAplikacji('{"wersja":2}')
+  assert.equal(importZlaWersja.ok, false)
+})
+
+test('CSS i Pulpit korzystają z centralnych zmiennych ustawień', () => {
+  const indexCss = readFileSync('src/index.css', 'utf8')
+  const pulpitCss = readFileSync('src/moduly/zamkniete/pulpit/pulpit.css', 'utf8')
+  const widok = readFileSync('src/moduly/zamkniete/pulpit/WidokPulpitu.tsx', 'utf8')
+
+  assert.match(indexCss, /--ui-promien-karty/)
+  assert.match(indexCss, /--pulpit-deadline-size/)
+  assert.match(indexCss, /data-ui-ogranicz-animacje/)
+
+  assert.match(pulpitCss, /var\(--pulpit-deadline-size\)/)
+  assert.match(pulpitCss, /var\(--pulpit-deadline-border\)/)
+  assert.match(pulpitCss, /var\(--pulpit-deadline-dot-size\)/)
+  assert.match(pulpitCss, /data-ui-pokaz-plomien-asap="false"/)
+
+  assert.match(widok, /pobierzUstawieniaAplikacji/)
+  assert.match(widok, /zakresDniaPracy/)
 })
