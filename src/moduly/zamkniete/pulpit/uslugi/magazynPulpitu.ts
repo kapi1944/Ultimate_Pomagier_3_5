@@ -121,6 +121,7 @@ export type EdytowalnePolaZadania = Pick<
   | 'zadaniobiorcaId'
   | 'przypomnienia'
   | 'powiazaneSzkolenieId'
+  | 'odlozonoDo'
 >
 
 export function edytujZadanieRecznePrzezZadaniodawce(
@@ -150,6 +151,7 @@ export function edytujZadanieRecznePrzezZadaniodawce(
     wlascicielId: zmiany.zadaniobiorcaId,
     przypomnienia: zmiany.przypomnienia,
     powiazaneSzkolenieId: zmiany.powiazaneSzkolenieId,
+    odlozonoDo: zmiany.odlozonoDo ?? obecne.odlozonoDo,
   }
 
   const zapisano = zapiszStanPulpitu({

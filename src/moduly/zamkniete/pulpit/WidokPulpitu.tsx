@@ -346,12 +346,56 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
     ustawBladEdycji('')
   }
 
+  function zapiszSzybkaEdycjeTerminu(
+    zadanie: ZadaniePulpitu,
+    data: string,
+    godzina: string | undefined,
+    odlozonoDo: string | undefined,
+  ) {
+    if (!zalogowanyUzytkownik) return
+
+    const zaktualizowane = edytujZadanieRecznePrzezZadaniodawce(
+      zadanie.id,
+      zalogowanyUzytkownik.id,
+      {
+        tytul: zadanie.tytul,
+        data,
+        godzina,
+        priorytet: zadanie.priorytet,
+        zadaniobiorcaId: zadanie.zadaniobiorcaId,
+        przypomnienia: zadanie.przypomnienia.map((przypomnienie) => ({ ...przypomnienie })),
+        powiazaneSzkolenieId: zadanie.powiazaneSzkolenieId,
+        odlozonoDo,
+      },
+    )
+
+    if (!zaktualizowane) {
+      odswiezStan()
+      return
+    }
+
+    ustawWybraneZadanie((obecne) =>
+      obecne?.id === zaktualizowane.id ? zaktualizowane : obecne
+    )
+    odswiezStan()
+  }
+
   function zmienGodzine(zadanie: ZadaniePulpitu, godzina: string) {
-    zmienZadanie({ ...zadanie, godzina: godzina || undefined })
+    zapiszSzybkaEdycjeTerminu(
+      zadanie,
+      zadanie.data,
+      godzina || undefined,
+      zadanie.odlozonoDo,
+    )
   }
 
   function odlozZadanie(zadanie: ZadaniePulpitu, nowaData: string) {
-    zmienZadanie({ ...zadanie, data: nowaData, odlozonoDo: nowaData })
+    zapiszSzybkaEdycjeTerminu(
+      zadanie,
+      nowaData,
+      zadanie.godzina,
+      nowaData,
+    )
   }
 
   function rozpocznijEdycjeZadania(zadanie: ZadaniePulpitu) {
@@ -615,6 +659,7 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
 
       {czyMoznaEdytowacWybrane && edytowaneZadanieId !== wybraneZadanie.id && <div className="pulpit-drawer__akcje">
         <button onClick={() => rozpocznijEdycjeZadania(wybraneZadanie)} type="button">Edytuj zadanie</button>
+        {!wybraneZadanie.czyTerminKrytyczny && <button onClick={() => odlozZadanie(wybraneZadanie, przesunDate(wybraneZadanie.data, 1))} type="button">Odłóż o dzień</button>}
       </div>}
 
       {czyMoznaEdytowacWybrane && edytowaneZadanieId === wybraneZadanie.id && formularzEdycji && <div className="pulpit-drawer__edycja">

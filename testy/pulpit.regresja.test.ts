@@ -231,6 +231,7 @@ test('magazyn chroni edycję i zachowuje historyczne metadane zadania', () => {
       zadaniobiorcaId: 'ewa',
       przypomnienia: [{ id: 'p1', wartosc: 15, jednostka: 'MINUTY' }],
       powiazaneSzkolenieId: 'szkolenie-1',
+      odlozonoDo: '2026-07-24',
     },
   )
 
@@ -243,6 +244,7 @@ test('magazyn chroni edycję i zachowuje historyczne metadane zadania', () => {
   assert.equal(zaktualizowane.godzina, '12:30')
   assert.equal(zaktualizowane.zadaniobiorcaId, 'ewa')
   assert.equal(zaktualizowane.wlascicielId, 'ewa')
+  assert.equal(zaktualizowane.odlozonoDo, '2026-07-24')
 
   zapiszZadanieReczne({
     ...zaktualizowane,
@@ -277,6 +279,8 @@ test('widok zapisuje moment wykonania i pokazuje brak czasu tylko dla starych da
   assert.match(widok, /Brak danych o czasie wykonania/)
   assert.match(widok, /Edytuj zadanie/)
   assert.match(widok, /Zapisz zmiany/)
+  assert.match(widok, /Odłóż o dzień/)
+  assert.match(widok, /zapiszSzybkaEdycjeTerminu/)
 })
 
 test('stare zadanie bez nowych pól jest bezpiecznie normalizowane', () => {
