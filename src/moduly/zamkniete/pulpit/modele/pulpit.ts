@@ -1,6 +1,14 @@
 export type StatusZadaniaPulpitu = 'OTWARTE' | 'WYKONANE'
-export type PriorytetZadaniaPulpitu = 'ZWYKLE' | 'PILNE'
+export type PriorytetZadaniaPulpitu = 'ZWYKLE' | 'PILNE' | 'ASAP'
 export type TypZrodlaZadania = 'RECZNE' | 'SZKOLENIE' | 'PACZKA'
+
+export type JednostkaPrzypomnienia = 'MINUTY' | 'GODZINY' | 'DNI'
+
+export type PrzypomnienieZadania = {
+  id: string
+  wartosc: number
+  jednostka: JednostkaPrzypomnienia
+}
 
 export type ZadaniePulpitu = {
   id: string
@@ -14,6 +22,9 @@ export type ZadaniePulpitu = {
   typZrodla: TypZrodlaZadania
   typZadania: string
   wlascicielId: string
+  zadaniodawcaId: string
+  zadaniobiorcaId: string
+  przypomnienia: PrzypomnienieZadania[]
   powiazaneSzkolenieId?: string
   powiazanyTypEncji?: string
   powiazanaEncjaId?: string

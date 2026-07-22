@@ -1,15 +1,16 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { obliczPostepCzasuDnia } from '../src/moduly/zamkniete/pulpit/logika/czasDnia.ts'
+import { obliczPostepCzasuDnia, pobierzStanWskaznikaCzasu, pozycjaGodzinyNaOsi } from '../src/moduly/zamkniete/pulpit/logika/czasDnia.ts'
 import { czyMoznaZmienicKontekstPulpitu } from '../src/moduly/zamkniete/pulpit/logika/kontekstPulpitu.ts'
 import { czyPaczkaOpozniona, czyPaczkaWidoczna, czyWysylkaWymagaDodatkowegoPotwierdzenia, pobierzGotowoscPaczki, sortujPaczki } from '../src/moduly/zamkniete/pulpit/logika/paczki.ts'
 import { obliczLicznikiPulpitu } from '../src/moduly/zamkniete/pulpit/logika/podsumowaniePulpitu.ts'
 import { generujZadaniaAutomatyczne } from '../src/moduly/zamkniete/pulpit/logika/zadaniaAutomatyczne.ts'
-import { czyMoznaOznaczycZadanieRecznie, czyZadanieOpoznione, pobierzEtykieteStatusuZadania, sortujZadaniaBezGodziny } from '../src/moduly/zamkniete/pulpit/logika/zadania.ts'
+import { czyMoznaOznaczycZadanieRecznie, czyMoznaWybracZadaniodawce, czyZadanieOpoznione, czyZadanieWidoczneDlaUzytkownika, pobierzEtykieteStatusuZadania, pobierzZadaniaDeadline, rozstrzygnijPrzypisanieZadania, sortujZadaniaBezGodziny, walidujPrzypomnienia } from '../src/moduly/zamkniete/pulpit/logika/zadania.ts'
 import type { PaczkaPulpitu, ZadaniePulpitu } from '../src/moduly/zamkniete/pulpit/modele/pulpit.ts'
+import { normalizujZadaniePulpitu } from '../src/moduly/zamkniete/pulpit/uslugi/magazynPulpitu.ts'
 
 const teraz = new Date('2026-07-22T14:00:00')
-const zadanie = (zmiany: Partial<ZadaniePulpitu> = {}): ZadaniePulpitu => ({ id: 'zadanie', tytul: 'Zadanie', data: '2026-07-22', utworzono: '2026-07-22T08:00:00.000Z', status: 'OTWARTE', priorytet: 'ZWYKLE', typZrodla: 'RECZNE', typZadania: 'ZADANIE_WLASNE', wlascicielId: 'anna', czyAutomatyczne: false, czyTerminKrytyczny: false, ...zmiany })
+const zadanie = (zmiany: Partial<ZadaniePulpitu> = {}): ZadaniePulpitu => ({ id: 'zadanie', tytul: 'Zadanie', data: '2026-07-22', utworzono: '2026-07-22T08:00:00.000Z', status: 'OTWARTE', priorytet: 'ZWYKLE', typZrodla: 'RECZNE', typZadania: 'ZADANIE_WLASNE', wlascicielId: 'anna', zadaniodawcaId: 'anna', zadaniobiorcaId: 'anna', przypomnienia: [], czyAutomatyczne: false, czyTerminKrytyczny: false, ...zmiany })
 const paczka = (zmiany: Partial<PaczkaPulpitu> = {}): PaczkaPulpitu => ({ id: 'paczka', nazwaSzkolenia: 'Excel', miasto: 'Warszawa', terminySzkolenia: ['2026-07-30'], trenerzy: ['Anna Trener'], planowanaDataWysylki: '2026-07-29', wlascicielId: 'anna', liczbaGotowych: 5, liczbaWymaganych: 7, brakujaceElementy: ['materiały'], czyWyslana: false, ...zmiany })
 
 test('tylko Architekt może zmieniać kontekst Pulpitu', () => {
@@ -66,4 +67,121 @@ test('liczniki kafelków wynikają z aktualnych zadań i paczek', () => {
   const automatyczne = zadanie({ id: 'blokada', czyAutomatyczne: true, priorytet: 'PILNE', godzina: '13:00' })
   const liczniki = obliczLicznikiPulpitu([zadanie(), automatyczne], [paczka({ planowanaDataWysylki: '2026-07-29' })], teraz, '2026-07-22')
   assert.deepEqual(liczniki, { doZrobienia: 2, pilne: 1, paczki: 1, blokady: 1 })
+})
+
+
+test('wskaźnik czasu pokazuje PREFAJRANT o 07:44', () => {
+  assert.deepEqual(pobierzStanWskaznikaCzasu(new Date('2026-07-22T07:44:00')), {
+    etykieta: 'PREFAJRANT',
+    pozycja: 0,
+    wyrownanieEtykiety: 'POCZATEK',
+  })
+})
+
+test('wskaźnik czasu pokazuje TERAZ od 07:45 do 15:59', () => {
+  assert.equal(pobierzStanWskaznikaCzasu(new Date('2026-07-22T07:45:00')).etykieta, 'TERAZ')
+  assert.equal(pobierzStanWskaznikaCzasu(new Date('2026-07-22T15:59:00')).etykieta, 'TERAZ')
+})
+
+test('wskaźnik czasu pokazuje FAJRANT od 16:00', () => {
+  assert.deepEqual(pobierzStanWskaznikaCzasu(new Date('2026-07-22T16:00:00')), {
+    etykieta: 'FAJRANT',
+    pozycja: 100,
+    wyrownanieEtykiety: 'KONIEC',
+  })
+})
+
+test('etykieta czasu jest przypięta do wnętrza lewej i prawej krawędzi osi', () => {
+  const lewa = pobierzStanWskaznikaCzasu(new Date('2026-07-22T07:30:00'))
+  const prawa = pobierzStanWskaznikaCzasu(new Date('2026-07-22T17:00:00'))
+  assert.equal(lewa.pozycja, 0)
+  assert.equal(lewa.wyrownanieEtykiety, 'POCZATEK')
+  assert.equal(prawa.pozycja, 100)
+  assert.equal(prawa.wyrownanieEtykiety, 'KONIEC')
+})
+
+test('ASAP jest sortowane przed wszystkimi pozostałymi priorytetami', () => {
+  const posortowane = sortujZadaniaBezGodziny([
+    zadanie({ id: 'zwykle', priorytet: 'ZWYKLE' }),
+    zadanie({ id: 'pilne', priorytet: 'PILNE' }),
+    zadanie({ id: 'asap', priorytet: 'ASAP' }),
+  ], teraz)
+  assert.deepEqual(posortowane.map((pozycja) => pozycja.id), ['asap', 'pilne', 'zwykle'])
+})
+
+test('deadline trafia we właściwe miejsce osi czasu', () => {
+  assert.equal(pozycjaGodzinyNaOsi('07:45'), 0)
+  assert.equal(pozycjaGodzinyNaOsi('16:00'), 100)
+  assert.ok(Math.abs(pozycjaGodzinyNaOsi('12:00') - 51.515151515151516) < 0.000001)
+})
+
+test('zadanie bez godziny nie tworzy markera deadline', () => {
+  const zadaniaDeadline = pobierzZadaniaDeadline([
+    zadanie({ id: 'z-godzina', godzina: '12:00' }),
+    zadanie({ id: 'bez-godziny' }),
+    zadanie({ id: 'inny-dzien', data: '2026-07-23', godzina: '12:00' }),
+  ], '2026-07-22', teraz)
+  assert.deepEqual(zadaniaDeadline.map((pozycja) => pozycja.id), ['z-godzina'])
+})
+
+test('domyślnie Zadaniodawca i Zadaniobiorca są aktualnym użytkownikiem', () => {
+  assert.deepEqual(rozstrzygnijPrzypisanieZadania('anna', 'OPIEKUN'), {
+    zadaniodawcaId: 'anna',
+    zadaniobiorcaId: 'anna',
+  })
+})
+
+test('zwykły użytkownik nie może zmienić Zadaniodawcy', () => {
+  assert.equal(czyMoznaWybracZadaniodawce('OPIEKUN'), false)
+  assert.deepEqual(rozstrzygnijPrzypisanieZadania('anna', 'OPIEKUN', 'jan', 'ewa'), {
+    zadaniodawcaId: 'anna',
+    zadaniobiorcaId: 'ewa',
+  })
+})
+
+test('Administrator może wybrać Zadaniodawcę, a Ja oznacza efektywnego Zadaniodawcę', () => {
+  assert.equal(czyMoznaWybracZadaniodawce('ADMINISTRATOR'), true)
+  assert.deepEqual(rozstrzygnijPrzypisanieZadania('admin', 'ADMINISTRATOR', 'jan'), {
+    zadaniodawcaId: 'jan',
+    zadaniobiorcaId: 'jan',
+  })
+})
+
+test('Zadaniobiorca widzi przypisane mu zadanie', () => {
+  assert.equal(czyZadanieWidoczneDlaUzytkownika(zadanie({ zadaniodawcaId: 'jan', zadaniobiorcaId: 'anna' }), 'anna'), true)
+})
+
+test('Zadaniodawca widzi zlecone zadanie', () => {
+  assert.equal(czyZadanieWidoczneDlaUzytkownika(zadanie({ zadaniodawcaId: 'jan', zadaniobiorcaId: 'anna' }), 'jan'), true)
+})
+
+test('można zapisać kilka różnych przypomnień, ale nie duplikaty', () => {
+  const rozne = [
+    { id: 'minuty', wartosc: 15, jednostka: 'MINUTY' as const },
+    { id: 'godziny', wartosc: 1, jednostka: 'GODZINY' as const },
+    { id: 'dni', wartosc: 1, jednostka: 'DNI' as const },
+  ]
+  assert.equal(walidujPrzypomnienia(rozne), null)
+  assert.match(walidujPrzypomnienia([...rozne, { id: 'duplikat', wartosc: 15, jednostka: 'MINUTY' }]) ?? '', /identyczne/)
+  assert.match(walidujPrzypomnienia([{ id: 'bledne', wartosc: 0, jednostka: 'DNI' }]) ?? '', /większa od zera/)
+})
+
+test('stare zadanie bez nowych pól jest bezpiecznie normalizowane', () => {
+  const stare = normalizujZadaniePulpitu({
+    id: 'stare',
+    tytul: 'Starsze zadanie',
+    data: '2026-07-22',
+    utworzono: '2026-07-20T08:00:00.000Z',
+    status: 'OTWARTE',
+    priorytet: 'ZWYKLE',
+    typZrodla: 'RECZNE',
+    typZadania: 'ZADANIE_WLASNE',
+    wlascicielId: 'anna',
+    czyAutomatyczne: false,
+    czyTerminKrytyczny: false,
+  })
+  assert.ok(stare)
+  assert.equal(stare.zadaniodawcaId, 'anna')
+  assert.equal(stare.zadaniobiorcaId, 'anna')
+  assert.deepEqual(stare.przypomnienia, [])
 })

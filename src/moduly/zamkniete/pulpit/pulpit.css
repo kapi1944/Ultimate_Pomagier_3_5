@@ -9,7 +9,8 @@
 .pulpit-kafelek:hover, .pulpit-kafelek--aktywny { border-color: #86efac; background: #104428; }
 .pulpit-kafelek strong { font-size: 2.3rem; line-height: 1; }.pulpit-kafelek span { font-weight: 800; letter-spacing: .04em; }.pulpit-kafelek small { color: #a7d7b3; }
 .pulpit-sekcja { display: grid; gap: 18px; padding: 22px; border: 1px solid rgba(74, 222, 128, .28); border-radius: 12px; background: #041f0f; }
-.pulpit-nawigacja-daty { display: flex; gap: 7px; align-items: center; }.pulpit button { border: 1px solid rgba(134, 239, 172, .4); border-radius: 6px; background: #082717; color: #dff7e6; cursor: pointer; padding: 7px 10px; }.pulpit button:hover { border-color: #86efac; background: #14532d; }.pulpit button:focus-visible, .pulpit input:focus-visible, .pulpit select:focus-visible { outline: 2px solid #fef08a; outline-offset: 2px; }
+.pulpit-sekcja__naglowek--plan { display: grid; grid-template-columns: 1fr auto 1fr; }
+.pulpit-nawigacja-daty { display: flex; grid-column: 2; gap: 7px; align-items: center; font-size: 1rem; font-weight: 700; }.pulpit-nawigacja-daty__strzalka { box-sizing: border-box; width: 40px; }.pulpit-nawigacja-daty__dzisiaj { box-sizing: border-box; width: 200px; }.pulpit button { border: 1px solid rgba(134, 239, 172, .4); border-radius: 6px; background: #082717; color: #dff7e6; cursor: pointer; padding: 7px 10px; }.pulpit button:hover { border-color: #86efac; background: #14532d; }.pulpit button:focus-visible, .pulpit input:focus-visible, .pulpit select:focus-visible { outline: 2px solid #fef08a; outline-offset: 2px; }
 .pulpit-przycisk-glowny { background: #4ade80 !important; border-color: #86efac !important; color: #052e12 !important; font-weight: 800; }
 .pulpit-os-czasu { min-height: 180px; padding-top: 18px; overflow: hidden; }.pulpit-os-czasu__linia { position: relative; height: 8px; border-radius: 999px; background: #163c23; }.pulpit-os-czasu__postep { height: 100%; border-radius: inherit; background: #4ade80; }.pulpit-os-czasu__teraz { position: absolute; top: -25px; color: #fef08a; font-size: .72rem; font-weight: 800; transform: translateX(-50%); }.pulpit-os-czasu__teraz::after { position: absolute; top: 18px; left: 50%; width: 2px; height: 21px; background: #fef08a; content: ''; }.pulpit-os-czasu__etykiety { display: flex; justify-content: space-between; margin-top: 8px; color: #9ccfab; font-size: .74rem; }.pulpit-os-czasu__zadania { position: relative; height: 112px; }.pulpit-os-czasu__zadanie { position: absolute; top: 14px; width: min(265px, 36vw); transform: translateX(-8%); }
 .pulpit-podsekcja { display: grid; gap: 12px; }.pulpit-lista-zadan { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }.pulpit-zadanie { display: grid; gap: 10px; padding: 13px; border: 1px solid rgba(156, 207, 171, .3); border-radius: 8px; background: #062615; }.pulpit-zadanie--opoznione { border-color: #f87171; }.pulpit-zadanie--wykonane { opacity: .72; }.pulpit-zadanie__tresc { display: grid; gap: 4px; border: 0; background: transparent; padding: 0; text-align: left; }.pulpit-zadanie__tresc:hover { background: transparent; }.pulpit-zadanie__etykieta { color: #9ccfab; font-size: .7rem; }.pulpit-zadanie__meta, .pulpit-zadanie__akcje { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }.pulpit-zadanie__akcje label { display: flex; gap: 4px; align-items: center; color: #b9d7c2; font-size: .78rem; }.pulpit-zadanie__akcje input { min-height: 30px; padding: 3px; }
@@ -19,4 +20,316 @@
 .pulpit-drawer { position: fixed; z-index: 30; top: 0; right: 0; width: min(430px, 100vw); height: 100vh; box-sizing: border-box; display: grid; align-content: start; gap: 16px; padding: 28px; overflow: auto; border-left: 1px solid #4ade80; background: #041f0f; box-shadow: -18px 0 36px rgba(0, 0, 0, .35); }.pulpit-drawer h2 { margin: 0; }.pulpit-drawer__zamknij { position: absolute; top: 14px; right: 14px; font-size: 1.3rem; }.pulpit-drawer dl { display: grid; gap: 9px; margin: 0; }.pulpit-drawer dl div { display: grid; gap: 3px; }.pulpit-drawer dt { color: #9ccfab; font-size: .75rem; }.pulpit-drawer dd { margin: 0; }
 .pulpit-modal { position: fixed; z-index: 40; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(0, 0, 0, .62); }.pulpit-modal > div { width: min(520px, 100%); padding: 24px; border: 1px solid #facc15; border-radius: 10px; background: #062615; }.pulpit-modal h2 { margin-top: 0; }.pulpit-modal__akcje { display: flex; justify-content: end; gap: 8px; }
 @media (max-width: 860px) { .pulpit-kafelki { grid-template-columns: repeat(2, minmax(0, 1fr)); }.pulpit-formularz-zadania { grid-template-columns: 1fr 1fr; }.pulpit-os-czasu__zadanie { width: min(220px, 55vw); }.pulpit-paczka { grid-template-columns: 1fr; } }
-@media (max-width: 560px) { .pulpit__naglowek, .pulpit-sekcja__naglowek { align-items: stretch; flex-direction: column; }.pulpit-kafelki { grid-template-columns: 1fr; }.pulpit-nawigacja-daty { flex-wrap: wrap; }.pulpit-os-czasu { overflow-x: auto; }.pulpit-os-czasu__etykiety, .pulpit-os-czasu__linia, .pulpit-os-czasu__zadania { min-width: 560px; }.pulpit-formularz-zadania { grid-template-columns: 1fr; }.pulpit-sekcja { padding: 16px; } }
+@media (max-width: 560px) { .pulpit__naglowek, .pulpit-sekcja__naglowek { align-items: stretch; flex-direction: column; }.pulpit-sekcja__naglowek--plan { display: flex; }.pulpit-kafelki { grid-template-columns: 1fr; }.pulpit-nawigacja-daty { flex-wrap: wrap; justify-content: center; }.pulpit-os-czasu { overflow-x: auto; }.pulpit-os-czasu__etykiety, .pulpit-os-czasu__linia, .pulpit-os-czasu__zadania { min-width: 560px; }.pulpit-formularz-zadania { grid-template-columns: 1fr; }.pulpit-sekcja { padding: 16px; } }
+
+
+.pulpit-os-czasu {
+  box-sizing: border-box;
+  min-height: 205px;
+  padding: 38px 10px 0;
+  overflow: visible;
+  isolation: isolate;
+}
+
+.pulpit-os-czasu__linia {
+  z-index: 12;
+}
+
+.pulpit-os-czasu__postep {
+  position: relative;
+  z-index: 1;
+}
+
+.pulpit-os-czasu__wskaznik {
+  position: absolute;
+  z-index: 30;
+  top: -31px;
+  width: 0;
+  height: 48px;
+  pointer-events: none;
+}
+
+.pulpit-os-czasu__wskaznik::after {
+  position: absolute;
+  top: 25px;
+  left: -1px;
+  width: 2px;
+  height: 24px;
+  background: #fef08a;
+  box-shadow: 0 0 8px rgba(254, 240, 138, .72);
+  content: '';
+}
+
+.pulpit-os-czasu__etykieta-teraz {
+  position: absolute;
+  top: 0;
+  display: block;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: calc(100vw - 64px);
+  border: 1px solid rgba(254, 240, 138, .75);
+  border-radius: 5px;
+  background: #183b20;
+  color: #fff7a8;
+  font-size: .76rem;
+  font-weight: 900;
+  line-height: 1.25;
+  letter-spacing: .035em;
+  padding: 4px 7px;
+  white-space: nowrap;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, .38);
+}
+
+.pulpit-os-czasu__etykieta-teraz--poczatek { transform: translateX(0); }
+.pulpit-os-czasu__etykieta-teraz--srodek { transform: translateX(-50%); }
+.pulpit-os-czasu__etykieta-teraz--koniec { transform: translateX(-100%); }
+
+.pulpit-os-czasu__etykiety {
+  position: relative;
+  z-index: 2;
+}
+
+.pulpit-os-czasu__zadania {
+  position: relative;
+  z-index: 15;
+  height: 135px;
+  overflow: visible;
+}
+
+.pulpit-deadline {
+  --kolor-zadaniodawcy: #38bdf8;
+  position: absolute;
+  z-index: 18;
+  top: 0;
+  width: 0;
+  height: 115px;
+}
+
+.pulpit-deadline::before {
+  position: absolute;
+  top: -25px;
+  left: -1px;
+  width: 2px;
+  height: 48px;
+  background: #fb923c;
+  box-shadow: 0 0 7px rgba(251, 146, 60, .5);
+  content: '';
+}
+
+.pulpit .pulpit-deadline__przycisk {
+  position: absolute;
+  z-index: 2;
+  top: 13px;
+  left: 0;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  width: max-content;
+  max-width: 190px;
+  min-height: 0;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  transform: translateX(-50%);
+}
+
+.pulpit .pulpit-deadline__przycisk:hover,
+.pulpit .pulpit-deadline__przycisk:focus-visible {
+  border: 0;
+  background: transparent;
+}
+
+.pulpit-deadline__romb {
+  position: relative;
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border: 3px solid #fed7aa;
+  background: #9a3412;
+  transform: rotate(45deg);
+  box-shadow: 0 0 0 2px #431407, 0 0 10px rgba(251, 146, 60, .7);
+}
+
+.pulpit-deadline__romb span {
+  width: 9px;
+  height: 9px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: var(--kolor-zadaniodawcy);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .5);
+}
+
+.pulpit-deadline__etykieta {
+  display: block;
+  max-width: 190px;
+  overflow: hidden;
+  color: #ffedd5;
+  font-size: .7rem;
+  font-weight: 850;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pulpit-deadline__plomien {
+  position: absolute;
+  top: -27px;
+  z-index: 3;
+  font-size: 1.15rem;
+  filter: drop-shadow(0 0 5px rgba(251, 146, 60, .95));
+  animation: pulpit-plomien 1.35s ease-in-out infinite;
+}
+
+.pulpit-deadline__tooltip {
+  position: absolute;
+  z-index: 50;
+  top: 66px;
+  left: 0;
+  display: grid;
+  width: min(285px, calc(100vw - 72px));
+  gap: 4px;
+  border: 1px solid #fb923c;
+  border-radius: 8px;
+  background: #1c1917;
+  color: #fff7ed;
+  font-size: .76rem;
+  line-height: 1.35;
+  padding: 10px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(-4px);
+  transition: opacity .14s ease, transform .14s ease;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, .46);
+}
+
+.pulpit-deadline:hover .pulpit-deadline__tooltip,
+.pulpit-deadline:focus-within .pulpit-deadline__tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.pulpit-deadline--lewo .pulpit-deadline__tooltip {
+  transform: translateX(0) translateY(-4px);
+}
+
+.pulpit-deadline--lewo:hover .pulpit-deadline__tooltip,
+.pulpit-deadline--lewo:focus-within .pulpit-deadline__tooltip {
+  transform: translateX(0) translateY(0);
+}
+
+.pulpit-deadline--prawo .pulpit-deadline__tooltip {
+  transform: translateX(-100%) translateY(-4px);
+}
+
+.pulpit-deadline--prawo:hover .pulpit-deadline__tooltip,
+.pulpit-deadline--prawo:focus-within .pulpit-deadline__tooltip {
+  transform: translateX(-100%) translateY(0);
+}
+
+.pulpit-status--asap {
+  border-color: #fb923c;
+  background: #7c2d12;
+  color: #ffedd5;
+}
+
+.pulpit-formularz-zadania {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 12px;
+  align-items: end;
+  padding: 16px;
+}
+
+.pulpit-formularz-zadania > label {
+  grid-column: span 3;
+}
+
+.pulpit-formularz-zadania__nazwa {
+  grid-column: span 6 !important;
+}
+
+.pulpit-formularz-zadania label > input,
+.pulpit-formularz-zadania label > select {
+  width: 100%;
+}
+
+.pulpit-przypomnienia {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  border: 1px solid rgba(134, 239, 172, .3);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.pulpit-przypomnienia legend {
+  color: #b9d7c2;
+  font-size: .82rem;
+  font-weight: 700;
+  padding: 0 5px;
+}
+
+.pulpit-przypomnienie {
+  display: grid;
+  grid-template-columns: minmax(90px, 130px) minmax(150px, 220px) auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.pulpit-formularz-zadania__blad {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #fecaca;
+  font-weight: 700;
+}
+
+.pulpit-formularz-zadania__zapisz {
+  grid-column: -3 / -1;
+}
+
+.pulpit-drawer__akcje {
+  display: grid;
+  gap: 9px;
+}
+
+.pulpit-drawer__akcje label {
+  display: grid;
+  gap: 5px;
+  color: #b9d7c2;
+  font-size: .82rem;
+}
+
+.pulpit-przycisk-niebezpieczny {
+  border-color: #f87171 !important;
+  color: #fecaca !important;
+}
+
+@keyframes pulpit-plomien {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-2px) scale(1.06); }
+}
+
+@media (max-width: 980px) {
+  .pulpit-formularz-zadania > label { grid-column: span 6; }
+  .pulpit-formularz-zadania__nazwa { grid-column: 1 / -1 !important; }
+}
+
+@media (max-width: 560px) {
+  .pulpit-os-czasu { padding-inline: 4px; overflow: visible; }
+  .pulpit-os-czasu__etykiety,
+  .pulpit-os-czasu__linia,
+  .pulpit-os-czasu__zadania { min-width: 0; }
+  .pulpit-formularz-zadania { grid-template-columns: 1fr; }
+  .pulpit-formularz-zadania > label,
+  .pulpit-formularz-zadania__nazwa,
+  .pulpit-formularz-zadania__zapisz { grid-column: 1 !important; }
+  .pulpit-przypomnienie { grid-template-columns: 1fr; }
+  .pulpit-deadline__etykieta { max-width: 120px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulpit-deadline__plomien { animation: none; }
+  .pulpit-deadline__tooltip { transition: none; }
+}

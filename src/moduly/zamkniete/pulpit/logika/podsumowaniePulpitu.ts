@@ -8,7 +8,7 @@ export function obliczLicznikiPulpitu(zadania: ZadaniePulpitu[], paczki: PaczkaP
   const otwarte = zadania.filter((zadanie) => zadanie.status === 'OTWARTE')
   return {
     doZrobienia: otwarte.filter((zadanie) => zadanie.data === data).length,
-    pilne: otwarte.filter((zadanie) => zadanie.priorytet === 'PILNE' || czyZadanieOpoznione(zadanie, dzisiaj)).length,
+    pilne: otwarte.filter((zadanie) => zadanie.priorytet === 'ASAP' || zadanie.priorytet === 'PILNE' || czyZadanieOpoznione(zadanie, dzisiaj)).length,
     paczki: paczki.filter((paczka) => czyPaczkaWidoczna(paczka, dzisiaj)).length,
     blokady: otwarte.filter((zadanie) => zadanie.czyAutomatyczne).length,
   }
