@@ -196,7 +196,7 @@ const styleProgramuSzkolenia = `
 
 .program-szkolen__uklad {
   display: grid;
-  grid-template-columns: minmax(710px, 1fr) minmax(800px, 800px) minmax(260px, 420px);
+  grid-template-columns: minmax(420px, 1fr) minmax(0, 800px) minmax(260px, 420px);
   justify-content: stretch;
   gap: 20px;
   align-items: start;
@@ -452,6 +452,7 @@ const styleProgramuSzkolenia = `
   grid-column: 2;
   grid-row: 2;
   justify-content: center;
+  min-width: 0;
   overflow: auto;
   order: 4;
   padding-bottom: 24px;
