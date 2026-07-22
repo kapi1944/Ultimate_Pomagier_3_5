@@ -1,4 +1,5 @@
 import type { BlokDokumentu, DokumentBlokowy, ProblemDokumentu } from '../../../../wspolne/dokumenty/modelBlokowy'
+import { utworzModelStronyProgramu } from './geometriaStronyProgramu.ts'
 
 export type TypElementuProgramu = 'naglowekListyProgramu' | 'cwiczenie' | 'warsztat' | 'przyklad'
 
@@ -84,60 +85,6 @@ const wzorzecNotatkiOnline = /w przypadku szkolenia w formule on-?line/i
 const wzorzecZakonczeniaZdania = /[.;:?]$/
 const skrotyChronione = ['m.in.', 'np.', 'tj.', 'tzn.', 'art.', 'ust.', 'pkt.', 'dz.u.']
 const znacznikiFormatowaniaLinii = ['**', '++', '*']
-
-function utworzModelStronyA4Programu(): DokumentBlokowy['strona'] {
-  const marginesy = {
-    goraMm: 14,
-    prawoMm: 14,
-    dolMm: 14,
-    lewoMm: 14,
-  }
-
-  return {
-    format: 'A4',
-    orientacja: 'pionowa',
-    szerokoscMm: 210,
-    wysokoscMm: 297,
-    marginesy,
-    obszarRoboczy: {
-      xMm: marginesy.lewoMm,
-      yMm: marginesy.goraMm,
-      szerokoscMm: 210 - marginesy.lewoMm - marginesy.prawoMm,
-      wysokoscMm: 297 - marginesy.goraMm - marginesy.dolMm,
-    },
-    naglowek: {
-      aktywny: true,
-      wysokoscMm: 28,
-      organizator: 'SEMPER',
-    },
-    stopka: {
-      aktywna: true,
-      wysokoscMm: 12,
-      organizator: 'SEMPER',
-    },
-    logotyp: {
-      aktywny: false,
-      szerokoscProcent: 90,
-    },
-    numeracjaStron: {
-      aktywna: true,
-      format: '1_z_n',
-    },
-    lamanieStron: {
-      unikajDzieleniaNaglowkow: true,
-      minimalnaLiczbaWierszyPoNaglowku: 2,
-    },
-    minimalneOdstepyOdKrawedziMm: 5,
-    skalowaniePodgladu: 1,
-    ustawieniaWydruku: {
-      drukujTlo: true,
-    },
-    ustawieniaEksportu: {
-      pdfReferencyjny: true,
-      docxZTejSamejStruktury: true,
-    },
-  }
-}
 
 function utworzBlok(
   id: string,
@@ -226,9 +173,9 @@ function zbudujDokumentBlokowyProgramu(program: Omit<ProgramSzkolenia, 'dokument
       organizator: 'SEMPER',
     },
     struktura,
-    strona: utworzModelStronyA4Programu(),
+    strona: utworzModelStronyProgramu(),
     wyglad: {
-      marginesy: utworzModelStronyA4Programu().marginesy,
+      marginesy: utworzModelStronyProgramu().marginesy,
       styleBlokow: {
         Tytul: { pogrubienie: true, rozmiarCzcionki: 16, interlinia: 1.15 },
         Dzien: { pogrubienie: true, rozmiarCzcionki: 12, interlinia: 1.15 },

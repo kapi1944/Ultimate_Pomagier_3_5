@@ -4,6 +4,8 @@
 
 @media print {
   [data-pomin-w-eksporcie] { display: none !important; }
-  .program-kartka-a4 { break-after: page; break-inside: avoid; }
+  .program-kartka-a4:not([data-strona-dokumentu]) { break-after: page; break-inside: avoid; }
+  [data-strona-dokumentu] { break-after: auto; page-break-after: auto; break-inside: avoid; }
+  [data-strona-dokumentu]:not(:last-of-type) { break-after: page; page-break-after: always; }
   .program-kartka-a4__naglowek, .program-kartka-a4__stopka { break-inside: avoid; }
 }

@@ -1,13 +1,14 @@
 import type { ReactNode } from 'react'
 import type { BlokDokumentu, DokumentBlokowy } from '../../../../wspolne/dokumenty/modelBlokowy'
+import type { FragmentDniaProgramu, FragmentModuluProgramu, GrupaPunktowProgramu } from './paginatorProgramu'
+import { utworzModelPaginacjiProgramu } from './paginatorProgramu'
 import { pobierzGruboscTekstuPozycjiListyProgramu } from './stylPozycjiListyProgramu'
 
 type StylDniPodgladu = 'pasek' | 'naglowek'
 type SeparacjaModulowPodgladu = 'brak' | 'ramka' | 'linia' | 'separator-pytan'
 type StylListyPodgladu = 'numeracja' | 'punktory'
 
-type WlasciwosciRendereraPodgladuProgramu = {
-  dokument: DokumentBlokowy
+export type WlasciwosciWygladuTrescProgramu = {
   kolorAkcentu: string
   stylDni: StylDniPodgladu
   separacjaModulow: SeparacjaModulowPodgladu
@@ -15,6 +16,10 @@ type WlasciwosciRendereraPodgladuProgramu = {
   stylListyGlownej: StylListyPodgladu
   stylePoziomowListy: string[]
   czyPogrubiacNaglowkiListyProgramu: boolean
+}
+
+type WlasciwosciRendereraPodgladuProgramu = WlasciwosciWygladuTrescProgramu & {
+  dokument: DokumentBlokowy
 }
 
 function renderujMarkdownInline(tekst: string): ReactNode[] {
@@ -49,125 +54,200 @@ function renderujMarkdownInline(tekst: string): ReactNode[] {
   return elementy.length ? elementy : [tekst]
 }
 
-function pobierzBlokiPoTypie(bloki: BlokDokumentu[], typ: BlokDokumentu['typ']) {
-  return bloki.filter((blok) => blok.typ === typ)
+function pobierzPoziom(blok: BlokDokumentu) {
+  return Math.max(0, blok.stylLokalny.wciecie ?? blok.metadane.poziom ?? 0)
 }
 
-export default function RendererPodgladuProgramu({
-  dokument,
-  kolorAkcentu,
-  stylDni,
-  separacjaModulow,
-  stylPodpunktow,
-  stylListyGlownej,
-  stylePoziomowListy,
-  czyPogrubiacNaglowkiListyProgramu,
-}: WlasciwosciRendereraPodgladuProgramu) {
-  const dni = pobierzBlokiPoTypie(dokument.struktura, 'Dzien')
-  const punktyProste = dokument.struktura.filter((blok) => blok.typ === 'Punkt' || blok.typ === 'Podpunkt')
+function pobierzMarker(blok: BlokDokumentu, liczniki: number[], stylListy: StylListyPodgladu, stylePoziomowListy: string[]) {
+  const poziom = pobierzPoziom(blok)
 
-  function pobierzMarker(blok: BlokDokumentu, liczniki: number[], stylListy: StylListyPodgladu) {
-    const poziom = Math.max(0, blok.stylLokalny.wciecie ?? blok.metadane.poziom ?? 0)
+  liczniki[poziom] = (liczniki[poziom] ?? 0) + 1
+  liczniki.length = poziom + 1
 
-    liczniki[poziom] = (liczniki[poziom] ?? 0) + 1
-    liczniki.length = poziom + 1
-
-    if (poziom === 0 && stylListy === 'numeracja') {
-      return `${liczniki[0]}.`
-    }
-
-    return stylePoziomowListy[Math.min(poziom, stylePoziomowListy.length - 1)] ?? '•'
+  if (poziom === 0 && stylListy === 'numeracja') {
+    return `${liczniki[0]}.`
   }
 
-  function renderujPunkty(bloki: BlokDokumentu[], stylListy: StylListyPodgladu) {
-    const liczniki: number[] = []
+  return stylePoziomowListy[Math.min(poziom, stylePoziomowListy.length - 1)] ?? '•'
+}
 
-    if (!bloki.length) {
-      return <div className="program-kartka-a4__pusty">Brak podpunktów.</div>
-    }
+export function RendererGrupyPunktowProgramu({
+  grupyPunktow,
+  poczatkowyIndeksNumeracji,
+  stylListy,
+  stylePoziomowListy,
+  czyPogrubiacNaglowkiListyProgramu,
+  atrybutyPomiaru,
+  atrybutyPomiaruListy,
+  czyTrescSurowa,
+}: {
+  grupyPunktow: GrupaPunktowProgramu[]
+  poczatkowyIndeksNumeracji: number
+  stylListy: StylListyPodgladu
+  stylePoziomowListy: string[]
+  czyPogrubiacNaglowkiListyProgramu: boolean
+  atrybutyPomiaru?: (grupa: GrupaPunktowProgramu) => Record<string, string>
+  atrybutyPomiaruListy?: Record<string, string>
+  czyTrescSurowa?: boolean
+}) {
+  const liczniki = [poczatkowyIndeksNumeracji]
 
+  if (czyTrescSurowa) {
     return (
-      <div className="program-kartka-a4__lista">
-        {bloki.map((blok) => {
-          const poziom = Math.max(0, blok.stylLokalny.wciecie ?? blok.metadane.poziom ?? 0)
-
-          return (
-            <div
-              className={`program-kartka-a4__pozycja${
-                blok.statusDiagnostyczny === 'do_sprawdzenia' ? ' program-kartka-a4__pozycja--niepewna' : ''
-              }`}
-              key={blok.id}
-              style={{
-                marginLeft: `${Math.min(poziom, 8) * 22}px`,
-              }}
-            >
-              <span className="program-kartka-a4__marker">{pobierzMarker(blok, liczniki, stylListy)}</span>
-              <span style={{ fontWeight: pobierzGruboscTekstuPozycjiListyProgramu(poziom, czyPogrubiacNaglowkiListyProgramu) }}>
-                {renderujMarkdownInline(blok.tresc ?? '')}
-              </span>
-            </div>
-          )
-        })}
+      <div className="program-kartka-a4__surowy" {...atrybutyPomiaruListy}>
+        {grupyPunktow.map((grupa) => (
+          <div className="program-kartka-a4__wiersz-surowy" key={grupa.id} {...atrybutyPomiaru?.(grupa)}>
+            {renderujMarkdownInline(grupa.bloki.map((blok) => blok.tresc ?? '').join(' '))}
+          </div>
+        ))}
       </div>
     )
   }
 
-  if (!dni.length) {
-    return punktyProste.length ? renderujPunkty(punktyProste, stylListyGlownej) : <div className="program-kartka-a4__pusty">Brak treści programu.</div>
+  return (
+    <div className="program-kartka-a4__lista" {...atrybutyPomiaruListy}>
+      {grupyPunktow.map((grupa) => (
+        <div className="program-kartka-a4__grupa-punktow" key={grupa.id} {...atrybutyPomiaru?.(grupa)}>
+          {grupa.bloki.map((blok) => {
+            const poziom = pobierzPoziom(blok)
+
+            return (
+              <div
+                className={`program-kartka-a4__pozycja${
+                  blok.statusDiagnostyczny === 'do_sprawdzenia' ? ' program-kartka-a4__pozycja--niepewna' : ''
+                }`}
+                key={blok.id}
+                style={{ marginLeft: `${Math.min(poziom, 8) * 22}px` }}
+              >
+                <span className="program-kartka-a4__marker">{pobierzMarker(blok, liczniki, stylListy, stylePoziomowListy)}</span>
+                <span style={{ fontWeight: pobierzGruboscTekstuPozycjiListyProgramu(poziom, czyPogrubiacNaglowkiListyProgramu) }}>
+                  {renderujMarkdownInline(blok.tresc ?? '')}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+export function RendererFragmentuModuluProgramu({
+  fragment,
+  indeksModulu,
+  wyglad,
+  atrybutyPomiaru,
+  atrybutyPomiaruGrup,
+  atrybutyPomiaruListy,
+  czyUkrywacPusty,
+}: {
+  fragment: FragmentModuluProgramu
+  indeksModulu: number
+  wyglad: WlasciwosciWygladuTrescProgramu
+  atrybutyPomiaru?: Record<string, string>
+  atrybutyPomiaruGrup?: (grupa: GrupaPunktowProgramu) => Record<string, string>
+  atrybutyPomiaruListy?: Record<string, string>
+  czyUkrywacPusty?: boolean
+}) {
+  const { modul, grupyPunktow, czyPokazacTytul, poczatkowyIndeksNumeracji } = fragment
+  const { kolorAkcentu, separacjaModulow, stylPodpunktow, stylListyGlownej, stylePoziomowListy, czyPogrubiacNaglowkiListyProgramu } = wyglad
+  const stylListy = modul.id === 'lista-prosta-programu' ? stylListyGlownej : stylPodpunktow
+  const czyTrescSurowa = modul.trybTresc === 'surowa'
+
+  return (
+    <article
+      className={`program-kartka-a4__modul${
+        separacjaModulow === 'ramka' ? ' program-kartka-a4__modul--ramka' : ''
+      }${
+        separacjaModulow === 'separator-pytan' && indeksModulu > 0
+          ? ' program-kartka-a4__modul--separator-pytan'
+          : ''
+      }${modul.blok.statusDiagnostyczny === 'do_sprawdzenia' ? ' program-kartka-a4__modul--niepewny' : ''}`}
+      style={separacjaModulow === 'separator-pytan' && indeksModulu > 0 ? { borderColor: kolorAkcentu } : undefined}
+      {...atrybutyPomiaru}
+    >
+      {czyPokazacTytul && modul.blok.tresc && (
+        <h3 className={`program-kartka-a4__modul-tytul${separacjaModulow === 'linia' ? ' program-kartka-a4__modul-tytul--linia' : ''}`}>
+          {renderujMarkdownInline(modul.blok.tresc)}
+        </h3>
+      )}
+      {grupyPunktow.length ? (
+        <RendererGrupyPunktowProgramu
+          czyPogrubiacNaglowkiListyProgramu={czyPogrubiacNaglowkiListyProgramu}
+          grupyPunktow={grupyPunktow}
+          poczatkowyIndeksNumeracji={poczatkowyIndeksNumeracji}
+          stylListy={stylListy}
+          stylePoziomowListy={stylePoziomowListy}
+          atrybutyPomiaru={atrybutyPomiaruGrup}
+          atrybutyPomiaruListy={atrybutyPomiaruListy}
+          czyTrescSurowa={czyTrescSurowa}
+        />
+      ) : !czyUkrywacPusty ? (
+        <div className="program-kartka-a4__pusty">Brak podpunktów.</div>
+      ) : null}
+    </article>
+  )
+}
+
+export function RendererFragmentuDniaProgramu({
+  fragment,
+  wyglad,
+  atrybutyPomiaru,
+}: {
+  fragment: FragmentDniaProgramu
+  wyglad: WlasciwosciWygladuTrescProgramu
+  atrybutyPomiaru?: Record<string, string>
+}) {
+  const { dzien, czyPokazacNaglowek, moduly } = fragment
+
+  return (
+    <section className="program-kartka-a4__dzien" {...atrybutyPomiaru}>
+      {czyPokazacNaglowek && dzien.blok?.tresc && (
+        <h2
+          className={`program-kartka-a4__dzien-tytul program-kartka-a4__dzien-tytul--${wyglad.stylDni}`}
+          style={{
+            backgroundColor: wyglad.stylDni === 'pasek' ? wyglad.kolorAkcentu : 'transparent',
+            borderColor: wyglad.kolorAkcentu,
+          }}
+        >
+          {dzien.blok.tresc}
+          {dzien.temat?.tresc && <span className="program-kartka-a4__temat-dnia">{renderujMarkdownInline(dzien.temat.tresc)}</span>}
+        </h2>
+      )}
+      <div className="program-kartka-a4__moduly">
+        {moduly.map((modul, indeksModulu) => (
+          <RendererFragmentuModuluProgramu fragment={modul} indeksModulu={indeksModulu} key={`${modul.modul.id}-${modul.poczatkowyIndeksNumeracji}`} wyglad={wyglad} />
+        ))}
+      </div>
+    </section>
+  )
+}
+
+export default function RendererPodgladuProgramu({ dokument, ...wyglad }: WlasciwosciRendereraPodgladuProgramu) {
+  const model = utworzModelPaginacjiProgramu(dokument)
+
+  if (!model.dni.length) {
+    return <div className="program-kartka-a4__pusty">Brak treści programu.</div>
   }
 
   return (
     <>
-      {dni.map((dzien) => {
-        const tematDnia = dzien.dzieci.find((blok) => blok.typ === 'Sekcja')
-        const moduly = pobierzBlokiPoTypie(dzien.dzieci, 'Modul')
-
-        return (
-          <section className="program-kartka-a4__dzien" key={dzien.id}>
-            {dzien.tresc && (
-              <h2
-                className={`program-kartka-a4__dzien-tytul program-kartka-a4__dzien-tytul--${stylDni}`}
-                style={{
-                  backgroundColor: stylDni === 'pasek' ? kolorAkcentu : 'transparent',
-                  borderColor: kolorAkcentu,
-                }}
-              >
-                {dzien.tresc}
-                {tematDnia?.tresc && <span className="program-kartka-a4__temat-dnia">{renderujMarkdownInline(tematDnia.tresc)}</span>}
-              </h2>
-            )}
-
-            <div className="program-kartka-a4__moduly">
-              {moduly.map((modul, indeksModulu) => {
-                const punkty = modul.dzieci.filter((blok) => blok.typ === 'Punkt' || blok.typ === 'Podpunkt')
-
-                return (
-                  <article
-                    className={`program-kartka-a4__modul${
-                      separacjaModulow === 'ramka' ? ' program-kartka-a4__modul--ramka' : ''
-                    }${
-                      separacjaModulow === 'separator-pytan' && indeksModulu > 0
-                        ? ' program-kartka-a4__modul--separator-pytan'
-                        : ''
-                    }${modul.statusDiagnostyczny === 'do_sprawdzenia' ? ' program-kartka-a4__modul--niepewny' : ''}`}
-                    key={modul.id}
-                    style={separacjaModulow === 'separator-pytan' && indeksModulu > 0 ? { borderColor: kolorAkcentu } : undefined}
-                  >
-                    <h3
-                      className={`program-kartka-a4__modul-tytul${
-                        separacjaModulow === 'linia' ? ' program-kartka-a4__modul-tytul--linia' : ''
-                      }`}
-                    >
-                      {renderujMarkdownInline(modul.tresc ?? '')}
-                    </h3>
-                    {renderujPunkty(punkty, stylPodpunktow)}
-                  </article>
-                )
-              })}
-            </div>
-          </section>
-        )
-      })}
+      {model.dni.map((dzien) => (
+        <RendererFragmentuDniaProgramu
+          fragment={{
+            dzien,
+            czyPokazacNaglowek: Boolean(dzien.blok?.tresc),
+            moduly: dzien.moduly.map((modul) => ({
+              modul,
+              grupyPunktow: modul.grupyPunktow,
+              czyPokazacTytul: true,
+              poczatkowyIndeksNumeracji: 0,
+            })),
+          }}
+          key={dzien.id}
+          wyglad={wyglad}
+        />
+      ))}
     </>
   )
 }

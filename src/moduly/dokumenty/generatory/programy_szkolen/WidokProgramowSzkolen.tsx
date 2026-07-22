@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import AkcjeEksportuPdf from '../../../../wspolne/dokumenty/AkcjeEksportuPdf'
 import PanelKontroliJakosciDokumentu from '../../../../wspolne/dokumenty/PanelKontroliJakosciDokumentu'
 import {
@@ -21,8 +21,7 @@ import {
 } from '../../../../wspolne/dokumenty/modelBlokowy'
 import { parsujTekstProgramu } from './ParserTekstu'
 import { pobierzTytulDokumentuProgramu } from './tytulDokumentuProgramu'
-import RendererPodgladuProgramu from './RendererPodgladuProgramu'
-import RendererStronSemper from './RendererStronSemper'
+import RendererStronProgramu from './RendererStronProgramu'
 import {
   konfiguracjePresetowProgramu,
   domyslnyPresetNowegoProgramu,
@@ -453,7 +452,7 @@ const styleProgramuSzkolenia = `
   grid-column: 2;
   grid-row: 2;
   justify-content: center;
-  overflow: visible;
+  overflow: auto;
   order: 4;
   padding-bottom: 24px;
 }
@@ -546,10 +545,16 @@ const styleProgramuSzkolenia = `
 }
 
 .program-kartka-a4__surowy {
+  display: grid;
+  gap: 0;
   white-space: pre-wrap;
   color: #374151;
   font-size: 0.9rem;
   line-height: 1.7;
+}
+
+.program-kartka-a4__wiersz-surowy {
+  min-height: 1.7em;
 }
 
 .program-kartka-a4__dzien {
@@ -664,10 +669,12 @@ const styleProgramuSzkolenia = `
   font-weight: 700;
 }
 
-.program-semper {
+.program-strony {
   display: grid;
   gap: 22px;
-  width: min(100%, 800px);
+  width: max-content;
+  min-width: var(--program-szerokosc-strony);
+  margin: 0 auto;
 }
 
 .program-semper__strona {
@@ -675,8 +682,9 @@ const styleProgramuSzkolenia = `
   display: flex;
   flex-direction: column;
   width: var(--program-szerokosc-strony);
-  min-height: var(--program-wysokosc-strony);
-  max-width: 100%;
+  height: var(--program-wysokosc-strony);
+  box-sizing: border-box;
+  max-width: none;
   padding: var(--program-odstep-gorny) var(--program-odstep-poziomy) calc(var(--program-wysokosc-stopki) + 6mm);
   overflow: hidden;
   background: #fff;
@@ -757,6 +765,7 @@ const styleProgramuSzkolenia = `
 .program-semper__tresc {
   flex: 1;
   min-height: 0;
+  overflow: hidden;
 }
 
 .program-semper__tresc--justowana .program-kartka-a4__pozycja > span:last-child {
@@ -768,10 +777,17 @@ const styleProgramuSzkolenia = `
   margin-bottom: 5mm;
 }
 
-.program-semper--semper_kompaktowy .program-kartka-a4__lista { gap: 3px; }
-.program-semper--semper_szczegolowy .program-kartka-a4__lista { gap: 2px; }
-.program-semper--semper_szczegolowy .program-kartka-a4__pozycja { font-size: .82rem; line-height: 1.35; }
-.program-semper--semper_wedlug_dni .program-kartka-a4__dzien-tytul { break-after: avoid-page; }
+.program-kartka-a4__grupa-punktow {
+  display: grid;
+  gap: 7px;
+}
+
+.program-strony--semper_kompaktowy .program-kartka-a4__lista,
+.program-strony--semper_kompaktowy .program-kartka-a4__grupa-punktow { gap: 3px; }
+.program-strony--semper_szczegolowy .program-kartka-a4__lista,
+.program-strony--semper_szczegolowy .program-kartka-a4__grupa-punktow { gap: 2px; }
+.program-strony--semper_szczegolowy .program-kartka-a4__pozycja { font-size: .82rem; line-height: 1.35; }
+.program-strony--semper_wedlug_dni .program-kartka-a4__dzien-tytul { break-after: avoid-page; }
 
 .program-semper__stopka {
   position: absolute;
@@ -814,6 +830,53 @@ const styleProgramuSzkolenia = `
   opacity: .34;
   pointer-events: none;
 }
+
+.program-dotychczasowy__strona {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  width: var(--program-szerokosc-strony);
+  height: var(--program-wysokosc-strony);
+  box-sizing: border-box;
+  margin: 0;
+  padding: var(--program-odstep-gorny) var(--program-odstep-poziomy);
+  overflow: hidden;
+}
+
+.program-dotychczasowy__tresc {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.program-dotychczasowy__strona .program-kartka-a4__stopka {
+  margin-top: 0;
+}
+
+.program-strony__oczekiwanie,
+.program-strony__problemy {
+  width: var(--program-szerokosc-strony);
+  box-sizing: border-box;
+  padding: 12px;
+  background: #ffffff;
+  color: #374151;
+}
+
+.program-strony__problemy {
+  border-left: 4px solid #b45309;
+}
+
+.program-strony__problemy p {
+  margin: 0;
+}
+
+.program-pomiar {
+  position: fixed;
+  top: 0;
+  left: -100000px;
+  display: grid;
+  gap: 10mm;
+  visibility: hidden;
+  pointer-events: none;
+}
 @media (max-width: 1860px) {
   .program-szkolen__uklad {
     grid-template-columns: minmax(420px, 1fr) minmax(0, 800px);
@@ -853,36 +916,17 @@ const styleProgramuSzkolenia = `
     padding-left: 0;
   }
 
-  .program-semper {
+  .program-strony {
     display: block !important;
-    width: 100% !important;
+    width: max-content !important;
   }
 
-  .program-semper__strona {
+  .program-semper__strona,
+  .program-dotychczasowy__strona {
     width: var(--program-szerokosc-strony) !important;
-    min-height: var(--program-wysokosc-strony) !important;
+    height: var(--program-wysokosc-strony) !important;
     max-width: none !important;
     margin: 0 !important;
-    box-shadow: none !important;
-    break-after: page;
-    print-color-adjust: exact;
-    -webkit-print-color-adjust: exact;
-  }
-  .program-kartka-a4 {
-    padding: 28px 20px;
-  }
-
-  .program-kartka-a4__meta {
-    flex-wrap: wrap;
-  }
-
-  .program-kartka-a4__kontakt {
-    max-width: none;
-    text-align: left;
-  }
-
-  .program-kartka-a4__tytul {
-    width: 100%;
   }
 }
 
@@ -919,26 +963,32 @@ const styleProgramuSzkolenia = `
     overflow: visible !important;
   }
 
-  .program-semper {
+  .program-pomiar,
+  .program-strony__oczekiwanie,
+  .program-strony__problemy {
+    display: none !important;
+  }
+
+  .program-strony {
     display: block !important;
     width: 100% !important;
   }
 
-  .program-semper__strona {
+  .program-semper__strona,
+  .program-dotychczasowy__strona {
     width: var(--program-szerokosc-strony) !important;
-    min-height: var(--program-wysokosc-strony) !important;
+    height: var(--program-wysokosc-strony) !important;
     max-width: none !important;
     margin: 0 !important;
     box-shadow: none !important;
-    break-after: page;
+    break-after: auto;
+    page-break-after: auto;
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
   }
-  .program-kartka-a4 {
-    box-shadow: none !important;
-    margin: 0 !important;
-    width: 100% !important;
-    min-height: auto !important;
+
+  .program-strony > article[data-strona-dokumentu]:not(:last-of-type) {
+    break-after: page;
     page-break-after: always;
   }
 }
@@ -962,38 +1012,6 @@ function formatujTytulSzkolenia(tytul: string, formatCudzyslowu: FormatCudzyslow
   }
 
   return formatCudzyslowu === 'gorny-gorny' ? `"${tekst}"` : `„${tekst}”`
-}
-
-function renderujMarkdownInline(tekst: string): ReactNode[] {
-  const elementy: ReactNode[] = []
-  const wzorzec = /(\*\*([^*]+)\*\*|\+\+([^+]+)\+\+|\*([^*\n]+)\*)/g
-  let ostatniIndeks = 0
-  let dopasowanie: RegExpExecArray | null = wzorzec.exec(tekst)
-
-  while (dopasowanie) {
-    if (dopasowanie.index > ostatniIndeks) {
-      elementy.push(tekst.slice(ostatniIndeks, dopasowanie.index))
-    }
-
-    const klucz = `${dopasowanie.index}-${dopasowanie[0]}`
-
-    if (dopasowanie[2]) {
-      elementy.push(<strong key={klucz}>{dopasowanie[2]}</strong>)
-    } else if (dopasowanie[3]) {
-      elementy.push(<u key={klucz}>{dopasowanie[3]}</u>)
-    } else if (dopasowanie[4]) {
-      elementy.push(<em key={klucz}>{dopasowanie[4]}</em>)
-    }
-
-    ostatniIndeks = dopasowanie.index + dopasowanie[0].length
-    dopasowanie = wzorzec.exec(tekst)
-  }
-
-  if (ostatniIndeks < tekst.length) {
-    elementy.push(tekst.slice(ostatniIndeks))
-  }
-
-  return elementy.length ? elementy : [tekst]
 }
 
 function normalizujZapisProgramu(zapis: unknown): ZapisProgramuRoboczego {
@@ -1507,40 +1525,6 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
     window.open('https://drive.google.com', '_blank', 'noopener,noreferrer')
   }
 
-  function renderujProgramSkryptowy() {
-    return (
-      <RendererPodgladuProgramu
-        czyPogrubiacNaglowkiListyProgramu={ustawienia.czyPogrubiacNaglowkiListyProgramu}
-        dokument={dokumentProgramu}
-        kolorAkcentu={kolorAkcentu}
-        separacjaModulow={ustawienia.separacjaModulow}
-        stylDni={ustawienia.stylDni}
-        stylListyGlownej={ustawienia.stylListyGlownej}
-        stylPodpunktow={ustawienia.stylPodpunktow}
-        stylePoziomowListy={ustawienia.stylePoziomowListy}
-      />
-    )
-  }
-
-  function renderujProgramZachowawczy() {
-    if (!trescProgramu.trim()) {
-      return <div className="program-kartka-a4__pusty">Brak treści programu.</div>
-    }
-
-    const wierszeProgramu = trescProgramu.split('\n')
-
-    return (
-      <div className="program-kartka-a4__surowy">
-        {wierszeProgramu.map((wiersz, indeks) => (
-          <span key={`${indeks}-${wiersz}`}>
-            {renderujMarkdownInline(wiersz)}
-            {indeks < wierszeProgramu.length - 1 && <br />}
-          </span>
-        ))}
-      </div>
-    )
-  }
-
   useEffect(() => {
     return ustawObslugeNiezapisanychProgramow({
       czySaNiezapisaneZmiany: () => JSON.stringify(daneProgramu) !== ostatniJawnyZapis,
@@ -1948,48 +1932,29 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
         </div>
 
         <section className="program-szkolen__podglad" ref={obszarPodgladuRef}>
-          {presetWygladu !== 'DOTYCHCZASOWY' && ustawienia.profilFirmy === 'semper' ? (
-            <RendererStronSemper
-              czyJustowac={ustawienia.czyJustowac}
-              dokument={dokumentProgramu}
-              elementyIdentyfikacji={ustawienia.elementyIdentyfikacji}
-              preset={presetWygladu}
-              profilFirmy={ustawienia.profilFirmy}
-              tytul={tytulZCudzyslowem || 'Program szkolenia'}
-            />
-          ) : (
-          <div className="program-kartka-a4">
-            <header className="program-kartka-a4__naglowek" style={{ borderColor: kolorAkcentu }}>
-              <div className="program-kartka-a4__meta">
-                <div className="program-kartka-a4__profil">{profil.nazwa}</div>
-                <div className="program-kartka-a4__kontakt">{profil.kontakt}</div>
-              </div>
-
-              {logotypProgramu && (
-                <div className="program-kartka-a4__logotyp">
-                  <img alt="Logotyp" src={logotypProgramu} style={{ width: `${ustawienia.szerokoscLogotypu}%` }} />
-                </div>
-              )}
-
-              <div className="program-kartka-a4__etykieta">Program szkolenia</div>
-              <div
-                className="program-kartka-a4__tytul"
-                style={{
-                  borderWidth: `${gruboscObramowaniaTytulu}px`,
-                  color: kolorAkcentu,
-                }}
-              >
-                {tytulZCudzyslowem || '„Program szkolenia”'}
-              </div>
-            </header>
-
-            <main className="program-kartka-a4__tresc">
-              {ustawienia.formatowanieSkryptowe ? renderujProgramSkryptowy() : renderujProgramZachowawczy()}
-            </main>
-
-            <footer className="program-kartka-a4__stopka">{profil.stopka}</footer>
-          </div>
-          )}
+          <RendererStronProgramu
+            czyFormatowanieSkryptowe={ustawienia.formatowanieSkryptowe}
+            czyJustowac={ustawienia.czyJustowac}
+            czyPogrubiacNaglowkiListyProgramu={ustawienia.czyPogrubiacNaglowkiListyProgramu}
+            dokument={dokumentProgramu}
+            elementyIdentyfikacji={ustawienia.elementyIdentyfikacji}
+            gruboscObramowaniaTytulu={gruboscObramowaniaTytulu}
+            kolorAkcentu={kolorAkcentu}
+            kontaktOrganizatora={profil.kontakt}
+            logotypUzytkownika={logotypProgramu}
+            nazwaOrganizatora={profil.nazwa}
+            preset={presetWygladu}
+            profilFirmy={ustawienia.profilFirmy}
+            separacjaModulow={ustawienia.separacjaModulow}
+            szerokoscLogotypu={ustawienia.szerokoscLogotypu}
+            stopkaOrganizatora={profil.stopka}
+            stylDni={ustawienia.stylDni}
+            stylListyGlownej={ustawienia.stylListyGlownej}
+            stylPodpunktow={ustawienia.stylPodpunktow}
+            stylePoziomowListy={ustawienia.stylePoziomowListy}
+            tekstSurowy={trescProgramu}
+            tytul={tytulZCudzyslowem || 'Program szkolenia'}
+          />
         </section>
       </div>
     </section>
