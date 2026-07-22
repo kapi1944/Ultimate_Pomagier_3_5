@@ -147,23 +147,22 @@
   height: 28px;
   place-items: center;
   border: 4px solid var(--kolor-zadaniobiorcy);
-  background: var(--kolor-zadaniobiorcy);
+  background: transparent;
   transform: rotate(45deg);
   box-shadow:
-    inset 0 0 0 3px rgba(0, 0, 0, .22),
     0 0 0 2px rgba(255, 247, 237, .9),
     0 0 12px var(--kolor-zadaniobiorcy);
 }
 
 .pulpit-deadline__romb span {
-  width: 12px;
-  height: 12px;
+  width: 16px;
+  height: 16px;
   border: 2px solid #fff;
   border-radius: 50%;
   background: var(--kolor-zadaniodawcy);
   box-shadow:
-    0 0 0 1px rgba(0, 0, 0, .6),
-    0 0 7px var(--kolor-zadaniodawcy);
+    0 0 0 1px rgba(0, 0, 0, .65),
+    0 0 8px var(--kolor-zadaniodawcy);
 }
 
 .pulpit-deadline__etykieta {
