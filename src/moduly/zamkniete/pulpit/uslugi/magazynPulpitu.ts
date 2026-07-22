@@ -1,3 +1,4 @@
+import type { RolaUzytkownika } from '../../../../kartoteki/uzytkownicy/typyUzytkownikow'
 import type { JednostkaPrzypomnienia, PrzypomnienieZadania, StanPulpitu, StatusZapotrzebowaniaZakupowego, ZadaniePulpitu, ZapotrzebowanieZakupowe } from '../modele/pulpit'
 
 const kluczStanuPulpitu = 'ultimatePomagier.pulpit.v1'
@@ -127,16 +128,21 @@ export type EdytowalnePolaZadania = Pick<
 export function edytujZadanieRecznePrzezZadaniodawce(
   zadanieId: string,
   uzytkownikId: string,
+  rola: RolaUzytkownika | null | undefined,
   zmiany: EdytowalnePolaZadania,
 ): ZadaniePulpitu | null {
   const stan = pobierzStanPulpitu()
   const obecne = stan.zadaniaReczne.find((zadanie) => zadanie.id === zadanieId)
 
+  const czyArchitekt = rola === 'ARCHITEKT'
+  const czyWlasneOtwarteZadanie =
+    obecne?.status === 'OTWARTE'
+    && obecne.zadaniodawcaId === uzytkownikId
+
   if (
     !obecne
     || obecne.czyAutomatyczne
-    || obecne.status !== 'OTWARTE'
-    || obecne.zadaniodawcaId !== uzytkownikId
+    || (!czyArchitekt && !czyWlasneOtwarteZadanie)
   ) {
     return null
   }

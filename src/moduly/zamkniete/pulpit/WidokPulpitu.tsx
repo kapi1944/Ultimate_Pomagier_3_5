@@ -382,6 +382,7 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
     const zaktualizowane = edytujZadanieRecznePrzezZadaniodawce(
       zadanie.id,
       zalogowanyUzytkownik.id,
+      zalogowanyUzytkownik.rola,
       {
         tytul: zadanie.tytul,
         data,
@@ -424,7 +425,11 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
   }
 
   function rozpocznijEdycjeZadania(zadanie: ZadaniePulpitu) {
-    if (!czyMoznaEdytowacZadanie(zadanie, zalogowanyUzytkownik?.id)) return
+    if (!czyMoznaEdytowacZadanie(
+      zadanie,
+      zalogowanyUzytkownik?.id,
+      zalogowanyUzytkownik?.rola,
+    )) return
 
     ustawFormularzEdycji(formularzZZadania(zadanie))
     ustawEdytowaneZadanieId(zadanie.id)
@@ -467,6 +472,7 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
     const zaktualizowane = edytujZadanieRecznePrzezZadaniodawce(
       wybraneZadanie.id,
       zalogowanyUzytkownik.id,
+      zalogowanyUzytkownik.rola,
       {
         tytul: formularzEdycji.tytul.trim(),
         data: formularzEdycji.data,
@@ -580,7 +586,11 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
   )
   const czyMoznaEdytowacWybrane = Boolean(
     wybraneZadanie
-    && czyMoznaEdytowacZadanie(wybraneZadanie, zalogowanyUzytkownik?.id)
+    && czyMoznaEdytowacZadanie(
+      wybraneZadanie,
+      zalogowanyUzytkownik?.id,
+      zalogowanyUzytkownik?.rola,
+    )
   )
   const czyMoznaUsunacWybrane = Boolean(
     wybraneZadanie
@@ -628,8 +638,12 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
         {czyDodawanieZadania && czyObserwowanyJestZalogowanym && <FormularzDodawaniaZadania blad={bladFormularza} czyWyborZadaniodawcy={czyWyborZadaniodawcy} formularz={noweZadanie} szkolenia={szkoleniaDostepne} ustawFormularz={ustawNoweZadanie} uzytkownicy={aktywniUzytkownicy} zapisz={dodajZadanie} />}
         {zadaniaDoPokazania.length ? <div className="pulpit-lista-zadan">{zadaniaDoPokazania.map((zadanie) => {
           const czyWykonawca = zadanie.zadaniobiorcaId === zalogowanyUzytkownik?.id
-          const czyZadaniodawca = czyMoznaEdytowacZadanie(zadanie, zalogowanyUzytkownik?.id)
-          return <KartaZadania key={zadanie.id} zadanie={zadanie} teraz={teraz} uzytkownicy={uzytkownicy} otworz={() => ustawWybraneZadanie(zadanie)} wykonaj={zadanie.czyAutomatyczne || !czyWykonawca ? undefined : () => oznaczWykonane(zadanie)} zmienGodzine={!czyZadaniodawca ? undefined : (godzina) => zmienGodzine(zadanie, godzina)} odloz={zadanie.czyTerminKrytyczny || !czyZadaniodawca ? undefined : (nowaData) => odlozZadanie(zadanie, nowaData)} />
+          const czyMoznaEdytowacTermin = czyMoznaEdytowacZadanie(
+            zadanie,
+            zalogowanyUzytkownik?.id,
+            zalogowanyUzytkownik?.rola,
+          )
+          return <KartaZadania key={zadanie.id} zadanie={zadanie} teraz={teraz} uzytkownicy={uzytkownicy} otworz={() => ustawWybraneZadanie(zadanie)} wykonaj={zadanie.czyAutomatyczne || !czyWykonawca ? undefined : () => oznaczWykonane(zadanie)} zmienGodzine={!czyMoznaEdytowacTermin ? undefined : (godzina) => zmienGodzine(zadanie, godzina)} odloz={zadanie.czyTerminKrytyczny || !czyMoznaEdytowacTermin ? undefined : (nowaData) => odlozZadanie(zadanie, nowaData)} />
         })}</div> : <p className="pulpit-pusty">Brak zadań bez przypisanej godziny.</p>}
       </div>
       {zadaniaWykonane.length > 0 && <details className="pulpit-wykonane"><summary>Wykonane ({zadaniaWykonane.length})</summary>{zadaniaWykonane.map((zadanie) => <KartaZadania key={zadanie.id} zadanie={zadanie} teraz={teraz} uzytkownicy={uzytkownicy} otworz={() => ustawWybraneZadanie(zadanie)} />)}</details>}

@@ -61,13 +61,18 @@ export function czyMoznaOznaczycZadanieRecznie(zadanie: ZadaniePulpitu) {
 export function czyMoznaEdytowacZadanie(
   zadanie: ZadaniePulpitu,
   uzytkownikId: string | null | undefined,
+  rola: RolaUzytkownika | null | undefined,
 ) {
-  return Boolean(
-    uzytkownikId
-    && !zadanie.czyAutomatyczne
-    && zadanie.status === 'OTWARTE'
+  if (!uzytkownikId || zadanie.czyAutomatyczne) return false
+
+  // Architekt ma nadrzędne prawo korekty wszystkich ręcznych zadań,
+  // niezależnie od Zadaniodawcy, Zadaniobiorcy i statusu.
+  if (rola === 'ARCHITEKT') return true
+
+  // Pozostali zachowują dotychczasową zasadę:
+  // edycja wyłącznie własnego, otwartego zadania jako Zadaniodawca.
+  return zadanie.status === 'OTWARTE'
     && zadanie.zadaniodawcaId === uzytkownikId
-  )
 }
 
 export function czyMoznaWybracZadaniodawce(rola: RolaUzytkownika | null | undefined) {

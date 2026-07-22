@@ -170,17 +170,58 @@ test('można zapisać kilka różnych przypomnień, ale nie duplikaty', () => {
   assert.match(walidujPrzypomnienia([{ id: 'bledne', wartosc: 0, jednostka: 'DNI' }]) ?? '', /większa od zera/)
 })
 
-test('tylko Zadaniodawca może edytować otwarte ręczne zadanie', () => {
+test('Architekt może edytować wszystkie ręczne zadania, a pozostali tylko własne otwarte', () => {
   const otwarte = zadanie({
     zadaniodawcaId: 'jan',
     zadaniobiorcaId: 'anna',
   })
 
-  assert.equal(czyMoznaEdytowacZadanie(otwarte, 'jan'), true)
-  assert.equal(czyMoznaEdytowacZadanie(otwarte, 'anna'), false)
-  assert.equal(czyMoznaEdytowacZadanie(otwarte, 'obcy'), false)
-  assert.equal(czyMoznaEdytowacZadanie({ ...otwarte, status: 'WYKONANE' }, 'jan'), false)
-  assert.equal(czyMoznaEdytowacZadanie({ ...otwarte, czyAutomatyczne: true }, 'jan'), false)
+  assert.equal(
+    czyMoznaEdytowacZadanie(otwarte, 'jan', 'PRACOWNIK'),
+    true,
+  )
+
+  assert.equal(
+    czyMoznaEdytowacZadanie(otwarte, 'anna', 'PRACOWNIK'),
+    false,
+  )
+
+  assert.equal(
+    czyMoznaEdytowacZadanie(otwarte, 'administrator', 'ADMINISTRATOR'),
+    false,
+  )
+
+  assert.equal(
+    czyMoznaEdytowacZadanie(otwarte, 'kacper', 'ARCHITEKT'),
+    true,
+  )
+
+  assert.equal(
+    czyMoznaEdytowacZadanie(
+      { ...otwarte, status: 'WYKONANE' },
+      'kacper',
+      'ARCHITEKT',
+    ),
+    true,
+  )
+
+  assert.equal(
+    czyMoznaEdytowacZadanie(
+      { ...otwarte, status: 'WYKONANE' },
+      'jan',
+      'PRACOWNIK',
+    ),
+    false,
+  )
+
+  assert.equal(
+    czyMoznaEdytowacZadanie(
+      { ...otwarte, czyAutomatyczne: true },
+      'kacper',
+      'ARCHITEKT',
+    ),
+    false,
+  )
 })
 
 test('magazyn chroni edycję i zachowuje historyczne metadane zadania', () => {
@@ -208,6 +249,7 @@ test('magazyn chroni edycję i zachowuje historyczne metadane zadania', () => {
   const niedozwolone = edytujZadanieRecznePrzezZadaniodawce(
     oryginalne.id,
     'anna',
+    'PRACOWNIK',
     {
       tytul: 'Niedozwolona zmiana',
       data: '2026-07-23',
@@ -225,6 +267,7 @@ test('magazyn chroni edycję i zachowuje historyczne metadane zadania', () => {
   const zaktualizowane = edytujZadanieRecznePrzezZadaniodawce(
     oryginalne.id,
     'jan',
+    'PRACOWNIK',
     {
       tytul: 'Nowy tytuł',
       data: '2026-07-24',
@@ -257,6 +300,7 @@ test('magazyn chroni edycję i zachowuje historyczne metadane zadania', () => {
   const poWykonaniu = edytujZadanieRecznePrzezZadaniodawce(
     oryginalne.id,
     'jan',
+    'PRACOWNIK',
     {
       tytul: 'Nie wolno',
       data: '2026-07-25',
@@ -273,6 +317,28 @@ test('magazyn chroni edycję i zachowuje historyczne metadane zadania', () => {
   const wykonane = pobierzStanPulpitu().zadaniaReczne[0]
   assert.equal(wykonane?.tytul, 'Nowy tytuł')
   assert.equal(wykonane?.wykonano, '2026-07-22T21:15:00.000Z')
+
+  const korektaArchitekta = edytujZadanieRecznePrzezZadaniodawce(
+    oryginalne.id,
+    'kacper',
+    'ARCHITEKT',
+    {
+      tytul: 'Korekta Architekta',
+      data: '2026-07-26',
+      godzina: '14:15',
+      priorytet: 'PILNE',
+      zadaniobiorcaId: 'ewa',
+      przypomnienia: [],
+      powiazaneSzkolenieId: undefined,
+    },
+  )
+
+  assert.ok(korektaArchitekta)
+  assert.equal(korektaArchitekta.tytul, 'Korekta Architekta')
+  assert.equal(korektaArchitekta.status, 'WYKONANE')
+  assert.equal(korektaArchitekta.zadaniodawcaId, 'jan')
+  assert.equal(korektaArchitekta.zadaniobiorcaId, 'ewa')
+  assert.equal(korektaArchitekta.wykonano, '2026-07-22T21:15:00.000Z')
 })
 
 test('widok zapisuje moment wykonania i pokazuje brak czasu tylko dla starych danych', () => {
