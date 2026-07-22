@@ -760,7 +760,7 @@
   color: var(--semper-czerwony);
   font-family: var(--czcionka-typu, "Ink Free", "Segoe Print", cursive);
   font-size: clamp(48px, 7vw, 82px);
-  font-style: italic;
+  font-style: normal;
   font-weight: normal;
   font-synthesis: none;
   letter-spacing: 0;

@@ -213,7 +213,8 @@ function mapujMotywKoloruDyplomu(wartosc: unknown): MotywKoloruDyplomu {
 }
 
 function pobierzCzcionkeTypu(wartosc: string) {
-  return wartosc.trim() || 'Ink Free'
+  const czcionka = wartosc.trim() || 'Ink Free'
+  return czcionka.includes(',') ? czcionka : `"${czcionka.replaceAll('"', '')}", cursive`
 }
 function pobierzKolorMotywuDyplomu(dane: Pick<ZapisDyplomow, 'motywKoloru' | 'kolorMotywu'>) {
   if (dane.motywKoloru === 'dowolny') {
