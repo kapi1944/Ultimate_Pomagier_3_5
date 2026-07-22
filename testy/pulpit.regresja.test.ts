@@ -366,6 +366,9 @@ test('marker deadline rozróżnia kolorem Zadaniodawcę i Zadaniobiorcę', () =>
   assert.match(widok, /zadanie\.zadaniobiorcaId/)
 
   assert.match(css, /background:\s*var\(--kolor-zadaniobiorcy\)/)
+  assert.match(css, /border:\s*4px solid var\(--kolor-zadaniobiorcy\)/)
+  assert.match(css, /width:\s*28px/)
+  assert.match(css, /height:\s*28px/)
   assert.match(css, /background:\s*var\(--kolor-zadaniodawcy\)/)
   assert.match(css, /width:\s*12px/)
   assert.match(css, /height:\s*12px/)
