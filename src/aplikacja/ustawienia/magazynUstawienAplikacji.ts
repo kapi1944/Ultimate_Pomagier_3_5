@@ -46,6 +46,16 @@ export function zastosujUstawieniaAplikacji(ustawienia: UstawieniaAplikacji) {
   root.style.setProperty('--ui-hover-scale', String(ustawienia.wyglad.skalaHover))
   root.style.setProperty('--ui-density-gap', gestoscGap[ustawienia.wyglad.gestosc] + 'px')
 
+  root.style.setProperty('--ui-menu-width', ustawienia.nawigacja.szerokoscMenu + 'px')
+
+  const wysokoscPrzyciskuMenu = {
+    KOMPAKTOWA: 34,
+    STANDARDOWA: 40,
+    DUZA: 48,
+  }[ustawienia.nawigacja.wysokoscPrzyciskuMenu]
+
+  root.style.setProperty('--ui-menu-button-height', wysokoscPrzyciskuMenu + 'px')
+
   root.style.setProperty('--pulpit-deadline-size', ustawienia.pulpit.deadline.rozmiarRombu + 'px')
   root.style.setProperty('--pulpit-deadline-border', ustawienia.pulpit.deadline.gruboscObramowania + 'px')
   root.style.setProperty('--pulpit-deadline-dot-size', ustawienia.pulpit.deadline.rozmiarKropki + 'px')

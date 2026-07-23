@@ -567,3 +567,136 @@ test('CSS i Pulpit korzystają z centralnych zmiennych ustawień', () => {
   assert.match(widok, /pobierzUstawieniaAplikacji/)
   assert.match(widok, /zakresDniaPracy/)
 })
+
+
+test('Etap 2 ustawień obsługuje nawigację, kafelki i wartości domyślne zadań', () => {
+  const domyslne = normalizujUstawieniaAplikacji({})
+
+  assert.equal(domyslne.nawigacja.szerokoscMenu, 280)
+  assert.equal(domyslne.nawigacja.wysokoscPrzyciskuMenu, 'STANDARDOWA')
+
+  assert.equal(domyslne.pulpit.widoczneKafelki.doZrobienia, true)
+  assert.equal(domyslne.pulpit.widoczneKafelki.pilne, true)
+  assert.equal(domyslne.pulpit.widoczneKafelki.paczki, true)
+  assert.equal(domyslne.pulpit.widoczneKafelki.blokady, true)
+  assert.equal(domyslne.pulpit.widoczneKafelki.zakupy, true)
+
+  assert.equal(domyslne.zadania.domyslnyPriorytet, 'ZWYKLE')
+  assert.equal(domyslne.zadania.domyslnaGodzina, '')
+  assert.deepEqual(domyslne.zadania.domyslnePrzypomnienia, {
+    piecMinut: false,
+    pietnascieMinut: false,
+    godzina: false,
+    dzien: false,
+  })
+})
+
+test('Etap 2 ustawień normalizuje zakres menu oraz konfigurację nowych zadań', () => {
+  const ustawienia = normalizujUstawieniaAplikacji({
+    wersja: 1,
+    nawigacja: {
+      szerokoscMenu: 999,
+      wysokoscPrzyciskuMenu: 'DUZA',
+    },
+    pulpit: {
+      widoczneKafelki: {
+        doZrobienia: false,
+        pilne: true,
+        paczki: false,
+        blokady: true,
+        zakupy: false,
+      },
+    },
+    zadania: {
+      domyslnyPriorytet: 'ASAP',
+      domyslnaGodzina: '14:30',
+      domyslnePrzypomnienia: {
+        piecMinut: true,
+        pietnascieMinut: true,
+        godzina: false,
+        dzien: true,
+      },
+    },
+  })
+
+  assert.equal(ustawienia.nawigacja.szerokoscMenu, 360)
+  assert.equal(ustawienia.nawigacja.wysokoscPrzyciskuMenu, 'DUZA')
+
+  assert.equal(ustawienia.pulpit.widoczneKafelki.doZrobienia, false)
+  assert.equal(ustawienia.pulpit.widoczneKafelki.paczki, false)
+  assert.equal(ustawienia.pulpit.widoczneKafelki.zakupy, false)
+
+  assert.equal(ustawienia.zadania.domyslnyPriorytet, 'ASAP')
+  assert.equal(ustawienia.zadania.domyslnaGodzina, '14:30')
+  assert.equal(ustawienia.zadania.domyslnePrzypomnienia.piecMinut, true)
+  assert.equal(ustawienia.zadania.domyslnePrzypomnienia.pietnascieMinut, true)
+  assert.equal(ustawienia.zadania.domyslnePrzypomnienia.godzina, false)
+  assert.equal(ustawienia.zadania.domyslnePrzypomnienia.dzien, true)
+})
+
+test('Etap 2 ustawień zachowuje zgodność ze starym rekordem wersji 1', () => {
+  const stare = normalizujUstawieniaAplikacji({
+    wersja: 1,
+    wyglad: {
+      paleta: 'DOMYSLNA',
+      gestosc: 'STANDARDOWA',
+      promienKart: 10,
+      promienPol: 6,
+      czasPrzejsciaMs: 150,
+      skalaHover: 1,
+    },
+    pulpit: {
+      poczatekDnia: '07:45',
+      koniecDnia: '16:00',
+      deadline: {
+        rozmiarRombu: 28,
+        gruboscObramowania: 5,
+        rozmiarKropki: 16,
+        poswiata: 'STANDARDOWA',
+        pokazPlomienAsap: true,
+      },
+    },
+    dostepnosc: {
+      ograniczAnimacje: false,
+    },
+  })
+
+  assert.equal(stare.nawigacja.szerokoscMenu, 280)
+  assert.equal(stare.pulpit.widoczneKafelki.zakupy, true)
+  assert.equal(stare.zadania.domyslnyPriorytet, 'ZWYKLE')
+})
+
+test('Pulpit respektuje widoczność kafelków i domyślne pola nowego zadania', () => {
+  const widok = readFileSync(
+    'src/moduly/zamkniete/pulpit/WidokPulpitu.tsx',
+    'utf8',
+  )
+
+  assert.match(widok, /widoczneKafelki\.doZrobienia/)
+  assert.match(widok, /widoczneKafelki\.pilne/)
+  assert.match(widok, /widoczneKafelki\.paczki/)
+  assert.match(widok, /widoczneKafelki\.blokady/)
+  assert.match(widok, /widoczneKafelki\.zakupy/)
+
+  assert.match(widok, /ustawienia\.zadania\.domyslnyPriorytet/)
+  assert.match(widok, /ustawienia\.zadania\.domyslnaGodzina/)
+  assert.match(widok, /domyslnePrzypomnienia\.piecMinut/)
+  assert.match(widok, /domyslnePrzypomnienia\.dzien/)
+})
+
+test('Nawigacja korzysta z centralnych zmiennych szerokości i wysokości menu', () => {
+  const css = readFileSync(
+    'src/aplikacja/layout/ukladAplikacji.css',
+    'utf8',
+  )
+
+  const magazyn = readFileSync(
+    'src/aplikacja/ustawienia/magazynUstawienAplikacji.ts',
+    'utf8',
+  )
+
+  assert.match(css, /--ui-menu-width/)
+  assert.match(css, /--ui-menu-button-height/)
+  assert.match(magazyn, /--ui-menu-width/)
+  assert.match(magazyn, /--ui-menu-button-height/)
+})

@@ -28,7 +28,13 @@ const kluczPrzypieciaPaneluJakosci = 'ultimatePomagier.panelJakosciPrzypiety'
 const kluczWysuwaniaPaneluJakosci = 'ultimatePomagier.panelJakosciWysuwanieZKrawedzi'
 const zdarzenieZmianyPreferencjiPaneluJakosci = 'ultimatePomagier:zmianaPreferencjiPaneluJakosci'
 
-type ZakladkaUstawien = 'OGOLNE' | 'WYGLAD' | 'PULPIT' | 'DOSTEPNOSC'
+type ZakladkaUstawien =
+  | 'OGOLNE'
+  | 'WYGLAD'
+  | 'NAWIGACJA'
+  | 'PULPIT'
+  | 'ZADANIA'
+  | 'DOSTEPNOSC'
 
 const etykietyPalet: Record<PaletaInterfejsu, string> = {
   DOMYSLNA: 'Domyślna',
@@ -99,7 +105,37 @@ export default function WidokUstawien() {
     }))
   }
 
-  function zmienPulpit<K extends keyof Omit<UstawieniaAplikacji['pulpit'], 'deadline'>>(
+  function zmienNawigacje<K extends keyof UstawieniaAplikacji['nawigacja']>(
+    pole: K,
+    wartosc: UstawieniaAplikacji['nawigacja'][K],
+  ) {
+    ustawRoboczeUstawienia((obecne) => ({
+      ...obecne,
+      nawigacja: {
+        ...obecne.nawigacja,
+        [pole]: wartosc,
+      },
+    }))
+  }
+
+  function zmienZadania<
+    K extends keyof Omit<UstawieniaAplikacji['zadania'], 'domyslnePrzypomnienia'>
+  >(
+    pole: K,
+    wartosc: UstawieniaAplikacji['zadania'][K],
+  ) {
+    ustawRoboczeUstawienia((obecne) => ({
+      ...obecne,
+      zadania: {
+        ...obecne.zadania,
+        [pole]: wartosc,
+      },
+    }))
+  }
+
+  function zmienPulpit<
+    K extends keyof Omit<UstawieniaAplikacji['pulpit'], 'deadline' | 'widoczneKafelki'>
+  >(
     pole: K,
     wartosc: UstawieniaAplikacji['pulpit'][K],
   ) {
@@ -197,12 +233,34 @@ export default function WidokUstawien() {
       }))
     }
 
+    if (aktywnaZakladka === 'NAWIGACJA') {
+      ustawRoboczeUstawienia((obecne) => ({
+        ...obecne,
+        nawigacja: { ...domyslneUstawieniaAplikacji.nawigacja },
+      }))
+    }
+
     if (aktywnaZakladka === 'PULPIT') {
       ustawRoboczeUstawienia((obecne) => ({
         ...obecne,
         pulpit: {
           ...domyslneUstawieniaAplikacji.pulpit,
+          widoczneKafelki: {
+            ...domyslneUstawieniaAplikacji.pulpit.widoczneKafelki,
+          },
           deadline: { ...domyslneUstawieniaAplikacji.pulpit.deadline },
+        },
+      }))
+    }
+
+    if (aktywnaZakladka === 'ZADANIA') {
+      ustawRoboczeUstawienia((obecne) => ({
+        ...obecne,
+        zadania: {
+          ...domyslneUstawieniaAplikacji.zadania,
+          domyslnePrzypomnienia: {
+            ...domyslneUstawieniaAplikacji.zadania.domyslnePrzypomnienia,
+          },
         },
       }))
     }
@@ -223,9 +281,19 @@ export default function WidokUstawien() {
     ustawRoboczeUstawienia({
       ...domyslneUstawieniaAplikacji,
       wyglad: { ...domyslneUstawieniaAplikacji.wyglad },
+      nawigacja: { ...domyslneUstawieniaAplikacji.nawigacja },
       pulpit: {
         ...domyslneUstawieniaAplikacji.pulpit,
+        widoczneKafelki: {
+          ...domyslneUstawieniaAplikacji.pulpit.widoczneKafelki,
+        },
         deadline: { ...domyslneUstawieniaAplikacji.pulpit.deadline },
+      },
+      zadania: {
+        ...domyslneUstawieniaAplikacji.zadania,
+        domyslnePrzypomnienia: {
+          ...domyslneUstawieniaAplikacji.zadania.domyslnePrzypomnienia,
+        },
       },
       dostepnosc: { ...domyslneUstawieniaAplikacji.dostepnosc },
     })
@@ -283,7 +351,9 @@ export default function WidokUstawien() {
         {([
           ['OGOLNE', 'Ogólne'],
           ['WYGLAD', 'Wygląd'],
+          ['NAWIGACJA', 'Nawigacja'],
           ['PULPIT', 'Pulpit'],
+          ['ZADANIA', 'Zadania'],
           ['DOSTEPNOSC', 'Dostępność'],
         ] as Array<[ZakladkaUstawien, string]>).map(([id, etykieta]) => (
           <button
@@ -340,7 +410,7 @@ export default function WidokUstawien() {
 
         <section className="ustawienia__karta">
           <h2>Konfiguracja systemowa</h2>
-          <p>Eksport obejmuje centralny model ustawień interfejsu, Pulpitu i dostępności.</p>
+          <p>Eksport obejmuje centralny model ustawień interfejsu, nawigacji, Pulpitu, zadań i dostępności.</p>
 
           <div className="ustawienia__akcje">
             <button type="button" onClick={eksportujUstawieniaSystemowe}>Eksportuj ustawienia JSON</button>
@@ -424,6 +494,47 @@ export default function WidokUstawien() {
         <PodgladUstawien />
       </>}
 
+      {aktywnaZakladka === 'NAWIGACJA' && <>
+        <fieldset className="ustawienia__globalne" disabled={!czyMozeEdytowacSystemowe}>
+          <section className="ustawienia__karta ustawienia__siatka">
+            <h2>Menu boczne</h2>
+
+            <label className="ustawienia__pole">
+              Szerokość menu (220–360 px)
+              <input
+                max="360"
+                min="220"
+                onChange={(zdarzenie) =>
+                  zmienNawigacje('szerokoscMenu', Number(zdarzenie.target.value))
+                }
+                step="10"
+                type="number"
+                value={roboczeUstawienia.nawigacja.szerokoscMenu}
+              />
+            </label>
+
+            <label className="ustawienia__pole">
+              Wielkość pozycji menu
+              <select
+                onChange={(zdarzenie) =>
+                  zmienNawigacje(
+                    'wysokoscPrzyciskuMenu',
+                    zdarzenie.target.value as UstawieniaAplikacji['nawigacja']['wysokoscPrzyciskuMenu'],
+                  )
+                }
+                value={roboczeUstawienia.nawigacja.wysokoscPrzyciskuMenu}
+              >
+                <option value="KOMPAKTOWA">Kompaktowa</option>
+                <option value="STANDARDOWA">Standardowa</option>
+                <option value="DUZA">Duża</option>
+              </select>
+            </label>
+          </section>
+        </fieldset>
+
+        <PodgladUstawien />
+      </>}
+
       {aktywnaZakladka === 'PULPIT' && <>
         <fieldset className="ustawienia__globalne" disabled={!czyMozeEdytowacSystemowe}>
           <section className="ustawienia__karta ustawienia__siatka">
@@ -438,6 +549,41 @@ export default function WidokUstawien() {
               Koniec dnia
               <input type="time" value={roboczeUstawienia.pulpit.koniecDnia} onChange={(zdarzenie) => zmienPulpit('koniecDnia', zdarzenie.target.value)} />
             </label>
+          </section>
+
+          <section className="ustawienia__karta">
+            <h2>Widoczne kafelki</h2>
+
+            {([
+              ['doZrobienia', 'Do zrobienia'],
+              ['pilne', 'Pilne'],
+              ['paczki', 'Paczki'],
+              ['blokady', 'Blokady'],
+              ['zakupy', 'Zakupy'],
+            ] as const).map(([id, etykieta]) => (
+              <label className="ustawienia__wiersz" key={id}>
+                <span>
+                  <strong>{etykieta}</strong>
+                  <small>Pokazuj kafelek w podsumowaniu Pulpitu.</small>
+                </span>
+                <input
+                  checked={roboczeUstawienia.pulpit.widoczneKafelki[id]}
+                  onChange={(zdarzenie) =>
+                    ustawRoboczeUstawienia((obecne) => ({
+                      ...obecne,
+                      pulpit: {
+                        ...obecne.pulpit,
+                        widoczneKafelki: {
+                          ...obecne.pulpit.widoczneKafelki,
+                          [id]: zdarzenie.target.checked,
+                        },
+                      },
+                    }))
+                  }
+                  type="checkbox"
+                />
+              </label>
+            ))}
           </section>
 
           <section className="ustawienia__karta ustawienia__siatka">
@@ -472,6 +618,78 @@ export default function WidokUstawien() {
               <span><strong>Płomień ASAP</strong><small>Pokazuje animowany płomień nad markerem zadania ASAP.</small></span>
               <input checked={roboczeUstawienia.pulpit.deadline.pokazPlomienAsap} onChange={(zdarzenie) => zmienDeadline('pokazPlomienAsap', zdarzenie.target.checked)} type="checkbox" />
             </label>
+          </section>
+        </fieldset>
+
+        <PodgladUstawien />
+      </>}
+
+      {aktywnaZakladka === 'ZADANIA' && <>
+        <fieldset className="ustawienia__globalne" disabled={!czyMozeEdytowacSystemowe}>
+          <section className="ustawienia__karta ustawienia__siatka">
+            <h2>Nowe zadania</h2>
+
+            <label className="ustawienia__pole">
+              Domyślny priorytet
+              <select
+                onChange={(zdarzenie) =>
+                  zmienZadania(
+                    'domyslnyPriorytet',
+                    zdarzenie.target.value as UstawieniaAplikacji['zadania']['domyslnyPriorytet'],
+                  )
+                }
+                value={roboczeUstawienia.zadania.domyslnyPriorytet}
+              >
+                <option value="ZWYKLE">Zwykłe</option>
+                <option value="PILNE">Pilne</option>
+                <option value="ASAP">ASAP</option>
+              </select>
+            </label>
+
+            <label className="ustawienia__pole">
+              Domyślna godzina
+              <input
+                onChange={(zdarzenie) =>
+                  zmienZadania('domyslnaGodzina', zdarzenie.target.value)
+                }
+                type="time"
+                value={roboczeUstawienia.zadania.domyslnaGodzina}
+              />
+            </label>
+          </section>
+
+          <section className="ustawienia__karta">
+            <h2>Domyślne przypomnienia</h2>
+
+            {([
+              ['piecMinut', '5 minut przed'],
+              ['pietnascieMinut', '15 minut przed'],
+              ['godzina', '1 godzinę przed'],
+              ['dzien', '1 dzień przed'],
+            ] as const).map(([id, etykieta]) => (
+              <label className="ustawienia__wiersz" key={id}>
+                <span>
+                  <strong>{etykieta}</strong>
+                  <small>Dodaj automatycznie do nowego zadania.</small>
+                </span>
+                <input
+                  checked={roboczeUstawienia.zadania.domyslnePrzypomnienia[id]}
+                  onChange={(zdarzenie) =>
+                    ustawRoboczeUstawienia((obecne) => ({
+                      ...obecne,
+                      zadania: {
+                        ...obecne.zadania,
+                        domyslnePrzypomnienia: {
+                          ...obecne.zadania.domyslnePrzypomnienia,
+                          [id]: zdarzenie.target.checked,
+                        },
+                      },
+                    }))
+                  }
+                  type="checkbox"
+                />
+              </label>
+            ))}
           </section>
         </fieldset>
 

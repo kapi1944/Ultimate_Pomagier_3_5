@@ -36,15 +36,36 @@ export type UstawieniaAplikacji = {
     czasPrzejsciaMs: number
     skalaHover: number
   }
+  nawigacja: {
+    szerokoscMenu: number
+    wysokoscPrzyciskuMenu: 'KOMPAKTOWA' | 'STANDARDOWA' | 'DUZA'
+  }
   pulpit: {
     poczatekDnia: string
     koniecDnia: string
+    widoczneKafelki: {
+      doZrobienia: boolean
+      pilne: boolean
+      paczki: boolean
+      blokady: boolean
+      zakupy: boolean
+    }
     deadline: {
       rozmiarRombu: number
       gruboscObramowania: number
       rozmiarKropki: number
       poswiata: PoziomPoswiaty
       pokazPlomienAsap: boolean
+    }
+  }
+  zadania: {
+    domyslnyPriorytet: 'ZWYKLE' | 'PILNE' | 'ASAP'
+    domyslnaGodzina: string
+    domyslnePrzypomnienia: {
+      piecMinut: boolean
+      pietnascieMinut: boolean
+      godzina: boolean
+      dzien: boolean
     }
   }
   dostepnosc: {
@@ -62,15 +83,36 @@ export const domyslneUstawieniaAplikacji: UstawieniaAplikacji = {
     czasPrzejsciaMs: 150,
     skalaHover: 1,
   },
+  nawigacja: {
+    szerokoscMenu: 280,
+    wysokoscPrzyciskuMenu: 'STANDARDOWA',
+  },
   pulpit: {
     poczatekDnia: '07:45',
     koniecDnia: '16:00',
+    widoczneKafelki: {
+      doZrobienia: true,
+      pilne: true,
+      paczki: true,
+      blokady: true,
+      zakupy: true,
+    },
     deadline: {
       rozmiarRombu: 28,
       gruboscObramowania: 5,
       rozmiarKropki: 16,
       poswiata: 'STANDARDOWA',
       pokazPlomienAsap: true,
+    },
+  },
+  zadania: {
+    domyslnyPriorytet: 'ZWYKLE',
+    domyslnaGodzina: '',
+    domyslnePrzypomnienia: {
+      piecMinut: false,
+      pietnascieMinut: false,
+      godzina: false,
+      dzien: false,
     },
   },
   dostepnosc: {
@@ -118,8 +160,12 @@ function pobierzWartoscZListy<T extends readonly string[]>(
 export function normalizujUstawieniaAplikacji(dane: unknown): UstawieniaAplikacji {
   const korzen = jakoObiekt(dane)
   const wyglad = jakoObiekt(korzen.wyglad)
+  const nawigacja = jakoObiekt(korzen.nawigacja)
   const pulpit = jakoObiekt(korzen.pulpit)
+  const widoczneKafelki = jakoObiekt(pulpit.widoczneKafelki)
   const deadline = jakoObiekt(pulpit.deadline)
+  const zadania = jakoObiekt(korzen.zadania)
+  const domyslnePrzypomnienia = jakoObiekt(zadania.domyslnePrzypomnienia)
   const dostepnosc = jakoObiekt(korzen.dostepnosc)
 
   let poczatekDnia = czyGodzina(pulpit.poczatekDnia)
@@ -173,9 +219,39 @@ export function normalizujUstawieniaAplikacji(dane: unknown): UstawieniaAplikacj
         domyslneUstawieniaAplikacji.wyglad.skalaHover,
       ),
     },
+    nawigacja: {
+      szerokoscMenu: ograniczLiczbe(
+        nawigacja.szerokoscMenu,
+        220,
+        360,
+        domyslneUstawieniaAplikacji.nawigacja.szerokoscMenu,
+      ),
+      wysokoscPrzyciskuMenu: pobierzWartoscZListy(
+        nawigacja.wysokoscPrzyciskuMenu,
+        ['KOMPAKTOWA', 'STANDARDOWA', 'DUZA'] as const,
+        domyslneUstawieniaAplikacji.nawigacja.wysokoscPrzyciskuMenu,
+      ),
+    },
     pulpit: {
       poczatekDnia,
       koniecDnia,
+      widoczneKafelki: {
+        doZrobienia: typeof widoczneKafelki.doZrobienia === 'boolean'
+          ? widoczneKafelki.doZrobienia
+          : domyslneUstawieniaAplikacji.pulpit.widoczneKafelki.doZrobienia,
+        pilne: typeof widoczneKafelki.pilne === 'boolean'
+          ? widoczneKafelki.pilne
+          : domyslneUstawieniaAplikacji.pulpit.widoczneKafelki.pilne,
+        paczki: typeof widoczneKafelki.paczki === 'boolean'
+          ? widoczneKafelki.paczki
+          : domyslneUstawieniaAplikacji.pulpit.widoczneKafelki.paczki,
+        blokady: typeof widoczneKafelki.blokady === 'boolean'
+          ? widoczneKafelki.blokady
+          : domyslneUstawieniaAplikacji.pulpit.widoczneKafelki.blokady,
+        zakupy: typeof widoczneKafelki.zakupy === 'boolean'
+          ? widoczneKafelki.zakupy
+          : domyslneUstawieniaAplikacji.pulpit.widoczneKafelki.zakupy,
+      },
       deadline: {
         rozmiarRombu: ograniczLiczbe(
           deadline.rozmiarRombu,
@@ -203,6 +279,31 @@ export function normalizujUstawieniaAplikacji(dane: unknown): UstawieniaAplikacj
         pokazPlomienAsap: typeof deadline.pokazPlomienAsap === 'boolean'
           ? deadline.pokazPlomienAsap
           : domyslneUstawieniaAplikacji.pulpit.deadline.pokazPlomienAsap,
+      },
+    },
+    zadania: {
+      domyslnyPriorytet: pobierzWartoscZListy(
+        zadania.domyslnyPriorytet,
+        ['ZWYKLE', 'PILNE', 'ASAP'] as const,
+        domyslneUstawieniaAplikacji.zadania.domyslnyPriorytet,
+      ),
+      domyslnaGodzina:
+        zadania.domyslnaGodzina === '' || czyGodzina(zadania.domyslnaGodzina)
+          ? String(zadania.domyslnaGodzina ?? '')
+          : domyslneUstawieniaAplikacji.zadania.domyslnaGodzina,
+      domyslnePrzypomnienia: {
+        piecMinut: typeof domyslnePrzypomnienia.piecMinut === 'boolean'
+          ? domyslnePrzypomnienia.piecMinut
+          : domyslneUstawieniaAplikacji.zadania.domyslnePrzypomnienia.piecMinut,
+        pietnascieMinut: typeof domyslnePrzypomnienia.pietnascieMinut === 'boolean'
+          ? domyslnePrzypomnienia.pietnascieMinut
+          : domyslneUstawieniaAplikacji.zadania.domyslnePrzypomnienia.pietnascieMinut,
+        godzina: typeof domyslnePrzypomnienia.godzina === 'boolean'
+          ? domyslnePrzypomnienia.godzina
+          : domyslneUstawieniaAplikacji.zadania.domyslnePrzypomnienia.godzina,
+        dzien: typeof domyslnePrzypomnienia.dzien === 'boolean'
+          ? domyslnePrzypomnienia.dzien
+          : domyslneUstawieniaAplikacji.zadania.domyslnePrzypomnienia.dzien,
       },
     },
     dostepnosc: {

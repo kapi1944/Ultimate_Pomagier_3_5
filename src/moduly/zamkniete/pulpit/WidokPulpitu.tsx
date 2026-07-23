@@ -60,16 +60,54 @@ function utworzIdPrzypomnienia() {
   return 'przypomnienie-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)
 }
 
-function pustyFormularz(data: string, uzytkownikId: string): FormularzZadania {
+function pustyFormularz(
+  data: string,
+  uzytkownikId: string,
+  ustawienia = pobierzUstawieniaAplikacji(),
+): FormularzZadania {
+  const przypomnienia: PrzypomnienieZadania[] = []
+
+  if (ustawienia.zadania.domyslnePrzypomnienia.piecMinut) {
+    przypomnienia.push({
+      id: utworzIdPrzypomnienia(),
+      wartosc: 5,
+      jednostka: 'MINUTY',
+    })
+  }
+
+  if (ustawienia.zadania.domyslnePrzypomnienia.pietnascieMinut) {
+    przypomnienia.push({
+      id: utworzIdPrzypomnienia(),
+      wartosc: 15,
+      jednostka: 'MINUTY',
+    })
+  }
+
+  if (ustawienia.zadania.domyslnePrzypomnienia.godzina) {
+    przypomnienia.push({
+      id: utworzIdPrzypomnienia(),
+      wartosc: 1,
+      jednostka: 'GODZINY',
+    })
+  }
+
+  if (ustawienia.zadania.domyslnePrzypomnienia.dzien) {
+    przypomnienia.push({
+      id: utworzIdPrzypomnienia(),
+      wartosc: 1,
+      jednostka: 'DNI',
+    })
+  }
+
   return {
     tytul: '',
     data,
-    godzina: '',
-    priorytet: 'ZWYKLE',
+    godzina: ustawienia.zadania.domyslnaGodzina,
+    priorytet: ustawienia.zadania.domyslnyPriorytet,
     zadaniodawcaId: uzytkownikId,
     zadaniobiorcaId: '',
     szkolenieId: '',
-    przypomnienia: [],
+    przypomnienia,
   }
 }
 
@@ -333,6 +371,7 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
   const [nowyZakup, ustawNowyZakup] = useState<FormularzZakupu>(pustyFormularzZakupu)
   const uzytkownicy = pobierzUzytkownikow()
   const ustawieniaAplikacji = pobierzUstawieniaAplikacji()
+  const widoczneKafelki = ustawieniaAplikacji.pulpit.widoczneKafelki
   const zakresDniaPracy: ZakresDniaPracy = {
     poczatek: ustawieniaAplikacji.pulpit.poczatekDnia,
     koniec: ustawieniaAplikacji.pulpit.koniecDnia,
@@ -605,11 +644,81 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
     </header>
 
     <section aria-label="Podsumowanie" className="pulpit-kafelki">
-      <button className={filtr === 'DO_ZROBIENIA' ? 'pulpit-kafelek pulpit-kafelek--aktywny' : 'pulpit-kafelek'} onClick={() => przelaczFiltr('DO_ZROBIENIA')} type="button"><strong>{liczniki.doZrobienia}</strong><span>DO ZROBIENIA</span><small>na wybrany dzień</small></button>
-      <button className={filtr === 'PILNE' ? 'pulpit-kafelek pulpit-kafelek--aktywny' : 'pulpit-kafelek'} onClick={() => przelaczFiltr('PILNE')} type="button"><strong>{liczniki.pilne}</strong><span>PILNE</span><small>{pilne.filter((zadanie) => czyZadanieOpoznione(zadanie, teraz)).length} opóźnione</small></button>
-      <button className={filtr === 'PACZKI' ? 'pulpit-kafelek pulpit-kafelek--aktywny' : 'pulpit-kafelek'} onClick={() => przelaczFiltr('PACZKI')} type="button"><strong>{liczniki.paczki}</strong><span>PACZKI</span><small>w ciągu {liczbaDniWidocznosciPaczki} dni</small></button>
-      <button className={filtr === 'BLOKADY' ? 'pulpit-kafelek pulpit-kafelek--aktywny' : 'pulpit-kafelek'} onClick={() => przelaczFiltr('BLOKADY')} type="button"><strong>{liczniki.blokady}</strong><span>BLOKADY</span><small>wymagają uwagi</small></button>
-      <button aria-label={'Zakupy: ' + liczbaAktywnychZapotrzebowanZakupowych + ' ' + odmienRzeczDoZakupu(liczbaAktywnychZapotrzebowanZakupowych)} className="pulpit-kafelek pulpit-kafelek--zakupy" onClick={() => ustawCzyWykazZakupowOtwarty(true)} type="button"><span className="pulpit-kafelek__naglowek"><IkonaZakupow />ZAKUPY</span><strong>{pobierzTekstLicznikaZakupow(liczbaAktywnychZapotrzebowanZakupowych)}</strong><small>{odmienRzeczDoZakupu(liczbaAktywnychZapotrzebowanZakupowych)}</small><em>{'+ Zg\u{142}o\u{15b} zakup'}</em></button>
+      {widoczneKafelki.doZrobienia && (
+        <button
+          className={filtr === 'DO_ZROBIENIA' ? 'pulpit-kafelek pulpit-kafelek--aktywny' : 'pulpit-kafelek'}
+          onClick={() => przelaczFiltr('DO_ZROBIENIA')}
+          type="button"
+        >
+          <strong>{liczniki.doZrobienia}</strong>
+          <span>DO ZROBIENIA</span>
+          <small>na wybrany dzień</small>
+        </button>
+      )}
+
+      {widoczneKafelki.pilne && (
+        <button
+          className={filtr === 'PILNE' ? 'pulpit-kafelek pulpit-kafelek--aktywny' : 'pulpit-kafelek'}
+          onClick={() => przelaczFiltr('PILNE')}
+          type="button"
+        >
+          <strong>{liczniki.pilne}</strong>
+          <span>PILNE</span>
+          <small>
+            {pilne.filter((zadanie) => czyZadanieOpoznione(zadanie, teraz)).length} opóźnione
+          </small>
+        </button>
+      )}
+
+      {widoczneKafelki.paczki && (
+        <button
+          className={filtr === 'PACZKI' ? 'pulpit-kafelek pulpit-kafelek--aktywny' : 'pulpit-kafelek'}
+          onClick={() => przelaczFiltr('PACZKI')}
+          type="button"
+        >
+          <strong>{liczniki.paczki}</strong>
+          <span>PACZKI</span>
+          <small>w ciągu {liczbaDniWidocznosciPaczki} dni</small>
+        </button>
+      )}
+
+      {widoczneKafelki.blokady && (
+        <button
+          className={filtr === 'BLOKADY' ? 'pulpit-kafelek pulpit-kafelek--aktywny' : 'pulpit-kafelek'}
+          onClick={() => przelaczFiltr('BLOKADY')}
+          type="button"
+        >
+          <strong>{liczniki.blokady}</strong>
+          <span>BLOKADY</span>
+          <small>wymagają uwagi</small>
+        </button>
+      )}
+
+      {widoczneKafelki.zakupy && (
+        <button
+          aria-label={
+            'Zakupy: '
+            + liczbaAktywnychZapotrzebowanZakupowych
+            + ' '
+            + odmienRzeczDoZakupu(liczbaAktywnychZapotrzebowanZakupowych)
+          }
+          className="pulpit-kafelek pulpit-kafelek--zakupy"
+          onClick={() => ustawCzyWykazZakupowOtwarty(true)}
+          type="button"
+        >
+          <span className="pulpit-kafelek__naglowek">
+            <IkonaZakupow />
+            ZAKUPY
+          </span>
+          <strong>
+            {pobierzTekstLicznikaZakupow(liczbaAktywnychZapotrzebowanZakupowych)}
+          </strong>
+          <small>
+            {odmienRzeczDoZakupu(liczbaAktywnychZapotrzebowanZakupowych)}
+          </small>
+          <em>+ Zgłoś zakup</em>
+        </button>
+      )}
     </section>
 
     {pokazZadania && <section className="pulpit-sekcja" aria-labelledby="plan-dnia">
