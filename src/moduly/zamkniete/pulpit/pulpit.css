@@ -32,12 +32,38 @@
 }
 
 .pulpit-os-czasu__linia {
+  position: relative;
   z-index: 12;
+  height: 12px;
+  background: transparent;
+}
+
+.pulpit-os-czasu__odcinek {
+  position: absolute;
+  z-index: 0;
+  border-radius: 999px;
+}
+
+.pulpit-os-czasu__odcinek--przed-praca,
+.pulpit-os-czasu__odcinek--po-pracy {
+  top: 3px;
+  height: 6px;
+  background: #102a19;
+}
+
+.pulpit-os-czasu__odcinek--praca {
+  top: 0;
+  height: 12px;
+  background: #2f7b46;
+  box-shadow: 0 0 8px rgba(74, 222, 128, .22);
 }
 
 .pulpit-os-czasu__postep {
-  position: relative;
+  position: absolute;
   z-index: 1;
+  top: 4px;
+  left: 0;
+  height: 4px;
 }
 
 .pulpit-os-czasu__wskaznik {
@@ -87,6 +113,28 @@
 .pulpit-os-czasu__etykiety {
   position: relative;
   z-index: 2;
+  height: 40px;
+  margin-top: 8px;
+  color: #9ccfab;
+  font-size: .68rem;
+}
+
+.pulpit-os-czasu__etykieta,
+.pulpit-os-czasu__etykieta-pracy {
+  position: absolute;
+  width: max-content;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.pulpit-os-czasu__etykieta--lewo { transform: translateX(0); }
+.pulpit-os-czasu__etykieta--prawo { transform: translateX(-100%); }
+
+.pulpit-os-czasu__etykieta-pracy {
+  top: 18px;
+  color: #b9d7c2;
+  font-size: .64rem;
+  font-weight: 700;
 }
 
 .pulpit-os-czasu__zadania {
@@ -113,7 +161,6 @@
   width: 2px;
   height: 48px;
   background: #fb923c;
-  box-shadow: 0 0 7px rgba(251, 146, 60, .5);
   content: '';
 }
 
@@ -150,8 +197,7 @@
   background: transparent;
   transform: rotate(45deg);
   box-shadow:
-    0 0 0 2px rgba(255, 247, 237, .9),
-    0 0 12px var(--kolor-zadaniobiorcy);
+    0 0 0 2px rgba(255, 247, 237, .9);
 }
 
 .pulpit-deadline__romb span {
@@ -161,8 +207,41 @@
   border-radius: 50%;
   background: var(--kolor-zadaniodawcy);
   box-shadow:
-    0 0 0 1px rgba(0, 0, 0, .65),
-    0 0 8px var(--kolor-zadaniodawcy);
+    0 0 0 1px rgba(0, 0, 0, .65);
+}
+
+.pulpit-deadline--pilne::before {
+  box-shadow: 0 0 8px var(--kolor-zadaniobiorcy);
+}
+
+.pulpit-deadline--pilne .pulpit-deadline__romb {
+  box-shadow:
+    0 0 0 2px rgba(255, 247, 237, .9),
+    0 0 calc(var(--pulpit-deadline-glow) + 4px) var(--kolor-zadaniobiorcy);
+}
+
+.pulpit-deadline--asap::before {
+  box-shadow: 0 0 14px var(--kolor-zadaniobiorcy);
+}
+
+.pulpit-deadline--asap .pulpit-deadline__romb {
+  box-shadow:
+    0 0 0 2px rgba(255, 247, 237, .9),
+    0 0 calc(var(--pulpit-deadline-glow) + 12px) var(--kolor-zadaniobiorcy);
+}
+
+.pulpit-deadline--pilne:hover .pulpit-deadline__romb,
+.pulpit-deadline--pilne:focus-within .pulpit-deadline__romb {
+  box-shadow:
+    0 0 0 2px rgba(255, 247, 237, .9),
+    0 0 calc(var(--pulpit-deadline-glow) + 8px) var(--kolor-zadaniobiorcy);
+}
+
+.pulpit-deadline--asap:hover .pulpit-deadline__romb,
+.pulpit-deadline--asap:focus-within .pulpit-deadline__romb {
+  box-shadow:
+    0 0 0 2px rgba(255, 247, 237, .9),
+    0 0 calc(var(--pulpit-deadline-glow) + 16px) var(--kolor-zadaniobiorcy);
 }
 
 .pulpit-deadline__etykieta {
@@ -334,6 +413,10 @@
   .pulpit-deadline__etykieta { max-width: 120px; }
 }
 
+@media (max-width: 720px) {
+  .pulpit-os-czasu__etykieta-pracy { display: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pulpit-deadline__plomien { animation: none; }
   .pulpit-deadline__tooltip { transition: none; }
@@ -496,8 +579,7 @@
   border-color: var(--kolor-zadaniobiorcy);
   background: transparent;
   box-shadow:
-    0 0 0 2px rgba(255, 247, 237, .9),
-    0 0 var(--pulpit-deadline-glow) var(--kolor-zadaniobiorcy);
+    0 0 0 2px rgba(255, 247, 237, .9);
 }
 
 .pulpit-deadline__romb span {

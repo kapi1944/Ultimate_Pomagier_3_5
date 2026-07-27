@@ -8,7 +8,7 @@ export const domyslnyZakresDniaPracy: ZakresDniaPracy = {
   koniec: '16:00',
 }
 
-export const etykietyOsiCzasu = ['07:45', '09:00', '10:30', '12:00', '13:30', '15:00', '16:00']
+export const etykietyOsiCzasu = ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00', '23:59']
 
 export type StanWskaznikaCzasu = {
   etykieta: 'PREFAJRANT' | 'TERAZ' | 'FAJRANT'
@@ -25,11 +25,8 @@ function minutyZGodziny(godzina: string) {
   return godziny * 60 + minuty
 }
 
-function formatujMinuty(minuty: number) {
-  const bezpieczneMinuty = Math.max(0, Math.min(23 * 60 + 59, Math.round(minuty)))
-  const godzina = Math.floor(bezpieczneMinuty / 60)
-  const minuta = bezpieczneMinuty % 60
-  return String(godzina).padStart(2, '0') + ':' + String(minuta).padStart(2, '0')
+function pozycjaMinutNaOsi(minuty: number) {
+  return Math.min(100, Math.max(0, (minuty / (24 * 60)) * 100))
 }
 
 function normalizujZakres(zakres: ZakresDniaPracy = domyslnyZakresDniaPracy) {
@@ -48,15 +45,10 @@ function normalizujZakres(zakres: ZakresDniaPracy = domyslnyZakresDniaPracy) {
 
 export function obliczPostepCzasuDnia(
   teraz: Date,
-  zakres: ZakresDniaPracy = domyslnyZakresDniaPracy,
+  _zakres: ZakresDniaPracy = domyslnyZakresDniaPracy,
 ) {
-  const minuty = pobierzMinuty(teraz)
-  const { poczatek, koniec } = normalizujZakres(zakres)
-
-  if (minuty <= poczatek) return 0
-  if (minuty >= koniec) return 100
-
-  return ((minuty - poczatek) / (koniec - poczatek)) * 100
+  void _zakres
+  return pozycjaMinutNaOsi(pobierzMinuty(teraz))
 }
 
 export function pobierzStanWskaznikaCzasu(
@@ -65,20 +57,22 @@ export function pobierzStanWskaznikaCzasu(
 ): StanWskaznikaCzasu {
   const minuty = pobierzMinuty(teraz)
   const { poczatek, koniec } = normalizujZakres(zakres)
+  const pozycja = obliczPostepCzasuDnia(teraz, zakres)
+  const wyrownanieEtykiety = pozycja <= 5
+    ? 'POCZATEK'
+    : pozycja >= 95
+      ? 'KONIEC'
+      : 'SRODEK'
 
   if (minuty < poczatek) {
-    return { etykieta: 'PREFAJRANT', pozycja: 0, wyrownanieEtykiety: 'POCZATEK' }
+    return { etykieta: 'PREFAJRANT', pozycja, wyrownanieEtykiety }
   }
 
   if (minuty >= koniec) {
-    return { etykieta: 'FAJRANT', pozycja: 100, wyrownanieEtykiety: 'KONIEC' }
+    return { etykieta: 'FAJRANT', pozycja, wyrownanieEtykiety }
   }
 
-  return {
-    etykieta: 'TERAZ',
-    pozycja: obliczPostepCzasuDnia(teraz, zakres),
-    wyrownanieEtykiety: 'SRODEK',
-  }
+  return { etykieta: 'TERAZ', pozycja, wyrownanieEtykiety }
 }
 
 export function czyGodzinaMiesciSieWDniuPracy(
@@ -93,36 +87,25 @@ export function czyGodzinaMiesciSieWDniuPracy(
 
 export function pozycjaGodzinyNaOsi(
   godzina: string,
+  _zakres: ZakresDniaPracy = domyslnyZakresDniaPracy,
+) {
+  void _zakres
+  return pozycjaMinutNaOsi(minutyZGodziny(godzina))
+}
+
+export function pobierzGraniceDniaPracyNaOsi(
   zakres: ZakresDniaPracy = domyslnyZakresDniaPracy,
 ) {
-  const wartosc = minutyZGodziny(godzina)
   const { poczatek, koniec } = normalizujZakres(zakres)
-
-  return Math.min(
-    100,
-    Math.max(0, ((wartosc - poczatek) / (koniec - poczatek)) * 100),
-  )
+  return {
+    poczatek: pozycjaMinutNaOsi(poczatek),
+    koniec: pozycjaMinutNaOsi(koniec),
+  }
 }
 
 export function pobierzEtykietyOsiCzasu(
-  zakres: ZakresDniaPracy = domyslnyZakresDniaPracy,
+  _zakres: ZakresDniaPracy = domyslnyZakresDniaPracy,
 ) {
-  if (
-    zakres.poczatek === domyslnyZakresDniaPracy.poczatek
-    && zakres.koniec === domyslnyZakresDniaPracy.koniec
-  ) {
-    return [...etykietyOsiCzasu]
-  }
-
-  const { poczatek, koniec } = normalizujZakres(zakres)
-  const liczbaPrzedzialow = 6
-
-  return Array.from({ length: liczbaPrzedzialow + 1 }, (_, indeks) => {
-    if (indeks === 0) return formatujMinuty(poczatek)
-    if (indeks === liczbaPrzedzialow) return formatujMinuty(koniec)
-
-    const surowe = poczatek + ((koniec - poczatek) * indeks) / liczbaPrzedzialow
-    const zaokraglone = Math.round(surowe / 5) * 5
-    return formatujMinuty(zaokraglone)
-  })
+  void _zakres
+  return [...etykietyOsiCzasu]
 }

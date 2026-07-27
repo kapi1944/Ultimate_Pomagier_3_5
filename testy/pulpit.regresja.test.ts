@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
-import { obliczPostepCzasuDnia, pobierzEtykietyOsiCzasu, pobierzStanWskaznikaCzasu, pozycjaGodzinyNaOsi } from '../src/moduly/zamkniete/pulpit/logika/czasDnia.ts'
+import { obliczPostepCzasuDnia, pobierzEtykietyOsiCzasu, pobierzGraniceDniaPracyNaOsi, pobierzStanWskaznikaCzasu, pozycjaGodzinyNaOsi } from '../src/moduly/zamkniete/pulpit/logika/czasDnia.ts'
 import { domyslneUstawieniaAplikacji, normalizujUstawieniaAplikacji } from '../src/aplikacja/ustawienia/modelUstawienAplikacji.ts'
 import { eksportujUstawieniaAplikacji, importujUstawieniaAplikacji, pobierzUstawieniaAplikacji, zapiszUstawieniaAplikacji } from '../src/aplikacja/ustawienia/magazynUstawienAplikacji.ts'
 import { czyMoznaZmienicKontekstPulpitu } from '../src/moduly/zamkniete/pulpit/logika/kontekstPulpitu.ts'
@@ -23,12 +23,11 @@ test('tylko Architekt może zmieniać kontekst Pulpitu', () => {
   assert.equal(czyMoznaZmienicKontekstPulpitu('OPIEKUN'), false)
 })
 
-test('postęp czasu dnia obejmuje dokładnie zakres 07:45–16:00', () => {
-  assert.equal(obliczPostepCzasuDnia(new Date('2026-07-22T07:44:00')), 0)
-  assert.equal(obliczPostepCzasuDnia(new Date('2026-07-22T07:45:00')), 0)
-  assert.equal(obliczPostepCzasuDnia(new Date('2026-07-22T11:52:30')), 50)
-  assert.equal(obliczPostepCzasuDnia(new Date('2026-07-22T16:00:00')), 100)
-  assert.equal(obliczPostepCzasuDnia(new Date('2026-07-22T18:00:00')), 100)
+test('postęp czasu dnia obejmuje pełną dobę', () => {
+  assert.equal(obliczPostepCzasuDnia(new Date('2026-07-22T00:00:00')), 0)
+  assert.equal(obliczPostepCzasuDnia(new Date('2026-07-22T12:00:00')), 50)
+  assert.equal(obliczPostepCzasuDnia(new Date('2026-07-22T18:00:00')), 75)
+  assert.ok(obliczPostepCzasuDnia(new Date('2026-07-22T23:59:00')) > 99.9)
 })
 
 test('status zadania rozróżnia opóźnione, wykonane i zadanie bez godziny', () => {
@@ -77,8 +76,8 @@ test('liczniki kafelków wynikają z aktualnych zadań i paczek', () => {
 test('wskaźnik czasu pokazuje PREFAJRANT o 07:44', () => {
   assert.deepEqual(pobierzStanWskaznikaCzasu(new Date('2026-07-22T07:44:00')), {
     etykieta: 'PREFAJRANT',
-    pozycja: 0,
-    wyrownanieEtykiety: 'POCZATEK',
+    pozycja: 32.22222222222222,
+    wyrownanieEtykiety: 'SRODEK',
   })
 })
 
@@ -90,17 +89,17 @@ test('wskaźnik czasu pokazuje TERAZ od 07:45 do 15:59', () => {
 test('wskaźnik czasu pokazuje FAJRANT od 16:00', () => {
   assert.deepEqual(pobierzStanWskaznikaCzasu(new Date('2026-07-22T16:00:00')), {
     etykieta: 'FAJRANT',
-    pozycja: 100,
-    wyrownanieEtykiety: 'KONIEC',
+    pozycja: 66.66666666666666,
+    wyrownanieEtykiety: 'SRODEK',
   })
 })
 
-test('etykieta czasu jest przypięta do wnętrza lewej i prawej krawędzi osi', () => {
-  const lewa = pobierzStanWskaznikaCzasu(new Date('2026-07-22T07:30:00'))
-  const prawa = pobierzStanWskaznikaCzasu(new Date('2026-07-22T17:00:00'))
+test('etykieta czasu jest przypięta do wnętrza lewej i prawej krawędzi pełnej osi', () => {
+  const lewa = pobierzStanWskaznikaCzasu(new Date('2026-07-22T00:00:00'))
+  const prawa = pobierzStanWskaznikaCzasu(new Date('2026-07-22T23:59:00'))
   assert.equal(lewa.pozycja, 0)
   assert.equal(lewa.wyrownanieEtykiety, 'POCZATEK')
-  assert.equal(prawa.pozycja, 100)
+  assert.ok(prawa.pozycja > 99.9)
   assert.equal(prawa.wyrownanieEtykiety, 'KONIEC')
 })
 
@@ -113,10 +112,13 @@ test('ASAP jest sortowane przed wszystkimi pozostałymi priorytetami', () => {
   assert.deepEqual(posortowane.map((pozycja) => pozycja.id), ['asap', 'pilne', 'zwykle'])
 })
 
-test('deadline trafia we właściwe miejsce osi czasu', () => {
-  assert.equal(pozycjaGodzinyNaOsi('07:45'), 0)
-  assert.equal(pozycjaGodzinyNaOsi('16:00'), 100)
-  assert.ok(Math.abs(pozycjaGodzinyNaOsi('12:00') - 51.515151515151516) < 0.000001)
+test('deadline trafia we właściwe miejsce pełnej osi czasu', () => {
+  const zakresPracy = { poczatek: '07:45', koniec: '16:00' }
+  assert.equal(pozycjaGodzinyNaOsi('00:00'), 0)
+  assert.equal(pozycjaGodzinyNaOsi('12:00'), 50)
+  assert.equal(pozycjaGodzinyNaOsi('18:00'), 75)
+  assert.ok(pozycjaGodzinyNaOsi('23:59') > 99.9)
+  assert.equal(pozycjaGodzinyNaOsi('13:52', zakresPracy), (13 * 60 + 52) / 1440 * 100)
 })
 
 test('zadanie bez godziny nie tworzy markera deadline', () => {
@@ -442,22 +444,40 @@ test('marker deadline rozróżnia kolorem Zadaniodawcę i Zadaniobiorcę', () =>
   assert.match(css, /height:\s*16px/)
 })
 
+test('marker deadline dodaje glow wyłącznie dla Pilne i mocniej dla ASAP', () => {
+  const widok = readFileSync('src/moduly/zamkniete/pulpit/WidokPulpitu.tsx', 'utf8')
+  const css = readFileSync('src/moduly/zamkniete/pulpit/pulpit.css', 'utf8')
 
-test('zakres dnia pracy może zostać zmieniony bez psucia domyślnego 07:45–16:00', () => {
+  assert.match(widok, /pulpit-deadline--pilne/)
+  assert.match(widok, /pulpit-deadline--asap/)
+  assert.doesNotMatch(widok, /pulpit-deadline--zwykle/)
+  assert.match(css, /\.pulpit-deadline--pilne \.pulpit-deadline__romb/)
+  assert.match(css, /calc\(var\(--pulpit-deadline-glow\) \+ 4px\)/)
+  assert.match(css, /\.pulpit-deadline--asap \.pulpit-deadline__romb/)
+  assert.match(css, /calc\(var\(--pulpit-deadline-glow\) \+ 12px\)/)
+})
+
+
+test('zakres dnia pracy zmienia granice wyróżnionego segmentu, a nie długość osi', () => {
   const zakres = { poczatek: '08:00', koniec: '17:00' }
 
-  assert.equal(obliczPostepCzasuDnia(new Date('2026-07-22T08:00:00'), zakres), 0)
-  assert.equal(obliczPostepCzasuDnia(new Date('2026-07-22T12:30:00'), zakres), 50)
-  assert.equal(obliczPostepCzasuDnia(new Date('2026-07-22T17:00:00'), zakres), 100)
+  assert.ok(Math.abs(obliczPostepCzasuDnia(new Date('2026-07-22T08:00:00'), zakres) - 100 / 3) < 0.000001)
+  assert.ok(Math.abs(obliczPostepCzasuDnia(new Date('2026-07-22T12:30:00'), zakres) - 52.083333333333336) < 0.000001)
+  assert.ok(Math.abs(obliczPostepCzasuDnia(new Date('2026-07-22T17:00:00'), zakres) - 70.83333333333333) < 0.000001)
 
   assert.equal(pobierzStanWskaznikaCzasu(new Date('2026-07-22T07:59:00'), zakres).etykieta, 'PREFAJRANT')
   assert.equal(pobierzStanWskaznikaCzasu(new Date('2026-07-22T08:00:00'), zakres).etykieta, 'TERAZ')
   assert.equal(pobierzStanWskaznikaCzasu(new Date('2026-07-22T17:00:00'), zakres).etykieta, 'FAJRANT')
 
   const etykiety = pobierzEtykietyOsiCzasu(zakres)
-  assert.equal(etykiety[0], '08:00')
-  assert.equal(etykiety.at(-1), '17:00')
-  assert.equal(pozycjaGodzinyNaOsi('12:30', zakres), 50)
+  assert.deepEqual(etykiety, ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00', '23:59'])
+  const graniceZmodyfikowane = pobierzGraniceDniaPracyNaOsi(zakres)
+  const graniceDomyslne = pobierzGraniceDniaPracyNaOsi({ poczatek: '07:45', koniec: '16:00' })
+  assert.ok(Math.abs(graniceZmodyfikowane.poczatek - 100 / 3) < 0.000001)
+  assert.ok(Math.abs(graniceZmodyfikowane.koniec - 70.83333333333333) < 0.000001)
+  assert.ok(Math.abs(graniceDomyslne.poczatek - 32.29166666666667) < 0.000001)
+  assert.ok(Math.abs(graniceDomyslne.koniec - 66.66666666666666) < 0.000001)
+  assert.equal(pozycjaGodzinyNaOsi('12:30', zakres), 52.083333333333336)
 })
 
 test('system ustawień aplikacji ma bezpieczne wartości domyślne i ogranicza zakresy', () => {
