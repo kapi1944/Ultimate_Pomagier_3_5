@@ -2,6 +2,7 @@ import type { TypIkonyMenu } from './IkonaMenu'
 
 export function pobierzTypIkonyMenu(id: string): TypIkonyMenu {
   if (id.includes('kopie_robocze') || id.includes('kopie-robocze')) return 'kopie'
+  if (id === 'dokumenty_kosz' || id.endsWith('_kosz')) return 'kosz'
   if (id === 'dokumenty_wszystkie' || id.endsWith('_lista')) return 'wszystkie'
   if (
     id === 'programy_szkolen' ||

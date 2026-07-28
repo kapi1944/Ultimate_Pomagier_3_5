@@ -42,6 +42,12 @@ export function normalizujZadaniePulpitu(wartosc: unknown): ZadaniePulpitu | nul
   const wlascicielId = tekst(dane.wlascicielId)
   const zadaniodawcaId = tekst(dane.zadaniodawcaId) || tekst(dane.createdBy) || tekst(dane.userId) || wlascicielId
   const zadaniobiorcaId = tekst(dane.zadaniobiorcaId) || zadaniodawcaId
+  const godzina = tekst(dane.godzina) || undefined
+  const rodzajTerminu = dane.rodzajTerminu === 'DO_KONCA_DNIA'
+    ? 'DO_KONCA_DNIA'
+    : dane.rodzajTerminu === 'KONKRETNA_GODZINA' || godzina
+      ? 'KONKRETNA_GODZINA'
+      : undefined
   const przypomnienia = (Array.isArray(dane.przypomnienia) ? dane.przypomnienia : Array.isArray(dane.reminders) ? dane.reminders : [])
     .map(normalizujPrzypomnienie)
     .filter((przypomnienie): przypomnienie is PrzypomnienieZadania => Boolean(przypomnienie))
@@ -51,7 +57,8 @@ export function normalizujZadaniePulpitu(wartosc: unknown): ZadaniePulpitu | nul
     id,
     tytul,
     data,
-    godzina: tekst(dane.godzina) || undefined,
+    godzina: rodzajTerminu === 'DO_KONCA_DNIA' ? undefined : godzina,
+    rodzajTerminu,
     utworzono: tekst(dane.utworzono) || new Date(0).toISOString(),
     status: dane.status === 'WYKONANE' ? 'WYKONANE' : 'OTWARTE',
     priorytet: dane.priorytet === 'ASAP' || dane.priorytet === 'PILNE' ? dane.priorytet : 'ZWYKLE',
@@ -118,6 +125,7 @@ export type EdytowalnePolaZadania = Pick<
   'tytul'
   | 'data'
   | 'godzina'
+  | 'rodzajTerminu'
   | 'priorytet'
   | 'zadaniobiorcaId'
   | 'przypomnienia'
@@ -152,6 +160,7 @@ export function edytujZadanieRecznePrzezZadaniodawce(
     tytul: zmiany.tytul,
     data: zmiany.data,
     godzina: zmiany.godzina,
+    rodzajTerminu: zmiany.rodzajTerminu,
     priorytet: zmiany.priorytet,
     zadaniobiorcaId: zmiany.zadaniobiorcaId,
     wlascicielId: zmiany.zadaniobiorcaId,

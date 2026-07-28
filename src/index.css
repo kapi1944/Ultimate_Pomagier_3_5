@@ -18,6 +18,11 @@
   --ui-transition-ms: 150ms;
   --ui-hover-scale: 1;
   --ui-density-gap: 18px;
+  --ui-page-padding: clamp(20px, 1.5vw, 36px);
+  --ui-page-padding-z-menu: clamp(52px, 3.2vw, 72px);
+  --ui-page-gap: clamp(12px, 1vw, 20px);
+  --ui-card-padding: clamp(12px, 1vw, 18px);
+  --ui-section-gap: clamp(14px, 1.25vw, 24px);
 
   --pulpit-deadline-size: 28px;
   --pulpit-deadline-border: 5px;

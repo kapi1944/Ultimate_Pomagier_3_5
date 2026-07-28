@@ -6,6 +6,7 @@ type WlasciwosciWidokuWszystkichDokumentow = {
   typyStale?: TypDokumentu[]
   tytul?: string
   opis?: string
+  czyKosz?: boolean
 }
 
 export default function WidokWszystkichDokumentow({
@@ -13,6 +14,7 @@ export default function WidokWszystkichDokumentow({
   typyStale,
   tytul = 'Wszystkie dokumenty',
   opis = 'Wspólny rejestr dokumentów zapisanych przez generatory.',
+  czyKosz = false,
 }: WlasciwosciWidokuWszystkichDokumentow) {
-  return <ListaDokumentow tytul={tytul} opis={opis} otworzDokument={otworzDokument} typyStale={typyStale} />
+  return <ListaDokumentow czyKosz={czyKosz} filtrPoczatkowy={{ czyUsunietyMiekko: czyKosz }} opis={opis} otworzDokument={otworzDokument} tytul={tytul} typyStale={typyStale} />
 }

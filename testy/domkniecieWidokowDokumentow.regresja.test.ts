@@ -82,6 +82,8 @@ test('pięć modułów ma spójne trasy i pozycje Wszystkie', () => {
     assert.equal(pozycje?.[0]?.etykieta.startsWith('Now'), true)
     assert.equal(pozycje?.[1]?.etykieta, 'Kopie robocze')
     assert.deepEqual(pozycje?.[2], { widok, etykieta, sciezka })
+    assert.equal(pozycje?.[3]?.etykieta, 'Kosz')
+    assert.equal(pobierzWidokGeneratoraZeSciezki(pozycje?.[3]?.sciezka ?? ''), pozycje?.[3]?.widok)
     assert.equal(pobierzWidokGeneratoraZeSciezki(sciezka), widok)
   })
 })

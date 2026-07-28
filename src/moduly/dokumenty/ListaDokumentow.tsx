@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useKontekstUzytkownika } from '../../aplikacja/logowanie/useKontekstUzytkownika'
 import { czyJestAdministratorem } from '../../kartoteki/uzytkownicy/uprawnienia'
 import { pobierzKonfiguracjeTypuDokumentu } from '../../wspolne/dokumenty/konfiguracjaDokumentow'
@@ -14,6 +14,7 @@ type WlasciwosciListyDokumentow = {
   opis: string
   filtrPoczatkowy?: FiltrDokumentow
   czyStatusStaly?: boolean
+  czyKosz?: boolean
   typyStale?: TypDokumentu[]
   otworzDokument?: (dokument: Dokument<unknown, unknown>) => void
 }
@@ -37,6 +38,7 @@ export default function ListaDokumentow({
   opis,
   filtrPoczatkowy = { czyUsunietyMiekko: false },
   czyStatusStaly = false,
+  czyKosz = false,
   typyStale,
   otworzDokument,
 }: WlasciwosciListyDokumentow) {
@@ -46,6 +48,8 @@ export default function ListaDokumentow({
   const [sortowanie, ustawSortowanie] = useState<KryteriumSortowaniaDokumentow>('ZMODYFIKOWANO_MALEJACO')
   const [stanLadowania, ustawStanLadowania] = useState<StanLadowania>('ladowanie')
   const [blad, ustawBlad] = useState<string | null>(null)
+  const [idSpalanegoDokumentu, ustawIdSpalanegoDokumentu] = useState<string | null>(null)
+  const referencjePozycji = useRef(new Map<string, HTMLDivElement>())
 
   const odswiez = useCallback(() => {
     ustawStanLadowania('ladowanie')
@@ -94,6 +98,45 @@ export default function ListaDokumentow({
     )
   }
 
+  function spalDokument(dokument: Dokument<unknown, unknown>) {
+    if (!window.confirm(`Trwale usunąć dokument „${dokument.tytul}”? Tej operacji nie można cofnąć.`)) {
+      return
+    }
+
+    ustawIdSpalanegoDokumentu(dokument.id)
+    window.setTimeout(() => {
+      const pozycjePrzedUsunieciem = new Map<string, DOMRect>(
+        [...referencjePozycji.current].map(([id, element]) => [id, element.getBoundingClientRect()]),
+      )
+
+      try {
+        if (!repozytoriumWspolnychDokumentow.usunTrwale(dokument.id)) {
+          throw new Error('Dokument nie znajduje się w koszu.')
+        }
+        ustawDokumenty(repozytoriumWspolnychDokumentow.pobierzWszystkie())
+      } catch {
+        ustawStanLadowania('blad')
+        ustawBlad('Nie udało się trwale usunąć dokumentu.')
+      } finally {
+        ustawIdSpalanegoDokumentu(null)
+      }
+
+      window.requestAnimationFrame(() => {
+        referencjePozycji.current.forEach((element, id) => {
+          const pozycjaPrzedUsunieciem = pozycjePrzedUsunieciem.get(id)
+          const przesuniecieY = pozycjaPrzedUsunieciem ? pozycjaPrzedUsunieciem.top - element.getBoundingClientRect().top : 0
+
+          if (przesuniecieY) {
+            element.animate([
+              { transform: `translateY(${przesuniecieY}px)` },
+              { transform: 'translateY(0)' },
+            ], { duration: 380, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' })
+          }
+        })
+      })
+    }, 900)
+  }
+
   return (
     <section className="widok lista-dokumentow">
       <header className="lista-dokumentow__naglowek">
@@ -137,10 +180,10 @@ export default function ListaDokumentow({
             <option value="TYTUL_MALEJACO">Tytuł Z-A</option>
           </select>
         </label>
-        <label className="lista-dokumentow__przelacznik">
+        {!czyKosz && <label className="lista-dokumentow__przelacznik">
           <input type="checkbox" checked={filtr.czyUsunietyMiekko === true} onChange={(zdarzenie) => ustawWartoscFiltru('czyUsunietyMiekko', zdarzenie.target.checked)} />
           Tylko usunięte
-        </label>
+        </label>}
         <button type="button" onClick={() => ustawFiltr(filtrPoczatkowy)}>Wyczyść filtry</button>
       </form>
 
@@ -156,22 +199,27 @@ export default function ListaDokumentow({
             const czyMoznaOtworzyc = Boolean(konfiguracja?.sciezkaGeneratora && otworzDokument)
             const czyMoznaZarzadzac = czyMoznaZarzadzacDokumentem(dokument)
 
-            const akcje = <>
-              <button type="button" disabled={!czyMoznaOtworzyc} title={czyMoznaOtworzyc ? 'Otwórz w odpowiednim generatorze' : 'Brak trasy dla tego typu dokumentu'} onClick={() => otworzDokument?.(dokument)}>{dokument.status === 'ROBOCZY' && czyMoznaZarzadzac ? 'Edytuj' : 'Otwórz'}</button>
-              {czyMoznaZarzadzac && dokument.status === 'ROBOCZY' && <button type="button" onClick={() => wykonajAkcje(() => opublikujDokument(dokument.id))}>Publikuj</button>}
-              {czyMoznaZarzadzac && dokument.status === 'OPUBLIKOWANY' && <button type="button" onClick={() => wykonajAkcje(() => utworzAktualizacjeDokumentu(dokument.id))}>Utwórz aktualizację</button>}
-              {czyMoznaZarzadzac && (dokument.czyZarchiwizowany
-                ? <button type="button" onClick={() => wykonajAkcje(() => repozytoriumWspolnychDokumentow.przywroc(dokument.id))}>Przywróć</button>
-                : <button type="button" onClick={() => wykonajAkcje(() => repozytoriumWspolnychDokumentow.archiwizuj(dokument.id))}>Archiwizuj</button>)}
-              {czyMoznaZarzadzac && <button type="button" disabled={dokument.czyUsunietyMiekko} onClick={() => wykonajAkcje(() => repozytoriumWspolnychDokumentow.usunMiekko(dokument.id))}>Usuń miękko</button>}
-            </>
+            const akcje = dokument.czyUsunietyMiekko
+              ? <>
+                {czyMoznaZarzadzac && <button type="button" onClick={() => wykonajAkcje(() => repozytoriumWspolnychDokumentow.przywrocZKosza(dokument.id))}>Przywróć dokument</button>}
+                {czyMoznaZarzadzac && <button className="lista-dokumentow__spal" disabled={idSpalanegoDokumentu !== null} type="button" onClick={() => spalDokument(dokument)}>🔥 Spal dokument</button>}
+              </>
+              : <>
+                <button type="button" disabled={!czyMoznaOtworzyc} title={czyMoznaOtworzyc ? 'Otwórz w odpowiednim generatorze' : 'Brak trasy dla tego typu dokumentu'} onClick={() => otworzDokument?.(dokument)}>{dokument.status === 'ROBOCZY' && czyMoznaZarzadzac ? 'Edytuj' : 'Otwórz'}</button>
+                {czyMoznaZarzadzac && dokument.status === 'ROBOCZY' && <button type="button" onClick={() => wykonajAkcje(() => opublikujDokument(dokument.id))}>Publikuj</button>}
+                {czyMoznaZarzadzac && dokument.status === 'OPUBLIKOWANY' && <button type="button" onClick={() => wykonajAkcje(() => utworzAktualizacjeDokumentu(dokument.id))}>Utwórz aktualizację</button>}
+                {czyMoznaZarzadzac && (dokument.czyZarchiwizowany
+                  ? <button type="button" onClick={() => wykonajAkcje(() => repozytoriumWspolnychDokumentow.przywroc(dokument.id))}>Przywróć</button>
+                  : <button type="button" onClick={() => wykonajAkcje(() => repozytoriumWspolnychDokumentow.archiwizuj(dokument.id))}>Archiwizuj</button>)}
+                {czyMoznaZarzadzac && <button type="button" onClick={() => wykonajAkcje(() => repozytoriumWspolnychDokumentow.usunMiekko(dokument.id))}>Przenieś do kosza</button>}
+              </>
 
             if (['CERTYFIKAT', 'ZASWIADCZENIE', 'DYPLOM'].includes(dokument.typ)) {
-              return <KartaDokumentuDyplomu akcje={akcje} dokument={dokument} etykietaStatusu={etykietyStatusow[dokument.status]} etykietaTypu={konfiguracja?.etykieta ?? dokument.typ} formatujDate={formatujDate} key={dokument.id} />
+              return <div className={`lista-dokumentow__pozycja${idSpalanegoDokumentu === dokument.id ? ' lista-dokumentow__pozycja--spalana' : ''}`} key={dokument.id} ref={(element) => { if (element) referencjePozycji.current.set(dokument.id, element); else referencjePozycji.current.delete(dokument.id) }}><KartaDokumentuDyplomu akcje={akcje} dokument={dokument} etykietaStatusu={etykietyStatusow[dokument.status]} etykietaTypu={konfiguracja?.etykieta ?? dokument.typ} formatujDate={formatujDate} /></div>
             }
 
             return (
-              <article className="lista-dokumentow__karta" key={dokument.id}>
+              <div className={`lista-dokumentow__pozycja${idSpalanegoDokumentu === dokument.id ? ' lista-dokumentow__pozycja--spalana' : ''}`} key={dokument.id} ref={(element) => { if (element) referencjePozycji.current.set(dokument.id, element); else referencjePozycji.current.delete(dokument.id) }}><article className="lista-dokumentow__karta">
                 <div className="lista-dokumentow__karta-naglowek">
                   <div><p className="lista-dokumentow__typ">{konfiguracja?.etykieta ?? dokument.typ}</p><h2>{dokument.tytul}</h2></div>
                   <strong>{etykietyStatusow[dokument.status]}</strong>
@@ -183,7 +231,7 @@ export default function ListaDokumentow({
                   <div><dt>Szkolenie</dt><dd>{dokument.szkolenieId ?? '—'}</dd></div>
                 </dl>
                 <div className="lista-dokumentow__akcje">{akcje}</div>
-              </article>
+              </article></div>
             )
           })}
         </div>

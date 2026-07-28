@@ -30,7 +30,7 @@ function utworzDokument(id: string, typ: 'PROGRAM_SZKOLENIA' | 'ANKIETA' = 'PROG
   })
 }
 
-test('rejestr tworzy, aktualizuje, archiwizuje i usuwa miekko dokument', () => {
+test('rejestr tworzy, aktualizuje, archiwizuje oraz obsługuje kosz dokumentów', () => {
   magazyn.clear()
   const utworzony = repozytoriumWspolnychDokumentow.utworz(utworzDokument('program-1'))
 
@@ -49,6 +49,15 @@ test('rejestr tworzy, aktualizuje, archiwizuje i usuwa miekko dokument', () => {
   const usuniety = repozytoriumWspolnychDokumentow.usunMiekko(utworzony.id)
   assert.equal(usuniety?.czyUsunietyMiekko, true)
   assert.ok(usuniety?.usunieto)
+
+  const przywroconyZKosza = repozytoriumWspolnychDokumentow.przywrocZKosza(utworzony.id)
+  assert.equal(przywroconyZKosza?.czyUsunietyMiekko, false)
+  assert.equal(przywroconyZKosza?.usunieto, null)
+  assert.equal(repozytoriumWspolnychDokumentow.usunTrwale(utworzony.id), false)
+
+  repozytoriumWspolnychDokumentow.usunMiekko(utworzony.id)
+  assert.equal(repozytoriumWspolnychDokumentow.usunTrwale(utworzony.id), true)
+  assert.equal(repozytoriumWspolnychDokumentow.pobierzPoId(utworzony.id), null)
 })
 
 test('rejestr pomija uszkodzony rekord bez utraty pozostalych dokumentow', () => {

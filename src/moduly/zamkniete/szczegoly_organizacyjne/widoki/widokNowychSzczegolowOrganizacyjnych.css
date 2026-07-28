@@ -1104,6 +1104,52 @@ button.szczegoly-checklista__naglowek:hover {
   }
 }
 
+@container obszar-roboczy (max-width: 1120px) {
+  .szczegoly-organizacyjne,
+  .szczegoly-organizacyjne--panel-otwarty,
+  .szczegoly-sticky__wiersz,
+  .szczegoly-siatka--cztery,
+  .szczegoly-siatka--trzy,
+  .szczegoly-kolumny-danych,
+  .szczegoly-wzor-klienta,
+  .szczegoly-wiersz-wymogu,
+  .szczegoly-wiersz-wymogu--przyjazd,
+  .szczegoly-wiersz-wymogu--rozszerzony,
+  .szczegoly-uklad-generatora,
+  .szczegoly-uklad-sekcji {
+    grid-template-columns: 1fr;
+  }
+
+  .szczegoly-panel-jakosci {
+    position: fixed;
+    inset: 0 0 0 auto;
+    grid-column: auto;
+    opacity: 0;
+    transform: translateX(100%);
+  }
+
+  .szczegoly-panel-jakosci--otwarty {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  .szczegoly-sticky { z-index: 11; }
+
+  .szczegoly-karta-grupy__formularz {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .szczegoly-karta-grupy__kolumna--lewa { padding-right: 0; }
+
+  .szczegoly-karta-grupy__kolumna--prawa {
+    border-top: 1px solid rgba(74, 222, 128, 0.2);
+    border-left: 0;
+    padding-top: 14px;
+    padding-left: 0;
+  }
+}
+
 @media (max-width: 760px) {
   .szczegoly-panel-jakosci {
     width: min(340px, 92vw);

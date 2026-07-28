@@ -11,8 +11,8 @@ import { generujZadaniaAutomatyczne } from './logika/zadaniaAutomatyczne'
 import { czyMoznaZmienicKontekstPulpitu } from './logika/kontekstPulpitu'
 import { obliczLicznikiPulpitu } from './logika/podsumowaniePulpitu'
 import { obliczLiczbeAktywnychZapotrzebowanZakupowych, odmienRzeczDoZakupu, pobierzAktywneZapotrzebowaniaZakupowe, pobierzTekstLicznikaZakupow, walidujNoweZapotrzebowanieZakupowe } from './logika/zapotrzebowaniaZakupowe'
-import { czyMoznaEdytowacZadanie, czyMoznaOznaczycZadanieRecznie, czyMoznaWybracZadaniodawce, czyZadanieDotyczyDnia, czyZadanieOpoznione, czyZadanieWidoczneDlaUzytkownika, pobierzEtykieteStatusuZadania, pobierzKolorZadaniodawcy, pobierzZadaniaDeadline, rozstrzygnijPrzypisanieZadania, sortujZadaniaBezGodziny, walidujPrzypomnienia } from './logika/zadania'
-import type { JednostkaPrzypomnienia, PaczkaPulpitu, PrzypomnienieZadania, ZadaniePulpitu, ZapotrzebowanieZakupowe } from './modele/pulpit'
+import { czyMoznaEdytowacZadanie, czyMoznaOznaczycZadanieRecznie, czyMoznaWybracZadaniodawce, czyZadanieDoKoncaDnia, czyZadanieDotyczyDnia, czyZadanieOpoznione, czyZadanieWidoczneDlaUzytkownika, pobierzEtykieteStatusuZadania, pobierzGodzineMarkeraZadania, pobierzKolorZadaniodawcy, pobierzSzerokoscLiniiDoFajrantu, pobierzZadaniaDeadline, rozstrzygnijPrzypisanieZadania, sortujZadaniaBezGodziny, walidujPrzypomnienia } from './logika/zadania'
+import type { JednostkaPrzypomnienia, PaczkaPulpitu, PrzypomnienieZadania, RodzajTerminuZadania, ZadaniePulpitu, ZapotrzebowanieZakupowe } from './modele/pulpit'
 import { edytujZadanieRecznePrzezZadaniodawce, oznaczPaczkeJakoWyslana, pobierzStanPulpitu, usunZadanieReczne, zapiszZadanieReczne, zapiszZapotrzebowanieZakupowe } from './uslugi/magazynPulpitu'
 import './pulpit.css'
 
@@ -27,11 +27,20 @@ type FormularzZadania = {
   tytul: string
   data: string
   godzina: string
+  rodzajTerminu: RodzajTerminuZadania | 'BRAK_GODZINY'
   priorytet: ZadaniePulpitu['priorytet']
   zadaniodawcaId: string
   zadaniobiorcaId: string
   szkolenieId: string
   przypomnienia: PrzypomnienieZadania[]
+}
+
+function pobierzRodzajTerminuZapisu(formularz: FormularzZadania) {
+  return formularz.rodzajTerminu === 'BRAK_GODZINY' ? undefined : formularz.rodzajTerminu
+}
+
+function pobierzGodzineZapisu(formularz: FormularzZadania) {
+  return formularz.rodzajTerminu === 'KONKRETNA_GODZINA' ? formularz.godzina || undefined : undefined
 }
 
 function dataTekstowa(data: Date) {
@@ -50,6 +59,10 @@ function przesunDate(data: string, liczbaDni: number) {
 function formatujDate(data: string) {
   if (!data) return 'Brak daty'
   return new Intl.DateTimeFormat('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(data + 'T00:00:00'))
+}
+
+function etykietaTerminuZadania(zadanie: ZadaniePulpitu) {
+  return czyZadanieDoKoncaDnia(zadanie) ? 'Do końca dnia' : zadanie.godzina || 'Bez godziny'
 }
 
 function utworzIdZadania() {
@@ -103,6 +116,7 @@ function pustyFormularz(
     tytul: '',
     data,
     godzina: ustawienia.zadania.domyslnaGodzina,
+    rodzajTerminu: 'KONKRETNA_GODZINA',
     priorytet: ustawienia.zadania.domyslnyPriorytet,
     zadaniodawcaId: uzytkownikId,
     zadaniobiorcaId: '',
@@ -116,6 +130,7 @@ function formularzZZadania(zadanie: ZadaniePulpitu): FormularzZadania {
     tytul: zadanie.tytul,
     data: zadanie.data,
     godzina: zadanie.godzina ?? '',
+    rodzajTerminu: czyZadanieDoKoncaDnia(zadanie) ? 'DO_KONCA_DNIA' : zadanie.godzina ? 'KONKRETNA_GODZINA' : 'BRAK_GODZINY',
     priorytet: zadanie.priorytet,
     zadaniodawcaId: zadanie.zadaniodawcaId,
     zadaniobiorcaId: zadanie.zadaniobiorcaId === zadanie.zadaniodawcaId ? '' : zadanie.zadaniobiorcaId,
@@ -194,16 +209,17 @@ function pobierzZadaniaAutomatyczne() {
   )
 }
 
-function KartaZadania({ zadanie, teraz, uzytkownicy, otworz, wykonaj, zmienGodzine, odloz }: {
+function KartaZadania({ zadanie, teraz, zakresDniaPracy, uzytkownicy, otworz, wykonaj, zmienGodzine, odloz }: {
   zadanie: ZadaniePulpitu
   teraz: Date
+  zakresDniaPracy: ZakresDniaPracy
   uzytkownicy: Uzytkownik[]
   otworz: () => void
   wykonaj?: () => void
   zmienGodzine?: (godzina: string) => void
   odloz?: (data: string) => void
 }) {
-  const status = pobierzEtykieteStatusuZadania(zadanie, teraz)
+  const status = pobierzEtykieteStatusuZadania(zadanie, teraz, zakresDniaPracy)
   const czyOpoznione = status === 'Opóźnione'
   return <article className={'pulpit-zadanie' + (czyOpoznione ? ' pulpit-zadanie--opoznione' : '') + (zadanie.status === 'WYKONANE' ? ' pulpit-zadanie--wykonane' : '')}>
     <button className="pulpit-zadanie__tresc" onClick={otworz} type="button">
@@ -214,12 +230,12 @@ function KartaZadania({ zadanie, teraz, uzytkownicy, otworz, wykonaj, zmienGodzi
       <small>Zadaniobiorca: {pobierzNazweOsoby(uzytkownicy, zadanie.zadaniobiorcaId)}</small>
     </button>
     <div className="pulpit-zadanie__meta">
-      {zadanie.godzina && <span>{zadanie.godzina}</span>}
+      {(zadanie.godzina || czyZadanieDoKoncaDnia(zadanie)) && <span>{etykietaTerminuZadania(zadanie)}</span>}
       <span className={'pulpit-status' + (czyOpoznione ? ' pulpit-status--czerwony' : zadanie.status === 'WYKONANE' ? ' pulpit-status--zielony' : '')}>{status}</span>
       {zadanie.priorytet !== 'ZWYKLE' && zadanie.status !== 'WYKONANE' && <span className={'pulpit-status ' + (zadanie.priorytet === 'ASAP' ? 'pulpit-status--asap' : 'pulpit-status--zolty')}>{zadanie.priorytet === 'ASAP' ? '\u{1F525} ASAP' : 'Pilne'}</span>}
     </div>
     {czyMoznaOznaczycZadanieRecznie(zadanie) && <div className="pulpit-zadanie__akcje">
-      {zmienGodzine && <label htmlFor={'godzina-' + zadanie.id}>Godzina<input id={'godzina-' + zadanie.id} onChange={(zdarzenie) => zmienGodzine(zdarzenie.target.value)} type="time" value={zadanie.godzina ?? ''} /></label>}
+      {zmienGodzine && !czyZadanieDoKoncaDnia(zadanie) && <label htmlFor={'godzina-' + zadanie.id}>Godzina<input id={'godzina-' + zadanie.id} onChange={(zdarzenie) => zmienGodzine(zdarzenie.target.value)} type="time" value={zadanie.godzina ?? ''} /></label>}
       {odloz && <button onClick={() => odloz(dataTekstowa(new Date(Date.now() + 86_400_000)))} type="button">Jutro</button>}
       {odloz && <button onClick={() => odloz(dataTekstowa(new Date(Date.now() + 3 * 86_400_000)))} type="button">Za 3 dni</button>}
       {wykonaj && <button className="pulpit-przycisk-glowny" onClick={wykonaj} type="button">{'\u2713'} Wykonane</button>}
@@ -227,7 +243,7 @@ function KartaZadania({ zadanie, teraz, uzytkownicy, otworz, wykonaj, zmienGodzi
   </article>
 }
 
-function MarkerDeadline({ zadanie, uzytkownicy, otworz }: { zadanie: ZadaniePulpitu; uzytkownicy: Uzytkownik[]; otworz: () => void }) {
+function MarkerDeadline({ zadanie, zakresDniaPracy, uzytkownicy, otworz }: { zadanie: ZadaniePulpitu; zakresDniaPracy: ZakresDniaPracy; uzytkownicy: Uzytkownik[]; otworz: () => void }) {
   const zadaniodawca = uzytkownicy.find((uzytkownik) => uzytkownik.id === zadanie.zadaniodawcaId)
   const zadaniobiorca = uzytkownicy.find((uzytkownik) => uzytkownik.id === zadanie.zadaniobiorcaId)
 
@@ -240,31 +256,38 @@ function MarkerDeadline({ zadanie, uzytkownicy, otworz }: { zadanie: ZadaniePulp
     zadaniobiorca?.kolorProfilu,
   )
 
+  const czyDoKoncaDnia = czyZadanieDoKoncaDnia(zadanie)
+  const godzinaMarkera = pobierzGodzineMarkeraZadania(zadanie, zakresDniaPracy)!
+  const pozycja = pozycjaGodzinyNaOsi(godzinaMarkera)
+  const szerokoscLiniiDoFajrantu = pobierzSzerokoscLiniiDoFajrantu(zadanie, zakresDniaPracy)
   const identyfikatorTooltipa = 'deadline-tooltip-' + zadanie.id
-  const pozycja = pozycjaGodzinyNaOsi(zadanie.godzina!)
   const klasaKrawedzi = pozycja <= 5 ? ' pulpit-deadline--lewo' : pozycja >= 95 ? ' pulpit-deadline--prawo' : ''
-  const klasaPriorytetu = zadanie.priorytet === 'PILNE'
+  const klasaPriorytetu = zadanie.priorytet === 'ZWYKLE'
+    ? ' pulpit-deadline--zwykle'
+    : zadanie.priorytet === 'PILNE'
     ? ' pulpit-deadline--pilne'
     : zadanie.priorytet === 'ASAP'
       ? ' pulpit-deadline--asap'
       : ''
 
   return <div
-    className={'pulpit-deadline' + klasaKrawedzi + klasaPriorytetu}
+    className={'pulpit-deadline' + klasaKrawedzi + klasaPriorytetu + (czyDoKoncaDnia ? ' pulpit-deadline--do-konca-dnia' : '')}
     style={{
       left: pozycja + '%',
       '--kolor-zadaniodawcy': kolorZadaniodawcy,
       '--kolor-zadaniobiorcy': kolorZadaniobiorcy,
     } as CSSProperties}
   >
-    <button aria-describedby={identyfikatorTooltipa} aria-label={'Deadline: ' + zadanie.tytul + ', ' + zadanie.godzina} className="pulpit-deadline__przycisk" onClick={otworz} type="button">
+    {szerokoscLiniiDoFajrantu > 0 && <span aria-hidden="true" className="pulpit-deadline__linia-do-fajrantu" style={{ width: szerokoscLiniiDoFajrantu + '%' }} />}
+    <button aria-describedby={identyfikatorTooltipa} aria-label={'Deadline: ' + zadanie.tytul + ', ' + etykietaTerminuZadania(zadanie)} className="pulpit-deadline__przycisk" onClick={otworz} type="button">
       {zadanie.priorytet === 'ASAP' && <span aria-hidden="true" className="pulpit-deadline__plomien">{'\u{1F525}'}</span>}
       <span aria-hidden="true" className="pulpit-deadline__romb"><span /></span>
-      <span className="pulpit-deadline__etykieta">DEADLINE: {zadanie.tytul}</span>
+      <span className="pulpit-deadline__etykieta">{czyDoKoncaDnia ? 'DO KOŃCA DNIA' : 'DEADLINE'}: {zadanie.tytul}</span>
     </button>
     <span className="pulpit-deadline__tooltip" id={identyfikatorTooltipa} role="tooltip">
       <strong>{zadanie.tytul}</strong>
-      <span>Deadline: {formatujDate(zadanie.data)}, {zadanie.godzina}</span>
+      <span>Deadline: {formatujDate(zadanie.data)}, {etykietaTerminuZadania(zadanie)}</span>
+      {czyDoKoncaDnia && <span>Do: FAJRANT {zakresDniaPracy.koniec}</span>}
       <span>Priorytet: {etykietaPriorytetu(zadanie.priorytet)}</span>
       <span>Zadaniodawca: {pobierzNazweOsoby(uzytkownicy, zadanie.zadaniodawcaId)}</span>
       <span>Zadaniobiorca: {pobierzNazweOsoby(uzytkownicy, zadanie.zadaniobiorcaId)}</span>
@@ -300,7 +323,8 @@ function FormularzDodawaniaZadania({ formularz, ustawFormularz, uzytkownicy, szk
   return <form className="pulpit-formularz-zadania" onSubmit={(zdarzenie) => { zdarzenie.preventDefault(); zapisz() }}>
     <label className="pulpit-formularz-zadania__nazwa" htmlFor="pulpit-nazwa-zadania">Nazwa zadania<input id="pulpit-nazwa-zadania" onChange={(zdarzenie) => ustawFormularz({ ...formularz, tytul: zdarzenie.target.value })} placeholder="Np. wysłać dokumenty" value={formularz.tytul} /></label>
     <label htmlFor="pulpit-termin-zadania">Termin wykonania<input id="pulpit-termin-zadania" onChange={(zdarzenie) => ustawFormularz({ ...formularz, data: zdarzenie.target.value })} type="date" value={formularz.data} /></label>
-    <label htmlFor="pulpit-godzina-zadania">Godzina wykonania<input id="pulpit-godzina-zadania" onChange={(zdarzenie) => ustawFormularz({ ...formularz, godzina: zdarzenie.target.value })} type="time" value={formularz.godzina} /></label>
+    <label htmlFor="pulpit-rodzaj-terminu-zadania">Termin<select id="pulpit-rodzaj-terminu-zadania" onChange={(zdarzenie) => ustawFormularz({ ...formularz, rodzajTerminu: zdarzenie.target.value as FormularzZadania['rodzajTerminu'], godzina: zdarzenie.target.value === 'KONKRETNA_GODZINA' ? formularz.godzina : '' })} value={formularz.rodzajTerminu}><option value="KONKRETNA_GODZINA">Konkretna godzina</option><option value="DO_KONCA_DNIA">Do końca dnia</option><option value="BRAK_GODZINY">Bez przypisanej godziny</option></select></label>
+    {formularz.rodzajTerminu === 'KONKRETNA_GODZINA' && <label htmlFor="pulpit-godzina-zadania">Godzina wykonania<input id="pulpit-godzina-zadania" onChange={(zdarzenie) => ustawFormularz({ ...formularz, godzina: zdarzenie.target.value })} type="time" value={formularz.godzina} /></label>}
     <label htmlFor="pulpit-priorytet-zadania">Priorytet<select id="pulpit-priorytet-zadania" onChange={(zdarzenie) => ustawFormularz({ ...formularz, priorytet: zdarzenie.target.value as ZadaniePulpitu['priorytet'] })} value={formularz.priorytet}><option value="ZWYKLE">Zwykłe</option><option value="PILNE">Pilne</option><option value="ASAP">ASAP</option></select></label>
     {czyWyborZadaniodawcy && <label htmlFor="pulpit-zadaniodawca">Zadaniodawca<select id="pulpit-zadaniodawca" onChange={(zdarzenie) => ustawFormularz({ ...formularz, zadaniodawcaId: zdarzenie.target.value })} value={formularz.zadaniodawcaId}>{uzytkownicy.map((uzytkownik) => <option key={uzytkownik.id} value={uzytkownik.id}>{pobierzNazweUzytkownika(uzytkownik)}</option>)}</select></label>}
     <label htmlFor="pulpit-zadaniobiorca">Zadaniobiorca<select id="pulpit-zadaniobiorca" onChange={(zdarzenie) => ustawFormularz({ ...formularz, zadaniobiorcaId: zdarzenie.target.value })} value={formularz.zadaniobiorcaId}><option value="">Ja &mdash; {pobierzNazweOsoby(uzytkownicy, formularz.zadaniodawcaId)}</option>{uzytkownicy.filter((uzytkownik) => uzytkownik.id !== formularz.zadaniodawcaId).map((uzytkownik) => <option key={uzytkownik.id} value={uzytkownik.id}>{pobierzNazweUzytkownika(uzytkownik)}</option>)}</select></label>
@@ -393,12 +417,12 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
   const zadania = useMemo(() => [...stan.zadaniaReczne, ...pobierzZadaniaAutomatyczne()].filter((zadanie) => czyZadanieWidoczneDlaUzytkownika(zadanie, wybranyUzytkownikId)), [stan.zadaniaReczne, wybranyUzytkownikId])
   const paczki = useMemo(() => pobierzPaczki(stan.wyslanePaczki).filter((paczka) => paczka.wlascicielId === wybranyUzytkownikId), [stan.wyslanePaczki, wybranyUzytkownikId])
   const zadaniaAktywneDnia = zadania.filter((zadanie) => zadanie.status === 'OTWARTE' && czyZadanieDotyczyDnia(zadanie, data))
-  const zadaniaGodzinowe = pobierzZadaniaDeadline(zadaniaAktywneDnia, data, teraz)
-  const zadaniaBezGodziny = sortujZadaniaBezGodziny(zadaniaAktywneDnia.filter((zadanie) => !zadanie.godzina), teraz)
+  const zadaniaGodzinowe = pobierzZadaniaDeadline(zadaniaAktywneDnia, data, teraz, zakresDniaPracy)
+  const zadaniaBezGodziny = sortujZadaniaBezGodziny(zadaniaAktywneDnia.filter((zadanie) => !zadanie.godzina && !czyZadanieDoKoncaDnia(zadanie)), teraz, zakresDniaPracy)
   const zadaniaWykonane = zadania.filter((zadanie) => zadanie.status === 'WYKONANE' && czyZadanieDotyczyDnia(zadanie, data))
   const paczkiWidoczne = sortujPaczki(paczki.filter((paczka) => czyPaczkaWidoczna(paczka, teraz)), teraz)
-  const pilne = zadania.filter((zadanie) => zadanie.status === 'OTWARTE' && (zadanie.priorytet === 'PILNE' || zadanie.priorytet === 'ASAP' || czyZadanieOpoznione(zadanie, teraz)))
-  const liczniki = obliczLicznikiPulpitu(zadania, paczki, teraz, data)
+  const pilne = zadania.filter((zadanie) => zadanie.status === 'OTWARTE' && (zadanie.priorytet === 'PILNE' || zadanie.priorytet === 'ASAP' || czyZadanieOpoznione(zadanie, teraz, zakresDniaPracy)))
+  const liczniki = obliczLicznikiPulpitu(zadania, paczki, teraz, data, zakresDniaPracy)
   const aktywneZapotrzebowaniaZakupowe = useMemo(() => pobierzAktywneZapotrzebowaniaZakupowe(stan.zapotrzebowaniaZakupowe), [stan.zapotrzebowaniaZakupowe])
   const liczbaAktywnychZapotrzebowanZakupowych = obliczLiczbeAktywnychZapotrzebowanZakupowych(stan.zapotrzebowaniaZakupowe)
   const czyObserwowanyJestZalogowanym = wybranyUzytkownikId === zalogowanyUzytkownik?.id
@@ -432,6 +456,7 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
         tytul: zadanie.tytul,
         data,
         godzina,
+        rodzajTerminu: zadanie.rodzajTerminu ?? (godzina ? 'KONKRETNA_GODZINA' : undefined),
         priorytet: zadanie.priorytet,
         zadaniobiorcaId: zadanie.zadaniobiorcaId,
         przypomnienia: zadanie.przypomnienia.map((przypomnienie) => ({ ...przypomnienie })),
@@ -500,6 +525,11 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
       return
     }
 
+    if (formularzEdycji.rodzajTerminu === 'KONKRETNA_GODZINA' && !formularzEdycji.godzina) {
+      ustawBladEdycji('Wybierz godzinę wykonania albo zmień rodzaj terminu.')
+      return
+    }
+
     const bladPrzypomnien = walidujPrzypomnienia(formularzEdycji.przypomnienia)
     if (bladPrzypomnien) {
       ustawBladEdycji(bladPrzypomnien)
@@ -521,7 +551,8 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
       {
         tytul: formularzEdycji.tytul.trim(),
         data: formularzEdycji.data,
-        godzina: formularzEdycji.godzina || undefined,
+        godzina: pobierzGodzineZapisu(formularzEdycji),
+        rodzajTerminu: pobierzRodzajTerminuZapisu(formularzEdycji),
         priorytet: formularzEdycji.priorytet,
         zadaniobiorcaId,
         przypomnienia: formularzEdycji.przypomnienia.map((przypomnienie) => ({ ...przypomnienie })),
@@ -559,6 +590,10 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
       ustawBladFormularza('Nazwa zadania jest wymagana.')
       return
     }
+    if (noweZadanie.rodzajTerminu === 'KONKRETNA_GODZINA' && !noweZadanie.godzina) {
+      ustawBladFormularza('Wybierz godzinę wykonania albo zmień rodzaj terminu.')
+      return
+    }
     const blad = walidujPrzypomnienia(noweZadanie.przypomnienia)
     if (blad) {
       ustawBladFormularza(blad)
@@ -571,7 +606,8 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
       id: utworzIdZadania(),
       tytul: noweZadanie.tytul.trim(),
       data: noweZadanie.data,
-      godzina: noweZadanie.godzina || undefined,
+      godzina: pobierzGodzineZapisu(noweZadanie),
+      rodzajTerminu: pobierzRodzajTerminuZapisu(noweZadanie),
       utworzono: new Date().toISOString(),
       status: 'OTWARTE',
       priorytet: noweZadanie.priorytet,
@@ -622,7 +658,7 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
   }
   const pokazZadania = filtr !== 'PACZKI'
   const pokazPaczki = filtr === 'WSZYSTKIE' || filtr === 'PACZKI'
-  const zadaniaDoPokazania = filtr === 'PILNE' ? zadaniaBezGodziny.filter((zadanie) => zadanie.priorytet === 'PILNE' || zadanie.priorytet === 'ASAP' || czyZadanieOpoznione(zadanie, teraz)) : filtr === 'BLOKADY' ? zadaniaBezGodziny.filter((zadanie) => zadanie.czyAutomatyczne) : zadaniaBezGodziny
+  const zadaniaDoPokazania = filtr === 'PILNE' ? zadaniaBezGodziny.filter((zadanie) => zadanie.priorytet === 'PILNE' || zadanie.priorytet === 'ASAP' || czyZadanieOpoznione(zadanie, teraz, zakresDniaPracy)) : filtr === 'BLOKADY' ? zadaniaBezGodziny.filter((zadanie) => zadanie.czyAutomatyczne) : zadaniaBezGodziny
   const czyMoznaWykonacWybrane = Boolean(
     wybraneZadanie
     && !wybraneZadanie.czyAutomatyczne
@@ -671,7 +707,7 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
           <strong>{liczniki.pilne}</strong>
           <span>PILNE</span>
           <small>
-            {pilne.filter((zadanie) => czyZadanieOpoznione(zadanie, teraz)).length} opóźnione
+            {pilne.filter((zadanie) => czyZadanieOpoznione(zadanie, teraz, zakresDniaPracy)).length} opóźnione
           </small>
         </button>
       )}
@@ -756,7 +792,7 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
           <span className="pulpit-os-czasu__etykieta-pracy" style={{ left: graniceDniaPracy.poczatek + '%' }}>Start pracy {zakresDniaPracy.poczatek}</span>
           <span className="pulpit-os-czasu__etykieta-pracy" style={{ left: graniceDniaPracy.koniec + '%' }}>Koniec pracy {zakresDniaPracy.koniec}</span>
         </div>
-        <div className="pulpit-os-czasu__zadania">{zadaniaGodzinowe.map((zadanie) => <MarkerDeadline key={zadanie.id} otworz={() => ustawWybraneZadanie(zadanie)} uzytkownicy={uzytkownicy} zadanie={zadanie} />)}</div>
+        <div className="pulpit-os-czasu__zadania">{zadaniaGodzinowe.map((zadanie) => <MarkerDeadline key={zadanie.id} otworz={() => ustawWybraneZadanie(zadanie)} zakresDniaPracy={zakresDniaPracy} uzytkownicy={uzytkownicy} zadanie={zadanie} />)}</div>
       </div>
 
       <div className="pulpit-podsekcja">
@@ -769,10 +805,10 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
             zalogowanyUzytkownik?.id,
             zalogowanyUzytkownik?.rola,
           )
-          return <KartaZadania key={zadanie.id} zadanie={zadanie} teraz={teraz} uzytkownicy={uzytkownicy} otworz={() => ustawWybraneZadanie(zadanie)} wykonaj={zadanie.czyAutomatyczne || !czyWykonawca ? undefined : () => oznaczWykonane(zadanie)} zmienGodzine={!czyMoznaEdytowacTermin ? undefined : (godzina) => zmienGodzine(zadanie, godzina)} odloz={zadanie.czyTerminKrytyczny || !czyMoznaEdytowacTermin ? undefined : (nowaData) => odlozZadanie(zadanie, nowaData)} />
+          return <KartaZadania key={zadanie.id} zadanie={zadanie} teraz={teraz} zakresDniaPracy={zakresDniaPracy} uzytkownicy={uzytkownicy} otworz={() => ustawWybraneZadanie(zadanie)} wykonaj={zadanie.czyAutomatyczne || !czyWykonawca ? undefined : () => oznaczWykonane(zadanie)} zmienGodzine={!czyMoznaEdytowacTermin ? undefined : (godzina) => zmienGodzine(zadanie, godzina)} odloz={zadanie.czyTerminKrytyczny || !czyMoznaEdytowacTermin ? undefined : (nowaData) => odlozZadanie(zadanie, nowaData)} />
         })}</div> : <p className="pulpit-pusty">Brak zadań bez przypisanej godziny.</p>}
       </div>
-      {zadaniaWykonane.length > 0 && <details className="pulpit-wykonane"><summary>Wykonane ({zadaniaWykonane.length})</summary>{zadaniaWykonane.map((zadanie) => <KartaZadania key={zadanie.id} zadanie={zadanie} teraz={teraz} uzytkownicy={uzytkownicy} otworz={() => ustawWybraneZadanie(zadanie)} />)}</details>}
+      {zadaniaWykonane.length > 0 && <details className="pulpit-wykonane"><summary>Wykonane ({zadaniaWykonane.length})</summary>{zadaniaWykonane.map((zadanie) => <KartaZadania key={zadanie.id} zadanie={zadanie} teraz={teraz} zakresDniaPracy={zakresDniaPracy} uzytkownicy={uzytkownicy} otworz={() => ustawWybraneZadanie(zadanie)} />)}</details>}
     </section>}
 
     {pokazPaczki && <section className="pulpit-sekcja" aria-labelledby="nadchodzace-paczki">
@@ -812,7 +848,7 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
       {wybraneZadanie.opis && <p>{wybraneZadanie.opis}</p>}
       <dl>
         <div><dt>Termin</dt><dd>{formatujDate(wybraneZadanie.data)}</dd></div>
-        <div><dt>Godzina</dt><dd>{wybraneZadanie.godzina || 'Bez godziny'}</dd></div>
+        <div><dt>Godzina</dt><dd>{etykietaTerminuZadania(wybraneZadanie)}</dd></div>
         <div><dt>Priorytet</dt><dd>{etykietaPriorytetu(wybraneZadanie.priorytet)}</dd></div>
         <div><dt>Zadaniodawca</dt><dd>{pobierzNazweOsoby(uzytkownicy, wybraneZadanie.zadaniodawcaId)}</dd></div>
         <div><dt>Zadaniobiorca</dt><dd>{pobierzNazweOsoby(uzytkownicy, wybraneZadanie.zadaniobiorcaId)}</dd></div>

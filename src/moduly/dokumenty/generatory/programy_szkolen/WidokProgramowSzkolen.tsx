@@ -135,8 +135,10 @@ const domyslnyZapisProgramu: ZapisProgramuRoboczego = {
 const styleProgramuSzkolenia = `
 .program-szkolen {
   display: grid;
+  min-width: 0;
   gap: 18px;
   color: #f4fff7;
+  container-type: inline-size;
 }
 
 .program-szkolen *,
@@ -878,7 +880,7 @@ const styleProgramuSzkolenia = `
   visibility: hidden;
   pointer-events: none;
 }
-@media (max-width: 1860px) {
+@container (max-width: 1860px) {
   .program-szkolen__uklad {
     grid-template-columns: minmax(420px, 1fr) minmax(0, 800px);
   }

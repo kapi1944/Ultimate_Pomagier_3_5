@@ -105,6 +105,44 @@
   gap: 12px;
 }
 
+.lista-dokumentow__pozycja {
+  position: relative;
+}
+
+.lista-dokumentow__pozycja--spalana {
+  animation: lista-dokumentow-spalanie 0.9s ease-in forwards;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.lista-dokumentow__pozycja--spalana::after {
+  position: absolute;
+  right: -8%;
+  bottom: -18%;
+  left: -8%;
+  height: 45%;
+  background:
+    radial-gradient(ellipse at 10% 100%, #fff7a8 0 7%, #ffb000 8% 18%, transparent 19%),
+    radial-gradient(ellipse at 34% 100%, #fff 0 5%, #ff6a00 6% 22%, transparent 23%),
+    radial-gradient(ellipse at 62% 100%, #ffd54a 0 8%, #ef2b0c 9% 24%, transparent 25%),
+    radial-gradient(ellipse at 88% 100%, #fff3a0 0 6%, #ff7800 7% 20%, transparent 21%);
+  content: '';
+  filter: blur(1px);
+  mix-blend-mode: screen;
+  animation: lista-dokumentow-plomienie 0.9s ease-in forwards;
+}
+
+.lista-dokumentow__spal {
+  border-color: rgba(251, 146, 60, 0.75) !important;
+  background: #4a1707 !important;
+  color: #fff1de !important;
+}
+
+.lista-dokumentow__spal:hover:not(:disabled) {
+  border-color: #fdba74 !important;
+  background: #6b2108 !important;
+}
+
 .lista-dokumentow__karta {
   flex-direction: column;
   border: 1px solid rgba(74, 222, 128, 0.28);
@@ -255,6 +293,30 @@
 
 .lista-dokumentow__akcje {
   flex-wrap: wrap;
+}
+
+@keyframes lista-dokumentow-spalanie {
+  0%, 35% {
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+  }
+
+  100% {
+    clip-path: inset(0 0 100% 0);
+    opacity: 0;
+  }
+}
+
+@keyframes lista-dokumentow-plomienie {
+  0% {
+    transform: translateY(0) scaleY(0.25);
+    opacity: 0.25;
+  }
+
+  100% {
+    transform: translateY(-170%) scaleY(2.2);
+    opacity: 1;
+  }
 }
 
 @media (max-width: 760px) {

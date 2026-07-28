@@ -9,7 +9,7 @@ import { czyPaczkaOpozniona, czyPaczkaWidoczna, czyWysylkaWymagaDodatkowegoPotwi
 import { obliczLicznikiPulpitu } from '../src/moduly/zamkniete/pulpit/logika/podsumowaniePulpitu.ts'
 import { obliczLiczbeAktywnychZapotrzebowanZakupowych, odmienRzeczDoZakupu, pobierzTekstLicznikaZakupow, walidujNoweZapotrzebowanieZakupowe } from '../src/moduly/zamkniete/pulpit/logika/zapotrzebowaniaZakupowe.ts'
 import { generujZadaniaAutomatyczne } from '../src/moduly/zamkniete/pulpit/logika/zadaniaAutomatyczne.ts'
-import { czyMoznaEdytowacZadanie, czyMoznaOznaczycZadanieRecznie, czyMoznaWybracZadaniodawce, czyZadanieOpoznione, czyZadanieWidoczneDlaUzytkownika, pobierzEtykieteStatusuZadania, pobierzZadaniaDeadline, rozstrzygnijPrzypisanieZadania, sortujZadaniaBezGodziny, walidujPrzypomnienia } from '../src/moduly/zamkniete/pulpit/logika/zadania.ts'
+import { czyMoznaEdytowacZadanie, czyMoznaOznaczycZadanieRecznie, czyMoznaWybracZadaniodawce, czyZadanieDoKoncaDnia, czyZadanieOpoznione, czyZadanieWidoczneDlaUzytkownika, pobierzEtykieteStatusuZadania, pobierzGodzineLogicznegoDeadline, pobierzGodzineMarkeraZadania, pobierzMomentPrzypomnieniaZadania, pobierzSzerokoscLiniiDoFajrantu, pobierzZadaniaDeadline, rozstrzygnijPrzypisanieZadania, sortujZadaniaBezGodziny, walidujPrzypomnienia } from '../src/moduly/zamkniete/pulpit/logika/zadania.ts'
 import type { PaczkaPulpitu, StatusZapotrzebowaniaZakupowego, ZadaniePulpitu, ZapotrzebowanieZakupowe } from '../src/moduly/zamkniete/pulpit/modele/pulpit.ts'
 import { edytujZadanieRecznePrzezZadaniodawce, normalizujZadaniePulpitu, pobierzStanPulpitu, zapiszZadanieReczne, zapiszZapotrzebowanieZakupowe } from '../src/moduly/zamkniete/pulpit/uslugi/magazynPulpitu.ts'
 
@@ -128,6 +128,51 @@ test('zadanie bez godziny nie tworzy markera deadline', () => {
     zadanie({ id: 'inny-dzien', data: '2026-07-23', godzina: '12:00' }),
   ], '2026-07-22', teraz)
   assert.deepEqual(zadaniaDeadline.map((pozycja) => pozycja.id), ['z-godzina'])
+})
+
+test('zadanie do końca dnia ma logiczny deadline FAJRANT, marker utworzenia i linię do końca pracy', () => {
+  const zakresDniaPracy = { poczatek: '07:45', koniec: '16:00' }
+  const doKoncaDnia = zadanie({
+    id: 'do-konca-dnia',
+    rodzajTerminu: 'DO_KONCA_DNIA',
+    utworzono: '2026-07-22T10:30:00',
+  })
+
+  assert.equal(doKoncaDnia.godzina, undefined)
+  assert.equal(czyZadanieDoKoncaDnia(doKoncaDnia), true)
+  assert.equal(pobierzGodzineLogicznegoDeadline(doKoncaDnia, zakresDniaPracy), '16:00')
+  assert.equal(pobierzGodzineMarkeraZadania(doKoncaDnia, zakresDniaPracy), '10:30')
+  assert.equal(pozycjaGodzinyNaOsi(pobierzGodzineMarkeraZadania(doKoncaDnia, zakresDniaPracy)!), 43.75)
+  assert.equal(pozycjaGodzinyNaOsi(zakresDniaPracy.koniec), 66.66666666666666)
+  assert.ok(Math.abs(pobierzSzerokoscLiniiDoFajrantu(doKoncaDnia, zakresDniaPracy) - 22.916666666666657) < 0.000001)
+  assert.deepEqual(pobierzZadaniaDeadline([doKoncaDnia, zadanie({ id: 'bez-godziny' })], '2026-07-22', teraz, zakresDniaPracy).map((pozycja) => pozycja.id), ['do-konca-dnia'])
+  assert.equal(czyZadanieOpoznione(doKoncaDnia, new Date('2026-07-22T15:59:00'), zakresDniaPracy), false)
+  assert.equal(czyZadanieOpoznione(doKoncaDnia, new Date('2026-07-22T16:01:00'), zakresDniaPracy), true)
+  assert.equal(pobierzMomentPrzypomnieniaZadania(doKoncaDnia, { id: 'godzina', wartosc: 1, jednostka: 'GODZINY' }, zakresDniaPracy)?.getHours(), 15)
+})
+
+test('zadanie do końca dnia utworzone po FAJRANCIE zachowuje marker bez linii wstecz', () => {
+  const zakresDniaPracy = { poczatek: '07:45', koniec: '16:00' }
+  const poFajrancie = zadanie({
+    rodzajTerminu: 'DO_KONCA_DNIA',
+    utworzono: '2026-07-22T17:00:00',
+  })
+
+  assert.equal(pobierzGodzineMarkeraZadania(poFajrancie, zakresDniaPracy), '17:00')
+  assert.equal(pobierzSzerokoscLiniiDoFajrantu(poFajrancie, zakresDniaPracy), 0)
+  assert.equal(czyZadanieOpoznione(poFajrancie, new Date('2026-07-22T17:00:00'), zakresDniaPracy), true)
+})
+
+test('zadanie do końca dnia przełożone na następny dzień zaczyna się od początku pracy', () => {
+  const zakresDniaPracy = { poczatek: '07:45', koniec: '16:00' }
+  const przelozone = zadanie({
+    data: '2026-07-23',
+    odlozonoDo: '2026-07-23',
+    rodzajTerminu: 'DO_KONCA_DNIA',
+    utworzono: '2026-07-22T14:47:00',
+  })
+
+  assert.equal(pobierzGodzineMarkeraZadania(przelozone, zakresDniaPracy), '07:45')
 })
 
 test('domyślnie Zadaniodawca i Zadaniobiorca są aktualnym użytkownikiem', () => {
@@ -370,7 +415,25 @@ test('stare zadanie bez nowych pól jest bezpiecznie normalizowane', () => {
   assert.ok(stare)
   assert.equal(stare.zadaniodawcaId, 'anna')
   assert.equal(stare.zadaniobiorcaId, 'anna')
+  assert.equal(stare.rodzajTerminu, undefined)
   assert.deepEqual(stare.przypomnienia, [])
+})
+
+test('normalizacja zachowuje nowe terminy i rozróżnia stare zadanie godzinowe', () => {
+  const doKoncaDnia = normalizujZadaniePulpitu({
+    ...zadanie(),
+    godzina: undefined,
+    rodzajTerminu: 'DO_KONCA_DNIA',
+  })
+  const stareGodzinowe = normalizujZadaniePulpitu({
+    ...zadanie(),
+    godzina: '13:52',
+  })
+
+  assert.equal(doKoncaDnia?.rodzajTerminu, 'DO_KONCA_DNIA')
+  assert.equal(doKoncaDnia?.godzina, undefined)
+  assert.equal(stareGodzinowe?.rodzajTerminu, 'KONKRETNA_GODZINA')
+  assert.equal(stareGodzinowe?.godzina, '13:52')
 })
 
 const zapotrzebowanie = (zmiany: Partial<ZapotrzebowanieZakupowe> = {}): ZapotrzebowanieZakupowe => ({ id: 'zakup', nazwa: 'Papier A4', ilosc: 1, status: 'ZGLOSZONE', utworzonePrzezId: 'kacper', utworzonoAt: '2026-07-22T08:00:00.000Z', ...zmiany })
@@ -450,11 +513,28 @@ test('marker deadline dodaje glow wyłącznie dla Pilne i mocniej dla ASAP', () 
 
   assert.match(widok, /pulpit-deadline--pilne/)
   assert.match(widok, /pulpit-deadline--asap/)
-  assert.doesNotMatch(widok, /pulpit-deadline--zwykle/)
+  assert.match(widok, /pulpit-deadline--zwykle/)
+  assert.match(css, /\.pulpit-deadline--zwykle \.pulpit-deadline__romb/)
   assert.match(css, /\.pulpit-deadline--pilne \.pulpit-deadline__romb/)
   assert.match(css, /calc\(var\(--pulpit-deadline-glow\) \+ 4px\)/)
   assert.match(css, /\.pulpit-deadline--asap \.pulpit-deadline__romb/)
   assert.match(css, /calc\(var\(--pulpit-deadline-glow\) \+ 12px\)/)
+})
+
+test('marker wiąże każdy priorytet z jawną klasą, a do końca dnia używa koloru Zadaniodawcy', () => {
+  const widok = readFileSync('src/moduly/zamkniete/pulpit/WidokPulpitu.tsx', 'utf8')
+  const css = readFileSync('src/moduly/zamkniete/pulpit/pulpit.css', 'utf8')
+
+  assert.match(widok, /zadanie\.priorytet === 'ZWYKLE'/)
+  assert.match(widok, /pulpit-deadline--zwykle/)
+  assert.match(widok, /pulpit-deadline--pilne/)
+  assert.match(widok, /pulpit-deadline--asap/)
+  assert.match(widok, /pulpit-deadline--do-konca-dnia/)
+  assert.match(widok, /DO KOŃCA DNIA/)
+  assert.match(widok, /Do: FAJRANT/)
+  assert.match(css, /\.pulpit-deadline__linia-do-fajrantu/)
+  assert.match(css, /background:\s*var\(--kolor-zadaniodawcy\)/)
+  assert.match(css, /pointer-events:\s*none/)
 })
 
 

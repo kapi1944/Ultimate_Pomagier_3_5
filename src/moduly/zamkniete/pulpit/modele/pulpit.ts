@@ -1,6 +1,7 @@
 export type StatusZadaniaPulpitu = 'OTWARTE' | 'WYKONANE'
 export type PriorytetZadaniaPulpitu = 'ZWYKLE' | 'PILNE' | 'ASAP'
 export type TypZrodlaZadania = 'RECZNE' | 'SZKOLENIE' | 'PACZKA'
+export type RodzajTerminuZadania = 'KONKRETNA_GODZINA' | 'DO_KONCA_DNIA'
 
 export type JednostkaPrzypomnienia = 'MINUTY' | 'GODZINY' | 'DNI'
 
@@ -16,6 +17,7 @@ export type ZadaniePulpitu = {
   opis?: string
   data: string
   godzina?: string
+  rodzajTerminu?: RodzajTerminuZadania
   utworzono: string
   status: StatusZadaniaPulpitu
   priorytet: PriorytetZadaniaPulpitu

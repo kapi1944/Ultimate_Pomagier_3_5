@@ -30,6 +30,8 @@ export interface RepozytoriumWspolnychDokumentow {
   archiwizuj(id: string): Dokument<unknown, unknown> | null
   przywroc(id: string): Dokument<unknown, unknown> | null
   usunMiekko(id: string): Dokument<unknown, unknown> | null
+  przywrocZKosza(id: string): Dokument<unknown, unknown> | null
+  usunTrwale(id: string): boolean
   utworzKopieRobocza(dane: Omit<KopiaRoboczaDokumentu, 'id' | 'utworzono' | 'zaktualizowano'> & { id?: string }): KopiaRoboczaDokumentu
   pobierzKopieRobocza(id: string): KopiaRoboczaDokumentu | null
   aktualizujKopieRobocza(id: string, zmiany: Partial<Pick<KopiaRoboczaDokumentu, 'daneDokumentu' | 'reczneNadpisania'>>): KopiaRoboczaDokumentu | null
@@ -265,6 +267,25 @@ export const repozytoriumWspolnychDokumentow: RepozytoriumWspolnychDokumentow = 
   usunMiekko(id) {
     const teraz = new Date().toISOString()
     return aktualizujStan(id, (dokument) => ({ ...dokument, czyUsunietyMiekko: true, usunieto: teraz, zmodyfikowano: teraz, zaktualizowano: teraz }))
+  },
+
+  przywrocZKosza(id) {
+    const teraz = new Date().toISOString()
+    return aktualizujStan(id, (dokument) => ({ ...dokument, czyUsunietyMiekko: false, usunieto: null, zmodyfikowano: teraz, zaktualizowano: teraz }))
+  },
+
+  usunTrwale(id) {
+    const stan = pobierzStan()
+    const dokumentDoUsuniecia = stan.dokumenty.find((dokument) => dokument.id === id)
+
+    if (!dokumentDoUsuniecia?.czyUsunietyMiekko) {
+      return false
+    }
+
+    const dokumenty = stan.dokumenty.filter((dokument) => dokument.id !== id)
+
+    zapiszStan({ ...stan, dokumenty })
+    return true
   },
 
   utworzKopieRobocza(dane) {

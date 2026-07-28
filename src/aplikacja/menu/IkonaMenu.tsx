@@ -5,6 +5,7 @@ export type TypIkonyMenu =
   | 'wszystkie'
   | 'nowy'
   | 'kopie'
+  | 'kosz'
   | 'programy'
   | 'ankiety'
   | 'dyplomy'
@@ -22,6 +23,7 @@ const sciezki: Record<TypIkonyMenu, string[]> = {
   wszystkie: ['M4 4h10l3 3v13H4z', 'M8 2h10l2 2v14', 'M8 11h6', 'M8 15h6'],
   nowy: ['M6 2h8l4 4v16H6z', 'M14 2v5h5', 'M12 11v6', 'M9 14h6'],
   kopie: ['M4 5h6l2 2h8v12H4z', 'M9 12h6', 'M9 15h4', 'M17 3l1 1'],
+  kosz: ['M5 7h14', 'M9 3h6', 'M10 3v4', 'M6 7l1 14h10l1-14', 'M10 11v6', 'M14 11v6'],
   programy: ['M4 4h7a3 3 0 0 1 3 3v13H7a3 3 0 0 0-3 3z', 'M20 4h-7a3 3 0 0 0-3 3v13h7a3 3 0 0 1 3 3z'],
   ankiety: ['M6 3h12v18H6z', 'M9 8h6', 'M9 12h6', 'M9 16l1.5 1.5L14 14'],
   dyplomy: ['M12 3l3 5 5 1-3.5 4 1 5-5.5-2-5.5 2 1-5L4 9l5-1z', 'M9 20h6'],

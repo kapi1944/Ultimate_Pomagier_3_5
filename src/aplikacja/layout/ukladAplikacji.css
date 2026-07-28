@@ -274,12 +274,14 @@
   flex: 1;
   min-width: 0;
   width: 100%;
-  padding: 36px 36px 36px 72px;
+  container-name: obszar-roboczy;
+  container-type: inline-size;
+  padding: var(--ui-page-padding) var(--ui-page-padding) var(--ui-page-padding) var(--ui-page-padding-z-menu);
   transition: margin-left 180ms ease, width 180ms ease, padding-left 180ms ease;
 }
 
 .uklad-aplikacji--menu-przypiete .uklad-aplikacji__kolumna-glowna { margin-left: var(--szerokosc-menu-bocznego); }
-.uklad-aplikacji--menu-przypiete .uklad-aplikacji__obszar-roboczy { width: 100%; margin-left: 0; padding-left: 36px; }
+.uklad-aplikacji--menu-przypiete .uklad-aplikacji__obszar-roboczy { width: 100%; margin-left: 0; padding-left: var(--ui-page-padding); }
 .widok { width: 100%; max-width: none; }
 .widok h1 { margin: 0 0 12px; font-size: 2rem; line-height: 1.2; }
 .widok p { max-width: 760px; margin: 0; color: #b9d7c2; }

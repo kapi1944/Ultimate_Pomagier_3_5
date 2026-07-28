@@ -25,10 +25,13 @@
 
 .pulpit-os-czasu {
   box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
   min-height: 205px;
   padding: 38px 10px 0;
   overflow: visible;
   isolation: isolate;
+  container-type: inline-size;
 }
 
 .pulpit-os-czasu__linia {
@@ -164,6 +167,19 @@
   content: '';
 }
 
+.pulpit-deadline__linia-do-fajrantu {
+  position: absolute;
+  z-index: 0;
+  top: -17px;
+  left: 0;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--kolor-zadaniodawcy);
+  opacity: .62;
+  pointer-events: none;
+  box-shadow: 0 0 5px var(--kolor-zadaniodawcy);
+}
+
 .pulpit .pulpit-deadline__przycisk {
   position: absolute;
   z-index: 2;
@@ -208,6 +224,10 @@
   background: var(--kolor-zadaniodawcy);
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, .65);
+}
+
+.pulpit-deadline--zwykle .pulpit-deadline__romb {
+  box-shadow: 0 0 0 2px rgba(255, 247, 237, .9);
 }
 
 .pulpit-deadline--pilne::before {
@@ -415,6 +435,10 @@
 
 @media (max-width: 720px) {
   .pulpit-os-czasu__etykieta-pracy { display: none; }
+}
+
+@container (max-width: 430px) {
+  .pulpit-os-czasu__etykieta:nth-child(even) { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

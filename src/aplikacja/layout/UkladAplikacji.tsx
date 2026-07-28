@@ -66,24 +66,31 @@ const dostepneWidoki: WidokNawigacji[] = [
   'dokumenty',
   'dokumenty_wszystkie',
   'dokumenty_kopie_robocze',
+  'dokumenty_kosz',
   'replikator_dokumentow',
   'listy-obecnosci',
   'listy_obecnosci_kopie_robocze',
   'listy_obecnosci_wszystkie',
+  'listy_obecnosci_kosz',
   'ankiety',
   'ankiety_kopie_robocze',
   'ankiety_wszystkie',
+  'ankiety_kosz',
   'dyplomy',
   'dyplomy_kopie_robocze',
   'dyplomy_wszystkie',
+  'dyplomy_kosz',
   'karta-na-drzwi',
   'karta_na_drzwi_kopie_robocze',
   'karta_na_drzwi_wszystkie',
+  'karta_na_drzwi_kosz',
   'checklisty_paczek',
   'checklisty_paczek_kopie_robocze',
   'checklisty_paczek_wszystkie',
+  'checklisty_paczek_kosz',
   'programy_szkolen',
   'programy_szkolen_kopie_robocze',
+  'programy_szkolen_kosz',
   'kartoteki',
   'kartoteki_trenerzy',
   'kartoteki_uzytkownicy',
@@ -179,6 +186,8 @@ function renderujWidok(
       return <WidokWszystkichDokumentow otworzDokument={otworzDokument} />
     case 'dokumenty_kopie_robocze':
       return <WidokKopiiRoboczychDokumentow otworzDokument={otworzDokument} />
+    case 'dokumenty_kosz':
+      return <WidokWszystkichDokumentow czyKosz opis="Usunięte dokumenty można przywrócić albo trwale spalić." otworzDokument={otworzDokument} tytul="Kosz dokumentów" />
     case 'replikator_dokumentow':
       return <WidokReplikatoraDokumentow />
     case 'listy-obecnosci':
@@ -187,30 +196,40 @@ function renderujWidok(
       return <WidokKopiiRoboczychDokumentow tytul="Kopie robocze — Listy obecności" opis="Robocze Listy obecności ze wspólnego rejestru dokumentów." typyStale={['LISTA_OBECNOSCI']} otworzDokument={otworzDokument} />
     case 'listy_obecnosci_wszystkie':
       return <WidokWszystkichDokumentow tytul="Wszystkie listy obecności" opis="Wszystkie listy obecności dostępne we wspólnym rejestrze." typyStale={['LISTA_OBECNOSCI']} otworzDokument={otworzDokument} />
+    case 'listy_obecnosci_kosz':
+      return <WidokWszystkichDokumentow czyKosz opis="Usunięte listy obecności." otworzDokument={otworzDokument} tytul="Kosz — Listy obecności" typyStale={['LISTA_OBECNOSCI']} />
     case 'ankiety':
       return <WidokAnkiet />
     case 'ankiety_kopie_robocze':
       return <WidokKopiiRoboczychDokumentow tytul="Kopie robocze — Ankiety" opis="Robocze Ankiety ze wspólnego rejestru dokumentów." typyStale={['ANKIETA']} otworzDokument={otworzDokument} />
     case 'ankiety_wszystkie':
       return <WidokWszystkichDokumentow tytul="Wszystkie ankiety" opis="Wszystkie ankiety dostępne we wspólnym rejestrze." typyStale={['ANKIETA']} otworzDokument={otworzDokument} />
+    case 'ankiety_kosz':
+      return <WidokWszystkichDokumentow czyKosz opis="Usunięte ankiety." otworzDokument={otworzDokument} tytul="Kosz — Ankiety" typyStale={['ANKIETA']} />
     case 'dyplomy':
       return <WidokDyplomow />
     case 'dyplomy_kopie_robocze':
       return <WidokKopiiRoboczychDokumentow tytul="Kopie robocze — Dyplomy" opis="Robocze certyfikaty, zaświadczenia i dyplomy." typyStale={['CERTYFIKAT', 'ZASWIADCZENIE', 'DYPLOM']} otworzDokument={otworzDokument} />
     case 'dyplomy_wszystkie':
       return <WidokWszystkichDokumentow tytul="Wszystkie dyplomy" opis="Wszystkie certyfikaty, zaświadczenia i dyplomy ze wspólnego rejestru." typyStale={['CERTYFIKAT', 'ZASWIADCZENIE', 'DYPLOM']} otworzDokument={otworzDokument} />
+    case 'dyplomy_kosz':
+      return <WidokWszystkichDokumentow czyKosz opis="Usunięte certyfikaty, zaświadczenia i dyplomy." otworzDokument={otworzDokument} tytul="Kosz — Dyplomy" typyStale={['CERTYFIKAT', 'ZASWIADCZENIE', 'DYPLOM']} />
     case 'karta-na-drzwi':
       return <WidokKartNaDrzwi />
     case 'karta_na_drzwi_kopie_robocze':
       return <WidokKopiiRoboczychDokumentow tytul="Kopie robocze — Karty na drzwi" opis="Robocze Karty na drzwi ze wspólnego rejestru dokumentów." typyStale={['KARTA_NA_DRZWI']} otworzDokument={otworzDokument} />
     case 'karta_na_drzwi_wszystkie':
       return <WidokWszystkichDokumentow tytul="Wszystkie karty na drzwi" opis="Wszystkie karty na drzwi dostępne we wspólnym rejestrze." typyStale={['KARTA_NA_DRZWI']} otworzDokument={otworzDokument} />
+    case 'karta_na_drzwi_kosz':
+      return <WidokWszystkichDokumentow czyKosz opis="Usunięte karty na drzwi." otworzDokument={otworzDokument} tytul="Kosz — Karty na drzwi" typyStale={['KARTA_NA_DRZWI']} />
     case 'checklisty_paczek':
       return <WidokChecklistPaczek dokumentIdZTrasy={pobierzIdChecklistyPaczkiZeSciezki()} />
     case 'checklisty_paczek_kopie_robocze':
       return <WidokKopiiRoboczychDokumentow tytul="Kopie robocze — Checklisty paczek" opis="Robocze checklisty paczek ze wspólnego rejestru dokumentów." typyStale={['CHECKLISTA_PACZKI']} otworzDokument={otworzDokument} />
     case 'checklisty_paczek_wszystkie':
       return <WidokWszystkichDokumentow tytul="Wszystkie checklisty paczek" opis="Wszystkie checklisty paczek dostępne we wspólnym rejestrze." typyStale={['CHECKLISTA_PACZKI']} otworzDokument={otworzDokument} />
+    case 'checklisty_paczek_kosz':
+      return <WidokWszystkichDokumentow czyKosz opis="Usunięte checklisty paczek." otworzDokument={otworzDokument} tytul="Kosz — Checklisty paczek" typyStale={['CHECKLISTA_PACZKI']} />
     case 'programy_szkolen':
       return <WidokProgramowSzkolen key={`${wersjaProgramu}-${pobierzIdProgramuZeSciezki() ?? 'nowy'}`} dokumentIdZTrasy={pobierzIdProgramuZeSciezki()} />
     case 'programy_szkolen_kopie_robocze':
@@ -226,6 +245,8 @@ function renderujWidok(
           usunKopie={usunKopieRoboczaProgramu}
         />
       )
+    case 'programy_szkolen_kosz':
+      return <WidokWszystkichDokumentow czyKosz opis="Usunięte programy szkoleń." otworzDokument={otworzDokument} tytul="Kosz — Programy szkoleń" typyStale={['PROGRAM_SZKOLENIA']} />
     case 'kartoteki':
       return <WidokKartotek poZmianieZakladki={zmienZakladkeKartotek} />
     case 'kartoteki_trenerzy':
