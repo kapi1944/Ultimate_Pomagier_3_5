@@ -8,7 +8,7 @@ export const kluczMagazynuUzytkownikow = 'ultimatePomagier.uzytkownicy.v1'
 
 function skopiujUzytkownika(uzytkownik: Uzytkownik): Uzytkownik {
   const emaile = uzytkownik.emaile.map((email) => email.trim()).filter(Boolean)
-  return { ...uzytkownik, email: uzytkownik.email?.trim() || emaile[0] || '', emaile, telefony: uzytkownik.telefony.map(normalizujTelefon), odznaki: [...uzytkownik.odznaki], aliasyHistoryczne: [...uzytkownik.aliasyHistoryczne] }
+  return { ...uzytkownik, email: emaile[0] || '', emaile, telefony: uzytkownik.telefony.map(normalizujTelefon), odznaki: [...uzytkownik.odznaki], aliasyHistoryczne: [...uzytkownik.aliasyHistoryczne] }
 }
 
 function czyPoprawnyUzytkownik(wartosc: unknown): wartosc is Uzytkownik {
@@ -41,10 +41,78 @@ export function wykonajMigracjeRoliArchitekta(uzytkownicy: Uzytkownik[]) {
   return { uzytkownicy: wynik, czyZmieniono }
 }
 
+const usuwaneIdUzytkownikow = new Set(['opiekun-anna-nowak', 'opiekun-piotr-zielinski'])
+const aktualizowaneIdUzytkownikow = new Set(['architekt-systemu', 'administrator-kacper-madej', 'Iza', 'Kamila', 'Dawid', 'Kasia RB', 'konto-zablokowane', 'konto-nieaktywne'])
+const noweIdUzytkownikow = new Set(['pracownik-pawel-kwiecinski', 'pracownik-tomasz-czekaj', 'pracownik-angelika-poznanska', 'pracownik-agata-pelc', 'pracownik-alicja-krysinska', 'pracownik-paulina-kazmierczak', 'pracownik-izabela-szoc', 'pracownik-ewelina-kostecka', 'pracownik-ewa-niziol'])
+
+function pobierzDaneMigrowane(uzytkownik: Uzytkownik) {
+  const kopia = skopiujUzytkownika(uzytkownik)
+  return {
+    zwrot: kopia.zwrot,
+    tytulNaukowy: kopia.tytulNaukowy,
+    imie: kopia.imie,
+    nazwisko: kopia.nazwisko,
+    pseudonim: kopia.pseudonim,
+    email: uzytkownik.email?.trim() || '',
+    emaile: kopia.emaile,
+    telefony: kopia.telefony,
+    login: kopia.login,
+    rola: kopia.rola,
+    organizacja: kopia.organizacja,
+    odznaki: kopia.odznaki,
+    status: kopia.status,
+    kolorProfilu: kopia.kolorProfilu,
+    aliasyHistoryczne: kopia.aliasyHistoryczne,
+    przypisanyKlientId: kopia.przypisanyKlientId,
+    przypisanyTrenerId: kopia.przypisanyTrenerId,
+    wymagaZmianyHasla: kopia.wymagaZmianyHasla,
+  }
+}
+
+export function wykonajMigracjeBazyUzytkownikow(uzytkownicy: Uzytkownik[]) {
+  const docelowiUzytkownicy = new Map(daneStartoweUzytkownikow.filter((uzytkownik) => aktualizowaneIdUzytkownikow.has(uzytkownik.id)).map((uzytkownik) => [uzytkownik.id, uzytkownik]))
+  const napotkaneId = new Set<string>()
+  const teraz = new Date().toISOString()
+  let czyZmieniono = false
+  const wynik: Uzytkownik[] = []
+
+  for (const uzytkownik of uzytkownicy) {
+    if (usuwaneIdUzytkownikow.has(uzytkownik.id) || napotkaneId.has(uzytkownik.id)) {
+      czyZmieniono = true
+      continue
+    }
+    napotkaneId.add(uzytkownik.id)
+    const docelowy = docelowiUzytkownicy.get(uzytkownik.id)
+    if (!docelowy || JSON.stringify(pobierzDaneMigrowane(uzytkownik)) === JSON.stringify(pobierzDaneMigrowane(docelowy))) {
+      wynik.push(skopiujUzytkownika(uzytkownik))
+      continue
+    }
+    czyZmieniono = true
+    wynik.push({
+      ...skopiujUzytkownika(docelowy),
+      id: uzytkownik.id,
+      utworzono: uzytkownik.utworzono,
+      ostatnieLogowanie: uzytkownik.ostatnieLogowanie,
+      wersjaUprawnien: uzytkownik.wersjaUprawnien + (czyZmianaWplywaNaUprawnienia(uzytkownik, docelowy) ? 1 : 0),
+      zaktualizowano: teraz,
+    })
+  }
+
+  for (const nowyUzytkownik of daneStartoweUzytkownikow.filter((uzytkownik) => noweIdUzytkownikow.has(uzytkownik.id))) {
+    if (napotkaneId.has(nowyUzytkownik.id)) continue
+    wynik.push(skopiujUzytkownika(nowyUzytkownik))
+    napotkaneId.add(nowyUzytkownik.id)
+    czyZmieniono = true
+  }
+
+  const migracjaRoli = wykonajMigracjeRoliArchitekta(wynik)
+  return { uzytkownicy: migracjaRoli.uzytkownicy, czyZmieniono: czyZmieniono || migracjaRoli.czyZmieniono }
+}
+
 export function zainicjalizujMagazynUzytkownikow() {
   const istniejacyMagazyn = odczytajMagazyn()
   if (istniejacyMagazyn !== null) {
-    const migracja = wykonajMigracjeRoliArchitekta(istniejacyMagazyn)
+    const migracja = wykonajMigracjeBazyUzytkownikow(istniejacyMagazyn)
     if (migracja.czyZmieniono) zapiszUzytkownikow(migracja.uzytkownicy)
     return migracja.uzytkownicy.map(skopiujUzytkownika)
   }

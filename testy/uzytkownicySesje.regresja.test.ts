@@ -24,13 +24,76 @@ test('magazyn inicjalizuje dane tylko raz, nie nadpisuje danych i bezpiecznie ob
   wyczyscStan()
   const pierwsze = zainicjalizujMagazynUzytkownikow()
   assert.equal(pierwsze.length, daneStartoweUzytkownikow.length)
-  const niestandardowy = [{ ...pierwsze[0], pseudonim: 'Zachowany użytkownik' }]
+  const niestandardowy = [{ ...pierwsze[0], id: 'uzytkownik-niestandardowy', login: 'niestandardowy', email: 'niestandardowy@pomagier.local', emaile: ['niestandardowy@pomagier.local'], pseudonim: 'Zachowany użytkownik' }]
   magazyn.set(kluczMagazynuUzytkownikow, JSON.stringify(niestandardowy))
-  assert.equal(zainicjalizujMagazynUzytkownikow()[0].pseudonim, 'Zachowany użytkownik')
+  assert.equal(zainicjalizujMagazynUzytkownikow().find((uzytkownik) => uzytkownik.id === 'uzytkownik-niestandardowy')?.pseudonim, 'Zachowany użytkownik')
   magazyn.set(kluczMagazynuUzytkownikow, '{uszkodzony')
-  assert.deepEqual(pobierzUzytkownikow(), [])
+  assert.equal(pobierzUzytkownikow().length, 9)
   magazyn.set(kluczMagazynuUzytkownikow, JSON.stringify([{}]))
-  assert.deepEqual(pobierzUzytkownikow(), [])
+  assert.equal(pobierzUzytkownikow().length, 9)
+})
+
+test('docelowa baza startowa zawiera dokładnie 17 spójnych i unikalnych użytkowników', () => {
+  const noweId = ['pracownik-pawel-kwiecinski', 'pracownik-tomasz-czekaj', 'pracownik-angelika-poznanska', 'pracownik-agata-pelc', 'pracownik-alicja-krysinska', 'pracownik-paulina-kazmierczak', 'pracownik-izabela-szoc', 'pracownik-ewelina-kostecka', 'pracownik-ewa-niziol']
+  assert.equal(daneStartoweUzytkownikow.length, 17)
+  assert.equal(new Set(daneStartoweUzytkownikow.map((uzytkownik) => uzytkownik.id)).size, 17)
+  assert.equal(new Set(daneStartoweUzytkownikow.map((uzytkownik) => uzytkownik.login.toLocaleLowerCase('pl'))).size, 17)
+  const wszystkieEmaile = daneStartoweUzytkownikow.flatMap((uzytkownik) => uzytkownik.emaile.map((email) => email.toLocaleLowerCase('pl')))
+  assert.equal(new Set(wszystkieEmaile).size, wszystkieEmaile.length)
+  assert.equal(daneStartoweUzytkownikow.every((uzytkownik) => uzytkownik.email === uzytkownik.emaile[0]), true)
+  assert.equal(daneStartoweUzytkownikow.some((uzytkownik) => uzytkownik.id === 'opiekun-anna-nowak'), false)
+  assert.equal(daneStartoweUzytkownikow.some((uzytkownik) => uzytkownik.id === 'opiekun-piotr-zielinski'), false)
+  assert.equal(noweId.every((id) => daneStartoweUzytkownikow.some((uzytkownik) => uzytkownik.id === id)), true)
+  const architekci = daneStartoweUzytkownikow.filter((uzytkownik) => uzytkownik.rola === 'ARCHITEKT')
+  assert.equal(architekci.length, 1)
+  assert.equal(architekci[0].id, 'administrator-kacper-madej')
+  assert.equal(architekci[0].status, 'AKTYWNY')
+  assert.equal(architekci[0].organizacja, 'SEMPER')
+  assert.equal(daneStartoweUzytkownikow.find((uzytkownik) => uzytkownik.id === 'architekt-systemu')?.email, 'a.systemu@pomagier.local')
+  assert.equal(daneStartoweUzytkownikow.find((uzytkownik) => uzytkownik.id === 'Kasia RB')?.email, 'k.buraczek@szkolenia-semper.pl')
+  assert.equal(daneStartoweUzytkownikow.find((uzytkownik) => uzytkownik.id === 'Iza')?.telefony[0]?.numerE164, '+48796230982')
+  assert.deepEqual(daneStartoweUzytkownikow.find((uzytkownik) => uzytkownik.id === 'pracownik-pawel-kwiecinski')?.odznaki, ['WYSYLACZ', 'AKCEPTUJACY', 'EKSPORTER', 'ROZLICZAJACY', 'AUDYTOR'])
+  assert.deepEqual(daneStartoweUzytkownikow.find((uzytkownik) => uzytkownik.id === 'pracownik-angelika-poznanska')?.odznaki, ['EKSPORTER', 'ROZLICZAJACY', 'AUDYTOR'])
+  for (const [id, imie, nazwisko, login] of [['Iza', 'Izabela', 'Czugała', 'i.czugala'], ['Kamila', 'Kamila', 'Zaremba', 'k.zaremba'], ['Dawid', 'Dawid', 'Chyła', 'd.chyla'], ['Kasia RB', 'Katarzyna', 'Rohde-Buraczek', 'k.buraczek']] as const) {
+    const uzytkownik = daneStartoweUzytkownikow.find((kandydat) => kandydat.id === id)
+    assert.deepEqual([uzytkownik?.imie, uzytkownik?.nazwisko, uzytkownik?.login], [imie, nazwisko, login])
+  }
+})
+
+test('migracja starego magazynu aktualizuje bazę raz, zachowuje metadane i nie tworzy duplikatów', () => {
+  wyczyscStan()
+  const stareUtworzenie = '2025-01-02T03:04:05.000Z'
+  const stareLogowanie = '2026-01-02T03:04:05.000Z'
+  const stareRekordy = daneStartoweUzytkownikow.slice(0, 8).map((uzytkownik) => {
+    if (uzytkownik.id === 'architekt-systemu') return { ...uzytkownik, email: 'stary-adres@pomagier.local' }
+    if (uzytkownik.id === 'Iza') return { ...uzytkownik, imie: 'Iza', nazwisko: '', pseudonim: 'Iza', email: 'iza@pomagier.local', emaile: ['iza@pomagier.local'], login: 'iza', odznaki: ['AKCEPTUJACY'] as typeof uzytkownik.odznaki, utworzono: stareUtworzenie, ostatnieLogowanie: stareLogowanie }
+    if (uzytkownik.id === 'Kamila') return { ...uzytkownik, nazwisko: '', email: 'kamila@pomagier.local', emaile: ['kamila@pomagier.local'], login: 'kamila' }
+    if (uzytkownik.id === 'Dawid') return { ...uzytkownik, nazwisko: '', email: 'dawid@pomagier.local', emaile: ['dawid@pomagier.local'], login: 'dawid' }
+    if (uzytkownik.id === 'Kasia RB') return { ...uzytkownik, imie: 'Kasia', nazwisko: 'RB', email: 'kasia.rb@pomagier.local', emaile: ['kasia.rb@pomagier.local'], login: 'kasia.rb' }
+    return uzytkownik
+  })
+  const wzorzec = daneStartoweUzytkownikow[0]
+  stareRekordy.push(
+    { ...wzorzec, id: 'opiekun-anna-nowak', imie: 'Anna', nazwisko: 'Nowak', pseudonim: 'Ania', email: 'anna.nowak@pomagier.local', emaile: ['anna.nowak@pomagier.local'], login: 'anna.nowak', rola: 'OPIEKUN' },
+    { ...wzorzec, id: 'opiekun-piotr-zielinski', imie: 'Piotr', nazwisko: 'Zieliński', pseudonim: 'Piotr', email: 'piotr.zielinski@pomagier.local', emaile: ['piotr.zielinski@pomagier.local'], login: 'piotr.zielinski', rola: 'OPIEKUN' },
+  )
+  magazyn.set(kluczMagazynuUzytkownikow, JSON.stringify(stareRekordy))
+
+  const poPierwszejMigracji = zainicjalizujMagazynUzytkownikow()
+  const izaPoMigracji = poPierwszejMigracji.find((uzytkownik) => uzytkownik.id === 'Iza')!
+  assert.equal(poPierwszejMigracji.length, 17)
+  assert.equal(izaPoMigracji.utworzono, stareUtworzenie)
+  assert.equal(izaPoMigracji.ostatnieLogowanie, stareLogowanie)
+  assert.equal(izaPoMigracji.wersjaUprawnien, 2)
+  assert.equal(poPierwszejMigracji.every((uzytkownik) => uzytkownik.email === uzytkownik.emaile[0]), true)
+  assert.equal(poPierwszejMigracji.some((uzytkownik) => uzytkownik.id === 'opiekun-anna-nowak' || uzytkownik.id === 'opiekun-piotr-zielinski'), false)
+  const zapisPoPierwszejMigracji = magazyn.get(kluczMagazynuUzytkownikow)
+
+  const poDrugiejMigracji = zainicjalizujMagazynUzytkownikow()
+  assert.deepEqual(poDrugiejMigracji, poPierwszejMigracji)
+  assert.equal(magazyn.get(kluczMagazynuUzytkownikow), zapisPoPierwszejMigracji)
+  assert.equal(new Set(poDrugiejMigracji.map((uzytkownik) => uzytkownik.id)).size, poDrugiejMigracji.length)
+  assert.equal(poDrugiejMigracji.find((uzytkownik) => uzytkownik.id === 'Iza')?.wersjaUprawnien, 2)
 })
 
 test('magazyn wyszukuje bez rozróżniania wielkości liter po loginie, e-mailu i aliasie', () => {
@@ -66,7 +129,7 @@ test('brak sesji nie zwraca Administratora, a role i odznaki nie przyznają dost
   assert.equal(czyJestAdministratorem(administrator), true)
   assert.equal(czyMozeEksportowac(administrator), true)
   assert.equal(czyMozeAkceptowac(iza), true)
-  assert.equal(czyMozeEksportowac(iza), false)
+  assert.equal(czyMozeEksportowac(iza), true)
 })
 
 test('migracja starej sesji rozpoznaje konto i usuwa oba historyczne klucze', () => {
