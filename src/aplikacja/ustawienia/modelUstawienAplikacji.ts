@@ -214,8 +214,8 @@ export function normalizujUstawieniaAplikacji(dane: unknown): UstawieniaAplikacj
       ),
       skalaHover: ograniczLiczbe(
         wyglad.skalaHover,
-        1,
-        1.1,
+        0.95,
+        1.05,
         domyslneUstawieniaAplikacji.wyglad.skalaHover,
       ),
     },

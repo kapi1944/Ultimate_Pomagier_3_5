@@ -1,7 +1,7 @@
 .kartoteki {
   display: grid;
   gap: 18px;
-  color: #f4fff7;
+  color: var(--ui-tekst);
 }
 
 .kartoteki__widok {
@@ -40,7 +40,7 @@
 
 .kartoteki__tytul p {
   margin: 0;
-  color: #9ccfab;
+  color: var(--ui-tekst-drugi);
   font-size: 0.86rem;
 }
 
@@ -70,9 +70,9 @@
 .kartoteki__panel,
 .kartoteki__wiersz,
 .kartoteki__tabela-opakowanie {
-  border: 1px solid rgba(74, 222, 128, 0.28);
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 28%, transparent);
   border-radius: 8px;
-  background: #062313;
+  background: var(--ui-powierzchnia);
 }
 
 .kartoteki__panel {
@@ -87,7 +87,7 @@
 
 .kartoteki__pasek > span,
 .kartoteki__liczba-pozycji {
-  color: #9ccfab;
+  color: var(--ui-tekst-drugi);
   font-size: 0.84rem;
 }
 
@@ -110,14 +110,14 @@
   box-sizing: border-box;
   justify-content: space-between;
   height: 100px;
-  border: 1px solid rgba(74, 222, 128, 0.18);
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 18%, transparent);
   border-radius: 8px;
-  background: #03180c;
+  background: var(--ui-pole);
   padding: 10px;
 }
 
 .kartoteki__paginacja span {
-  color: #dff7e6;
+  color: var(--ui-tekst);
   font-weight: 700;
 }
 
@@ -145,13 +145,13 @@
 .kartoteki__wiersz strong,
 .kartoteki__panel strong {
   display: block;
-  color: #f7fff9;
+  color: var(--ui-tekst);
 }
 
 .kartoteki__wiersz > div:first-child > span {
   display: block;
   margin-top: 3px;
-  color: #9ccfab;
+  color: var(--ui-tekst-drugi);
   font-size: 0.86rem;
 }
 .kartoteki__wiersz--nieaktywny {
@@ -187,7 +187,7 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
-  border-top: 1px solid rgba(74, 222, 128, 0.18);
+  border-top: 1px solid color-mix(in srgb, var(--ui-akcent) 18%, transparent);
   margin-top: 12px;
   padding-top: 14px;
 }
@@ -204,20 +204,20 @@
   grid-template-columns: 86px minmax(0, 1fr);
   gap: 10px;
   align-items: center;
-  color: #dff7e6;
+  color: var(--ui-tekst);
   font-size: 0.86rem;
   font-weight: 700;
 }
 
 .kartoteki__pole-przelacznika span {
-  color: #dff7e6;
+  color: var(--ui-tekst);
 }
 
 .kartoteki .szczegoly-przelacznik-tak-nie {
   min-height: 0;
   border: 0;
   background: transparent;
-  color: #e9fff0;
+  color: var(--ui-tekst);
   cursor: pointer;
   padding: 0;
 }
@@ -245,7 +245,7 @@
 .kartoteki__formularz > label {
   display: grid;
   gap: 5px;
-  color: #dff7e6;
+  color: var(--ui-tekst);
   font-size: 0.84rem;
   font-weight: 700;
 }
@@ -266,17 +266,17 @@
 .kartoteki select {
   width: 100%;
   min-height: 38px;
-  border: 1px solid rgba(74, 222, 128, 0.36);
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 36%, transparent);
   border-radius: 6px;
-  background: #03180c;
-  color: #f7fff9;
+  background: var(--ui-pole);
+  color: var(--ui-tekst);
   font: inherit;
   font-size: 0.86rem;
   padding: 8px 10px;
 }
 
 .kartoteki input::placeholder {
-  color: #91b99d;
+  color: var(--ui-tekst-drugi);
 }
 
 .kartoteki__wyszukiwarka {
@@ -298,10 +298,10 @@
 
 .kartoteki__przycisk {
   min-height: 34px;
-  border: 1px solid rgba(74, 222, 128, 0.24);
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 24%, transparent);
   border-radius: 6px;
-  background: #0b2b17;
-  color: #e9fff0;
+  background: var(--ui-powierzchnia);
+  color: var(--ui-tekst);
   cursor: pointer;
   font: inherit;
   font-size: 0.86rem;
@@ -327,8 +327,8 @@
 }
 
 .kartoteki__przycisk:hover:not(:disabled) {
-  border-color: #4ade80;
-  background: #123a20;
+  border-color: var(--ui-akcent);
+  background: var(--ui-akcent-mocny);
 }
 
 .kartoteki__przycisk:disabled {
@@ -337,15 +337,15 @@
 }
 
 .kartoteki__przycisk--glowny {
-  border-color: #4ade80;
-  background: #4ade80;
-  color: #052e12;
+  border-color: var(--ui-akcent);
+  background: var(--ui-akcent);
+  color: var(--ui-tekst-na-akcencie);
 }
 
 .kartoteki__przycisk--jasny {
-  border-color: #f7fff9;
-  background: #f7fff9;
-  color: #03180c;
+  border-color: var(--ui-tekst);
+  background: var(--ui-tekst);
+  color: var(--ui-pole);
 }
 
 .kartoteki__komunikat {
@@ -370,16 +370,16 @@
 
 .kartoteki__liczniki-elementow strong,
 .kartoteki__liczniki-elementow span {
-  border: 1px solid rgba(74, 222, 128, 0.18);
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 18%, transparent);
   border-radius: 6px;
-  background: #03180c;
-  color: #dff7e6;
+  background: var(--ui-pole);
+  color: var(--ui-tekst);
   font-size: 0.78rem;
   padding: 5px 8px;
 }
 
 .kartoteki__liczniki-elementow span {
-  color: #9ccfab;
+  color: var(--ui-tekst-drugi);
 }
 
 .kartoteki__tabela-opakowanie {
@@ -394,20 +394,20 @@
 
 .kartoteki__tabela th,
 .kartoteki__tabela td {
-  border-bottom: 1px solid rgba(74, 222, 128, 0.18);
+  border-bottom: 1px solid color-mix(in srgb, var(--ui-akcent) 18%, transparent);
   padding: 12px 10px;
   text-align: left;
   vertical-align: middle;
 }
 
 .kartoteki__tabela th {
-  color: #dff7e6;
+  color: var(--ui-tekst);
   font-size: 0.78rem;
   font-weight: 800;
 }
 
 .kartoteki__tabela td {
-  color: #f7fff9;
+  color: var(--ui-tekst);
   font-size: 0.86rem;
 }
 

@@ -2,13 +2,14 @@
   --szerokosc-panelu-ustawien: min(420px, calc(100vw - 22px));
 
   display: grid;
+  width: 100%;
   gap: 18px;
-  color: #f4fff7;
-  transition: margin-right 220ms ease;
+  color: var(--ui-tekst);
 }
 
-.dyplomy--panel-ustawien-otwarty {
-  margin-right: var(--szerokosc-panelu-ustawien);
+.uklad-aplikacji__kolumna-glowna:has(.dyplomy--panel-ustawien-otwarty) {
+  margin-right: min(420px, calc(100vw - 22px));
+  transition: margin-right 220ms ease;
 }
 
 .dyplomy *,
@@ -42,11 +43,11 @@
 .dyplomy__przycisk,
 .dyplomy__przycisk-wyboru {
   min-height: 38px;
-  border: 1px solid rgba(74, 222, 128, 0.35);
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 35%, transparent);
   border-radius: 6px;
   padding: 8px 12px;
-  background: #041f0f;
-  color: #f4fff7;
+  background: var(--ui-panel);
+  color: var(--ui-tekst);
   cursor: pointer;
   font: inherit;
 }
@@ -55,18 +56,18 @@
 .dyplomy__przycisk-wyboru:hover,
 .dyplomy__przycisk--glowny,
 .dyplomy__przycisk-wyboru--aktywny {
-  border-color: #4ade80;
-  background: #4ade80;
-  color: #052e12;
+  border-color: var(--ui-akcent);
+  background: var(--ui-akcent);
+  color: var(--ui-tekst-na-akcencie);
 }
 
 .dyplomy__przycisk:disabled,
 .dyplomy__przycisk-wyboru:disabled,
 .dyplomy__przycisk:disabled:hover,
 .dyplomy__przycisk-wyboru:disabled:hover {
-  border-color: rgba(74, 222, 128, 0.22);
-  background: #041f0f;
-  color: #f4fff7;
+  border-color: color-mix(in srgb, var(--ui-akcent) 22%, transparent);
+  background: var(--ui-panel);
+  color: var(--ui-tekst);
   cursor: not-allowed;
   opacity: 0.45;
 }
@@ -79,11 +80,11 @@
 
 .dyplomy__komunikat,
 .dyplomy__status {
-  border: 1px solid rgba(74, 222, 128, 0.28);
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 28%, transparent);
   border-radius: 6px;
   padding: 10px 12px;
-  background: #082b14;
-  color: #c7ead0;
+  background: var(--ui-powierzchnia);
+  color: var(--ui-tekst-drugi);
   font-size: 0.92rem;
 }
 
@@ -108,10 +109,10 @@
 }
 
 .dyplomy__sekcja {
-  border: 1px solid rgba(74, 222, 128, 0.25);
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 25%, transparent);
   border-radius: 8px;
   padding: 16px;
-  background: #082b14;
+  background: var(--ui-powierzchnia);
 }
 
 .dyplomy__strefa-aktywacji {
@@ -147,9 +148,7 @@
 }
 
 .dyplomy__ustawienia-naglowek {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: grid;
   gap: 12px;
   margin-bottom: 14px;
 }
@@ -158,12 +157,18 @@
   margin-bottom: 0;
 }
 
+.dyplomy__ustawienia-akcje {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
 .dyplomy__checklista {
   display: grid;
   gap: 8px;
   margin-top: 16px;
   padding-top: 14px;
-  border-top: 1px solid rgba(74, 222, 128, 0.25);
+  border-top: 1px solid color-mix(in srgb, var(--ui-akcent) 25%, transparent);
 }
 
 .dyplomy__checklista h3,
@@ -173,12 +178,12 @@
 }
 
 .dyplomy__checklista h3 {
-  color: #e7fff0;
+  color: var(--ui-tekst);
   font-size: 0.92rem;
 }
 
 .dyplomy__checklista p {
-  color: #c7ead0;
+  color: var(--ui-tekst-drugi);
   font-size: 0.82rem;
 }
 
@@ -209,7 +214,7 @@
 }
 
 .dyplomy__checklista-pozycja--gotowa span {
-  background: #166534;
+  background: var(--ui-akcent-mocny);
   color: #f0fdf4;
 }
 
@@ -224,7 +229,7 @@
 .dyplomy__sekcja h2,
 .dyplomy__status h2 {
   margin: 0 0 14px;
-  color: #e7fff0;
+  color: var(--ui-tekst);
   font-size: 1rem;
   letter-spacing: 0;
 }
@@ -253,7 +258,7 @@
   align-items: center;
   justify-content: flex-end;
   gap: 12px;
-  color: #e7fff0;
+  color: var(--ui-tekst);
   font-size: 0.92rem;
   font-weight: 700;
 }
@@ -268,7 +273,7 @@
 }
 
 .dyplomy__pola-drugiej-strony--nieaktywne .dyplomy__pole {
-  color: #8fb89a;
+  color: var(--ui-tekst-drugi);
 }
 
 .dyplomy__status-naglowek {
@@ -301,7 +306,7 @@
   display: grid;
   gap: 6px;
   min-width: 0;
-  color: #e7fff0;
+  color: var(--ui-tekst);
   font-size: 0.92rem;
   font-weight: 700;
 }
@@ -318,7 +323,7 @@
 
 .dyplomy__pole--przycisk {
   align-content: end;
-  border-left: 1px solid rgba(74, 222, 128, 0.22);
+  border-left: 1px solid color-mix(in srgb, var(--ui-akcent) 22%, transparent);
   padding-left: 16px;
 }
 
@@ -329,11 +334,11 @@
 .dyplomy__tabela input,
 .dyplomy__tabela select {
   width: 100%;
-  border: 1px solid rgba(74, 222, 128, 0.35);
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 35%, transparent);
   border-radius: 6px;
   padding: 9px 10px;
-  background: #03180c;
-  color: #f4fff7;
+  background: var(--ui-pole);
+  color: var(--ui-tekst);
   font: inherit;
 }
 
@@ -341,7 +346,7 @@
 .dyplomy__tabela input[type='checkbox'] {
   width: 18px;
   height: 18px;
-  accent-color: #4ade80;
+  accent-color: var(--ui-akcent);
 }
 
 .dyplomy__pole input[type='color'] {
@@ -366,7 +371,7 @@
 
 .dyplomy__pole input:disabled,
 .dyplomy__pole textarea:disabled {
-  color: #8fb89a;
+  color: var(--ui-tekst-drugi);
   cursor: not-allowed;
   opacity: 0.8;
 }
@@ -381,7 +386,7 @@
 .dyplomy__kalendarz-naglowek input:focus,
 .dyplomy__tabela input:focus,
 .dyplomy__tabela select:focus {
-  outline: 2px solid rgba(74, 222, 128, 0.55);
+  outline: 2px solid color-mix(in srgb, var(--ui-akcent) 55%, transparent);
   outline-offset: 2px;
 }
 
@@ -399,7 +404,7 @@
 }
 
 .dyplomy__dzien-tygodnia {
-  color: #9ccfab;
+  color: var(--ui-tekst-drugi);
   font-size: 0.76rem;
   font-weight: 700;
   text-align: center;
@@ -407,10 +412,10 @@
 
 .dyplomy__dzien {
   min-height: 18px;
-  border: 1px solid rgba(74, 222, 128, 0.22);
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 22%, transparent);
   border-radius: 6px;
-  background: #03180c;
-  color: #f4fff7;
+  background: var(--ui-pole);
+  color: var(--ui-tekst);
   cursor: pointer;
   font: inherit;
 }
@@ -421,13 +426,13 @@
 
 .dyplomy__dzien:hover,
 .dyplomy__dzien--aktywny {
-  border-color: #4ade80;
-  background: #4ade80;
-  color: #052e12;
+  border-color: var(--ui-akcent);
+  background: var(--ui-akcent);
+  color: var(--ui-tekst-na-akcencie);
 }
 
 .dyplomy__dzien--spoza {
-  color: #6c8d76;
+  color: var(--ui-tekst-drugi);
 }
 
 .dyplomy__format-dat {
@@ -437,11 +442,11 @@
 .dyplomy__daty,
 .dyplomy__numer-podglad {
   margin-top: 12px;
-  border: 1px solid rgba(74, 222, 128, 0.2);
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 20%, transparent);
   border-radius: 6px;
   padding: 10px 12px;
-  background: #03180c;
-  color: #c7ead0;
+  background: var(--ui-pole);
+  color: var(--ui-tekst-drugi);
 }
 
 .dyplomy__numer-podglad {
@@ -452,14 +457,14 @@
 .dyplomy__numer-fragment--zmienny {
   border-radius: 4px;
   padding: 2px 4px;
-  background: rgba(74, 222, 128, 0.22);
+  background: color-mix(in srgb, var(--ui-akcent) 22%, transparent);
   color: #ffffff;
 }
 
 .dyplomy__tabela-ramka {
   overflow-x: auto;
   margin-top: 14px;
-  border: 1px solid rgba(74, 222, 128, 0.22);
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 22%, transparent);
   border-radius: 6px;
 }
 
@@ -471,14 +476,14 @@
 
 .dyplomy__tabela th,
 .dyplomy__tabela td {
-  border-bottom: 1px solid rgba(74, 222, 128, 0.18);
+  border-bottom: 1px solid color-mix(in srgb, var(--ui-akcent) 18%, transparent);
   padding: 8px;
   vertical-align: middle;
 }
 
 .dyplomy__tabela th {
-  background: #03180c;
-  color: #e7fff0;
+  background: var(--ui-pole);
+  color: var(--ui-tekst);
   font-size: 0.82rem;
   text-align: left;
 }
@@ -499,10 +504,10 @@
 .dyplomy__dodatek {
   display: grid;
   gap: 8px;
-  border: 1px solid rgba(74, 222, 128, 0.22);
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 22%, transparent);
   border-radius: 6px;
   padding: 10px;
-  background: #03180c;
+  background: var(--ui-pole);
 }
 
 .dyplomy__dodatek img {
@@ -516,7 +521,7 @@
 .dyplomy__dodatek div {
   min-height: 60px;
   white-space: pre-wrap;
-  color: #c7ead0;
+  color: var(--ui-tekst-drugi);
   font-size: 0.84rem;
 }
 
@@ -535,19 +540,19 @@
 .dyplomy__kontrola-podgladu {
   display: grid;
   gap: 10px;
-  border: 1px solid rgba(74, 222, 128, 0.22);
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 22%, transparent);
   border-radius: 6px;
   padding: 10px;
-  background: #082b14;
+  background: var(--ui-powierzchnia);
 }
 
 .dyplomy__narzedzia-podgladu {
   display: grid;
   gap: 12px;
-  border: 1px solid rgba(74, 222, 128, 0.22);
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 22%, transparent);
   border-radius: 6px;
   padding: 10px;
-  background: #082b14;
+  background: var(--ui-powierzchnia);
 }
 
 .dyplomy__widocznosc-podgladu {
@@ -569,7 +574,7 @@
 }
 
 .dyplomy__logotyp-naglowek {
-  color: #f4fff7;
+  color: var(--ui-tekst);
   font-size: 0.98rem;
   text-align: center;
 }
@@ -590,7 +595,7 @@
 }
 
 .dyplomy__licznik-uczestnika {
-  color: #c7ead0;
+  color: var(--ui-tekst-drugi);
   font-size: 0.9rem;
   font-weight: 700;
 }
@@ -635,7 +640,8 @@
   background: var(--semper-tlo);
   color: var(--semper-tekst);
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
-  font-family: "DejaVu Sans Condensed", "Arial Narrow", Arial, sans-serif;
+  font-family: var(--czcionka-dyplomu, Calibri, Arial, sans-serif);
+  font-style: normal;
 }
 
 .dyplom-kartka__tlo {
@@ -758,9 +764,9 @@
   right: 0;
   left: 0;
   color: var(--semper-czerwony);
-  font-family: var(--czcionka-typu, "Ink Free", "Segoe Print", cursive);
+  font-family: var(--czcionka-typu, "Bradley Hand ITC", "Segoe Print", cursive);
   font-size: clamp(48px, 7vw, 82px);
-  font-style: normal;
+  font-style: italic;
   font-weight: normal;
   font-synthesis: none;
   letter-spacing: 0;
@@ -1011,7 +1017,7 @@
 
 .dyplom-kartka__naglowek-drugiej span {
   color: var(--semper-czerwony);
-  font-family: var(--czcionka-typu, "Ink Free", "Segoe Print", cursive);
+  font-family: var(--czcionka-typu, "Bradley Hand ITC", "Segoe Print", cursive);
   font-style: italic;
   font-weight: 800;
 }
@@ -1024,7 +1030,6 @@
   line-height: 1.65;
 }
 
-.dyplom-kartka__tresc-drugiej h2,
 .dyplom-kartka__tresc-drugiej p {
   margin: 0;
 }
@@ -1044,7 +1049,7 @@
 }
 
 @media (max-width: 760px) {
-  .dyplomy--panel-ustawien-otwarty { margin-right: 0; }
+  .uklad-aplikacji__kolumna-glowna:has(.dyplomy--panel-ustawien-otwarty) { margin-right: 0; }
 
   .dyplomy__strefa-aktywacji { display: none; }
 
@@ -1066,7 +1071,7 @@
   }
 
   .dyplomy__pole--przycisk {
-    border-top: 1px solid rgba(74, 222, 128, 0.22);
+    border-top: 1px solid color-mix(in srgb, var(--ui-akcent) 22%, transparent);
     border-left: 0;
     padding-top: 12px;
     padding-left: 0;
@@ -1123,7 +1128,7 @@
     color: #000000 !important;
     margin: 0 !important;
     box-shadow: none !important;
-    font-family: "DejaVu Sans Condensed", "Arial Narrow", Arial, sans-serif !important;
+    font-family: var(--czcionka-dyplomu, Calibri, Arial, sans-serif) !important;
     page-break-after: always;
   }
 

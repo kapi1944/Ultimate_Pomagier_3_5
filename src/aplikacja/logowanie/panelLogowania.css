@@ -3,18 +3,18 @@
   min-height: 100vh;
   place-items: center;
   padding: 24px;
-  background: #02140a;
-  color: #f4fff7;
+  background: var(--ui-tlo);
+  color: var(--ui-tekst);
 }
 
 .panel-logowania__formularz {
   display: grid;
   width: min(100%, 420px);
   gap: 16px;
-  border: 1px solid rgba(74, 222, 128, 0.25);
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 25%, transparent);
   border-radius: 8px;
   padding: 28px;
-  background: #082b14;
+  background: var(--ui-powierzchnia);
 }
 
 .panel-logowania__formularz h1 {
@@ -24,36 +24,36 @@
 
 .panel-logowania__formularz p {
   margin: 0;
-  color: #b9d7c2;
+  color: var(--ui-tekst-drugi);
 }
 
 .panel-logowania__formularz label {
   display: grid;
   gap: 8px;
-  color: #e7fff0;
+  color: var(--ui-tekst);
   font-weight: 700;
 }
 
 .panel-logowania__formularz select {
-  border: 1px solid rgba(74, 222, 128, 0.35);
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 35%, transparent);
   border-radius: 6px;
   padding: 10px 12px;
-  background: #03180c;
-  color: #f4fff7;
+  background: var(--ui-pole);
+  color: var(--ui-tekst);
   font: inherit;
 }
 
 .panel-logowania__formularz select:focus {
-  outline: 2px solid rgba(74, 222, 128, 0.55);
+  outline: 2px solid color-mix(in srgb, var(--ui-akcent) 55%, transparent);
   outline-offset: 2px;
 }
 
 .panel-logowania__formularz button {
-  border: 1px solid #4ade80;
+  border: 1px solid var(--ui-akcent);
   border-radius: 6px;
   padding: 10px 14px;
-  background: #4ade80;
-  color: #052e12;
+  background: var(--ui-akcent);
+  color: var(--ui-tekst-na-akcencie);
   cursor: pointer;
   font: inherit;
   font-weight: 700;
@@ -73,7 +73,7 @@
   display: grid;
   gap: 4px;
   padding: 12px;
-  border: 1px solid rgba(74, 222, 128, 0.25);
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 25%, transparent);
   border-radius: 6px;
-  background: #03180c;
+  background: var(--ui-pole);
 }

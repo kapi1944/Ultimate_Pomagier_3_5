@@ -1,10 +1,10 @@
 .checklista-paczki {
-  --checklista-tlo-karty: #062313;
-  --checklista-tlo-pola: #03180c;
-  --checklista-obramowanie: rgba(156, 207, 171, .28);
-  --checklista-tekst: #effff2;
-  --checklista-tekst-wtorny: #b8d6bf;
-  --checklista-akcent: #8ee7a8;
+  --checklista-tlo-karty: var(--ui-powierzchnia);
+  --checklista-tlo-pola: var(--ui-pole);
+  --checklista-obramowanie: color-mix(in srgb, var(--ui-tekst-drugi) 28%, transparent);
+  --checklista-tekst: var(--ui-tekst);
+  --checklista-tekst-wtorny: var(--ui-tekst-drugi);
+  --checklista-akcent: var(--ui-akcent);
   --checklista-czerwony: #ef6b63;
   --checklista-pomaranczowy: #f4ae4a;
   --checklista-zolty: #e7d96b;
@@ -22,7 +22,7 @@
 .checklista-paczki textarea {
   box-sizing: border-box;
   min-height: 38px;
-  border: 1px solid rgba(116, 197, 139, .46);
+  border: 1px solid var(--ui-obramowanie);
   border-radius: 7px;
   background: var(--checklista-tlo-pola);
   color: var(--checklista-tekst);
@@ -32,10 +32,10 @@
 .checklista-paczki button {
   cursor: pointer;
   padding: 8px 12px;
-  background: #0b3b1d;
+  background: var(--ui-akcent-mocny);
 }
 
-.checklista-paczki button:hover:not(:disabled) { background: #115025; }
+.checklista-paczki button:hover:not(:disabled) { background: var(--ui-akcent-mocny); }
 .checklista-paczki button:focus-visible,
 .checklista-paczki input:focus-visible,
 .checklista-paczki select:focus-visible,
@@ -79,18 +79,18 @@
 .checklista-paczki__ostrzezenie { padding: 10px 12px; border: 1px solid rgba(244, 174, 74, .7); border-radius: 8px; background: rgba(93, 58, 5, .36); color: #ffe4a6; }
 
 .checklista-paczki__kroki { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 0; padding: 0; list-style: none; }
-.checklista-paczki__kroki > li { display: grid; align-content: start; gap: 8px; min-width: 0; padding: 12px; border: 1px solid var(--checklista-obramowanie); border-radius: 8px; background: rgba(3, 24, 12, .72); }
+.checklista-paczki__kroki > li { display: grid; align-content: start; gap: 8px; min-width: 0; padding: 12px; border: 1px solid var(--checklista-obramowanie); border-radius: 8px; background: color-mix(in srgb, var(--ui-pole) 42%, transparent); }
 .checklista-paczki__kroki p { margin-bottom: 0; }
 
 .checklista-paczki__lista { display: grid; gap: 10px; }
-.checklista-paczki__lista > article { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 14px; align-items: center; padding: 13px; border: 1px solid var(--checklista-obramowanie); border-radius: 8px; background: rgba(3, 24, 12, .66); }
+.checklista-paczki__lista > article { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 14px; align-items: center; padding: 13px; border: 1px solid var(--checklista-obramowanie); border-radius: 8px; background: color-mix(in srgb, var(--ui-pole) 42%, transparent); }
 .checklista-paczki__lista > article > div { display: grid; gap: 4px; min-width: 0; }
 .checklista-paczki__lista span { color: var(--checklista-tekst-wtorny); }
 .checklista-paczki__pilna { color: #ffd5b0; }
 
 .checklista-paczki__uklad-roboczy { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(390px, .9fr); align-items: start; gap: 18px; }
 .checklista-paczki__formularz { min-width: 0; }
-.checklista-paczki__panel-podgladu { position: sticky; top: 14px; min-width: 0; max-height: calc(100vh - 32px); overflow: auto; padding: 14px; border: 1px solid var(--checklista-obramowanie); border-radius: 10px; background: #041f0f; }
+.checklista-paczki__panel-podgladu { position: sticky; top: 14px; min-width: 0; max-height: calc(100vh - 32px); overflow: auto; padding: 14px; border: 1px solid var(--checklista-obramowanie); border-radius: 10px; background: var(--ui-panel); }
 .checklista-paczki__panel-podgladu > h2 { margin: 0 0 12px; font-size: 1rem; }
 
 .checklista-paczki__dane-szkolenia { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 18px; }
@@ -100,7 +100,7 @@
 .checklista-paczki__dane-szkolenia > label:last-child select { min-width: 150px; }
 
 .checklista-paczki__logotypy { align-items: stretch; }
-.checklista-paczki__logotypy > div { flex: 1 1 220px; min-width: 0; padding: 12px; border: 1px solid var(--checklista-obramowanie); border-radius: 8px; background: rgba(3, 24, 12, .5); }
+.checklista-paczki__logotypy > div { flex: 1 1 220px; min-width: 0; padding: 12px; border: 1px solid var(--checklista-obramowanie); border-radius: 8px; background: color-mix(in srgb, var(--ui-pole) 42%, transparent); }
 .checklista-paczki__logotypy h3 { margin-bottom: 8px; font-size: .95rem; }
 .checklista-paczki__miniatury-logotypow img { max-width: 132px; max-height: 58px; padding: 5px; border-radius: 4px; background: #fff; object-fit: contain; }
 .checklista-paczki__opis-pomocniczy { font-size: .86rem; }
@@ -111,19 +111,19 @@
 .checklista-paczki__dodawanie label { flex: 1 1 150px; }
 .checklista-paczki__naglowki-tabeli,
 .checklista-paczki__wiersz { display: grid; grid-template-columns: minmax(145px, .8fr) minmax(200px, 1.45fr) minmax(185px, 1.15fr) minmax(135px, .85fr) minmax(195px, 1.15fr); gap: 10px; min-width: 0; }
-.checklista-paczki__naglowki-tabeli { padding: 8px 10px; border-radius: 7px; background: #0b3b1d; color: #e8fff0; font-size: .82rem; font-weight: 700; text-transform: uppercase; }
+.checklista-paczki__naglowki-tabeli { padding: 8px 10px; border-radius: 7px; background: var(--ui-akcent-mocny); color: var(--ui-tekst); font-size: .82rem; font-weight: 700; text-transform: uppercase; }
 .checklista-paczki__kategoria { margin-top: 14px; overflow: hidden; border: 1px solid var(--checklista-obramowanie); border-radius: 8px; }
-.checklista-paczki__kategoria > h3 { margin: 0; background: rgba(11, 59, 29, .78); color: var(--checklista-akcent); font-size: .95rem; }
+.checklista-paczki__kategoria > h3 { margin: 0; background: var(--ui-akcent-mocny); color: var(--ui-tekst); font-size: .95rem; }
 .checklista-paczki__przelacznik-kategorii { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 39px; padding: 9px 12px; border: 0; background: transparent; color: inherit; cursor: pointer; font: inherit; font-weight: inherit; text-align: left; }
-.checklista-paczki__przelacznik-kategorii:hover { background: rgba(156, 207, 171, .12); }
-.checklista-paczki__przelacznik-kategorii:focus-visible { outline: 2px solid #e8fff0; outline-offset: -3px; }
+.checklista-paczki__przelacznik-kategorii:hover { background: color-mix(in srgb, var(--ui-tekst-drugi) 12%, transparent); }
+.checklista-paczki__przelacznik-kategorii:focus-visible { outline: 2px solid var(--ui-tekst); outline-offset: -3px; }
 .checklista-paczki__chevron-kategorii { display: inline-block; transition: transform 220ms ease; }
 .checklista-paczki__chevron-kategorii--zwinieta { transform: rotate(-90deg); }
 .checklista-paczki__zawartosc-kategorii { display: grid; grid-template-rows: 1fr; opacity: 1; transition: grid-template-rows 220ms ease, opacity 180ms ease; }
 .checklista-paczki__zawartosc-kategorii--zwinieta { grid-template-rows: 0fr; opacity: 0; }
 .checklista-paczki__zawartosc-kategorii-wewnetrzna { min-height: 0; overflow: hidden; }
 .checklista-paczki__pusta-kategoria { padding: 12px; margin-bottom: 0; }
-.checklista-paczki__wiersz { align-items: start; padding: 12px; border-top: 1px solid rgba(156, 207, 171, .16); background: rgba(3, 24, 12, .42); }
+.checklista-paczki__wiersz { align-items: start; padding: 12px; border-top: 1px solid color-mix(in srgb, var(--ui-tekst-drugi) 16%, transparent); background: color-mix(in srgb, var(--ui-pole) 42%, transparent); }
 .checklista-paczki__zawartosc-kategorii-wewnetrzna > .checklista-paczki__wiersz:first-child { border-top: 0; }
 .checklista-paczki__kolumna-status,
 .checklista-paczki__kolumna-material,
@@ -144,13 +144,13 @@
 .checklista-paczki__dodatek { display: grid; grid-template-columns: 66px minmax(0, 1fr) auto; gap: 5px; align-items: center; }
 .checklista-paczki__dodatek input { min-height: 31px; padding: 4px 6px; }
 .checklista-paczki__nadpisanie { padding: 7px; border: 1px solid rgba(244, 174, 74, .5); border-radius: 6px; background: rgba(93, 58, 5, .25); color: #ffe4a6; font-size: .83rem; }
-.checklista-paczki__notatka-wewnetrzna { padding: 8px; border: 1px dashed rgba(156, 207, 171, .34); border-radius: 6px; background: rgba(4, 31, 15, .7); }
+.checklista-paczki__notatka-wewnetrzna { padding: 8px; border: 1px dashed color-mix(in srgb, var(--ui-tekst-drugi) 34%, transparent); border-radius: 6px; background: color-mix(in srgb, var(--ui-panel) 70%, transparent); }
 .checklista-paczki__akcje-wiersza { justify-content: flex-end; }
 .checklista-paczki__wiersz > .checklista-paczki__akcje-wiersza { grid-column: 1 / -1; }
 .checklista-paczki__akcje-wiersza button { min-height: 30px; padding: 4px 8px; font-size: .8rem; }
 
 .checklista-paczki__uwagi-zrodlowe { display: grid; gap: 8px; }
-.checklista-paczki__uwagi-zrodlowe p { margin-bottom: 0; padding-left: 10px; border-left: 3px solid rgba(142, 231, 168, .58); }
+.checklista-paczki__uwagi-zrodlowe p { margin-bottom: 0; padding-left: 10px; border-left: 3px solid var(--ui-akcent); }
 .checklista-paczki__siatka-wysylki { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .checklista-paczki__siatka-wysylki fieldset { grid-column: 1 / -1; }
 .checklista-paczki__zalacznik { margin-bottom: 0; font-size: .88rem; }
@@ -181,7 +181,7 @@
 .checklista-paczki__wydruk th:nth-child(5), .checklista-paczki__wydruk td:nth-child(5) { width: 20%; }
 .checklista-paczki__wydruk-tabela--materialy th, .checklista-paczki__wydruk-tabela--materialy td { background: #dceaf7; }
 .checklista-paczki__wydruk-tabela--teczki th, .checklista-paczki__wydruk-tabela--teczki td { background: #fff1c9; }
-.checklista-paczki__wydruk-tabela--pakiet-crm th, .checklista-paczki__wydruk-tabela--pakiet-crm td { background: #e0efd8; }
+.checklista-paczki__wydruk-tabela--pakiet-crm th, .checklista-paczki__wydruk-tabela--pakiet-crm td { background: var(--ui-tekst-drugi); }
 .checklista-paczki__wydruk-tabela--gadzety th, .checklista-paczki__wydruk-tabela--gadzety td { background: #f9e1d0; }
 .checklista-paczki__wydruk-tabela--inne th, .checklista-paczki__wydruk-tabela--inne td { background: #f7cfb2; }
 .checklista-paczki__wydruk-sklad-teczki { margin: 2px 0 0; padding-left: 14px; }

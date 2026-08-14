@@ -53,7 +53,7 @@
   border: 1px solid rgba(148, 163, 184, 0.25);
   border-radius: 8px;
   padding: 18px;
-  background: #071a15;
+  background: var(--ui-powierzchnia);
 }
 
 .replikator-dokumentow__panel--podglad {
@@ -66,7 +66,7 @@
 .replikator-dokumentow__tryby label {
   display: grid;
   gap: 6px;
-  color: #dcefe5;
+  color: var(--ui-tekst-drugi);
   font-size: 0.88rem;
   font-weight: 700;
 }
@@ -84,8 +84,8 @@
   border: 1px solid rgba(148, 163, 184, 0.35);
   border-radius: 6px;
   padding: 9px 10px;
-  background: #03110d;
-  color: #f7fff9;
+  background: var(--ui-pole);
+  color: var(--ui-tekst);
   font: inherit;
 }
 
@@ -192,7 +192,7 @@
   min-width: 0;
   margin: 0;
   overflow-wrap: anywhere;
-  color: #f7fff9;
+  color: var(--ui-tekst);
 }
 
 .replikator-dokumentow__ostrzezenie {

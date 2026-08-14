@@ -24,10 +24,10 @@
 .lista-dokumentow button,
 .lista-dokumentow input,
 .lista-dokumentow select {
-  border: 1px solid rgba(74, 222, 128, 0.35);
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 35%, transparent);
   border-radius: 6px;
-  background: #082b14;
-  color: #f4fff7;
+  background: var(--ui-powierzchnia);
+  color: var(--ui-tekst);
   font: inherit;
 }
 
@@ -38,8 +38,8 @@
 }
 
 .lista-dokumentow button:hover:not(:disabled) {
-  border-color: #4ade80;
-  background: #123a20;
+  border-color: var(--ui-akcent);
+  background: var(--ui-akcent-mocny);
 }
 
 .lista-dokumentow button:disabled {
@@ -50,16 +50,16 @@
 .lista-dokumentow__filtry {
   flex-wrap: wrap;
   align-items: end;
-  border: 1px solid rgba(74, 222, 128, 0.24);
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 24%, transparent);
   border-radius: 8px;
-  background: #041f0f;
+  background: var(--ui-panel);
   padding: 14px;
 }
 
 .lista-dokumentow__filtry label {
   display: grid;
   gap: 5px;
-  color: #c7ead0;
+  color: var(--ui-tekst-drugi);
   font-size: 0.82rem;
 }
 
@@ -86,11 +86,11 @@
 }
 
 .lista-dokumentow__licznik {
-  color: #9ccfab;
+  color: var(--ui-tekst-drugi);
 }
 
 .lista-dokumentow__stan {
-  border: 1px dashed rgba(156, 207, 171, 0.4);
+  border: 1px dashed color-mix(in srgb, var(--ui-tekst-drugi) 40%, transparent);
   border-radius: 8px;
   padding: 18px;
 }
@@ -145,9 +145,9 @@
 
 .lista-dokumentow__karta {
   flex-direction: column;
-  border: 1px solid rgba(74, 222, 128, 0.28);
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 28%, transparent);
   border-radius: 8px;
-  background: #041f0f;
+  background: var(--ui-panel);
   padding: 16px;
 }
 
@@ -164,7 +164,7 @@
   align-self: start;
   aspect-ratio: 210 / 297;
   overflow: hidden;
-  border: 1px solid rgba(74, 222, 128, 0.2);
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 20%, transparent);
   border-radius: 6px;
   background: #ffffff;
 }
@@ -259,14 +259,14 @@
 .lista-dokumentow__karta-naglowek strong {
   align-self: start;
   border-radius: 999px;
-  background: #123a20;
+  background: var(--ui-akcent-mocny);
   color: #bbf7d0;
   font-size: 0.78rem;
   padding: 4px 8px;
 }
 
 .lista-dokumentow__typ {
-  color: #9ccfab;
+  color: var(--ui-tekst-drugi);
   font-size: 0.8rem;
 }
 
@@ -282,7 +282,7 @@
 }
 
 .lista-dokumentow__metadane dt {
-  color: #9ccfab;
+  color: var(--ui-tekst-drugi);
   font-size: 0.76rem;
 }
 

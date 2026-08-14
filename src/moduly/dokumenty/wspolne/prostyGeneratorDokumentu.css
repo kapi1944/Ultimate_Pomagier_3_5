@@ -14,10 +14,10 @@
 }
 
 .prosty-generator__panel {
-  border: 1px solid rgba(74, 222, 128, 0.25);
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 25%, transparent);
   border-radius: 8px;
   padding: 18px;
-  background: #082b14;
+  background: var(--ui-powierzchnia);
 }
 
 .prosty-generator__panel h2 {
@@ -28,7 +28,7 @@
 .prosty-generator__etykieta {
   display: block;
   margin-bottom: 10px;
-  color: #e7fff0;
+  color: var(--ui-tekst);
   font-weight: 700;
 }
 
@@ -39,17 +39,17 @@
   max-height: calc(100vh - 260px);
   resize: vertical;
   overflow: auto;
-  border: 1px solid rgba(74, 222, 128, 0.35);
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 35%, transparent);
   border-radius: 6px;
   padding: 14px;
-  background: #03180c;
-  color: #f4fff7;
+  background: var(--ui-pole);
+  color: var(--ui-tekst);
   font: inherit;
   line-height: 1.5;
 }
 
 .prosty-generator__textarea:focus {
-  outline: 2px solid rgba(74, 222, 128, 0.55);
+  outline: 2px solid color-mix(in srgb, var(--ui-akcent) 55%, transparent);
   outline-offset: 2px;
 }
 
@@ -61,23 +61,23 @@
 }
 
 .prosty-generator__akcje button {
-  border: 1px solid rgba(74, 222, 128, 0.35);
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 35%, transparent);
   border-radius: 6px;
   padding: 9px 12px;
-  background: #041f0f;
-  color: #f4fff7;
+  background: var(--ui-panel);
+  color: var(--ui-tekst);
   cursor: pointer;
   font: inherit;
 }
 
 .prosty-generator__akcje button:hover {
-  border-color: #4ade80;
-  background: #0d3b1b;
+  border-color: var(--ui-akcent);
+  background: var(--ui-akcent-mocny);
 }
 
 .prosty-generator__komunikat {
   margin-top: 12px;
-  color: #b9d7c2;
+  color: var(--ui-tekst-drugi);
   font-size: 0.92rem;
 }
 
@@ -87,7 +87,7 @@
   overflow: auto;
   margin: 0;
   white-space: pre-wrap;
-  color: #f4fff7;
+  color: var(--ui-tekst);
   font: inherit;
   line-height: 1.55;
 }

@@ -1,10 +1,10 @@
 .panel-jakosci-dokumentu {
   display: grid;
   gap: 12px;
-  border: 1px solid rgba(74, 222, 128, 0.28);
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 28%, transparent);
   border-radius: 8px;
   padding: 12px;
-  background: #03180c;
+  background: var(--ui-pole);
 }
 
 .panel-jakosci-dokumentu--blad {
@@ -25,7 +25,7 @@
 
 .panel-jakosci-dokumentu__naglowek span,
 .panel-jakosci-dokumentu__tresc {
-  color: #c7ead0;
+  color: var(--ui-tekst-drugi);
   font-size: 0.82rem;
   line-height: 1.45;
 }
@@ -37,7 +37,7 @@
 
 .panel-jakosci-dokumentu h3 {
   margin: 0 0 6px;
-  color: #e7fff0;
+  color: var(--ui-tekst);
   font-size: 0.9rem;
 }
 
@@ -48,19 +48,19 @@
 
 .panel-jakosci-dokumentu__przycisk {
   min-height: 38px;
-  border: 1px solid rgba(74, 222, 128, 0.35);
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 35%, transparent);
   border-radius: 6px;
   padding: 8px 12px;
-  background: #041f0f;
-  color: #f4fff7;
+  background: var(--ui-panel);
+  color: var(--ui-tekst);
   cursor: pointer;
   font: inherit;
 }
 
 .panel-jakosci-dokumentu__przycisk:hover {
-  border-color: #4ade80;
-  background: #4ade80;
-  color: #052e12;
+  border-color: var(--ui-akcent);
+  background: var(--ui-akcent);
+  color: var(--ui-tekst-na-akcencie);
 }
 
 .panel-jakosci-dokumentu__link {

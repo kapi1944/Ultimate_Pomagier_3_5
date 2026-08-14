@@ -480,8 +480,8 @@ export default function WidokUstawien() {
             </label>
 
             <label className="ustawienia__pole">
-              Skala hover
-              <input min="1" max="1.1" step="0.01" onChange={(zdarzenie) => zmienWyglad('skalaHover', Number(zdarzenie.target.value))} type="number" value={roboczeUstawienia.wyglad.skalaHover} />
+              Skala hover ({`${roboczeUstawienia.wyglad.skalaHover >= 1 ? '+' : ''}${Math.round((roboczeUstawienia.wyglad.skalaHover - 1) * 1000) / 10}%`})
+              <input min="-5" max="5" step="0.5" onChange={(zdarzenie) => zmienWyglad('skalaHover', 1 + Number(zdarzenie.target.value) / 100)} type="range" value={Math.round((roboczeUstawienia.wyglad.skalaHover - 1) * 1000) / 10} />
             </label>
 
             <label className="ustawienia__pole">

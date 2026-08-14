@@ -1,9 +1,9 @@
 .szablony-dokumentow {
-  color: #f4fff7;
+  color: var(--ui-tekst);
 }
 
 .szablony-dokumentow__licznik {
-  color: #9ccfab;
+  color: var(--ui-tekst-drugi);
   font-size: 0.84rem;
   font-weight: 700;
 }
@@ -17,16 +17,16 @@
 }
 
 .szablony-dokumentow__wiersz-aktywny td {
-  background: rgba(74, 222, 128, 0.14);
+  background: color-mix(in srgb, var(--ui-akcent) 14%, transparent);
 }
 
 .szablony-dokumentow__szczegoly,
 .szablony-dokumentow__sekcja {
   display: grid;
   gap: 12px;
-  border: 1px solid rgba(74, 222, 128, 0.24);
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 24%, transparent);
   border-radius: 8px;
-  background: #062313;
+  background: var(--ui-powierzchnia);
   padding: 16px;
 }
 
@@ -51,7 +51,7 @@
 .szablony-dokumentow__naglowek-szczegolow p,
 .szablony-dokumentow__sekcja p {
   margin: 0;
-  color: #9ccfab;
+  color: var(--ui-tekst-drugi);
 }
 
 .szablony-dokumentow__metryki {
@@ -62,13 +62,13 @@
 
 .szablony-dokumentow__metryki span,
 .szablony-dokumentow__wersja {
-  border: 1px solid rgba(74, 222, 128, 0.18);
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 18%, transparent);
   border-radius: 6px;
-  background: #03180c;
+  background: var(--ui-pole);
 }
 
 .szablony-dokumentow__metryki span {
-  color: #dff7e6;
+  color: var(--ui-tekst);
   font-size: 0.78rem;
   font-weight: 700;
   padding: 6px 8px;
@@ -93,13 +93,13 @@
 }
 
 .szablony-dokumentow__sekcja dt {
-  color: #9ccfab;
+  color: var(--ui-tekst-drugi);
   font-weight: 700;
 }
 
 .szablony-dokumentow__sekcja dd {
   margin: 0;
-  color: #f7fff9;
+  color: var(--ui-tekst);
   overflow-wrap: anywhere;
 }
 
@@ -118,9 +118,9 @@
 .szablony-dokumentow__blok {
   display: grid;
   gap: 4px;
-  border-left: 3px solid rgba(74, 222, 128, 0.5);
+  border-left: 3px solid color-mix(in srgb, var(--ui-akcent) 50%, transparent);
   border-radius: 6px;
-  background: #03180c;
+  background: var(--ui-pole);
   padding: 9px 10px;
 }
 
@@ -133,7 +133,7 @@
 }
 
 .szablony-dokumentow__blok span {
-  color: #c9ead2;
+  color: var(--ui-tekst-drugi);
   overflow-wrap: anywhere;
 }
 
@@ -144,7 +144,7 @@
 
 .szablony-dokumentow__tabela th,
 .szablony-dokumentow__tabela td {
-  border-bottom: 1px solid rgba(74, 222, 128, 0.18);
+  border-bottom: 1px solid color-mix(in srgb, var(--ui-akcent) 18%, transparent);
   padding: 9px;
   text-align: left;
 }
@@ -165,7 +165,7 @@
 }
 
 .szablony-dokumentow__wersja span {
-  color: #9ccfab;
+  color: var(--ui-tekst-drugi);
   font-size: 0.84rem;
 }
 

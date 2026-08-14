@@ -137,7 +137,7 @@ const styleProgramuSzkolenia = `
   display: grid;
   min-width: 0;
   gap: 18px;
-  color: #f4fff7;
+  color: var(--ui-tekst);
   container-type: inline-size;
 }
 
@@ -171,28 +171,28 @@ const styleProgramuSzkolenia = `
 
 .program-szkolen__przycisk {
   min-height: 38px;
-  border: 1px solid rgba(74, 222, 128, 0.35);
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 35%, transparent);
   border-radius: 6px;
   padding: 8px 12px;
-  background: #041f0f;
-  color: #f4fff7;
+  background: var(--ui-panel);
+  color: var(--ui-tekst);
   cursor: pointer;
   font: inherit;
 }
 
 .program-szkolen__przycisk:hover,
 .program-szkolen__przycisk--aktywny {
-  border-color: #4ade80;
-  background: #4ade80;
-  color: #052e12;
+  border-color: var(--ui-akcent);
+  background: var(--ui-akcent);
+  color: var(--ui-tekst-na-akcencie);
 }
 
 .program-szkolen__komunikat {
-  border: 1px solid rgba(74, 222, 128, 0.28);
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 28%, transparent);
   border-radius: 6px;
   padding: 10px 12px;
-  background: #082b14;
-  color: #c7ead0;
+  background: var(--ui-powierzchnia);
+  color: var(--ui-tekst-drugi);
   font-size: 0.92rem;
 }
 
@@ -210,10 +210,10 @@ const styleProgramuSzkolenia = `
 }
 
 .program-szkolen__sekcja {
-  border: 1px solid rgba(74, 222, 128, 0.25);
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 25%, transparent);
   border-radius: 8px;
   padding: 16px;
-  background: #082b14;
+  background: var(--ui-powierzchnia);
 }
 
 .program-szkolen__sekcja--import {
@@ -244,7 +244,7 @@ const styleProgramuSzkolenia = `
 
 .program-szkolen__sekcja h2 {
   margin: 0 0 14px;
-  color: #e7fff0;
+  color: var(--ui-tekst);
   font-size: 1rem;
   letter-spacing: 0;
 }
@@ -276,21 +276,21 @@ const styleProgramuSzkolenia = `
 }
 
 .program-szkolen__blok-logotypu--link {
-  border-left: 1px solid rgba(74, 222, 128, 0.22);
+  border-left: 1px solid color-mix(in srgb, var(--ui-akcent) 22%, transparent);
   padding-left: 24px;
 }
 
 .program-szkolen__separator {
   height: 1px;
   margin: 2px 0;
-  background: rgba(74, 222, 128, 0.22);
+  background: color-mix(in srgb, var(--ui-akcent) 22%, transparent);
 }
 
 .program-szkolen__srodtytul {
   margin: 4px 0 0;
-  border-top: 1px solid rgba(74, 222, 128, 0.18);
+  border-top: 1px solid color-mix(in srgb, var(--ui-akcent) 18%, transparent);
   padding-top: 12px;
-  color: #e7fff0;
+  color: var(--ui-tekst);
   font-size: 0.95rem;
   font-weight: 700;
 }
@@ -298,7 +298,7 @@ const styleProgramuSzkolenia = `
 .program-szkolen__etykieta {
   display: grid;
   gap: 6px;
-  color: #e7fff0;
+  color: var(--ui-tekst);
   font-size: 0.92rem;
   font-weight: 700;
 }
@@ -315,11 +315,11 @@ const styleProgramuSzkolenia = `
 .program-szkolen__pole,
 .program-szkolen__lista {
   width: 100%;
-  border: 1px solid rgba(74, 222, 128, 0.35);
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 35%, transparent);
   border-radius: 6px;
   padding: 9px 10px;
-  background: #03180c;
-  color: #f4fff7;
+  background: var(--ui-pole);
+  color: var(--ui-tekst);
   font: inherit;
 }
 
@@ -332,17 +332,17 @@ const styleProgramuSzkolenia = `
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
-  border: 1px solid rgba(74, 222, 128, 0.25);
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 25%, transparent);
   border-radius: 6px;
   padding: 8px;
-  background: #03180c;
+  background: var(--ui-pole);
 }
 
 .program-szkolen__obszar-edytora {
-  border: 1px solid rgba(74, 222, 128, 0.35);
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 35%, transparent);
   border-radius: 6px;
-  background: #03180c;
-  color: #f4fff7;
+  background: var(--ui-pole);
+  color: var(--ui-tekst);
 }
 
 .program-szkolen__pole[type='color'] {
@@ -356,19 +356,19 @@ const styleProgramuSzkolenia = `
 
 .program-szkolen__pole:focus,
 .program-szkolen__lista:focus {
-  outline: 2px solid rgba(74, 222, 128, 0.55);
+  outline: 2px solid color-mix(in srgb, var(--ui-akcent) 55%, transparent);
   outline-offset: 2px;
 }
 
 .program-szkolen__obszar-edytora:focus-within {
-  outline: 2px solid rgba(74, 222, 128, 0.55);
+  outline: 2px solid color-mix(in srgb, var(--ui-akcent) 55%, transparent);
   outline-offset: 2px;
 }
 
 .program-szkolen__tiptap {
   min-height: 620px;
   padding: 14px;
-  color: #f4fff7;
+  color: var(--ui-tekst);
   font: inherit;
   line-height: 1.55;
 }
@@ -387,7 +387,7 @@ const styleProgramuSzkolenia = `
 
 .program-szkolen__tiptap h2,
 .program-szkolen__tiptap h3 {
-  color: #e7fff0;
+  color: var(--ui-tekst);
 }
 
 .program-szkolen__tiptap ul,
@@ -397,14 +397,14 @@ const styleProgramuSzkolenia = `
 
 .program-szkolen__tiptap hr {
   border: 0;
-  border-top: 1px solid rgba(74, 222, 128, 0.35);
+  border-top: 1px solid color-mix(in srgb, var(--ui-akcent) 35%, transparent);
   margin: 18px 0;
 }
 
 .program-szkolen__tiptap p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   float: left;
-  color: #86a891;
+  color: var(--ui-tekst-drugi);
   pointer-events: none;
   height: 0;
 }
@@ -425,10 +425,10 @@ const styleProgramuSzkolenia = `
 }
 
 .program-szkolen__wybor-profilu {
-  border: 1px solid rgba(74, 222, 128, 0.35);
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 35%, transparent);
   border-radius: 6px;
   padding: 3px;
-  background: #03180c;
+  background: var(--ui-pole);
 }
 
 .program-szkolen__przycisk-profilu {
@@ -443,7 +443,7 @@ const styleProgramuSzkolenia = `
 
 .program-szkolen__opis {
   margin: 0;
-  color: #c7ead0;
+  color: var(--ui-tekst-drugi);
   font-size: 0.82rem;
   font-weight: 400;
   line-height: 1.45;
@@ -662,7 +662,7 @@ const styleProgramuSzkolenia = `
 .program-szkolen__identyfikacja {
   display: grid;
   gap: 9px;
-  border: 1px solid rgba(74, 222, 128, 0.28);
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 28%, transparent);
   border-radius: 6px;
   padding: 10px;
 }
@@ -914,7 +914,7 @@ const styleProgramuSzkolenia = `
 
   .program-szkolen__blok-logotypu--link {
     border-left: 0;
-    border-top: 1px solid rgba(74, 222, 128, 0.22);
+    border-top: 1px solid color-mix(in srgb, var(--ui-akcent) 22%, transparent);
     padding-top: 14px;
     padding-left: 0;
   }

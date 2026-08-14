@@ -74,6 +74,7 @@ type DaneNumeracji = {
 type ZapisDyplomow = DaneNumeracji & {
   trybTytulu: TrybTytuluDyplomu
   czcionkaTypu: string
+  czcionkaDyplomu: string
   czyPogrubionyTyp: boolean
   motywKoloru: MotywKoloruDyplomu
   kolorMotywu: string
@@ -105,6 +106,8 @@ type ZapisDyplomow = DaneNumeracji & {
 
 const kluczZapisuDyplomow = 'ultimate-pomagier.dyplomy.generator-pawla'
 const kluczDokumentuDyplomow = 'ultimate-pomagier.dyplomy.generator-pawla.dokumentId'
+const kluczPrzypieciaPaneluUstawien = 'ultimate-pomagier.dyplomy.panel-ustawien-przypiety'
+const kluczWysuwaniaPaneluUstawien = 'ultimate-pomagier.dyplomy.panel-ustawien-wysuwanie'
 const kluczTrenerowKartoteki = 'ultimate-pomagier.kartoteki.trenerzy'
 const domyslnyNumerRejestru = '88754867/106061/2026'
 const domyslnaDataSzkolenia = '2026-05-18'
@@ -122,6 +125,15 @@ const rodzajeGodzin: RodzajGodzin[] = [
   'niestandardowych',
 ]
 const trybyTytulu: TrybTytuluDyplomu[] = ['certyfikat', 'zaswiadczenie', 'dyplom']
+
+function pobierzUstawienieLogiczne(klucz: string, wartoscDomyslna: boolean) {
+  try {
+    const wartosc = localStorage.getItem(klucz)
+    return wartosc === null ? wartoscDomyslna : wartosc === 'true'
+  } catch {
+    return wartoscDomyslna
+  }
+}
 const dniTygodnia = ['Pon', 'Wt', 'Sr', 'Czw', 'Pt', 'Sob', 'Nd']
 const nazwyMiesiecy = [
   '',
@@ -213,8 +225,13 @@ function mapujMotywKoloruDyplomu(wartosc: unknown): MotywKoloruDyplomu {
 }
 
 function pobierzCzcionkeTypu(wartosc: string) {
-  const czcionka = wartosc.trim() || 'Ink Free'
+  const czcionka = wartosc.trim() || 'Bradley Hand ITC'
   return czcionka.includes(',') ? czcionka : `"${czcionka.replaceAll('"', '')}", cursive`
+}
+
+function pobierzCzcionkeDyplomu(wartosc: string) {
+  const czcionka = wartosc.trim() || 'Calibri'
+  return czcionka.includes(',') ? czcionka : `"${czcionka.replaceAll('"', '')}", Arial, sans-serif`
 }
 function pobierzKolorMotywuDyplomu(dane: Pick<ZapisDyplomow, 'motywKoloru' | 'kolorMotywu'>) {
   if (dane.motywKoloru === 'dowolny') {
@@ -276,6 +293,7 @@ function pobierzStylMotywuDyplomu(
     | 'motywKoloru'
     | 'kolorMotywu'
     | 'czcionkaTypu'
+    | 'czcionkaDyplomu'
     | 'szerokoscDodatkuGornego'
     | 'szerokoscDodatkuDolnego'
     | 'marginesDodatkuGornego'
@@ -291,6 +309,7 @@ function pobierzStylMotywuDyplomu(
   return {
     '--semper-czerwony': pobierzKolorMotywuDyplomu(dane),
     '--czcionka-typu': pobierzCzcionkeTypu(dane.czcionkaTypu),
+    '--czcionka-dyplomu': pobierzCzcionkeDyplomu(dane.czcionkaDyplomu),
     '--szerokosc-dodatku-gornego': pobierzSzerokoscDodatku(dane.szerokoscDodatkuGornego),
     '--szerokosc-dodatku-dolnego': pobierzSzerokoscDodatku(dane.szerokoscDodatkuDolnego),
     '--przesuniecie-naglowka': ustawieniaNaglowka.przesuniecieNaglowka,
@@ -505,7 +524,8 @@ function utworzDomyslnyZapis(): ZapisDyplomow {
   return {
     ...daneNumeracji,
     trybTytulu: 'certyfikat',
-    czcionkaTypu: 'Ink Free',
+    czcionkaTypu: 'Bradley Hand ITC',
+    czcionkaDyplomu: 'Calibri',
     czyPogrubionyTyp: false,
     motywKoloru: 'semper',
     kolorMotywu: koloryFirmoweDyplomu.semper,
@@ -571,7 +591,8 @@ function wczytajZapisDyplomow(): ZapisDyplomow {
       motywKoloru: mapujMotywKoloruDyplomu(dane.motywKoloru),
       kolorMotywu: czyKolorHex(dane.kolorMotywu ?? '') ? String(dane.kolorMotywu) : domyslnyZapis.kolorMotywu,
       czyPogrubionyTyp: dane.czyPogrubionyTyp ?? domyslnyZapis.czyPogrubionyTyp,
-      czcionkaTypu: pobierzCzcionkeTypu(dane.czcionkaTypu ?? domyslnyZapis.czcionkaTypu),
+      czcionkaTypu: dane.czcionkaTypu?.trim() || domyslnyZapis.czcionkaTypu,
+      czcionkaDyplomu: dane.czcionkaDyplomu?.trim() || domyslnyZapis.czcionkaDyplomu,
       rodzajGodzin: mapujRodzajGodzin(dane.rodzajGodzin),
       niestandardowyRodzajGodzin: dane.niestandardowyRodzajGodzin ?? '',
       szerokoscDodatkuGornego: ograniczProcent(
@@ -876,7 +897,6 @@ function StronaDrugaDyplomu({ dane, uczestnik }: { dane: ZapisDyplomow; uczestni
         </header>
 
         <main className="dyplom-kartka__tresc-drugiej">
-          <h2>Informacje dodatkowe</h2>
           <div>{dane.trescDrugiejStrony || 'Cele, korzyści, program szkolenia albo efekty uczenia się.'}</div>
         </main>
       </div>
@@ -986,7 +1006,13 @@ export default function WidokDyplomow() {
   const [idWybranegoDodatkuDolnego, ustawIdWybranegoDodatkuDolnego] = useState('')
   const [trybPodgladuStron, ustawTrybPodgladuStron] = useState<TrybPodgladuStron>('pierwsza')
   const [ukladPodgladuStron, ustawUkladPodgladuStron] = useState<UkladPodgladuStron>('pod_soba')
-  const [czyPanelUstawienOtwarty, ustawCzyPanelUstawienOtwarty] = useState(false)
+  const [czyPanelUstawienPrzypiety, ustawCzyPanelUstawienPrzypiety] = useState(() =>
+    pobierzUstawienieLogiczne(kluczPrzypieciaPaneluUstawien, false),
+  )
+  const [czyPanelUstawienOtwarty, ustawCzyPanelUstawienOtwarty] = useState(czyPanelUstawienPrzypiety)
+  const [czyWysuwaniePaneluUstawienWlaczone, ustawCzyWysuwaniePaneluUstawienWlaczone] = useState(() =>
+    pobierzUstawienieLogiczne(kluczWysuwaniaPaneluUstawien, true),
+  )
   const [indeksUczestnikaPierwszejStrony, ustawIndeksUczestnikaPierwszejStrony] = useState(0)
   const uczestnicyDoDruku = useMemo(
     () => dane.uczestnicy.filter((uczestnik) => uczestnik.imieNazwisko.trim()),
@@ -1019,6 +1045,36 @@ export default function WidokDyplomow() {
     () => wybierzPodpowiedziMiejscowosci(miejscowosciDoPodpowiedzi, dane.miejsceSzkolenia),
     [dane.miejsceSzkolenia, miejscowosciDoPodpowiedzi],
   )
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(kluczPrzypieciaPaneluUstawien, String(czyPanelUstawienPrzypiety))
+    } catch {
+      return
+    }
+  }, [czyPanelUstawienPrzypiety])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(kluczWysuwaniaPaneluUstawien, String(czyWysuwaniePaneluUstawienWlaczone))
+    } catch {
+      return
+    }
+  }, [czyWysuwaniePaneluUstawienWlaczone])
+
+  function otworzPanelUstawienZKrawedzi() {
+    if (czyWysuwaniePaneluUstawienWlaczone) ustawCzyPanelUstawienOtwarty(true)
+  }
+
+  function schowajPanelUstawienJesliOdpiety() {
+    if (!czyPanelUstawienPrzypiety) ustawCzyPanelUstawienOtwarty(false)
+  }
+
+  function przelaczPrzypieciePaneluUstawien() {
+    const czyPrzypiac = !czyPanelUstawienPrzypiety
+    ustawCzyPanelUstawienPrzypiety(czyPrzypiac)
+    ustawCzyPanelUstawienOtwarty(czyPrzypiac)
+  }
   const trenerzyDoWyboru = useMemo(
     () => pobierzTrenerowZKartoteki().sort((pierwszy, drugi) => pierwszy.imieNazwisko.localeCompare(drugi.imieNazwisko, 'pl')),
     [],
@@ -1411,6 +1467,7 @@ export default function WidokDyplomow() {
       ...aktualne,
       rozmiarTytulu: domyslnyZapis.rozmiarTytulu,
       czcionkaTypu: domyslnyZapis.czcionkaTypu,
+      czcionkaDyplomu: domyslnyZapis.czcionkaDyplomu,
       czyPogrubionyTyp: domyslnyZapis.czyPogrubionyTyp,
       szerokoscDodatkuGornego: domyslnyZapis.szerokoscDodatkuGornego,
       szerokoscDodatkuDolnego: domyslnyZapis.szerokoscDodatkuDolnego,
@@ -1472,14 +1529,21 @@ export default function WidokDyplomow() {
         {komunikat}
       </div>
 
-      <div aria-hidden="true" className="dyplomy__strefa-aktywacji" onMouseEnter={() => ustawCzyPanelUstawienOtwarty(true)} />
+      <div aria-hidden="true" className="dyplomy__strefa-aktywacji" onMouseEnter={otworzPanelUstawienZKrawedzi} />
 
       <div className="dyplomy__uklad">
         <div className="dyplomy__panel-pracy">
-          <section aria-label="Ustawienia dyplomu" className="dyplomy__sekcja dyplomy__sekcja--ustawienia" id="panel-ustawien-dyplomu">
+          <section aria-label="Ustawienia dyplomu" className="dyplomy__sekcja dyplomy__sekcja--ustawienia" id="panel-ustawien-dyplomu" onMouseEnter={() => ustawCzyPanelUstawienOtwarty(true)} onMouseLeave={schowajPanelUstawienJesliOdpiety}>
             <div className="dyplomy__ustawienia-naglowek">
               <h2>Ustawienia dyplomu</h2>
-              <button aria-label="Zamknij ustawienia dyplomu" className="dyplomy__przycisk dyplomy__przycisk--maly" onClick={() => ustawCzyPanelUstawienOtwarty(false)} type="button">Zamknij</button>
+              <div className="dyplomy__ustawienia-akcje">
+                <button aria-pressed={czyWysuwaniePaneluUstawienWlaczone} className="dyplomy__przycisk dyplomy__przycisk--maly" onClick={() => ustawCzyWysuwaniePaneluUstawienWlaczone((czyWlaczone) => !czyWlaczone)} title={czyWysuwaniePaneluUstawienWlaczone ? 'Wyłącz wysuwanie z prawej krawędzi' : 'Włącz wysuwanie z prawej krawędzi'} type="button">
+                  ↪ {czyWysuwaniePaneluUstawienWlaczone ? 'Wyłącz wysuwanie' : 'Włącz wysuwanie'}
+                </button>
+                <button aria-pressed={czyPanelUstawienPrzypiety} className="dyplomy__przycisk dyplomy__przycisk--maly" onClick={przelaczPrzypieciePaneluUstawien} title={czyPanelUstawienPrzypiety ? 'Odepnij panel ustawień' : 'Przypnij panel ustawień'} type="button">
+                  📌 {czyPanelUstawienPrzypiety ? 'Odepnij panel' : 'Przypnij panel'}
+                </button>
+              </div>
             </div>
             <div className="dyplomy__siatka dyplomy__siatka--trzy">
               <div className="dyplomy__pole dyplomy__pole--pelne">
@@ -1504,11 +1568,23 @@ export default function WidokDyplomow() {
                 <span>Czcionka nagłówka</span>
                 <input list="dyplomy-czcionki-typu" onChange={(zdarzenie) => zmienPole('czcionkaTypu', zdarzenie.target.value)} type="text" value={dane.czcionkaTypu} />
                 <datalist id="dyplomy-czcionki-typu">
-                  <option value="Ink Free" />
                   <option value="Bradley Hand ITC" />
+                  <option value="Ink Free" />
                   <option value="Segoe Print" />
                   <option value="Segoe Script" />
                   <option value="Comic Sans MS" />
+                </datalist>
+              </label>
+
+              <label className="dyplomy__pole">
+                <span>Czcionka dyplomu</span>
+                <input list="dyplomy-czcionki-dyplomu" onChange={(zdarzenie) => zmienPole('czcionkaDyplomu', zdarzenie.target.value)} type="text" value={dane.czcionkaDyplomu} />
+                <datalist id="dyplomy-czcionki-dyplomu">
+                  <option value="Calibri" />
+                  <option value="Arial" />
+                  <option value="Aptos" />
+                  <option value="Georgia" />
+                  <option value="Times New Roman" />
                 </datalist>
               </label>
 

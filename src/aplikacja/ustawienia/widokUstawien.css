@@ -207,7 +207,7 @@
 .ustawienia__zapisz {
   border-color: var(--ui-akcent) !important;
   background: var(--ui-akcent) !important;
-  color: #052e12 !important;
+  color: var(--ui-tekst-na-akcencie) !important;
   font-weight: 800 !important;
 }
 
@@ -252,7 +252,7 @@
   width: 100%;
   border-color: var(--ui-akcent);
   background: var(--ui-akcent);
-  color: #052e12;
+  color: var(--ui-tekst-na-akcencie);
   font-weight: 800;
 }
 
