@@ -28,6 +28,7 @@ import {
   type WynikImportuProgramu,
 } from './pipelineImportuProgramu'
 import { importujDocxProgramu } from './adapterDocxProgramu'
+import { importujPdfProgramu } from './adapterPdfProgramu'
 import { pobierzTytulDokumentuProgramu } from './tytulDokumentuProgramu'
 import RendererStronProgramu from './RendererStronProgramu'
 import {
@@ -1340,20 +1341,35 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
       return
     }
 
+    const nazwaPliku = plik.name
+
+    function przygotujStagingImportu(wynik: WynikImportuProgramu) {
+      ustawZaakceptowanePolaImportu([])
+      ustawTrybImportu('UZUPELNIJ')
+
+      if (wynik.bledy.length) {
+        ustawWynikImportu(null)
+        ustawKomunikat(wynik.bledy[0])
+        return
+      }
+
+      ustawWynikImportu(wynik)
+      ustawZaakceptowanePolaImportu(pobierzDomyslnieZaakceptowanePolaImportuProgramu(daneProgramu, wynik))
+      ustawKomunikat(`Przygotowano wynik importu pliku: ${nazwaPliku}. Sprawdź propozycje przed zastosowaniem.`)
+    }
+
     if (/\.docx$/i.test(plik.name)) {
-      void importujDocxProgramu(plik).then((wynik) => {
-        ustawWynikImportu(wynik)
-        ustawZaakceptowanePolaImportu(pobierzDomyslnieZaakceptowanePolaImportuProgramu(daneProgramu, wynik))
-        ustawTrybImportu('UZUPELNIJ')
-        ustawKomunikat(wynik.bledy.length
-          ? `Nie przygotowano importu pliku: ${plik.name}.`
-          : `Przygotowano wynik importu pliku: ${plik.name}. Sprawdź propozycje przed zastosowaniem.`)
-      })
+      void importujDocxProgramu(plik).then(przygotujStagingImportu)
+      return
+    }
+
+    if (/\.pdf$/i.test(plik.name)) {
+      void importujPdfProgramu(plik).then(przygotujStagingImportu)
       return
     }
 
     if (!czyPlikTekstowy(plik)) {
-      ustawKomunikat('Obsługiwane są pliki tekstowe oraz DOCX. Format DOC i PDF nie są obsługiwane.')
+      ustawKomunikat('Obsługiwane są pliki tekstowe, DOCX oraz PDF z warstwą tekstową. Format DOC nie jest obsługiwany.')
       return
     }
 
@@ -1364,10 +1380,7 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
       const tekstProgramu = czyHtml ? konwertujHtmlNaTekstProgramu(zawartosc) : zawartosc
 
       const wynik = importujTekstProgramu(tekstProgramu)
-      ustawWynikImportu(wynik)
-      ustawZaakceptowanePolaImportu(pobierzDomyslnieZaakceptowanePolaImportuProgramu(daneProgramu, wynik))
-      ustawTrybImportu('UZUPELNIJ')
-      ustawKomunikat(`Przygotowano wynik importu pliku: ${plik.name}. Sprawdź propozycje przed zastosowaniem.`)
+      przygotujStagingImportu(wynik)
     }
     czytnik.onerror = () => ustawKomunikat('Nie udało się odczytać pliku programu.')
     czytnik.readAsText(plik)
@@ -1821,7 +1834,7 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
               <label className="program-szkolen__etykieta">
                 Program z pliku
                 <input
-                  accept=".docx,.txt,.md,.csv,.html,.htm,text/*"
+                  accept=".docx,.pdf,.txt,.md,.csv,.html,.htm,text/*,application/pdf"
                   className="program-szkolen__pole"
                   onChange={(zdarzenie) => importujProgramZPliku(zdarzenie.target.files?.[0])}
                   type="file"

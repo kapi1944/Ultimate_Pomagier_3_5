@@ -8,6 +8,7 @@ export {
   utworzWynikImportuProgramu,
 } from './pipelineImportuProgramu'
 export { importujDocxProgramu, utworzWynikImportuProgramuZTekstuDocx } from './adapterDocxProgramu'
+export { importujPdfProgramu, utworzWynikImportuProgramuZTekstuPdf } from './adapterPdfProgramu'
 export type {
   PewnoscDanychImportu,
   PoleImportuProgramu,
