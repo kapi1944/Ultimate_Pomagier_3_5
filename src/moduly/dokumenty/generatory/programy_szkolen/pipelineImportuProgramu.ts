@@ -105,15 +105,29 @@ export function przygotujZmianyImportuProgramu(
   })
 }
 
+export function pobierzDomyslnieZaakceptowanePolaImportuProgramu(
+  aktualnyModel: ModelProgramuSzkolenia,
+  wynikImportu: WynikImportuProgramu,
+): PoleImportuProgramu[] {
+  return przygotujZmianyImportuProgramu(aktualnyModel, wynikImportu)
+    .filter((zmiana) => zmiana.pewnosc === 'PEWNE' && zmiana.stan === 'GOTOWA_DO_ZASTOSOWANIA')
+    .map((zmiana) => zmiana.pole)
+}
+
 export function zastosujZaakceptowaneZmianyImportuProgramu(
   aktualnyModel: ModelProgramuSzkolenia,
   wynikImportu: WynikImportuProgramu,
   tryb: TrybZastosowaniaImportuProgramu = 'UZUPELNIJ',
+  zaakceptowanePola: readonly PoleImportuProgramu[] = [],
 ): WynikZastosowaniaImportuProgramu {
   const model = normalizujProgramSzkolenia(aktualnyModel)
   const zmiany = przygotujZmianyImportuProgramu(model, wynikImportu)
+  const zaakceptowanePolaZbior = new Set(zaakceptowanePola)
   const propozycjeDoZastosowania = zmiany.filter((zmiana) =>
-    zmiana.stan === 'GOTOWA_DO_ZASTOSOWANIA' || zmiana.stan === 'WYMAGA_SPRAWDZENIA' || (tryb === 'ZASTAP' && zmiana.stan === 'KONFLIKT'),
+    zaakceptowanePolaZbior.has(zmiana.pole)
+      && (zmiana.stan === 'GOTOWA_DO_ZASTOSOWANIA'
+        || zmiana.stan === 'WYMAGA_SPRAWDZENIA'
+        || (tryb === 'ZASTAP' && zmiana.stan === 'KONFLIKT')),
   )
   const danePoImporcie = propozycjeDoZastosowania.reduce<ModelProgramuSzkolenia>(
     (wynik, zmiana) => ({ ...wynik, [zmiana.pole]: zmiana.wartosc }),

@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { czyNalezyPrzypomniecOPelnymBackupu, kluczOstatniegoPelnegoBackupu, odczytajKopieLokalna, pobierzListeKopiiLokalnych, przywrocBackup, przywrocKopieLokalna, sprawdzBackup, sprawdzKopieLokalna, utworzBackup, utworzKopieLokalnaPrzedOperacja } from '../src/wspolne/dane/backupDanych.ts'
+import { czyNalezyPrzypomniecOPelnymBackupu, kluczBackupuRejestruProgramow, kluczOstatniegoPelnegoBackupu, odczytajKopieLokalna, pobierzListeKopiiLokalnych, przywrocBackup, przywrocKopieLokalna, sprawdzBackup, sprawdzKopieLokalna, utworzBackup, utworzKopieLokalnaPrzedOperacja } from '../src/wspolne/dane/backupDanych.ts'
 import { analizujMigracjeStarszychDokumentow, wykonajMigracjeStarszychDokumentow } from '../src/wspolne/dokumenty/migracjaStarszychDokumentow.ts'
+import { utworzNowyDokument } from '../src/wspolne/dokumenty/modelDokumentu.ts'
 import { kluczRejestruDokumentow, pobierzStanRejestruDokumentow } from '../src/wspolne/dokumenty/rejestrDokumentow.ts'
 import { kluczRepozytoriumDokumentow } from '../src/wspolne/dokumenty/repozytoriumDokumentow.ts'
 
@@ -85,6 +86,31 @@ test('restore pełny i częściowy tworzy kopię przed zmianą oraz weryfikuje w
   magazyn.set('ultimatePomagier.ustawieniaAplikacji.v1', JSON.stringify({ kontrast: 'niski' }))
   przywrocBackup(dokumenty, ['DOKUMENTY'])
   assert.equal(magazyn.get('ultimatePomagier.ustawieniaAplikacji.v1'), JSON.stringify({ kontrast: 'niski' }))
+})
+
+test('częściowy backup PROGRAMY zawiera tylko programy ze wspólnego rejestru i restore chroni inne generatory', () => {
+  magazyn.clear(); ustawDane()
+  const program = utworzNowyDokument({
+    id: 'program-1', typ: 'PROGRAM_SZKOLENIA', tytul: 'Program z backupu', generatorId: 'programy_szkolen', daneDokumentu: {}, ustawieniaDokumentu: {},
+  })
+  const lista = utworzNowyDokument({
+    id: 'lista-1', typ: 'LISTA_OBECNOSCI', tytul: 'Lista obecności', generatorId: 'listy_obecnosci', daneDokumentu: {}, ustawieniaDokumentu: {},
+  })
+  magazyn.set(kluczRejestruDokumentow, JSON.stringify({ wersja: 3, dokumenty: [program, lista], kopieRobocze: [], autosave: [], historia: [], migracje: [] }))
+
+  const backup = utworzBackup(['PROGRAMY'])
+  const rejestrBackupu = JSON.parse(backup.dane[kluczBackupuRejestruProgramow]) as { dokumenty: Array<{ id: string }> }
+  assert.deepEqual(rejestrBackupu.dokumenty.map((dokument) => dokument.id), ['program-1'])
+  assert.equal(backup.dane[kluczRejestruDokumentow], undefined)
+
+  const zmienionyProgram = { ...program, tytul: 'Zmieniony program' }
+  const nowaLista = { ...lista, tytul: 'Lista po imporcie' }
+  magazyn.set(kluczRejestruDokumentow, JSON.stringify({ wersja: 3, dokumenty: [zmienionyProgram, nowaLista], kopieRobocze: [], autosave: [], historia: [], migracje: [] }))
+  przywrocBackup(backup, ['PROGRAMY'])
+
+  const odtworzony = pobierzStanRejestruDokumentow()
+  assert.equal(odtworzony.dokumenty.find((dokument) => dokument.id === 'program-1')?.tytul, 'Program z backupu')
+  assert.equal(odtworzony.dokumenty.find((dokument) => dokument.id === 'lista-1')?.tytul, 'Lista po imporcie')
 })
 
 test('błąd restore przywraca pełny poprzedni stan transakcyjny', () => {

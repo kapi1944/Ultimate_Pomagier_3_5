@@ -1,3 +1,10 @@
+import {
+  kluczRejestruDokumentow,
+  pobierzStanRejestruDokumentowBezZapisu,
+  zapiszStanRejestruDokumentow,
+  type StanRejestruDokumentow,
+} from '../dokumenty/rejestrDokumentow'
+
 export type KategoriaBackupu = 'DOKUMENTY' | 'SZCZEGOLY_ORGANIZACYJNE' | 'PROGRAMY' | 'PULPIT_I_ZADANIA' | 'KARTOTEKI' | 'USTAWIENIA' | 'WSZYSTKO'
 export type RodzajKopiiLokalnej = 'AUTOMATYCZNA' | 'PRZED_OPERACJA'
 
@@ -5,6 +12,7 @@ export const wersjaFormatuBackupu = 1
 export const kluczOstatniegoPelnegoBackupu = 'ultimatePomagier.backup.ostatniPelny.v1'
 const prefiksKopiiLokalnej = 'ultimatePomagier.backup.lokalny.v1.'
 const kluczIndeksuKopiiLokalnych = `${prefiksKopiiLokalnej}indeks`
+export const kluczBackupuRejestruProgramow = 'ultimatePomagier.backup.programy.rejestr.v1'
 
 export type ManifestBackupu = {
   wersjaFormatu: number
@@ -46,6 +54,36 @@ function stabilnyTekst(dane: Record<string, string>) { return Object.keys(dane).
 function sumaKontrolna(dane: Record<string, string>) { let suma = 2166136261; for (const znak of stabilnyTekst(dane)) { suma ^= znak.charCodeAt(0); suma = Math.imul(suma, 16777619) } return (suma >>> 0).toString(16).padStart(8, '0') }
 function liczbaRekordow(wartosc: string) { try { const odczyt = JSON.parse(wartosc) as unknown; if (Array.isArray(odczyt)) return odczyt.length; if (odczyt && typeof odczyt === 'object' && Array.isArray((odczyt as { dokumenty?: unknown[] }).dokumenty)) return (odczyt as { dokumenty: unknown[] }).dokumenty.length; return 1 } catch { return 1 } }
 
+function czyDaneHistoriiDotyczaProgramu(dane: unknown) {
+  return Boolean(dane && typeof dane === 'object' && (dane as { generatorId?: unknown }).generatorId === 'programy_szkolen')
+}
+
+function utworzStanRejestruTylkoProgramow(stan: StanRejestruDokumentow): StanRejestruDokumentow {
+  const idProgramow = new Set(stan.dokumenty.filter((dokument) => dokument.typ === 'PROGRAM_SZKOLENIA').map((dokument) => dokument.id))
+
+  return {
+    wersja: 3,
+    dokumenty: stan.dokumenty.filter((dokument) => dokument.typ === 'PROGRAM_SZKOLENIA'),
+    kopieRobocze: stan.kopieRobocze.filter((kopia) => kopia.dokumentNadrzednyId !== null && idProgramow.has(kopia.dokumentNadrzednyId)),
+    autosave: stan.autosave.filter((autosave) => autosave.generatorId === 'programy_szkolen'),
+    historia: stan.historia.filter((wpis) => (wpis.dokumentId !== null && idProgramow.has(wpis.dokumentId)) || czyDaneHistoriiDotyczaProgramu(wpis.dane)),
+    migracje: [],
+  }
+}
+
+function scalStanRejestruProgramow(aktualny: StanRejestruDokumentow, zBackupu: StanRejestruDokumentow): StanRejestruDokumentow {
+  const idProgramow = new Set(zBackupu.dokumenty.map((dokument) => dokument.id))
+  const idHistoriiProgramow = new Set(zBackupu.historia.map((wpis) => wpis.id))
+
+  return {
+    ...aktualny,
+    dokumenty: [...aktualny.dokumenty.filter((dokument) => dokument.typ !== 'PROGRAM_SZKOLENIA'), ...zBackupu.dokumenty],
+    kopieRobocze: [...aktualny.kopieRobocze.filter((kopia) => kopia.dokumentNadrzednyId === null || !idProgramow.has(kopia.dokumentNadrzednyId)), ...zBackupu.kopieRobocze],
+    autosave: [...aktualny.autosave.filter((autosave) => autosave.generatorId !== 'programy_szkolen'), ...zBackupu.autosave],
+    historia: [...aktualny.historia.filter((wpis) => !idHistoriiProgramow.has(wpis.id) && !(wpis.dokumentId !== null && idProgramow.has(wpis.dokumentId)) && !czyDaneHistoriiDotyczaProgramu(wpis.dane)), ...zBackupu.historia],
+  }
+}
+
 export function utworzBackup(kategorie: KategoriaBackupu[] = ['WSZYSTKO'], czyPotwierdzonyPrzezUzytkownika = false): BackupDanych {
   const czyPelny = kategorie.includes('WSZYSTKO')
   const wybrane: KategoriaBackupu[] = czyPelny ? ['DOKUMENTY', 'SZCZEGOLY_ORGANIZACYJNE', 'PROGRAMY', 'PULPIT_I_ZADANIA', 'KARTOTEKI', 'USTAWIENIA'] : unikalne(kategorie) as KategoriaBackupu[]
@@ -57,6 +95,12 @@ export function utworzBackup(kategorie: KategoriaBackupu[] = ['WSZYSTKO'], czyPo
     sekcje[nazwaSekcji(kategoria)] = klucze
     liczba[nazwaSekcji(kategoria)] = klucze.reduce((suma, klucz) => suma + liczbaRekordow(localStorage.getItem(klucz)!), 0)
     klucze.forEach((klucz) => { dane[klucz] = localStorage.getItem(klucz)! })
+    if (!czyPelny && kategoria === 'PROGRAMY' && localStorage.getItem(kluczRejestruDokumentow) !== null) {
+      const rejestrProgramow = utworzStanRejestruTylkoProgramow(pobierzStanRejestruDokumentowBezZapisu())
+      dane[kluczBackupuRejestruProgramow] = JSON.stringify(rejestrProgramow)
+      sekcje[nazwaSekcji(kategoria)].push(kluczBackupuRejestruProgramow)
+      liczba[nazwaSekcji(kategoria)] += rejestrProgramow.dokumenty.length
+    }
   })
   const backup: BackupDanych = { manifest: { wersjaFormatu: wersjaFormatuBackupu, utworzono: new Date().toISOString(), wersjaAplikacji: 'ultimate-pomagier-3.5', sekcje, liczbaRekordow: liczba, schematy: { rejestrDokumentow: 3, backup: wersjaFormatuBackupu }, sumaKontrolna: sumaKontrolna(dane) }, dane }
   if (czyPelny && czyPotwierdzonyPrzezUzytkownika) localStorage.setItem(kluczOstatniegoPelnegoBackupu, backup.manifest.utworzono)
@@ -114,14 +158,20 @@ function kluczeDoOdtworzenia(backup: BackupDanych, kategorie: KategoriaBackupu[]
 export function przywrocBackup(backup: BackupDanych, kategorie: KategoriaBackupu[] = ['WSZYSTKO']) {
   const sprawdzenie = sprawdzBackup(serializujBackup(backup)); if (!sprawdzenie.poprawny) throw new Error(sprawdzenie.blad ?? 'Niepoprawny backup.')
   const kopiaPrzedRestore = utworzKopieLokalnaPrzedOperacja('PRZED_OPERACJA', kategorie)
-  const klucze = kluczeDoOdtworzenia(backup, kategorie)
-  if (!klucze.length) throw new Error('Wybrany backup nie zawiera wskazanej sekcji do przywrócenia.')
+  const czyPrzywrocicRejestrProgramow = kategorie.includes('PROGRAMY') && typeof backup.dane[kluczBackupuRejestruProgramow] === 'string'
+  const klucze = kluczeDoOdtworzenia(backup, kategorie).filter((klucz) => klucz !== kluczBackupuRejestruProgramow)
+  if (!klucze.length && !czyPrzywrocicRejestrProgramow) throw new Error('Wybrany backup nie zawiera wskazanej sekcji do przywrócenia.')
   const kluczeDoUsuniecia = unikalne(kategorie.flatMap((kategoria) => pobierzKluczeKategorii(kategoria)))
-  const kluczeTransakcji = unikalne([...klucze, ...kluczeDoUsuniecia])
+  const kluczeTransakcji = unikalne([...klucze, ...kluczeDoUsuniecia, ...(czyPrzywrocicRejestrProgramow ? [kluczRejestruDokumentow] : [])])
   const stanPrzed: Record<string, string | null> = Object.fromEntries(kluczeTransakcji.map((klucz) => [klucz, localStorage.getItem(klucz)]))
   try {
     kluczeDoUsuniecia.forEach((klucz) => localStorage.removeItem(klucz))
     klucze.forEach((klucz) => localStorage.setItem(klucz, backup.dane[klucz]))
+    if (czyPrzywrocicRejestrProgramow) {
+      const zapisRejestruProgramow = backup.dane[kluczBackupuRejestruProgramow]
+      const odtworzonyStan = JSON.parse(zapisRejestruProgramow) as StanRejestruDokumentow
+      zapiszStanRejestruDokumentow(scalStanRejestruProgramow(pobierzStanRejestruDokumentowBezZapisu(), odtworzonyStan))
+    }
     const poZapisie = Object.fromEntries(klucze.map((klucz) => [klucz, localStorage.getItem(klucz)]))
     if (JSON.stringify(poZapisie) !== JSON.stringify(Object.fromEntries(klucze.map((klucz) => [klucz, backup.dane[klucz]])))) throw new Error('Weryfikacja zapisu restore nie powiodła się.')
     return { kopiaPrzedRestore, przywroconeKlucze: klucze }

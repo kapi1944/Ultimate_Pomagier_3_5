@@ -20,11 +20,14 @@ import {
 import { parsujTekstProgramu } from './ParserTekstu'
 import {
   importujTekstProgramu,
+  pobierzDomyslnieZaakceptowanePolaImportuProgramu,
   przygotujZmianyImportuProgramu,
   zastosujZaakceptowaneZmianyImportuProgramu,
+  type PoleImportuProgramu,
   type TrybZastosowaniaImportuProgramu,
   type WynikImportuProgramu,
 } from './pipelineImportuProgramu'
+import { importujDocxProgramu } from './adapterDocxProgramu'
 import { pobierzTytulDokumentuProgramu } from './tytulDokumentuProgramu'
 import RendererStronProgramu from './RendererStronProgramu'
 import {
@@ -1012,6 +1015,7 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
   const [stanZapisu, ustawStanZapisu] = useState<'zapisano' | 'zapisywanie' | 'blad'>('zapisano')
   const [wynikImportu, ustawWynikImportu] = useState<WynikImportuProgramu | null>(null)
   const [trybImportu, ustawTrybImportu] = useState<TrybZastosowaniaImportuProgramu>('UZUPELNIJ')
+  const [zaakceptowanePolaImportu, ustawZaakceptowanePolaImportu] = useState<PoleImportuProgramu[]>([])
 
   useEffect(() => {
     if (!dokumentIdZTrasy) {
@@ -1336,8 +1340,20 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
       return
     }
 
+    if (/\.docx$/i.test(plik.name)) {
+      void importujDocxProgramu(plik).then((wynik) => {
+        ustawWynikImportu(wynik)
+        ustawZaakceptowanePolaImportu(pobierzDomyslnieZaakceptowanePolaImportuProgramu(daneProgramu, wynik))
+        ustawTrybImportu('UZUPELNIJ')
+        ustawKomunikat(wynik.bledy.length
+          ? `Nie przygotowano importu pliku: ${plik.name}.`
+          : `Przygotowano wynik importu pliku: ${plik.name}. Sprawdź propozycje przed zastosowaniem.`)
+      })
+      return
+    }
+
     if (!czyPlikTekstowy(plik)) {
-      ustawKomunikat('DOC/DOCX/PDF wymagają wcześniejszej konwersji treści.')
+      ustawKomunikat('Obsługiwane są pliki tekstowe oraz DOCX. Format DOC i PDF nie są obsługiwane.')
       return
     }
 
@@ -1347,7 +1363,9 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
       const czyHtml = plik.type === 'text/html' || /\.html?$/i.test(plik.name)
       const tekstProgramu = czyHtml ? konwertujHtmlNaTekstProgramu(zawartosc) : zawartosc
 
-      ustawWynikImportu(importujTekstProgramu(tekstProgramu))
+      const wynik = importujTekstProgramu(tekstProgramu)
+      ustawWynikImportu(wynik)
+      ustawZaakceptowanePolaImportu(pobierzDomyslnieZaakceptowanePolaImportuProgramu(daneProgramu, wynik))
       ustawTrybImportu('UZUPELNIJ')
       ustawKomunikat(`Przygotowano wynik importu pliku: ${plik.name}. Sprawdź propozycje przed zastosowaniem.`)
     }
@@ -1360,9 +1378,10 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
       return
     }
 
-    const zastosowanie = zastosujZaakceptowaneZmianyImportuProgramu(daneProgramu, wynikImportu, trybImportu)
+    const zastosowanie = zastosujZaakceptowaneZmianyImportuProgramu(daneProgramu, wynikImportu, trybImportu, zaakceptowanePolaImportu)
     ustawDaneProgramu(zastosowanie.model)
     ustawWynikImportu(null)
+    ustawZaakceptowanePolaImportu([])
     ustawKomunikat(zastosowanie.zastosowanePola.length
       ? 'Zastosowano zaakceptowane zmiany z importu. Wynik parsowania wymaga zatwierdzenia.'
       : 'Import nie wprowadził zmian do programu.')
@@ -1370,7 +1389,20 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
 
   function anulujImportProgramu() {
     ustawWynikImportu(null)
+    ustawZaakceptowanePolaImportu([])
     ustawKomunikat('Anulowano import. Aktualny program nie został zmieniony.')
+  }
+
+  function ustawAkceptacjePolaImportu(pole: PoleImportuProgramu, czyZaakceptowane: boolean) {
+    ustawZaakceptowanePolaImportu((aktualne) => czyZaakceptowane
+      ? Array.from(new Set([...aktualne, pole]))
+      : aktualne.filter((zaakceptowanePole) => zaakceptowanePole !== pole))
+  }
+
+  function zaznaczPewneZmianyImportu() {
+    ustawZaakceptowanePolaImportu(zmianyImportu
+      .filter((zmiana) => zmiana.pewnosc === 'PEWNE' && zmiana.stan === 'GOTOWA_DO_ZASTOSOWANIA')
+      .map((zmiana) => zmiana.pole))
   }
 
   function importujLogotypZPliku(plik?: File) {
@@ -1789,7 +1821,7 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
               <label className="program-szkolen__etykieta">
                 Program z pliku
                 <input
-                  accept=".txt,.md,.csv,.html,.htm,text/*"
+                  accept=".docx,.txt,.md,.csv,.html,.htm,text/*"
                   className="program-szkolen__pole"
                   onChange={(zdarzenie) => importujProgramZPliku(zdarzenie.target.files?.[0])}
                   type="file"
@@ -1804,6 +1836,15 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
                   <ul>
                     {zmianyImportu.map((zmiana) => (
                       <li key={zmiana.pole}>
+                        <label>
+                          <input
+                            checked={zaakceptowanePolaImportu.includes(zmiana.pole)}
+                            disabled={zmiana.pewnosc === 'BRAK' || zmiana.stan === 'BEZ_ZMIANY'}
+                            onChange={(zdarzenie) => ustawAkceptacjePolaImportu(zmiana.pole, zdarzenie.target.checked)}
+                            type="checkbox"
+                          />{' '}
+                          Zastosuj tę zmianę
+                        </label>
                         {zmiana.pole === 'tytulSzkolenia' ? 'Tytuł szkolenia' : 'Treść programu'}: {zmiana.stan === 'KONFLIKT' ? 'konflikt z aktualną wartością' : zmiana.stan === 'WYMAGA_SPRAWDZENIA' ? 'importowane — wymaga sprawdzenia' : zmiana.stan === 'GOTOWA_DO_ZASTOSOWANIA' ? 'importowane' : 'bez zmiany'}
                         <details>
                           <summary>Pokaż proponowaną wartość</summary>
@@ -1820,6 +1861,8 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
                     </select>
                   </label>
                   <div className="program-szkolen__akcje">
+                    <button className="program-szkolen__przycisk" onClick={zaznaczPewneZmianyImportu} type="button">Zaznacz pewne</button>
+                    <button className="program-szkolen__przycisk" onClick={() => ustawZaakceptowanePolaImportu([])} type="button">Odznacz wszystko</button>
                     <button className="program-szkolen__przycisk" disabled={wynikImportu.bledy.length > 0} onClick={zaakceptujImportProgramu} type="button">Zastosuj import</button>
                     <button className="program-szkolen__przycisk" onClick={anulujImportProgramu} type="button">Anuluj import</button>
                   </div>
