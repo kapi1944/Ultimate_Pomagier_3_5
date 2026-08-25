@@ -3,7 +3,8 @@ import type { TypIkonyMenu } from './IkonaMenu'
 export function pobierzTypIkonyMenu(id: string): TypIkonyMenu {
   if (id.includes('kopie_robocze') || id.includes('kopie-robocze')) return 'kopie'
   if (id === 'dokumenty_kosz' || id.endsWith('_kosz')) return 'kosz'
-  if (id === 'dokumenty_wszystkie' || id.endsWith('_lista')) return 'wszystkie'
+  if (id === 'dokumenty_wszystkie' || id.endsWith('_lista') || id.endsWith('_wszystkie')) return 'wszystkie'
+  if (id === 'checklisty_paczek') return 'nowy'
   if (
     id === 'programy_szkolen' ||
     id === 'zamkniete_szczegoly_organizacyjne_nowe' ||
@@ -19,6 +20,7 @@ export function pobierzTypIkonyMenu(id: string): TypIkonyMenu {
   if (id === 'generator-kart-na-drzwi') return 'drzwi'
   if (id === 'szczegoly-organizacyjne') return 'szczegoly'
   if (id === 'dokumenty') return 'dokumenty'
+  if (id === 'generator-checklist-paczek') return 'dokumenty'
   if (id === 'replikator_dokumentow') return 'replikator'
   if (id.startsWith('kartoteki')) return 'kartoteki'
   if (id === 'ustawienia') return 'ustawienia'

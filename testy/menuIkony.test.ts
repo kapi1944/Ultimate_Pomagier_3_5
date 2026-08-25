@@ -12,10 +12,10 @@ test('kazda pozycja menu ma renderowana ikone', () => {
   const pozycje = pobierzWszystkiePozycje(pozycjeMenu)
   const kodMenu = readFileSync(new URL('../src/aplikacja/menu/MenuBoczne.tsx', import.meta.url), 'utf8')
 
-  assert.match(kodMenu, /<IkonaMenu typ=\{pobierzTypIkonyMenu\(pozycja\.id\)\} \/>/)
+  assert.match(kodMenu, /<IkonaMenu typ=\{pobierzTypIkonyMenu\(pozycja\.widok \?\? pozycja\.id\)\} \/>/)
 
   for (const pozycja of pozycje) {
-    const typIkony = pobierzTypIkonyMenu(pozycja.id)
+    const typIkony = pobierzTypIkonyMenu(pozycja.widok ?? pozycja.id)
     assert.ok(typIkony !== 'pulpit' || pozycja.id === 'pulpit', `Pozycja ${pozycja.id} wymaga wlasnej ikony`)
   }
 })
