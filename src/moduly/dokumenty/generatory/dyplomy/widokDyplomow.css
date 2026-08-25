@@ -12,6 +12,14 @@
   transition: margin-right 220ms ease;
 }
 
+.dyplomy {
+  transition: width 220ms ease;
+}
+
+.dyplomy--panel-ustawien-otwarty {
+  width: calc(100% - var(--szerokosc-panelu-ustawien));
+}
+
 .dyplomy *,
 .dyplomy *::before,
 .dyplomy *::after {
@@ -1197,5 +1205,12 @@
   .dyplom-kartka__szczegoly p,
   .dyplom-kartka__stopka {
     color: #000000 !important;
+  }
+}
+
+
+@media (max-width: 900px) {
+  .dyplomy--panel-ustawien-otwarty {
+    width: 100%;
   }
 }

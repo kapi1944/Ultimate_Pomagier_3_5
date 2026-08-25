@@ -9,6 +9,7 @@ import { czyPaczkaOpozniona, czyPaczkaWidoczna, czyWysylkaWymagaDodatkowegoPotwi
 import { obliczLicznikiPulpitu } from '../src/moduly/zamkniete/pulpit/logika/podsumowaniePulpitu.ts'
 import { obliczLiczbeAktywnychZapotrzebowanZakupowych, odmienRzeczDoZakupu, pobierzTekstLicznikaZakupow, walidujNoweZapotrzebowanieZakupowe } from '../src/moduly/zamkniete/pulpit/logika/zapotrzebowaniaZakupowe.ts'
 import { generujZadaniaAutomatyczne } from '../src/moduly/zamkniete/pulpit/logika/zadaniaAutomatyczne.ts'
+import { normalizujKadrMiniatury } from '../src/moduly/zamkniete/pulpit/logika/miniaturyZadan.ts'
 import { czyMoznaEdytowacZadanie, czyMoznaOznaczycZadanieRecznie, czyMoznaWybracZadaniodawce, czyZadanieDoKoncaDnia, czyZadanieOpoznione, czyZadanieWidoczneDlaUzytkownika, pobierzEtykieteStatusuZadania, pobierzGodzineLogicznegoDeadline, pobierzGodzineMarkeraZadania, pobierzMomentPrzypomnieniaZadania, pobierzSzerokoscLiniiDoFajrantu, pobierzZadaniaDeadline, rozstrzygnijPrzypisanieZadania, sortujZadaniaBezGodziny, walidujPrzypomnienia } from '../src/moduly/zamkniete/pulpit/logika/zadania.ts'
 import type { PaczkaPulpitu, StatusZapotrzebowaniaZakupowego, ZadaniePulpitu, ZapotrzebowanieZakupowe } from '../src/moduly/zamkniete/pulpit/modele/pulpit.ts'
 import { edytujZadanieRecznePrzezZadaniodawce, normalizujZadaniePulpitu, pobierzStanPulpitu, zapiszZadanieReczne, zapiszZapotrzebowanieZakupowe } from '../src/moduly/zamkniete/pulpit/uslugi/magazynPulpitu.ts'
@@ -822,4 +823,86 @@ test('Nawigacja korzysta z centralnych zmiennych szerokości i wysokości menu',
   assert.match(css, /--ui-menu-button-height/)
   assert.match(magazyn, /--ui-menu-width/)
   assert.match(magazyn, /--ui-menu-button-height/)
+})
+
+test('kadr miniatury ma bezpieczne wartości domyślne i ogranicza przesunięcie oraz zoom', () => {
+  assert.deepEqual(normalizujKadrMiniatury(undefined), {
+    x: 0,
+    y: 0,
+    zoom: 1,
+    proporcja: '16:9',
+  })
+  assert.deepEqual(normalizujKadrMiniatury({ x: 8, y: -5, zoom: 99, proporcja: '1:1' }), {
+    x: 1,
+    y: -1,
+    zoom: 3,
+    proporcja: '1:1',
+  })
+})
+
+test('stara miniatura bez źródła i kadru jest migrowana bez utraty zadania', () => {
+  const staraMiniatura = 'data:image/webp;base64,AAAA'
+  const znormalizowane = normalizujZadaniePulpitu({
+    ...zadanie({ id: 'stara-miniatura' }),
+    miniatura: {
+      daneUrl: staraMiniatura,
+      nazwaPliku: 'stara.webp',
+      szerokosc: 320,
+      wysokosc: 180,
+    },
+  })
+
+  assert.ok(znormalizowane)
+  assert.equal(znormalizowane.miniatura?.daneUrl, staraMiniatura)
+  assert.equal(znormalizowane.miniatura?.zrodloDaneUrl, staraMiniatura)
+  assert.equal(znormalizowane.miniatura?.szerokoscZrodla, 320)
+  assert.equal(znormalizowane.miniatura?.wysokoscZrodla, 180)
+  assert.deepEqual(znormalizowane.miniatura?.kadr, { x: 0, y: 0, zoom: 1, proporcja: '16:9' })
+})
+
+test('uszkodzona miniatura jest odrzucana bez odrzucania zadania', () => {
+  const znormalizowane = normalizujZadaniePulpitu({
+    ...zadanie({ id: 'uszkodzona-miniatura' }),
+    miniatura: {
+      daneUrl: 'javascript:alert(1)',
+      zrodloDaneUrl: 'javascript:alert(1)',
+      szerokosc: 320,
+      wysokosc: 180,
+      szerokoscZrodla: 1000,
+      wysokoscZrodla: 600,
+      kadr: { x: 0, y: 0, zoom: 1, proporcja: '16:9' },
+    },
+  })
+
+  assert.ok(znormalizowane)
+  assert.equal(znormalizowane.miniatura, undefined)
+})
+
+test('widok zapisuje miniaturę przy tworzeniu i edycji oraz renderuje ją nad markerem z tą samą pozycją czasu', () => {
+  const widok = readFileSync('src/moduly/zamkniete/pulpit/WidokPulpitu.tsx', 'utf8')
+  const css = readFileSync('src/moduly/zamkniete/pulpit/pulpit.css', 'utf8')
+
+  assert.match(widok, /miniatura:\s*noweZadanie\.miniatura/)
+  assert.match(widok, /miniatura:\s*formularzEdycji\.miniatura/)
+  assert.match(widok, /pulpit-os-czasu__miniatury/)
+  assert.match(widok, /MiniaturaZadaniaNaOsi/)
+  assert.match(widok, /pozycjaGodzinyNaOsi\(godzinaMarkera, zakresDniaPracy\)/)
+  assert.match(widok, /Edytuj miniaturę/)
+  assert.match(widok, /Zmień obraz/)
+  assert.match(widok, /Usuń miniaturę/)
+  assert.match(widok, /Zastosuj kadr/)
+  assert.match(css, /\.pulpit-os-czasu__miniatura/)
+})
+
+test('model miniatury zachowuje źródło robocze i parametry ponownej edycji kadru', () => {
+  const model = readFileSync('src/moduly/zamkniete/pulpit/modele/pulpit.ts', 'utf8')
+  const logika = readFileSync('src/moduly/zamkniete/pulpit/logika/miniaturyZadan.ts', 'utf8')
+
+  assert.match(model, /zrodloDaneUrl:\s*string/)
+  assert.match(model, /szerokoscZrodla:\s*number/)
+  assert.match(model, /wysokoscZrodla:\s*number/)
+  assert.match(model, /kadr:\s*KadrMiniaturyZadania/)
+  assert.match(logika, /maksymalnyWymiarZrodla\s*=\s*1600/)
+  assert.match(logika, /aktualizujKadrMiniatury/)
+  assert.match(logika, /proporcja/)
 })

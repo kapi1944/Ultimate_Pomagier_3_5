@@ -11,11 +11,24 @@ export type PrzypomnienieZadania = {
   jednostka: JednostkaPrzypomnienia
 }
 
+export type ProporcjaMiniaturyZadania = '16:9' | '4:3' | '1:1'
+
+export type KadrMiniaturyZadania = {
+  x: number
+  y: number
+  zoom: number
+  proporcja: ProporcjaMiniaturyZadania
+}
+
 export type MiniaturaZadaniaPulpitu = {
   daneUrl: string
+  zrodloDaneUrl: string
   nazwaPliku: string
   szerokosc: number
   wysokosc: number
+  szerokoscZrodla: number
+  wysokoscZrodla: number
+  kadr: KadrMiniaturyZadania
 }
 
 export type ZadaniePulpitu = {

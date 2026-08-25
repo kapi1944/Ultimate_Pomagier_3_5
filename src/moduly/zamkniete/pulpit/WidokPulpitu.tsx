@@ -6,14 +6,14 @@ import { pobierzNazweUzytkownika, pobierzNazweWyswietlanaUzytkownika, type Uzytk
 import { pobierzChecklistyPaczek, pobierzSzczegolyDoChecklisty } from '../../dokumenty/generatory/checklisty_paczek/rejestrChecklistPaczek'
 import { czyPozycjaJestAktywna } from '../../dokumenty/generatory/checklisty_paczek/modelChecklistyPaczki'
 import { pobierzEtykietyOsiCzasu, pobierzGraniceDniaPracyNaOsi, pobierzStanWskaznikaCzasu, pozycjaGodzinyNaOsi, type ZakresDniaPracy } from './logika/czasDnia'
-import { przygotujMiniatureZadania } from './logika/miniaturyZadan'
+import { aktualizujKadrMiniatury, przygotujMiniatureZadania } from './logika/miniaturyZadan'
 import { czyPaczkaOpozniona, czyPaczkaWidoczna, czyWysylkaWymagaDodatkowegoPotwierdzenia, liczbaDniWidocznosciPaczki, pobierzGotowoscPaczki, pobierzTerminWzglednyPaczki, sortujPaczki } from './logika/paczki'
 import { generujZadaniaAutomatyczne } from './logika/zadaniaAutomatyczne'
 import { czyMoznaZmienicKontekstPulpitu } from './logika/kontekstPulpitu'
 import { obliczLicznikiPulpitu } from './logika/podsumowaniePulpitu'
 import { obliczLiczbeAktywnychZapotrzebowanZakupowych, odmienRzeczDoZakupu, pobierzAktywneZapotrzebowaniaZakupowe, pobierzTekstLicznikaZakupow, walidujNoweZapotrzebowanieZakupowe } from './logika/zapotrzebowaniaZakupowe'
 import { czyMoznaEdytowacZadanie, czyMoznaOznaczycZadanieRecznie, czyMoznaWybracZadaniodawce, czyZadanieDoKoncaDnia, czyZadanieDotyczyDnia, czyZadanieOpoznione, czyZadanieWidoczneDlaUzytkownika, pobierzEtykieteStatusuZadania, pobierzGodzineMarkeraZadania, pobierzKolorZadaniodawcy, pobierzSzerokoscLiniiDoFajrantu, pobierzZadaniaDeadline, rozstrzygnijPrzypisanieZadania, sortujZadaniaBezGodziny, walidujPrzypomnienia } from './logika/zadania'
-import type { JednostkaPrzypomnienia, PaczkaPulpitu, PrzypomnienieZadania, RodzajTerminuZadania, ZadaniePulpitu, ZapotrzebowanieZakupowe } from './modele/pulpit'
+import type { JednostkaPrzypomnienia, KadrMiniaturyZadania, PaczkaPulpitu, PrzypomnienieZadania, RodzajTerminuZadania, ZadaniePulpitu, ZapotrzebowanieZakupowe } from './modele/pulpit'
 import { edytujZadanieRecznePrzezZadaniodawce, oznaczPaczkeJakoWyslana, pobierzStanPulpitu, usunZadanieReczne, zapiszZadanieReczne, zapiszZapotrzebowanieZakupowe } from './uslugi/magazynPulpitu'
 import './pulpit.css'
 
@@ -247,6 +247,28 @@ function KartaZadania({ zadanie, teraz, zakresDniaPracy, uzytkownicy, otworz, wy
   </article>
 }
 
+function MiniaturaZadaniaNaOsi({ zadanie, zakresDniaPracy, otworz }: { zadanie: ZadaniePulpitu; zakresDniaPracy: ZakresDniaPracy; otworz: () => void }) {
+  const godzinaMarkera = pobierzGodzineMarkeraZadania(zadanie, zakresDniaPracy)
+  if (!zadanie.miniatura || !godzinaMarkera) return null
+
+  const pozycja = pozycjaGodzinyNaOsi(godzinaMarkera, zakresDniaPracy)
+  const klasaKrawedzi = pozycja <= 5
+    ? ' pulpit-os-czasu__miniatura--lewo'
+    : pozycja >= 95
+      ? ' pulpit-os-czasu__miniatura--prawo'
+      : ''
+
+  return <button
+    aria-label={'Otwórz zadanie z miniaturą: ' + zadanie.tytul}
+    className={'pulpit-os-czasu__miniatura' + klasaKrawedzi}
+    onClick={otworz}
+    style={{ left: pozycja + '%' }}
+    type="button"
+  >
+    <img alt="" aria-hidden="true" src={zadanie.miniatura.daneUrl} />
+  </button>
+}
+
 function MarkerDeadline({ zadanie, zakresDniaPracy, uzytkownicy, otworz }: { zadanie: ZadaniePulpitu; zakresDniaPracy: ZakresDniaPracy; uzytkownicy: Uzytkownik[]; otworz: () => void }) {
   const zadaniodawca = uzytkownicy.find((uzytkownik) => uzytkownik.id === zadanie.zadaniodawcaId)
   const zadaniobiorca = uzytkownicy.find((uzytkownik) => uzytkownik.id === zadanie.zadaniobiorcaId)
@@ -301,7 +323,7 @@ function MarkerDeadline({ zadanie, zakresDniaPracy, uzytkownicy, otworz }: { zad
 
 function FormularzDodawaniaZadania({ formularz, ustawFormularz, uzytkownicy, szkolenia, czyWyborZadaniodawcy, blad, zapisz, anuluj, etykietaZapisu = 'Zapisz' }: {
   formularz: FormularzZadania
-  ustawFormularz: (formularz: FormularzZadania) => void
+  ustawFormularz: Dispatch<SetStateAction<FormularzZadania>>
   uzytkownicy: Uzytkownik[]
   szkolenia: Array<{ id: string; nazwa: string }>
   czyWyborZadaniodawcy: boolean
@@ -310,6 +332,81 @@ function FormularzDodawaniaZadania({ formularz, ustawFormularz, uzytkownicy, szk
   anuluj?: () => void
   etykietaZapisu?: string
 }) {
+  const identyfikatorPliku = useId()
+  const [bladMiniatury, ustawBladMiniatury] = useState('')
+  const [czyPrzetwarzanieMiniatury, ustawCzyPrzetwarzanieMiniatury] = useState(false)
+  const [czyPrzeciaganieMiniatury, ustawCzyPrzeciaganieMiniatury] = useState(false)
+  const [czyEdycjaKadru, ustawCzyEdycjaKadru] = useState(false)
+  const [miniaturaPrzedEdycja, ustawMiniaturePrzedEdycja] = useState<FormularzZadania['miniatura']>()
+
+  async function dodajMiniature(plik: File | null | undefined) {
+    if (!plik) return
+    ustawCzyPrzetwarzanieMiniatury(true)
+    ustawBladMiniatury('')
+
+    try {
+      const miniatura = await przygotujMiniatureZadania(plik)
+      ustawFormularz((obecny) => ({ ...obecny, miniatura }))
+      ustawMiniaturePrzedEdycja(miniatura)
+      ustawCzyEdycjaKadru(true)
+    } catch (bladObrazu) {
+      ustawBladMiniatury(bladObrazu instanceof Error ? bladObrazu.message : 'Nie udało się przygotować miniatury.')
+    } finally {
+      ustawCzyPrzetwarzanieMiniatury(false)
+    }
+  }
+
+  async function zmienKadrMiniatury(zmiana: Partial<KadrMiniaturyZadania>) {
+    if (!formularz.miniatura) return
+    ustawCzyPrzetwarzanieMiniatury(true)
+    ustawBladMiniatury('')
+
+    try {
+      const miniatura = await aktualizujKadrMiniatury(formularz.miniatura, zmiana)
+      ustawFormularz((obecny) => ({ ...obecny, miniatura }))
+    } catch (bladObrazu) {
+      ustawBladMiniatury(bladObrazu instanceof Error ? bladObrazu.message : 'Nie udało się zaktualizować kadru.')
+    } finally {
+      ustawCzyPrzetwarzanieMiniatury(false)
+    }
+  }
+
+  function rozpocznijEdycjeKadru() {
+    if (!formularz.miniatura) return
+    ustawMiniaturePrzedEdycja(formularz.miniatura)
+    ustawCzyEdycjaKadru(true)
+  }
+
+  function anulujEdycjeKadru() {
+    if (miniaturaPrzedEdycja) {
+      ustawFormularz((obecny) => ({ ...obecny, miniatura: miniaturaPrzedEdycja }))
+    }
+    ustawCzyEdycjaKadru(false)
+    ustawMiniaturePrzedEdycja(undefined)
+  }
+
+  function zatwierdzEdycjeKadru() {
+    ustawCzyEdycjaKadru(false)
+    ustawMiniaturePrzedEdycja(undefined)
+  }
+
+  function obsluzWklejenie(zdarzenie: ClipboardEvent<HTMLFormElement>) {
+    const plik = Array.from(zdarzenie.clipboardData.items)
+      .find((element) => element.kind === 'file' && element.type.startsWith('image/'))
+      ?.getAsFile()
+    if (!plik) return
+    zdarzenie.preventDefault()
+    void dodajMiniature(plik)
+  }
+
+  function obsluzUpuszczenie(zdarzenie: DragEvent<HTMLDivElement>) {
+    zdarzenie.preventDefault()
+    ustawCzyPrzeciaganieMiniatury(false)
+    const plik = Array.from(zdarzenie.dataTransfer.files).find((element) => element.type.startsWith('image/'))
+    if (plik) void dodajMiniature(plik)
+    else ustawBladMiniatury('Upuść plik graficzny.')
+  }
+
   function dodajPrzypomnienie() {
     const propozycje: Array<Omit<PrzypomnienieZadania, 'id'>> = [
       { wartosc: 15, jednostka: 'MINUTY' },
@@ -324,7 +421,7 @@ function FormularzDodawaniaZadania({ formularz, ustawFormularz, uzytkownicy, szk
     ustawFormularz({ ...formularz, przypomnienia: formularz.przypomnienia.map((przypomnienie) => przypomnienie.id === id ? { ...przypomnienie, ...zmiana } : przypomnienie) })
   }
 
-  return <form className="pulpit-formularz-zadania" onSubmit={(zdarzenie) => { zdarzenie.preventDefault(); zapisz() }}>
+  return <form className="pulpit-formularz-zadania" onPaste={obsluzWklejenie} onSubmit={(zdarzenie) => { zdarzenie.preventDefault(); zapisz() }}>
     <label className="pulpit-formularz-zadania__nazwa" htmlFor="pulpit-nazwa-zadania">Nazwa zadania<input id="pulpit-nazwa-zadania" onChange={(zdarzenie) => ustawFormularz({ ...formularz, tytul: zdarzenie.target.value })} placeholder="Np. wysłać dokumenty" value={formularz.tytul} /></label>
     <label htmlFor="pulpit-termin-zadania">Termin wykonania<input id="pulpit-termin-zadania" onChange={(zdarzenie) => ustawFormularz({ ...formularz, data: zdarzenie.target.value })} type="date" value={formularz.data} /></label>
     <label htmlFor="pulpit-rodzaj-terminu-zadania">Termin<select id="pulpit-rodzaj-terminu-zadania" onChange={(zdarzenie) => ustawFormularz({ ...formularz, rodzajTerminu: zdarzenie.target.value as FormularzZadania['rodzajTerminu'], godzina: zdarzenie.target.value === 'KONKRETNA_GODZINA' ? formularz.godzina : '' })} value={formularz.rodzajTerminu}><option value="KONKRETNA_GODZINA">Konkretna godzina</option><option value="DO_KONCA_DNIA">Do końca dnia</option><option value="BRAK_GODZINY">Bez przypisanej godziny</option></select></label>
@@ -333,6 +430,56 @@ function FormularzDodawaniaZadania({ formularz, ustawFormularz, uzytkownicy, szk
     {czyWyborZadaniodawcy && <label htmlFor="pulpit-zadaniodawca">Zadaniodawca<select id="pulpit-zadaniodawca" onChange={(zdarzenie) => ustawFormularz({ ...formularz, zadaniodawcaId: zdarzenie.target.value })} value={formularz.zadaniodawcaId}>{uzytkownicy.map((uzytkownik) => <option key={uzytkownik.id} value={uzytkownik.id}>{pobierzNazweUzytkownika(uzytkownik)}</option>)}</select></label>}
     <label htmlFor="pulpit-zadaniobiorca">Zadaniobiorca<select id="pulpit-zadaniobiorca" onChange={(zdarzenie) => ustawFormularz({ ...formularz, zadaniobiorcaId: zdarzenie.target.value })} value={formularz.zadaniobiorcaId}><option value="">Ja &mdash; {pobierzNazweOsoby(uzytkownicy, formularz.zadaniodawcaId)}</option>{uzytkownicy.filter((uzytkownik) => uzytkownik.id !== formularz.zadaniodawcaId).map((uzytkownik) => <option key={uzytkownik.id} value={uzytkownik.id}>{pobierzNazweUzytkownika(uzytkownik)}</option>)}</select></label>
     <label htmlFor="pulpit-powiazanie-zadania">Powiązanie<select id="pulpit-powiazanie-zadania" onChange={(zdarzenie) => ustawFormularz({ ...formularz, szkolenieId: zdarzenie.target.value })} value={formularz.szkolenieId}><option value="">Bez powiązania</option>{szkolenia.map((szczegoly) => <option key={szczegoly.id} value={szczegoly.id}>{szczegoly.nazwa}</option>)}</select></label>
+    <div
+      aria-busy={czyPrzetwarzanieMiniatury}
+      className={'pulpit-formularz-zadania__miniatura' + (czyPrzeciaganieMiniatury ? ' pulpit-formularz-zadania__miniatura--przeciaganie' : '')}
+      onDragEnter={(zdarzenie) => { zdarzenie.preventDefault(); ustawCzyPrzeciaganieMiniatury(true) }}
+      onDragLeave={() => ustawCzyPrzeciaganieMiniatury(false)}
+      onDragOver={(zdarzenie) => { zdarzenie.preventDefault(); ustawCzyPrzeciaganieMiniatury(true) }}
+      onDrop={obsluzUpuszczenie}
+    >
+      {formularz.miniatura && <img alt={'Miniatura: ' + formularz.miniatura.nazwaPliku} className="pulpit-formularz-zadania__miniatura-podglad" src={formularz.miniatura.daneUrl} />}
+      <div className="pulpit-formularz-zadania__miniatura-opis">
+        <strong>Miniatura zadania <span>(opcjonalna)</span></strong>
+        <small>Wybierz obraz z dysku, przeciągnij go tutaj lub wklej ze schowka skrótem Ctrl+V.</small>
+      </div>
+      <div className="pulpit-formularz-zadania__miniatura-akcje">
+        <label className="pulpit-formularz-zadania__wybor-pliku" htmlFor={identyfikatorPliku}>
+          {czyPrzetwarzanieMiniatury ? 'Przygotowywanie…' : formularz.miniatura ? 'Zmień obraz' : 'Wybierz z dysku'}
+          <input accept="image/png,image/jpeg,image/webp" disabled={czyPrzetwarzanieMiniatury} id={identyfikatorPliku} onChange={(zdarzenie) => { void dodajMiniature(zdarzenie.target.files?.[0]); zdarzenie.target.value = '' }} type="file" />
+        </label>
+        {formularz.miniatura && <button disabled={czyPrzetwarzanieMiniatury} onClick={rozpocznijEdycjeKadru} type="button">Edytuj miniaturę</button>}
+        {formularz.miniatura && <button disabled={czyPrzetwarzanieMiniatury} onClick={() => { ustawCzyEdycjaKadru(false); ustawMiniaturePrzedEdycja(undefined); ustawFormularz((obecny) => ({ ...obecny, miniatura: undefined })) }} type="button">Usuń miniaturę</button>}
+      </div>
+      {formularz.miniatura && czyEdycjaKadru && <div className="pulpit-miniatura-edytor">
+        <div>
+          <strong>Kadr miniatury</strong>
+          <small>Przesuń kadr, ustaw zoom i wybierz proporcje. Obraz źródłowy pozostaje zapisany do późniejszej edycji.</small>
+        </div>
+        <label>Format
+          <select disabled={czyPrzetwarzanieMiniatury} onChange={(zdarzenie) => { void zmienKadrMiniatury({ proporcja: zdarzenie.target.value as KadrMiniaturyZadania['proporcja'] }) }} value={formularz.miniatura.kadr.proporcja}>
+            <option value="16:9">16:9 — szeroka</option>
+            <option value="4:3">4:3 — klasyczna</option>
+            <option value="1:1">1:1 — kwadrat</option>
+          </select>
+        </label>
+        <label>Zoom <span>{formularz.miniatura.kadr.zoom.toFixed(2)}×</span>
+          <input disabled={czyPrzetwarzanieMiniatury} max="3" min="1" onChange={(zdarzenie) => { void zmienKadrMiniatury({ zoom: Number(zdarzenie.target.value) }) }} step="0.05" type="range" value={formularz.miniatura.kadr.zoom} />
+        </label>
+        <label>Poziom
+          <input disabled={czyPrzetwarzanieMiniatury} max="1" min="-1" onChange={(zdarzenie) => { void zmienKadrMiniatury({ x: Number(zdarzenie.target.value) }) }} step="0.02" type="range" value={formularz.miniatura.kadr.x} />
+        </label>
+        <label>Pion
+          <input disabled={czyPrzetwarzanieMiniatury} max="1" min="-1" onChange={(zdarzenie) => { void zmienKadrMiniatury({ y: Number(zdarzenie.target.value) }) }} step="0.02" type="range" value={formularz.miniatura.kadr.y} />
+        </label>
+        <div className="pulpit-miniatura-edytor__akcje">
+          <button disabled={czyPrzetwarzanieMiniatury} onClick={() => { void zmienKadrMiniatury({ x: 0, y: 0, zoom: 1, proporcja: '16:9' }) }} type="button">Resetuj</button>
+          <button disabled={czyPrzetwarzanieMiniatury} onClick={anulujEdycjeKadru} type="button">Anuluj</button>
+          <button className="pulpit-przycisk-glowny" disabled={czyPrzetwarzanieMiniatury} onClick={zatwierdzEdycjeKadru} type="button">Zastosuj kadr</button>
+        </div>
+      </div>}
+    </div>
+    {bladMiniatury && <p className="pulpit-formularz-zadania__blad" role="alert">{bladMiniatury}</p>}
     <fieldset className="pulpit-przypomnienia">
       <legend>Przypomnienia</legend>
       {formularz.przypomnienia.map((przypomnienie, indeks) => <div className="pulpit-przypomnienie" key={przypomnienie.id}>
@@ -346,9 +493,9 @@ function FormularzDodawaniaZadania({ formularz, ustawFormularz, uzytkownicy, szk
     {anuluj
       ? <div className="pulpit-modal__akcje">
           <button onClick={anuluj} type="button">Anuluj</button>
-          <button className="pulpit-przycisk-glowny pulpit-formularz-zadania__zapisz" type="submit">{etykietaZapisu}</button>
+          <button className="pulpit-przycisk-glowny pulpit-formularz-zadania__zapisz" disabled={czyPrzetwarzanieMiniatury} type="submit">{etykietaZapisu}</button>
         </div>
-      : <button className="pulpit-przycisk-glowny pulpit-formularz-zadania__zapisz" type="submit">{etykietaZapisu}</button>}
+      : <button className="pulpit-przycisk-glowny pulpit-formularz-zadania__zapisz" disabled={czyPrzetwarzanieMiniatury} type="submit">{etykietaZapisu}</button>}
   </form>
 }
 
@@ -560,6 +707,7 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
         priorytet: formularzEdycji.priorytet,
         zadaniobiorcaId,
         przypomnienia: formularzEdycji.przypomnienia.map((przypomnienie) => ({ ...przypomnienie })),
+        miniatura: formularzEdycji.miniatura,
         powiazaneSzkolenieId: formularzEdycji.szkolenieId || undefined,
       },
     )
@@ -620,6 +768,7 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
       wlascicielId: przypisanie.zadaniobiorcaId,
       ...przypisanie,
       przypomnienia: noweZadanie.przypomnienia,
+      miniatura: noweZadanie.miniatura,
       powiazaneSzkolenieId: noweZadanie.szkolenieId || undefined,
       czyAutomatyczne: false,
       czyTerminKrytyczny: false,
@@ -778,6 +927,9 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
         </div>
       </div>
       <div className="pulpit-os-czasu" aria-label={'Dobowa oś czasu od 00:00 do 23:59; dzień pracy od ' + zakresDniaPracy.poczatek + ' do ' + zakresDniaPracy.koniec}>
+        <div className="pulpit-os-czasu__miniatury">
+          {zadaniaGodzinowe.map((zadanie) => <MiniaturaZadaniaNaOsi key={'miniatura-' + zadanie.id} otworz={() => ustawWybraneZadanie(zadanie)} zakresDniaPracy={zakresDniaPracy} zadanie={zadanie} />)}
+        </div>
         <div className="pulpit-os-czasu__linia">
           <div className="pulpit-os-czasu__odcinek pulpit-os-czasu__odcinek--przed-praca" style={{ width: graniceDniaPracy.poczatek + '%' }} />
           <div className="pulpit-os-czasu__odcinek pulpit-os-czasu__odcinek--praca" style={{ left: graniceDniaPracy.poczatek + '%', width: graniceDniaPracy.koniec - graniceDniaPracy.poczatek + '%' }} />
@@ -876,7 +1028,10 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
           etykietaZapisu="Zapisz zmiany"
           formularz={formularzEdycji}
           szkolenia={szkoleniaDostepne}
-          ustawFormularz={ustawFormularzEdycji}
+          ustawFormularz={(zmiana) => ustawFormularzEdycji((obecny) => {
+            if (!obecny) return obecny
+            return typeof zmiana === 'function' ? zmiana(obecny) : zmiana
+          })}
           uzytkownicy={aktywniUzytkownicy}
           zapisz={zapiszEdycjeZadania}
         />

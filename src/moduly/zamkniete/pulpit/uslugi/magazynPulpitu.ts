@@ -1,5 +1,6 @@
 import type { RolaUzytkownika } from '../../../../kartoteki/uzytkownicy/typyUzytkownikow'
 import type { JednostkaPrzypomnienia, MiniaturaZadaniaPulpitu, PrzypomnienieZadania, StanPulpitu, StatusZapotrzebowaniaZakupowego, ZadaniePulpitu, ZapotrzebowanieZakupowe } from '../modele/pulpit'
+import { normalizujKadrMiniatury } from '../logika/miniaturyZadan'
 
 const kluczStanuPulpitu = 'ultimatePomagier.pulpit.v1'
 
@@ -35,25 +36,44 @@ function normalizujMiniatureZadania(wartosc: unknown): MiniaturaZadaniaPulpitu |
   if (!wartosc || typeof wartosc !== 'object') return null
   const dane = wartosc as Record<string, unknown>
   const daneUrl = tekst(dane.daneUrl)
+  const zrodloDaneUrl = tekst(dane.zrodloDaneUrl) || daneUrl
   const szerokosc = Number(dane.szerokosc)
   const wysokosc = Number(dane.wysokosc)
+  const szerokoscZrodla = Number(dane.szerokoscZrodla ?? dane.szerokosc)
+  const wysokoscZrodla = Number(dane.wysokoscZrodla ?? dane.wysokosc)
 
   if (
     !/^data:image\/(?:jpeg|png|webp);base64,/i.test(daneUrl)
+    || !/^data:image\/(?:jpeg|png|webp);base64,/i.test(zrodloDaneUrl)
     || daneUrl.length > 750_000
+    || zrodloDaneUrl.length > 3_500_000
     || !Number.isFinite(szerokosc)
     || !Number.isFinite(wysokosc)
+    || !Number.isFinite(szerokoscZrodla)
+    || !Number.isFinite(wysokoscZrodla)
     || szerokosc <= 0
     || wysokosc <= 0
     || szerokosc > 480
     || wysokosc > 480
+    || szerokoscZrodla <= 0
+    || wysokoscZrodla <= 0
+    || szerokoscZrodla > 1600
+    || wysokoscZrodla > 1600
   ) return null
+
+  const kadrWejsciowy = dane.kadr && typeof dane.kadr === 'object'
+    ? dane.kadr as Record<string, unknown>
+    : undefined
 
   return {
     daneUrl,
+    zrodloDaneUrl,
     nazwaPliku: tekst(dane.nazwaPliku).slice(0, 120) || 'miniatura',
     szerokosc,
     wysokosc,
+    szerokoscZrodla,
+    wysokoscZrodla,
+    kadr: normalizujKadrMiniatury(kadrWejsciowy as never),
   }
 }
 

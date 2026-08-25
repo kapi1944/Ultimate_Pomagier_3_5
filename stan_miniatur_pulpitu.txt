@@ -1,0 +1,2929 @@
+===== STATUS =====
+## main...origin/main
+ M src/moduly/zamkniete/pulpit/WidokPulpitu.tsx
+?? stan_miniatur_pulpitu.txt
+?? wdroz_miniatury_pulpitu.sh
+?? wdroz_miniatury_pulpitu_v2.sh
+?? wdroz_miniatury_pulpitu_v3.sh
+?? wdroz_miniatury_pulpitu_v4.sh
+
+===== DIFF PULPITU =====
+diff --git a/src/moduly/zamkniete/pulpit/WidokPulpitu.tsx b/src/moduly/zamkniete/pulpit/WidokPulpitu.tsx
+index a67bd89..090984b 100644
+--- a/src/moduly/zamkniete/pulpit/WidokPulpitu.tsx
++++ b/src/moduly/zamkniete/pulpit/WidokPulpitu.tsx
+@@ -247,6 +247,26 @@ function KartaZadania({ zadanie, teraz, zakresDniaPracy, uzytkownicy, otworz, wy
+   </article>
+ }
+ 
++function MiniaturaZadaniaNaOsi({ zadanie, zakresDniaPracy }: { zadanie: ZadaniePulpitu; zakresDniaPracy: ZakresDniaPracy }) {
++  const godzinaMarkera = pobierzGodzineMarkeraZadania(zadanie, zakresDniaPracy)
++  if (!zadanie.miniatura || !godzinaMarkera) return null
++
++  const pozycja = pozycjaGodzinyNaOsi(godzinaMarkera, zakresDniaPracy)
++  const klasaKrawedzi = pozycja <= 5
++    ? ' pulpit-os-czasu__miniatura--lewo'
++    : pozycja >= 95
++      ? ' pulpit-os-czasu__miniatura--prawo'
++      : ''
++
++  return <img
++    alt=""
++    aria-hidden="true"
++    className={'pulpit-os-czasu__miniatura' + klasaKrawedzi}
++    src={zadanie.miniatura.daneUrl}
++    style={{ left: pozycja + '%' }}
++  />
++}
++
+ function MarkerDeadline({ zadanie, zakresDniaPracy, uzytkownicy, otworz }: { zadanie: ZadaniePulpitu; zakresDniaPracy: ZakresDniaPracy; uzytkownicy: Uzytkownik[]; otworz: () => void }) {
+   const zadaniodawca = uzytkownicy.find((uzytkownik) => uzytkownik.id === zadanie.zadaniodawcaId)
+   const zadaniobiorca = uzytkownicy.find((uzytkownik) => uzytkownik.id === zadanie.zadaniobiorcaId)
+@@ -301,7 +321,7 @@ function MarkerDeadline({ zadanie, zakresDniaPracy, uzytkownicy, otworz }: { zad
+ 
+ function FormularzDodawaniaZadania({ formularz, ustawFormularz, uzytkownicy, szkolenia, czyWyborZadaniodawcy, blad, zapisz, anuluj, etykietaZapisu = 'Zapisz' }: {
+   formularz: FormularzZadania
+-  ustawFormularz: (formularz: FormularzZadania) => void
++  ustawFormularz: Dispatch<SetStateAction<FormularzZadania>>
+   uzytkownicy: Uzytkownik[]
+   szkolenia: Array<{ id: string; nazwa: string }>
+   czyWyborZadaniodawcy: boolean
+@@ -310,6 +330,43 @@ function FormularzDodawaniaZadania({ formularz, ustawFormularz, uzytkownicy, szk
+   anuluj?: () => void
+   etykietaZapisu?: string
+ }) {
++  const identyfikatorPliku = useId()
++  const [bladMiniatury, ustawBladMiniatury] = useState('')
++  const [czyPrzetwarzanieMiniatury, ustawCzyPrzetwarzanieMiniatury] = useState(false)
++  const [czyPrzeciaganieMiniatury, ustawCzyPrzeciaganieMiniatury] = useState(false)
++
++  async function dodajMiniature(plik: File | null | undefined) {
++    if (!plik) return
++    ustawCzyPrzetwarzanieMiniatury(true)
++    ustawBladMiniatury('')
++
++    try {
++      const miniatura = await przygotujMiniatureZadania(plik)
++      ustawFormularz((obecny) => ({ ...obecny, miniatura }))
++    } catch (bladObrazu) {
++      ustawBladMiniatury(bladObrazu instanceof Error ? bladObrazu.message : 'Nie udało się przygotować miniatury.')
++    } finally {
++      ustawCzyPrzetwarzanieMiniatury(false)
++    }
++  }
++
++  function obsluzWklejenie(zdarzenie: ClipboardEvent<HTMLFormElement>) {
++    const plik = Array.from(zdarzenie.clipboardData.items)
++      .find((element) => element.kind === 'file' && element.type.startsWith('image/'))
++      ?.getAsFile()
++    if (!plik) return
++    zdarzenie.preventDefault()
++    void dodajMiniature(plik)
++  }
++
++  function obsluzUpuszczenie(zdarzenie: DragEvent<HTMLDivElement>) {
++    zdarzenie.preventDefault()
++    ustawCzyPrzeciaganieMiniatury(false)
++    const plik = Array.from(zdarzenie.dataTransfer.files).find((element) => element.type.startsWith('image/'))
++    if (plik) void dodajMiniature(plik)
++    else ustawBladMiniatury('Upuść plik graficzny.')
++  }
++
+   function dodajPrzypomnienie() {
+     const propozycje: Array<Omit<PrzypomnienieZadania, 'id'>> = [
+       { wartosc: 15, jednostka: 'MINUTY' },
+@@ -324,7 +381,7 @@ function FormularzDodawaniaZadania({ formularz, ustawFormularz, uzytkownicy, szk
+     ustawFormularz({ ...formularz, przypomnienia: formularz.przypomnienia.map((przypomnienie) => przypomnienie.id === id ? { ...przypomnienie, ...zmiana } : przypomnienie) })
+   }
+ 
+-  return <form className="pulpit-formularz-zadania" onSubmit={(zdarzenie) => { zdarzenie.preventDefault(); zapisz() }}>
++  return <form className="pulpit-formularz-zadania" onPaste={obsluzWklejenie} onSubmit={(zdarzenie) => { zdarzenie.preventDefault(); zapisz() }}>
+     <label className="pulpit-formularz-zadania__nazwa" htmlFor="pulpit-nazwa-zadania">Nazwa zadania<input id="pulpit-nazwa-zadania" onChange={(zdarzenie) => ustawFormularz({ ...formularz, tytul: zdarzenie.target.value })} placeholder="Np. wysłać dokumenty" value={formularz.tytul} /></label>
+     <label htmlFor="pulpit-termin-zadania">Termin wykonania<input id="pulpit-termin-zadania" onChange={(zdarzenie) => ustawFormularz({ ...formularz, data: zdarzenie.target.value })} type="date" value={formularz.data} /></label>
+     <label htmlFor="pulpit-rodzaj-terminu-zadania">Termin<select id="pulpit-rodzaj-terminu-zadania" onChange={(zdarzenie) => ustawFormularz({ ...formularz, rodzajTerminu: zdarzenie.target.value as FormularzZadania['rodzajTerminu'], godzina: zdarzenie.target.value === 'KONKRETNA_GODZINA' ? formularz.godzina : '' })} value={formularz.rodzajTerminu}><option value="KONKRETNA_GODZINA">Konkretna godzina</option><option value="DO_KONCA_DNIA">Do końca dnia</option><option value="BRAK_GODZINY">Bez przypisanej godziny</option></select></label>
+@@ -333,6 +390,28 @@ function FormularzDodawaniaZadania({ formularz, ustawFormularz, uzytkownicy, szk
+     {czyWyborZadaniodawcy && <label htmlFor="pulpit-zadaniodawca">Zadaniodawca<select id="pulpit-zadaniodawca" onChange={(zdarzenie) => ustawFormularz({ ...formularz, zadaniodawcaId: zdarzenie.target.value })} value={formularz.zadaniodawcaId}>{uzytkownicy.map((uzytkownik) => <option key={uzytkownik.id} value={uzytkownik.id}>{pobierzNazweUzytkownika(uzytkownik)}</option>)}</select></label>}
+     <label htmlFor="pulpit-zadaniobiorca">Zadaniobiorca<select id="pulpit-zadaniobiorca" onChange={(zdarzenie) => ustawFormularz({ ...formularz, zadaniobiorcaId: zdarzenie.target.value })} value={formularz.zadaniobiorcaId}><option value="">Ja &mdash; {pobierzNazweOsoby(uzytkownicy, formularz.zadaniodawcaId)}</option>{uzytkownicy.filter((uzytkownik) => uzytkownik.id !== formularz.zadaniodawcaId).map((uzytkownik) => <option key={uzytkownik.id} value={uzytkownik.id}>{pobierzNazweUzytkownika(uzytkownik)}</option>)}</select></label>
+     <label htmlFor="pulpit-powiazanie-zadania">Powiązanie<select id="pulpit-powiazanie-zadania" onChange={(zdarzenie) => ustawFormularz({ ...formularz, szkolenieId: zdarzenie.target.value })} value={formularz.szkolenieId}><option value="">Bez powiązania</option>{szkolenia.map((szczegoly) => <option key={szczegoly.id} value={szczegoly.id}>{szczegoly.nazwa}</option>)}</select></label>
++    <div
++      aria-busy={czyPrzetwarzanieMiniatury}
++      className={'pulpit-formularz-zadania__miniatura' + (czyPrzeciaganieMiniatury ? ' pulpit-formularz-zadania__miniatura--przeciaganie' : '')}
++      onDragEnter={(zdarzenie) => { zdarzenie.preventDefault(); ustawCzyPrzeciaganieMiniatury(true) }}
++      onDragLeave={() => ustawCzyPrzeciaganieMiniatury(false)}
++      onDragOver={(zdarzenie) => { zdarzenie.preventDefault(); ustawCzyPrzeciaganieMiniatury(true) }}
++      onDrop={obsluzUpuszczenie}
++    >
++      {formularz.miniatura && <img alt={'Miniatura: ' + formularz.miniatura.nazwaPliku} src={formularz.miniatura.daneUrl} />}
++      <div className="pulpit-formularz-zadania__miniatura-opis">
++        <strong>Miniatura zadania <span>(opcjonalna)</span></strong>
++        <small>Wybierz obraz z dysku, przeciągnij go tutaj lub wklej ze schowka skrótem Ctrl+V.</small>
++      </div>
++      <div className="pulpit-formularz-zadania__miniatura-akcje">
++        <label className="pulpit-formularz-zadania__wybor-pliku" htmlFor={identyfikatorPliku}>
++          {czyPrzetwarzanieMiniatury ? 'Przygotowywanie…' : formularz.miniatura ? 'Zmień obraz' : 'Wybierz z dysku'}
++          <input accept="image/*" disabled={czyPrzetwarzanieMiniatury} id={identyfikatorPliku} onChange={(zdarzenie) => { void dodajMiniature(zdarzenie.target.files?.[0]); zdarzenie.target.value = '' }} type="file" />
++        </label>
++        {formularz.miniatura && <button disabled={czyPrzetwarzanieMiniatury} onClick={() => ustawFormularz((obecny) => ({ ...obecny, miniatura: undefined }))} type="button">Usuń miniaturę</button>}
++      </div>
++    </div>
++    {bladMiniatury && <p className="pulpit-formularz-zadania__blad" role="alert">{bladMiniatury}</p>}
+     <fieldset className="pulpit-przypomnienia">
+       <legend>Przypomnienia</legend>
+       {formularz.przypomnienia.map((przypomnienie, indeks) => <div className="pulpit-przypomnienie" key={przypomnienie.id}>
+@@ -346,9 +425,9 @@ function FormularzDodawaniaZadania({ formularz, ustawFormularz, uzytkownicy, szk
+     {anuluj
+       ? <div className="pulpit-modal__akcje">
+           <button onClick={anuluj} type="button">Anuluj</button>
+-          <button className="pulpit-przycisk-glowny pulpit-formularz-zadania__zapisz" type="submit">{etykietaZapisu}</button>
++          <button className="pulpit-przycisk-glowny pulpit-formularz-zadania__zapisz" disabled={czyPrzetwarzanieMiniatury} type="submit">{etykietaZapisu}</button>
+         </div>
+-      : <button className="pulpit-przycisk-glowny pulpit-formularz-zadania__zapisz" type="submit">{etykietaZapisu}</button>}
++      : <button className="pulpit-przycisk-glowny pulpit-formularz-zadania__zapisz" disabled={czyPrzetwarzanieMiniatury} type="submit">{etykietaZapisu}</button>}
+   </form>
+ }
+ 
+
+===== FILES =====
+
+===== src/moduly/zamkniete/pulpit/WidokPulpitu.tsx =====
+import { useEffect, useId, useMemo, useState, type ClipboardEvent, type CSSProperties, type Dispatch, type DragEvent, type SetStateAction } from 'react'
+import { useKontekstUzytkownika } from '../../../aplikacja/logowanie/useKontekstUzytkownika'
+import { pobierzUstawieniaAplikacji } from '../../../aplikacja/ustawienia/magazynUstawienAplikacji'
+import { pobierzUzytkownikow } from '../../../kartoteki/uzytkownicy/magazynUzytkownikow'
+import { pobierzNazweUzytkownika, pobierzNazweWyswietlanaUzytkownika, type Uzytkownik } from '../../../kartoteki/uzytkownicy/typyUzytkownikow'
+import { pobierzChecklistyPaczek, pobierzSzczegolyDoChecklisty } from '../../dokumenty/generatory/checklisty_paczek/rejestrChecklistPaczek'
+import { czyPozycjaJestAktywna } from '../../dokumenty/generatory/checklisty_paczek/modelChecklistyPaczki'
+import { pobierzEtykietyOsiCzasu, pobierzGraniceDniaPracyNaOsi, pobierzStanWskaznikaCzasu, pozycjaGodzinyNaOsi, type ZakresDniaPracy } from './logika/czasDnia'
+import { przygotujMiniatureZadania } from './logika/miniaturyZadan'
+import { czyPaczkaOpozniona, czyPaczkaWidoczna, czyWysylkaWymagaDodatkowegoPotwierdzenia, liczbaDniWidocznosciPaczki, pobierzGotowoscPaczki, pobierzTerminWzglednyPaczki, sortujPaczki } from './logika/paczki'
+import { generujZadaniaAutomatyczne } from './logika/zadaniaAutomatyczne'
+import { czyMoznaZmienicKontekstPulpitu } from './logika/kontekstPulpitu'
+import { obliczLicznikiPulpitu } from './logika/podsumowaniePulpitu'
+import { obliczLiczbeAktywnychZapotrzebowanZakupowych, odmienRzeczDoZakupu, pobierzAktywneZapotrzebowaniaZakupowe, pobierzTekstLicznikaZakupow, walidujNoweZapotrzebowanieZakupowe } from './logika/zapotrzebowaniaZakupowe'
+import { czyMoznaEdytowacZadanie, czyMoznaOznaczycZadanieRecznie, czyMoznaWybracZadaniodawce, czyZadanieDoKoncaDnia, czyZadanieDotyczyDnia, czyZadanieOpoznione, czyZadanieWidoczneDlaUzytkownika, pobierzEtykieteStatusuZadania, pobierzGodzineMarkeraZadania, pobierzKolorZadaniodawcy, pobierzSzerokoscLiniiDoFajrantu, pobierzZadaniaDeadline, rozstrzygnijPrzypisanieZadania, sortujZadaniaBezGodziny, walidujPrzypomnienia } from './logika/zadania'
+import type { JednostkaPrzypomnienia, PaczkaPulpitu, PrzypomnienieZadania, RodzajTerminuZadania, ZadaniePulpitu, ZapotrzebowanieZakupowe } from './modele/pulpit'
+import { edytujZadanieRecznePrzezZadaniodawce, oznaczPaczkeJakoWyslana, pobierzStanPulpitu, usunZadanieReczne, zapiszZadanieReczne, zapiszZapotrzebowanieZakupowe } from './uslugi/magazynPulpitu'
+import './pulpit.css'
+
+type FiltrPulpitu = 'WSZYSTKIE' | 'DO_ZROBIENIA' | 'PILNE' | 'PACZKI' | 'BLOKADY'
+
+type WlasciwosciPulpitu = {
+  otworzRekordZrodlowy?: (idSzkolenia?: string) => void
+  otworzPaczke?: (idPaczki: string) => void
+}
+
+type FormularzZadania = {
+  tytul: string
+  data: string
+  godzina: string
+  rodzajTerminu: RodzajTerminuZadania | 'BRAK_GODZINY'
+  priorytet: ZadaniePulpitu['priorytet']
+  zadaniodawcaId: string
+  zadaniobiorcaId: string
+  szkolenieId: string
+  przypomnienia: PrzypomnienieZadania[]
+  miniatura?: ZadaniePulpitu['miniatura']
+}
+
+function pobierzRodzajTerminuZapisu(formularz: FormularzZadania) {
+  return formularz.rodzajTerminu === 'BRAK_GODZINY' ? undefined : formularz.rodzajTerminu
+}
+
+function pobierzGodzineZapisu(formularz: FormularzZadania) {
+  return formularz.rodzajTerminu === 'KONKRETNA_GODZINA' ? formularz.godzina || undefined : undefined
+}
+
+function dataTekstowa(data: Date) {
+  const rok = data.getFullYear()
+  const miesiac = String(data.getMonth() + 1).padStart(2, '0')
+  const dzien = String(data.getDate()).padStart(2, '0')
+  return rok + '-' + miesiac + '-' + dzien
+}
+
+function przesunDate(data: string, liczbaDni: number) {
+  const wynik = new Date(data + 'T00:00:00')
+  wynik.setDate(wynik.getDate() + liczbaDni)
+  return dataTekstowa(wynik)
+}
+
+function formatujDate(data: string) {
+  if (!data) return 'Brak daty'
+  return new Intl.DateTimeFormat('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(data + 'T00:00:00'))
+}
+
+function etykietaTerminuZadania(zadanie: ZadaniePulpitu) {
+  return czyZadanieDoKoncaDnia(zadanie) ? 'Do końca dnia' : zadanie.godzina || 'Bez godziny'
+}
+
+function utworzIdZadania() {
+  return 'zadanie-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8)
+}
+
+function utworzIdPrzypomnienia() {
+  return 'przypomnienie-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)
+}
+
+function pustyFormularz(
+  data: string,
+  uzytkownikId: string,
+  ustawienia = pobierzUstawieniaAplikacji(),
+): FormularzZadania {
+  const przypomnienia: PrzypomnienieZadania[] = []
+
+  if (ustawienia.zadania.domyslnePrzypomnienia.piecMinut) {
+    przypomnienia.push({
+      id: utworzIdPrzypomnienia(),
+      wartosc: 5,
+      jednostka: 'MINUTY',
+    })
+  }
+
+  if (ustawienia.zadania.domyslnePrzypomnienia.pietnascieMinut) {
+    przypomnienia.push({
+      id: utworzIdPrzypomnienia(),
+      wartosc: 15,
+      jednostka: 'MINUTY',
+    })
+  }
+
+  if (ustawienia.zadania.domyslnePrzypomnienia.godzina) {
+    przypomnienia.push({
+      id: utworzIdPrzypomnienia(),
+      wartosc: 1,
+      jednostka: 'GODZINY',
+    })
+  }
+
+  if (ustawienia.zadania.domyslnePrzypomnienia.dzien) {
+    przypomnienia.push({
+      id: utworzIdPrzypomnienia(),
+      wartosc: 1,
+      jednostka: 'DNI',
+    })
+  }
+
+  return {
+    tytul: '',
+    data,
+    godzina: ustawienia.zadania.domyslnaGodzina,
+    rodzajTerminu: 'KONKRETNA_GODZINA',
+    priorytet: ustawienia.zadania.domyslnyPriorytet,
+    zadaniodawcaId: uzytkownikId,
+    zadaniobiorcaId: '',
+    szkolenieId: '',
+    przypomnienia,
+    miniatura: undefined,
+  }
+}
+
+function formularzZZadania(zadanie: ZadaniePulpitu): FormularzZadania {
+  return {
+    tytul: zadanie.tytul,
+    data: zadanie.data,
+    godzina: zadanie.godzina ?? '',
+    rodzajTerminu: czyZadanieDoKoncaDnia(zadanie) ? 'DO_KONCA_DNIA' : zadanie.godzina ? 'KONKRETNA_GODZINA' : 'BRAK_GODZINY',
+    priorytet: zadanie.priorytet,
+    zadaniodawcaId: zadanie.zadaniodawcaId,
+    zadaniobiorcaId: zadanie.zadaniobiorcaId === zadanie.zadaniodawcaId ? '' : zadanie.zadaniobiorcaId,
+    szkolenieId: zadanie.powiazaneSzkolenieId ?? '',
+    przypomnienia: zadanie.przypomnienia.map((przypomnienie) => ({ ...przypomnienie })),
+    miniatura: zadanie.miniatura,
+  }
+}
+
+function formatujMoment(dataIso: string) {
+  const data = new Date(dataIso)
+  if (Number.isNaN(data.getTime())) return 'Brak danych o czasie wykonania'
+
+  return new Intl.DateTimeFormat('pl-PL', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(data)
+}
+
+function pobierzNazweOsoby(uzytkownicy: Uzytkownik[], uzytkownikId: string) {
+  const uzytkownik = uzytkownicy.find((osoba) => osoba.id === uzytkownikId)
+  return uzytkownik ? pobierzNazweUzytkownika(uzytkownik) || pobierzNazweWyswietlanaUzytkownika(uzytkownik) : 'Nieustalony użytkownik'
+}
+
+function etykietaPriorytetu(priorytet: ZadaniePulpitu['priorytet']) {
+  if (priorytet === 'ASAP') return 'ASAP'
+  return priorytet === 'PILNE' ? 'Pilne' : 'Zwykłe'
+}
+
+function etykietaPrzypomnienia(przypomnienie: PrzypomnienieZadania) {
+  const jednostki: Record<JednostkaPrzypomnienia, string> = { MINUTY: 'min przed', GODZINY: 'godz. przed', DNI: 'dni przed' }
+  return przypomnienie.wartosc + ' ' + jednostki[przypomnienie.jednostka]
+}
+
+function pobierzPaczki(wyslanePaczki: Record<string, string>): PaczkaPulpitu[] {
+  return pobierzChecklistyPaczek().flatMap((checklista) => {
+    const dane = checklista.daneDokumentu
+    if (!dane.dataWyslania) return []
+    const wymagane = dane.pozycje.filter((pozycja) => pozycja.czyWymagana && !pozycja.czyOpcjonalna && !pozycja.czyOnline && czyPozycjaJestAktywna(pozycja))
+    const brakujacePozycje = wymagane.filter((pozycja) => pozycja.statusGotowosci !== 'GOTOWE').map((pozycja) => pozycja.nazwa)
+    const brakDanychOdbiorcy = [dane.daneOdbiorcy.imieNazwisko || dane.daneOdbiorcy.nazwaFirmy, dane.daneOdbiorcy.ulica, dane.daneOdbiorcy.nrBudynku, dane.daneOdbiorcy.kodPocztowy, dane.daneOdbiorcy.miasto].some((wartosc) => !wartosc.trim())
+    return [{
+      id: checklista.id,
+      nazwaSzkolenia: dane.migawkaZrodla?.tytulSzkolenia || checklista.tytul,
+      miasto: dane.migawkaZrodla?.miejsce || dane.daneOdbiorcy.miasto || 'Brak miasta',
+      terminySzkolenia: dane.migawkaZrodla?.terminy ?? [],
+      trenerzy: dane.migawkaZrodla?.trenerzy ?? [],
+      planowanaDataWysylki: dane.dataWyslania,
+      wlascicielId: dane.wysylaczId || dane.opiekunId || checklista.wlascicielId || '',
+      liczbaGotowych: wymagane.length - brakujacePozycje.length,
+      liczbaWymaganych: wymagane.length,
+      brakujaceElementy: brakDanychOdbiorcy ? [...brakujacePozycje, 'dane odbiorcy'] : brakujacePozycje,
+      czyWyslana: Boolean(wyslanePaczki[checklista.id]),
+    }]
+  })
+}
+
+function pobierzZadaniaAutomatyczne() {
+  const checklisty = pobierzChecklistyPaczek()
+  return generujZadaniaAutomatyczne(
+    pobierzSzczegolyDoChecklisty().flatMap((szczegoly) => szczegoly.grupy.filter((grupa) => Boolean(grupa.dataOd)).map((grupa) => {
+      const checklista = checklisty.find((pozycja) => pozycja.daneDokumentu.szczegolyOrganizacyjneId === szczegoly.id && pozycja.daneDokumentu.grupaId === grupa.id)
+      const pozycjeMaterialow = checklista?.daneDokumentu.pozycje.filter((pozycja) => /materiał|prezentac/i.test(pozycja.nazwa) && pozycja.czyWymagana && czyPozycjaJestAktywna(pozycja))
+      return {
+        id: szczegoly.id,
+        tytul: szczegoly.nazwa + ' \u2014 ' + grupa.nazwa,
+        wlascicielId: szczegoly.opiekunId,
+        data: przesunDate(grupa.dataOd, -7),
+        czyMaTrenera: grupa.trenerzy.some((trener) => trener.imieNazwisko.trim()),
+        czyDaneKlientaKompletne: Boolean(szczegoly.dane.nazwaKlienta.trim() || szczegoly.dane.nabywca.nazwa.trim()),
+        czyMaterialyOdTreneraGotowe: pozycjeMaterialow?.every((pozycja) => pozycja.statusGotowosci === 'GOTOWE'),
+      }
+    })),
+  )
+}
+
+function KartaZadania({ zadanie, teraz, zakresDniaPracy, uzytkownicy, otworz, wykonaj, zmienGodzine, odloz }: {
+  zadanie: ZadaniePulpitu
+  teraz: Date
+  zakresDniaPracy: ZakresDniaPracy
+  uzytkownicy: Uzytkownik[]
+  otworz: () => void
+  wykonaj?: () => void
+  zmienGodzine?: (godzina: string) => void
+  odloz?: (data: string) => void
+}) {
+  const status = pobierzEtykieteStatusuZadania(zadanie, teraz, zakresDniaPracy)
+  const czyOpoznione = status === 'Opóźnione'
+  return <article className={'pulpit-zadanie' + (czyOpoznione ? ' pulpit-zadanie--opoznione' : '') + (zadanie.status === 'WYKONANE' ? ' pulpit-zadanie--wykonane' : '')}>
+    <button className="pulpit-zadanie__tresc" onClick={otworz} type="button">
+      <span className="pulpit-zadanie__etykieta">{zadanie.czyAutomatyczne ? 'Automatyczne' : 'Ręczne'} &middot; {zadanie.typZadania}</span>
+      <strong>{zadanie.tytul}</strong>
+      {zadanie.opis && <span>{zadanie.opis}</span>}
+      <small>Zadaniodawca: {pobierzNazweOsoby(uzytkownicy, zadanie.zadaniodawcaId)}</small>
+      <small>Zadaniobiorca: {pobierzNazweOsoby(uzytkownicy, zadanie.zadaniobiorcaId)}</small>
+    </button>
+    <div className="pulpit-zadanie__meta">
+      {(zadanie.godzina || czyZadanieDoKoncaDnia(zadanie)) && <span>{etykietaTerminuZadania(zadanie)}</span>}
+      <span className={'pulpit-status' + (czyOpoznione ? ' pulpit-status--czerwony' : zadanie.status === 'WYKONANE' ? ' pulpit-status--zielony' : '')}>{status}</span>
+      {zadanie.priorytet !== 'ZWYKLE' && zadanie.status !== 'WYKONANE' && <span className={'pulpit-status ' + (zadanie.priorytet === 'ASAP' ? 'pulpit-status--asap' : 'pulpit-status--zolty')}>{zadanie.priorytet === 'ASAP' ? '\u{1F525} ASAP' : 'Pilne'}</span>}
+    </div>
+    {czyMoznaOznaczycZadanieRecznie(zadanie) && <div className="pulpit-zadanie__akcje">
+      {zmienGodzine && !czyZadanieDoKoncaDnia(zadanie) && <label htmlFor={'godzina-' + zadanie.id}>Godzina<input id={'godzina-' + zadanie.id} onChange={(zdarzenie) => zmienGodzine(zdarzenie.target.value)} type="time" value={zadanie.godzina ?? ''} /></label>}
+      {odloz && <button onClick={() => odloz(dataTekstowa(new Date(Date.now() + 86_400_000)))} type="button">Jutro</button>}
+      {odloz && <button onClick={() => odloz(dataTekstowa(new Date(Date.now() + 3 * 86_400_000)))} type="button">Za 3 dni</button>}
+      {wykonaj && <button className="pulpit-przycisk-glowny" onClick={wykonaj} type="button">{'\u2713'} Wykonane</button>}
+    </div>}
+  </article>
+}
+
+function MiniaturaZadaniaNaOsi({ zadanie, zakresDniaPracy }: { zadanie: ZadaniePulpitu; zakresDniaPracy: ZakresDniaPracy }) {
+  const godzinaMarkera = pobierzGodzineMarkeraZadania(zadanie, zakresDniaPracy)
+  if (!zadanie.miniatura || !godzinaMarkera) return null
+
+  const pozycja = pozycjaGodzinyNaOsi(godzinaMarkera, zakresDniaPracy)
+  const klasaKrawedzi = pozycja <= 5
+    ? ' pulpit-os-czasu__miniatura--lewo'
+    : pozycja >= 95
+      ? ' pulpit-os-czasu__miniatura--prawo'
+      : ''
+
+  return <img
+    alt=""
+    aria-hidden="true"
+    className={'pulpit-os-czasu__miniatura' + klasaKrawedzi}
+    src={zadanie.miniatura.daneUrl}
+    style={{ left: pozycja + '%' }}
+  />
+}
+
+function MarkerDeadline({ zadanie, zakresDniaPracy, uzytkownicy, otworz }: { zadanie: ZadaniePulpitu; zakresDniaPracy: ZakresDniaPracy; uzytkownicy: Uzytkownik[]; otworz: () => void }) {
+  const zadaniodawca = uzytkownicy.find((uzytkownik) => uzytkownik.id === zadanie.zadaniodawcaId)
+  const zadaniobiorca = uzytkownicy.find((uzytkownik) => uzytkownik.id === zadanie.zadaniobiorcaId)
+
+  const kolorZadaniodawcy = pobierzKolorZadaniodawcy(
+    zadanie.zadaniodawcaId,
+    zadaniodawca?.kolorProfilu,
+  )
+  const kolorZadaniobiorcy = pobierzKolorZadaniodawcy(
+    zadanie.zadaniobiorcaId,
+    zadaniobiorca?.kolorProfilu,
+  )
+
+  const czyDoKoncaDnia = czyZadanieDoKoncaDnia(zadanie)
+  const godzinaMarkera = pobierzGodzineMarkeraZadania(zadanie, zakresDniaPracy)!
+  const pozycja = pozycjaGodzinyNaOsi(godzinaMarkera, zakresDniaPracy)
+  const szerokoscLiniiDoFajrantu = pobierzSzerokoscLiniiDoFajrantu(zadanie, zakresDniaPracy)
+  const identyfikatorTooltipa = 'deadline-tooltip-' + zadanie.id
+  const klasaKrawedzi = pozycja <= 5 ? ' pulpit-deadline--lewo' : pozycja >= 95 ? ' pulpit-deadline--prawo' : ''
+  const klasaPriorytetu = zadanie.priorytet === 'ZWYKLE'
+    ? ' pulpit-deadline--zwykle'
+    : zadanie.priorytet === 'PILNE'
+    ? ' pulpit-deadline--pilne'
+    : zadanie.priorytet === 'ASAP'
+      ? ' pulpit-deadline--asap'
+      : ''
+
+  return <div
+    className={'pulpit-deadline' + klasaKrawedzi + klasaPriorytetu + (czyDoKoncaDnia ? ' pulpit-deadline--do-konca-dnia' : '')}
+    style={{
+      left: pozycja + '%',
+      '--kolor-zadaniodawcy': kolorZadaniodawcy,
+      '--kolor-zadaniobiorcy': kolorZadaniobiorcy,
+    } as CSSProperties}
+  >
+    {szerokoscLiniiDoFajrantu > 0 && <span aria-hidden="true" className="pulpit-deadline__linia-do-fajrantu" style={{ width: szerokoscLiniiDoFajrantu + '%' }} />}
+    <button aria-describedby={identyfikatorTooltipa} aria-label={'Deadline: ' + zadanie.tytul + ', ' + etykietaTerminuZadania(zadanie)} className="pulpit-deadline__przycisk" onClick={otworz} type="button">
+      {zadanie.priorytet === 'ASAP' && <span aria-hidden="true" className="pulpit-deadline__plomien">{'\u{1F525}'}</span>}
+      <span aria-hidden="true" className="pulpit-deadline__romb"><span /></span>
+      <span className="pulpit-deadline__etykieta">{czyDoKoncaDnia ? 'DO KOŃCA DNIA' : 'DEADLINE'}: {zadanie.tytul}</span>
+    </button>
+    <span className="pulpit-deadline__tooltip" id={identyfikatorTooltipa} role="tooltip">
+      <strong>{zadanie.tytul}</strong>
+      <span>Deadline: {formatujDate(zadanie.data)}, {etykietaTerminuZadania(zadanie)}</span>
+      {czyDoKoncaDnia && <span>Do: FAJRANT {zakresDniaPracy.koniec}</span>}
+      <span>Priorytet: {etykietaPriorytetu(zadanie.priorytet)}</span>
+      <span>Zadaniodawca: {pobierzNazweOsoby(uzytkownicy, zadanie.zadaniodawcaId)}</span>
+      <span>Zadaniobiorca: {pobierzNazweOsoby(uzytkownicy, zadanie.zadaniobiorcaId)}</span>
+    </span>
+  </div>
+}
+
+function FormularzDodawaniaZadania({ formularz, ustawFormularz, uzytkownicy, szkolenia, czyWyborZadaniodawcy, blad, zapisz, anuluj, etykietaZapisu = 'Zapisz' }: {
+  formularz: FormularzZadania
+  ustawFormularz: Dispatch<SetStateAction<FormularzZadania>>
+  uzytkownicy: Uzytkownik[]
+  szkolenia: Array<{ id: string; nazwa: string }>
+  czyWyborZadaniodawcy: boolean
+  blad: string
+  zapisz: () => void
+  anuluj?: () => void
+  etykietaZapisu?: string
+}) {
+  const identyfikatorPliku = useId()
+  const [bladMiniatury, ustawBladMiniatury] = useState('')
+  const [czyPrzetwarzanieMiniatury, ustawCzyPrzetwarzanieMiniatury] = useState(false)
+  const [czyPrzeciaganieMiniatury, ustawCzyPrzeciaganieMiniatury] = useState(false)
+
+  async function dodajMiniature(plik: File | null | undefined) {
+    if (!plik) return
+    ustawCzyPrzetwarzanieMiniatury(true)
+    ustawBladMiniatury('')
+
+    try {
+      const miniatura = await przygotujMiniatureZadania(plik)
+      ustawFormularz((obecny) => ({ ...obecny, miniatura }))
+    } catch (bladObrazu) {
+      ustawBladMiniatury(bladObrazu instanceof Error ? bladObrazu.message : 'Nie udało się przygotować miniatury.')
+    } finally {
+      ustawCzyPrzetwarzanieMiniatury(false)
+    }
+  }
+
+  function obsluzWklejenie(zdarzenie: ClipboardEvent<HTMLFormElement>) {
+    const plik = Array.from(zdarzenie.clipboardData.items)
+      .find((element) => element.kind === 'file' && element.type.startsWith('image/'))
+      ?.getAsFile()
+    if (!plik) return
+    zdarzenie.preventDefault()
+    void dodajMiniature(plik)
+  }
+
+  function obsluzUpuszczenie(zdarzenie: DragEvent<HTMLDivElement>) {
+    zdarzenie.preventDefault()
+    ustawCzyPrzeciaganieMiniatury(false)
+    const plik = Array.from(zdarzenie.dataTransfer.files).find((element) => element.type.startsWith('image/'))
+    if (plik) void dodajMiniature(plik)
+    else ustawBladMiniatury('Upuść plik graficzny.')
+  }
+
+  function dodajPrzypomnienie() {
+    const propozycje: Array<Omit<PrzypomnienieZadania, 'id'>> = [
+      { wartosc: 15, jednostka: 'MINUTY' },
+      { wartosc: 1, jednostka: 'GODZINY' },
+      { wartosc: 1, jednostka: 'DNI' },
+    ]
+    const propozycja = propozycje.find((kandydat) => !formularz.przypomnienia.some((obecne) => obecne.wartosc === kandydat.wartosc && obecne.jednostka === kandydat.jednostka)) ?? { wartosc: formularz.przypomnienia.length + 2, jednostka: 'GODZINY' as const }
+    ustawFormularz({ ...formularz, przypomnienia: [...formularz.przypomnienia, { id: utworzIdPrzypomnienia(), ...propozycja }] })
+  }
+
+  function zmienPrzypomnienie(id: string, zmiana: Partial<PrzypomnienieZadania>) {
+    ustawFormularz({ ...formularz, przypomnienia: formularz.przypomnienia.map((przypomnienie) => przypomnienie.id === id ? { ...przypomnienie, ...zmiana } : przypomnienie) })
+  }
+
+  return <form className="pulpit-formularz-zadania" onPaste={obsluzWklejenie} onSubmit={(zdarzenie) => { zdarzenie.preventDefault(); zapisz() }}>
+    <label className="pulpit-formularz-zadania__nazwa" htmlFor="pulpit-nazwa-zadania">Nazwa zadania<input id="pulpit-nazwa-zadania" onChange={(zdarzenie) => ustawFormularz({ ...formularz, tytul: zdarzenie.target.value })} placeholder="Np. wysłać dokumenty" value={formularz.tytul} /></label>
+    <label htmlFor="pulpit-termin-zadania">Termin wykonania<input id="pulpit-termin-zadania" onChange={(zdarzenie) => ustawFormularz({ ...formularz, data: zdarzenie.target.value })} type="date" value={formularz.data} /></label>
+    <label htmlFor="pulpit-rodzaj-terminu-zadania">Termin<select id="pulpit-rodzaj-terminu-zadania" onChange={(zdarzenie) => ustawFormularz({ ...formularz, rodzajTerminu: zdarzenie.target.value as FormularzZadania['rodzajTerminu'], godzina: zdarzenie.target.value === 'KONKRETNA_GODZINA' ? formularz.godzina : '' })} value={formularz.rodzajTerminu}><option value="KONKRETNA_GODZINA">Konkretna godzina</option><option value="DO_KONCA_DNIA">Do końca dnia</option><option value="BRAK_GODZINY">Bez przypisanej godziny</option></select></label>
+    {formularz.rodzajTerminu === 'KONKRETNA_GODZINA' && <label htmlFor="pulpit-godzina-zadania">Godzina wykonania<input id="pulpit-godzina-zadania" onChange={(zdarzenie) => ustawFormularz({ ...formularz, godzina: zdarzenie.target.value })} type="time" value={formularz.godzina} /></label>}
+    <label htmlFor="pulpit-priorytet-zadania">Priorytet<select id="pulpit-priorytet-zadania" onChange={(zdarzenie) => ustawFormularz({ ...formularz, priorytet: zdarzenie.target.value as ZadaniePulpitu['priorytet'] })} value={formularz.priorytet}><option value="ZWYKLE">Zwykłe</option><option value="PILNE">Pilne</option><option value="ASAP">ASAP</option></select></label>
+    {czyWyborZadaniodawcy && <label htmlFor="pulpit-zadaniodawca">Zadaniodawca<select id="pulpit-zadaniodawca" onChange={(zdarzenie) => ustawFormularz({ ...formularz, zadaniodawcaId: zdarzenie.target.value })} value={formularz.zadaniodawcaId}>{uzytkownicy.map((uzytkownik) => <option key={uzytkownik.id} value={uzytkownik.id}>{pobierzNazweUzytkownika(uzytkownik)}</option>)}</select></label>}
+    <label htmlFor="pulpit-zadaniobiorca">Zadaniobiorca<select id="pulpit-zadaniobiorca" onChange={(zdarzenie) => ustawFormularz({ ...formularz, zadaniobiorcaId: zdarzenie.target.value })} value={formularz.zadaniobiorcaId}><option value="">Ja &mdash; {pobierzNazweOsoby(uzytkownicy, formularz.zadaniodawcaId)}</option>{uzytkownicy.filter((uzytkownik) => uzytkownik.id !== formularz.zadaniodawcaId).map((uzytkownik) => <option key={uzytkownik.id} value={uzytkownik.id}>{pobierzNazweUzytkownika(uzytkownik)}</option>)}</select></label>
+    <label htmlFor="pulpit-powiazanie-zadania">Powiązanie<select id="pulpit-powiazanie-zadania" onChange={(zdarzenie) => ustawFormularz({ ...formularz, szkolenieId: zdarzenie.target.value })} value={formularz.szkolenieId}><option value="">Bez powiązania</option>{szkolenia.map((szczegoly) => <option key={szczegoly.id} value={szczegoly.id}>{szczegoly.nazwa}</option>)}</select></label>
+    <div
+      aria-busy={czyPrzetwarzanieMiniatury}
+      className={'pulpit-formularz-zadania__miniatura' + (czyPrzeciaganieMiniatury ? ' pulpit-formularz-zadania__miniatura--przeciaganie' : '')}
+      onDragEnter={(zdarzenie) => { zdarzenie.preventDefault(); ustawCzyPrzeciaganieMiniatury(true) }}
+      onDragLeave={() => ustawCzyPrzeciaganieMiniatury(false)}
+      onDragOver={(zdarzenie) => { zdarzenie.preventDefault(); ustawCzyPrzeciaganieMiniatury(true) }}
+      onDrop={obsluzUpuszczenie}
+    >
+      {formularz.miniatura && <img alt={'Miniatura: ' + formularz.miniatura.nazwaPliku} src={formularz.miniatura.daneUrl} />}
+      <div className="pulpit-formularz-zadania__miniatura-opis">
+        <strong>Miniatura zadania <span>(opcjonalna)</span></strong>
+        <small>Wybierz obraz z dysku, przeciągnij go tutaj lub wklej ze schowka skrótem Ctrl+V.</small>
+      </div>
+      <div className="pulpit-formularz-zadania__miniatura-akcje">
+        <label className="pulpit-formularz-zadania__wybor-pliku" htmlFor={identyfikatorPliku}>
+          {czyPrzetwarzanieMiniatury ? 'Przygotowywanie…' : formularz.miniatura ? 'Zmień obraz' : 'Wybierz z dysku'}
+          <input accept="image/*" disabled={czyPrzetwarzanieMiniatury} id={identyfikatorPliku} onChange={(zdarzenie) => { void dodajMiniature(zdarzenie.target.files?.[0]); zdarzenie.target.value = '' }} type="file" />
+        </label>
+        {formularz.miniatura && <button disabled={czyPrzetwarzanieMiniatury} onClick={() => ustawFormularz((obecny) => ({ ...obecny, miniatura: undefined }))} type="button">Usuń miniaturę</button>}
+      </div>
+    </div>
+    {bladMiniatury && <p className="pulpit-formularz-zadania__blad" role="alert">{bladMiniatury}</p>}
+    <fieldset className="pulpit-przypomnienia">
+      <legend>Przypomnienia</legend>
+      {formularz.przypomnienia.map((przypomnienie, indeks) => <div className="pulpit-przypomnienie" key={przypomnienie.id}>
+        <label htmlFor={'pulpit-przypomnienie-wartosc-' + indeks}>Wartość<input id={'pulpit-przypomnienie-wartosc-' + indeks} min="1" onChange={(zdarzenie) => zmienPrzypomnienie(przypomnienie.id, { wartosc: Number(zdarzenie.target.value) })} type="number" value={przypomnienie.wartosc} /></label>
+        <label htmlFor={'pulpit-przypomnienie-jednostka-' + indeks}>Jednostka<select id={'pulpit-przypomnienie-jednostka-' + indeks} onChange={(zdarzenie) => zmienPrzypomnienie(przypomnienie.id, { jednostka: zdarzenie.target.value as JednostkaPrzypomnienia })} value={przypomnienie.jednostka}><option value="MINUTY">minut przed</option><option value="GODZINY">godzin przed</option><option value="DNI">dni przed</option></select></label>
+        <button onClick={() => ustawFormularz({ ...formularz, przypomnienia: formularz.przypomnienia.filter((obecne) => obecne.id !== przypomnienie.id) })} type="button">Usuń</button>
+      </div>)}
+      <button onClick={dodajPrzypomnienie} type="button">+ Dodaj przypomnienie</button>
+    </fieldset>
+    {blad && <p className="pulpit-formularz-zadania__blad" role="alert">{blad}</p>}
+    {anuluj
+      ? <div className="pulpit-modal__akcje">
+          <button onClick={anuluj} type="button">Anuluj</button>
+          <button className="pulpit-przycisk-glowny pulpit-formularz-zadania__zapisz" disabled={czyPrzetwarzanieMiniatury} type="submit">{etykietaZapisu}</button>
+        </div>
+      : <button className="pulpit-przycisk-glowny pulpit-formularz-zadania__zapisz" disabled={czyPrzetwarzanieMiniatury} type="submit">{etykietaZapisu}</button>}
+  </form>
+}
+
+type FormularzZakupu = {
+  nazwa: string
+  ilosc: string
+  uwagi: string
+}
+
+function pustyFormularzZakupu(): FormularzZakupu {
+  return { nazwa: '', ilosc: '1', uwagi: '' }
+}
+
+function utworzIdZapotrzebowaniaZakupowego() {
+  return 'zapotrzebowanie-zakupowe-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8)
+}
+
+function formatujDateGodzine(data: string) {
+  return new Intl.DateTimeFormat('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(data))
+}
+
+function IkonaZakupow() {
+  return <svg aria-hidden="true" className="pulpit-kafelek__ikona" fill="none" viewBox="0 0 24 24"><path d="M3 4h2l2.2 10.1a2 2 0 0 0 2 1.6h7.9a2 2 0 0 0 1.9-1.4L21 7H7" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" /><circle cx="10" cy="19" fill="currentColor" r="1.3" /><circle cx="17" cy="19" fill="currentColor" r="1.3" /></svg>
+}
+
+function FormularzZakupu({ formularz, ustawFormularz, blad, zapisz, anuluj }: { formularz: FormularzZakupu; ustawFormularz: (formularz: FormularzZakupu) => void; blad: string; zapisz: () => void; anuluj: () => void }) {
+  return <form className="pulpit-formularz-zakupu" onSubmit={(zdarzenie) => { zdarzenie.preventDefault(); zapisz() }}>
+    <label htmlFor="pulpit-zakup-nazwa">Co jest potrzebne?<input aria-invalid={Boolean(blad)} id="pulpit-zakup-nazwa" onChange={(zdarzenie) => ustawFormularz({ ...formularz, nazwa: zdarzenie.target.value })} value={formularz.nazwa} /></label>
+    <label htmlFor="pulpit-zakup-ilosc">{'Ilo\u{15b}\u{107}'}<input id="pulpit-zakup-ilosc" min="0.000001" onChange={(zdarzenie) => ustawFormularz({ ...formularz, ilosc: zdarzenie.target.value })} required step="any" type="number" value={formularz.ilosc} /></label>
+    <label htmlFor="pulpit-zakup-uwagi">Uwagi<textarea id="pulpit-zakup-uwagi" onChange={(zdarzenie) => ustawFormularz({ ...formularz, uwagi: zdarzenie.target.value })} value={formularz.uwagi} /></label>
+    {blad && <p className="pulpit-formularz-zakupu__blad" role="alert">{blad}</p>}
+    <div className="pulpit-modal__akcje"><button onClick={anuluj} type="button">Anuluj</button><button className="pulpit-przycisk-glowny" type="submit">{'Zg\u{142}o\u{15b}'}</button></div>
+  </form>
+}
+export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: WlasciwosciPulpitu) {
+  const { zalogowanyUzytkownik, aktywniUzytkownicy } = useKontekstUzytkownika()
+  const [teraz, ustawTeraz] = useState(() => new Date())
+  const [data, ustawDate] = useState(() => dataTekstowa(new Date()))
+  const [filtr, ustawFiltr] = useState<FiltrPulpitu>('WSZYSTKIE')
+  const [stan, ustawStan] = useState(pobierzStanPulpitu)
+  const [wybranyUzytkownikId, ustawWybranegoUzytkownikaId] = useState(zalogowanyUzytkownik?.id ?? '')
+  const [wybraneZadanie, ustawWybraneZadanie] = useState<ZadaniePulpitu | null>(null)
+  const [edytowaneZadanieId, ustawEdytowaneZadanieId] = useState<string | null>(null)
+  const [formularzEdycji, ustawFormularzEdycji] = useState<FormularzZadania | null>(null)
+  const [bladEdycji, ustawBladEdycji] = useState('')
+  const [paczkaDoPotwierdzenia, ustawPaczkeDoPotwierdzenia] = useState<PaczkaPulpitu | null>(null)
+  const [czyDodawanieZadania, ustawCzyDodawanieZadania] = useState(false)
+  const [czyWykazZakupowOtwarty, ustawCzyWykazZakupowOtwarty] = useState(false)
+  const [czyDodawanieZakupu, ustawCzyDodawanieZakupu] = useState(false)
+  const [bladFormularza, ustawBladFormularza] = useState('')
+  const [bladFormularzaZakupu, ustawBladFormularzaZakupu] = useState('')
+  const [noweZadanie, ustawNoweZadanie] = useState(() => pustyFormularz(dataTekstowa(new Date()), zalogowanyUzytkownik?.id ?? ''))
+  const [nowyZakup, ustawNowyZakup] = useState<FormularzZakupu>(pustyFormularzZakupu)
+  const uzytkownicy = pobierzUzytkownikow()
+  const ustawieniaAplikacji = pobierzUstawieniaAplikacji()
+  const widoczneKafelki = ustawieniaAplikacji.pulpit.widoczneKafelki
+  const zakresDniaPracy: ZakresDniaPracy = {
+    poczatek: ustawieniaAplikacji.pulpit.poczatekDnia,
+    koniec: ustawieniaAplikacji.pulpit.koniecDnia,
+  }
+  const szkoleniaDostepne = useMemo(() => pobierzSzczegolyDoChecklisty().map((szczegoly) => ({ id: szczegoly.id, nazwa: szczegoly.nazwa })), [])
+
+  useEffect(() => {
+    const identyfikator = window.setInterval(() => ustawTeraz(new Date()), 60_000)
+    return () => window.clearInterval(identyfikator)
+  }, [])
+
+  const czyArchitekt = czyMoznaZmienicKontekstPulpitu(zalogowanyUzytkownik?.rola)
+  const czyWyborZadaniodawcy = czyMoznaWybracZadaniodawce(zalogowanyUzytkownik?.rola)
+  const zadania = useMemo(() => [...stan.zadaniaReczne, ...pobierzZadaniaAutomatyczne()].filter((zadanie) => czyZadanieWidoczneDlaUzytkownika(zadanie, wybranyUzytkownikId)), [stan.zadaniaReczne, wybranyUzytkownikId])
+  const paczki = useMemo(() => pobierzPaczki(stan.wyslanePaczki).filter((paczka) => paczka.wlascicielId === wybranyUzytkownikId), [stan.wyslanePaczki, wybranyUzytkownikId])
+  const zadaniaAktywneDnia = zadania.filter((zadanie) => zadanie.status === 'OTWARTE' && czyZadanieDotyczyDnia(zadanie, data))
+  const zadaniaGodzinowe = pobierzZadaniaDeadline(zadaniaAktywneDnia, data, teraz, zakresDniaPracy)
+  const zadaniaBezGodziny = sortujZadaniaBezGodziny(zadaniaAktywneDnia.filter((zadanie) => !zadanie.godzina && !czyZadanieDoKoncaDnia(zadanie)), teraz, zakresDniaPracy)
+  const zadaniaWykonane = zadania.filter((zadanie) => zadanie.status === 'WYKONANE' && czyZadanieDotyczyDnia(zadanie, data))
+  const paczkiWidoczne = sortujPaczki(paczki.filter((paczka) => czyPaczkaWidoczna(paczka, teraz)), teraz)
+  const pilne = zadania.filter((zadanie) => zadanie.status === 'OTWARTE' && (zadanie.priorytet === 'PILNE' || zadanie.priorytet === 'ASAP' || czyZadanieOpoznione(zadanie, teraz, zakresDniaPracy)))
+  const liczniki = obliczLicznikiPulpitu(zadania, paczki, teraz, data, zakresDniaPracy)
+  const aktywneZapotrzebowaniaZakupowe = useMemo(() => pobierzAktywneZapotrzebowaniaZakupowe(stan.zapotrzebowaniaZakupowe), [stan.zapotrzebowaniaZakupowe])
+  const liczbaAktywnychZapotrzebowanZakupowych = obliczLiczbeAktywnychZapotrzebowanZakupowych(stan.zapotrzebowaniaZakupowe)
+  const czyObserwowanyJestZalogowanym = wybranyUzytkownikId === zalogowanyUzytkownik?.id
+  const wskaznikCzasu = pobierzStanWskaznikaCzasu(teraz, zakresDniaPracy)
+  const etykietyOsi = pobierzEtykietyOsiCzasu(zakresDniaPracy)
+  const graniceDniaPracy = pobierzGraniceDniaPracyNaOsi(zakresDniaPracy)
+
+  function odswiezStan() { ustawStan(pobierzStanPulpitu()) }
+  function zmienZadanie(zadanie: ZadaniePulpitu) { zapiszZadanieReczne(zadanie); ustawWybraneZadanie((obecne) => obecne?.id === zadanie.id ? zadanie : obecne); odswiezStan() }
+  function oznaczWykonane(zadanie: ZadaniePulpitu) {
+    if (zadanie.status === 'WYKONANE') return
+    zmienZadanie({ ...zadanie, status: 'WYKONANE', wykonano: new Date().toISOString() })
+    ustawEdytowaneZadanieId(null)
+    ustawFormularzEdycji(null)
+    ustawBladEdycji('')
+  }
+
+  function zapiszSzybkaEdycjeTerminu(
+    zadanie: ZadaniePulpitu,
+    data: string,
+    godzina: string | undefined,
+    odlozonoDo: string | undefined,
+  ) {
+    if (!zalogowanyUzytkownik) return
+
+    const zaktualizowane = edytujZadanieRecznePrzezZadaniodawce(
+      zadanie.id,
+      zalogowanyUzytkownik.id,
+      zalogowanyUzytkownik.rola,
+      {
+        tytul: zadanie.tytul,
+        data,
+        godzina,
+        rodzajTerminu: zadanie.rodzajTerminu ?? (godzina ? 'KONKRETNA_GODZINA' : undefined),
+        priorytet: zadanie.priorytet,
+        zadaniobiorcaId: zadanie.zadaniobiorcaId,
+        przypomnienia: zadanie.przypomnienia.map((przypomnienie) => ({ ...przypomnienie })),
+        powiazaneSzkolenieId: zadanie.powiazaneSzkolenieId,
+        odlozonoDo,
+      },
+    )
+
+    if (!zaktualizowane) {
+      odswiezStan()
+      return
+    }
+
+    ustawWybraneZadanie((obecne) =>
+      obecne?.id === zaktualizowane.id ? zaktualizowane : obecne
+    )
+    odswiezStan()
+  }
+
+  function zmienGodzine(zadanie: ZadaniePulpitu, godzina: string) {
+    zapiszSzybkaEdycjeTerminu(
+      zadanie,
+      zadanie.data,
+      godzina || undefined,
+      zadanie.odlozonoDo,
+    )
+  }
+
+  function odlozZadanie(zadanie: ZadaniePulpitu, nowaData: string) {
+    zapiszSzybkaEdycjeTerminu(
+      zadanie,
+      nowaData,
+      zadanie.godzina,
+      nowaData,
+    )
+  }
+
+  function rozpocznijEdycjeZadania(zadanie: ZadaniePulpitu) {
+    if (!czyMoznaEdytowacZadanie(
+      zadanie,
+      zalogowanyUzytkownik?.id,
+      zalogowanyUzytkownik?.rola,
+    )) return
+
+    ustawFormularzEdycji(formularzZZadania(zadanie))
+    ustawEdytowaneZadanieId(zadanie.id)
+    ustawBladEdycji('')
+  }
+
+  function anulujEdycjeZadania() {
+    ustawEdytowaneZadanieId(null)
+    ustawFormularzEdycji(null)
+    ustawBladEdycji('')
+  }
+
+  function zapiszEdycjeZadania() {
+    if (
+      !wybraneZadanie
+      || !formularzEdycji
+      || !zalogowanyUzytkownik
+      || edytowaneZadanieId !== wybraneZadanie.id
+    ) return
+
+    if (!formularzEdycji.tytul.trim()) {
+      ustawBladEdycji('Nazwa zadania jest wymagana.')
+      return
+    }
+
+    if (formularzEdycji.rodzajTerminu === 'KONKRETNA_GODZINA' && !formularzEdycji.godzina) {
+      ustawBladEdycji('Wybierz godzinę wykonania albo zmień rodzaj terminu.')
+      return
+    }
+
+    const bladPrzypomnien = walidujPrzypomnienia(formularzEdycji.przypomnienia)
+    if (bladPrzypomnien) {
+      ustawBladEdycji(bladPrzypomnien)
+      return
+    }
+
+    const zadaniobiorcaId =
+      formularzEdycji.zadaniobiorcaId || wybraneZadanie.zadaniodawcaId
+
+    if (!aktywniUzytkownicy.some((uzytkownik) => uzytkownik.id === zadaniobiorcaId)) {
+      ustawBladEdycji('Wybrany Zadaniobiorca nie jest dostępny.')
+      return
+    }
+
+    const zaktualizowane = edytujZadanieRecznePrzezZadaniodawce(
+      wybraneZadanie.id,
+      zalogowanyUzytkownik.id,
+      zalogowanyUzytkownik.rola,
+      {
+        tytul: formularzEdycji.tytul.trim(),
+        data: formularzEdycji.data,
+        godzina: pobierzGodzineZapisu(formularzEdycji),
+        rodzajTerminu: pobierzRodzajTerminuZapisu(formularzEdycji),
+        priorytet: formularzEdycji.priorytet,
+        zadaniobiorcaId,
+        przypomnienia: formularzEdycji.przypomnienia.map((przypomnienie) => ({ ...przypomnienie })),
+        powiazaneSzkolenieId: formularzEdycji.szkolenieId || undefined,
+      },
+    )
+
+    if (!zaktualizowane) {
+      ustawBladEdycji(
+        'Nie można zapisać zmian. Zadanie mogło zostać wykonane albo nie masz już prawa do jego edycji.'
+      )
+      odswiezStan()
+      return
+    }
+
+    ustawWybraneZadanie(zaktualizowane)
+    anulujEdycjeZadania()
+    odswiezStan()
+  }
+
+  function przelaczFiltr(nowyFiltr: FiltrPulpitu) { ustawFiltr((obecny) => obecny === nowyFiltr ? 'WSZYSTKIE' : nowyFiltr) }
+  function otworzDodawanie() {
+    ustawNoweZadanie(pustyFormularz(data, zalogowanyUzytkownik?.id ?? ''))
+    ustawBladFormularza('')
+    ustawCzyDodawanieZadania((obecnie) => !obecnie)
+  }
+  function potwierdzWysylke() {
+    if (!paczkaDoPotwierdzenia) return
+    oznaczPaczkeJakoWyslana(paczkaDoPotwierdzenia.id)
+    ustawPaczkeDoPotwierdzenia(null)
+    odswiezStan()
+  }
+  function dodajZadanie() {
+    if (!noweZadanie.tytul.trim() || !zalogowanyUzytkownik) {
+      ustawBladFormularza('Nazwa zadania jest wymagana.')
+      return
+    }
+    if (noweZadanie.rodzajTerminu === 'KONKRETNA_GODZINA' && !noweZadanie.godzina) {
+      ustawBladFormularza('Wybierz godzinę wykonania albo zmień rodzaj terminu.')
+      return
+    }
+    const blad = walidujPrzypomnienia(noweZadanie.przypomnienia)
+    if (blad) {
+      ustawBladFormularza(blad)
+      return
+    }
+    const wybranyZadaniodawcaId = aktywniUzytkownicy.some((uzytkownik) => uzytkownik.id === noweZadanie.zadaniodawcaId) ? noweZadanie.zadaniodawcaId : ''
+    const wybranyZadaniobiorcaId = aktywniUzytkownicy.some((uzytkownik) => uzytkownik.id === noweZadanie.zadaniobiorcaId) ? noweZadanie.zadaniobiorcaId : ''
+    const przypisanie = rozstrzygnijPrzypisanieZadania(zalogowanyUzytkownik.id, zalogowanyUzytkownik.rola, wybranyZadaniodawcaId, wybranyZadaniobiorcaId)
+    zmienZadanie({
+      id: utworzIdZadania(),
+      tytul: noweZadanie.tytul.trim(),
+      data: noweZadanie.data,
+      godzina: pobierzGodzineZapisu(noweZadanie),
+      rodzajTerminu: pobierzRodzajTerminuZapisu(noweZadanie),
+      utworzono: new Date().toISOString(),
+      status: 'OTWARTE',
+      priorytet: noweZadanie.priorytet,
+      typZrodla: 'RECZNE',
+      typZadania: 'ZADANIE_WLASNE',
+      wlascicielId: przypisanie.zadaniobiorcaId,
+      ...przypisanie,
+      przypomnienia: noweZadanie.przypomnienia,
+      powiazaneSzkolenieId: noweZadanie.szkolenieId || undefined,
+      czyAutomatyczne: false,
+      czyTerminKrytyczny: false,
+    })
+    ustawNoweZadanie(pustyFormularz(data, zalogowanyUzytkownik.id))
+    ustawBladFormularza('')
+    ustawCzyDodawanieZadania(false)
+  }
+
+  function otworzDodawanieZakupu() {
+    ustawNowyZakup(pustyFormularzZakupu())
+    ustawBladFormularzaZakupu('')
+    ustawCzyDodawanieZakupu(true)
+  }
+  function dodajZapotrzebowanieZakupowe() {
+    if (!zalogowanyUzytkownik) return
+    const ilosc = Number(nowyZakup.ilosc)
+    const blad = walidujNoweZapotrzebowanieZakupowe(nowyZakup.nazwa, ilosc)
+    if (blad) {
+      ustawBladFormularzaZakupu(blad)
+      return
+    }
+    zapiszZapotrzebowanieZakupowe({
+      id: utworzIdZapotrzebowaniaZakupowego(),
+      nazwa: nowyZakup.nazwa.trim(),
+      ilosc,
+      status: 'ZGLOSZONE',
+      uwagi: nowyZakup.uwagi.trim() || undefined,
+      utworzonePrzezId: zalogowanyUzytkownik.id,
+      utworzonoAt: new Date().toISOString(),
+    })
+    ustawCzyDodawanieZakupu(false)
+    ustawNowyZakup(pustyFormularzZakupu())
+    ustawBladFormularzaZakupu('')
+    odswiezStan()
+  }
+  function zmienStatusZapotrzebowaniaZakupowego(zapotrzebowanie: ZapotrzebowanieZakupowe, status: ZapotrzebowanieZakupowe['status']) {
+    zapiszZapotrzebowanieZakupowe({ ...zapotrzebowanie, status })
+    odswiezStan()
+  }
+  const pokazZadania = filtr !== 'PACZKI'
+  const pokazPaczki = filtr === 'WSZYSTKIE' || filtr === 'PACZKI'
+  const zadaniaDoPokazania = filtr === 'PILNE' ? zadaniaBezGodziny.filter((zadanie) => zadanie.priorytet === 'PILNE' || zadanie.priorytet === 'ASAP' || czyZadanieOpoznione(zadanie, teraz, zakresDniaPracy)) : filtr === 'BLOKADY' ? zadaniaBezGodziny.filter((zadanie) => zadanie.czyAutomatyczne) : zadaniaBezGodziny
+  const czyMoznaWykonacWybrane = Boolean(
+    wybraneZadanie
+    && !wybraneZadanie.czyAutomatyczne
+    && wybraneZadanie.status === 'OTWARTE'
+    && wybraneZadanie.zadaniobiorcaId === zalogowanyUzytkownik?.id
+  )
+  const czyMoznaEdytowacWybrane = Boolean(
+    wybraneZadanie
+    && czyMoznaEdytowacZadanie(
+      wybraneZadanie,
+      zalogowanyUzytkownik?.id,
+      zalogowanyUzytkownik?.rola,
+    )
+  )
+  const czyMoznaUsunacWybrane = Boolean(
+    wybraneZadanie
+    && !wybraneZadanie.czyAutomatyczne
+    && wybraneZadanie.zadaniodawcaId === zalogowanyUzytkownik?.id
+  )
+
+  return <section className="widok pulpit" aria-label="Pulpit bieżącej pracy">
+    <header className="pulpit__naglowek">
+      <div><h1>Pulpit</h1><p>Centrum bieżącej pracy: zadania, blokady i nadchodzące wysyłki.</p></div>
+      {czyArchitekt && <label className="pulpit__wybor-kontekstu" htmlFor="pulpit-kontekst-uzytkownika">Kontekst użytkownika<select id="pulpit-kontekst-uzytkownika" onChange={(zdarzenie) => ustawWybranegoUzytkownikaId(zdarzenie.target.value)} value={wybranyUzytkownikId}>{aktywniUzytkownicy.map((uzytkownik) => <option key={uzytkownik.id} value={uzytkownik.id}>{pobierzNazweWyswietlanaUzytkownika(uzytkownik)}</option>)}</select></label>}
+    </header>
+
+    <section aria-label="Podsumowanie" className="pulpit-kafelki">
+      {widoczneKafelki.doZrobienia && (
+        <button
+          className={filtr === 'DO_ZROBIENIA' ? 'pulpit-kafelek pulpit-kafelek--aktywny' : 'pulpit-kafelek'}
+          onClick={() => przelaczFiltr('DO_ZROBIENIA')}
+          type="button"
+        >
+          <strong>{liczniki.doZrobienia}</strong>
+          <span>DO ZROBIENIA</span>
+          <small>na wybrany dzień</small>
+        </button>
+      )}
+
+      {widoczneKafelki.pilne && (
+        <button
+          className={filtr === 'PILNE' ? 'pulpit-kafelek pulpit-kafelek--aktywny' : 'pulpit-kafelek'}
+          onClick={() => przelaczFiltr('PILNE')}
+          type="button"
+        >
+          <strong>{liczniki.pilne}</strong>
+          <span>PILNE</span>
+          <small>
+            {pilne.filter((zadanie) => czyZadanieOpoznione(zadanie, teraz, zakresDniaPracy)).length} opóźnione
+          </small>
+        </button>
+      )}
+
+      {widoczneKafelki.paczki && (
+        <button
+          className={filtr === 'PACZKI' ? 'pulpit-kafelek pulpit-kafelek--aktywny' : 'pulpit-kafelek'}
+          onClick={() => przelaczFiltr('PACZKI')}
+          type="button"
+        >
+          <strong>{liczniki.paczki}</strong>
+          <span>PACZKI</span>
+          <small>w ciągu {liczbaDniWidocznosciPaczki} dni</small>
+        </button>
+      )}
+
+      {widoczneKafelki.blokady && (
+        <button
+          className={filtr === 'BLOKADY' ? 'pulpit-kafelek pulpit-kafelek--aktywny' : 'pulpit-kafelek'}
+          onClick={() => przelaczFiltr('BLOKADY')}
+          type="button"
+        >
+          <strong>{liczniki.blokady}</strong>
+          <span>BLOKADY</span>
+          <small>wymagają uwagi</small>
+        </button>
+      )}
+
+      {widoczneKafelki.zakupy && (
+        <button
+          aria-label={
+            'Zakupy: '
+            + liczbaAktywnychZapotrzebowanZakupowych
+            + ' '
+            + odmienRzeczDoZakupu(liczbaAktywnychZapotrzebowanZakupowych)
+          }
+          className="pulpit-kafelek pulpit-kafelek--zakupy"
+          onClick={() => ustawCzyWykazZakupowOtwarty(true)}
+          type="button"
+        >
+          <span className="pulpit-kafelek__naglowek">
+            <IkonaZakupow />
+            ZAKUPY
+          </span>
+          <strong>
+            {pobierzTekstLicznikaZakupow(liczbaAktywnychZapotrzebowanZakupowych)}
+          </strong>
+          <small>
+            {odmienRzeczDoZakupu(liczbaAktywnychZapotrzebowanZakupowych)}
+          </small>
+          <em>+ Zgłoś zakup</em>
+        </button>
+      )}
+    </section>
+
+    {pokazZadania && <section className="pulpit-sekcja" aria-labelledby="plan-dnia">
+      <div className="pulpit-sekcja__naglowek pulpit-sekcja__naglowek--plan">
+        <div><h2 id="plan-dnia">Plan dnia</h2><p>{formatujDate(data)}</p></div>
+        <div className="pulpit-nawigacja-daty">
+          <button className="pulpit-nawigacja-daty__strzalka" aria-label="Poprzedni dzień" onClick={() => ustawDate(przesunDate(data, -1))} type="button">&lsaquo;</button>
+          <button className="pulpit-nawigacja-daty__dzisiaj" onClick={() => ustawDate(dataTekstowa(new Date()))} type="button">Dzisiaj</button>
+          <button className="pulpit-nawigacja-daty__strzalka" aria-label="Następny dzień" onClick={() => ustawDate(przesunDate(data, 1))} type="button">&rsaquo;</button>
+          <input aria-label="Wybierz datę planu" onChange={(zdarzenie) => ustawDate(zdarzenie.target.value)} type="date" value={data} />
+        </div>
+      </div>
+      <div className="pulpit-os-czasu" aria-label={'Dobowa oś czasu od 00:00 do 23:59; dzień pracy od ' + zakresDniaPracy.poczatek + ' do ' + zakresDniaPracy.koniec}>
+        <div className="pulpit-os-czasu__linia">
+          <div className="pulpit-os-czasu__odcinek pulpit-os-czasu__odcinek--przed-praca" style={{ width: graniceDniaPracy.poczatek + '%' }} />
+          <div className="pulpit-os-czasu__odcinek pulpit-os-czasu__odcinek--praca" style={{ left: graniceDniaPracy.poczatek + '%', width: graniceDniaPracy.koniec - graniceDniaPracy.poczatek + '%' }} />
+          <div className="pulpit-os-czasu__odcinek pulpit-os-czasu__odcinek--po-pracy" style={{ left: graniceDniaPracy.koniec + '%', width: 100 - graniceDniaPracy.koniec + '%' }} />
+          <div className="pulpit-os-czasu__postep" style={{ width: wskaznikCzasu.pozycja + '%' }} />
+          {data === dataTekstowa(teraz) && <div className="pulpit-os-czasu__wskaznik" style={{ left: wskaznikCzasu.pozycja + '%' }}>
+            <span className={'pulpit-os-czasu__etykieta-teraz pulpit-os-czasu__etykieta-teraz--' + wskaznikCzasu.wyrownanieEtykiety.toLocaleLowerCase('pl')}>{wskaznikCzasu.etykieta}</span>
+          </div>}
+        </div>
+        <div className="pulpit-os-czasu__etykiety">
+          {etykietyOsi.map((etykieta) => {
+            const pozycja = pozycjaGodzinyNaOsi(etykieta, zakresDniaPracy)
+            const klasaKrawedzi = pozycja <= 5 ? ' pulpit-os-czasu__etykieta--lewo' : pozycja >= 95 ? ' pulpit-os-czasu__etykieta--prawo' : ''
+            return <span className={'pulpit-os-czasu__etykieta' + klasaKrawedzi} key={etykieta} style={{ left: pozycja + '%' }}>{etykieta}</span>
+          })}
+          <span className="pulpit-os-czasu__etykieta-pracy" style={{ left: graniceDniaPracy.poczatek + '%' }}>Start pracy {zakresDniaPracy.poczatek}</span>
+          <span className="pulpit-os-czasu__etykieta-pracy" style={{ left: graniceDniaPracy.koniec + '%' }}>Koniec pracy {zakresDniaPracy.koniec}</span>
+        </div>
+        <div className="pulpit-os-czasu__zadania">{zadaniaGodzinowe.map((zadanie) => <MarkerDeadline key={zadanie.id} otworz={() => ustawWybraneZadanie(zadanie)} zakresDniaPracy={zakresDniaPracy} uzytkownicy={uzytkownicy} zadanie={zadanie} />)}</div>
+      </div>
+
+      <div className="pulpit-podsekcja">
+        <div className="pulpit-podsekcja__naglowek"><h3>Do wykonania dzisiaj</h3>{czyObserwowanyJestZalogowanym && <button onClick={otworzDodawanie} type="button">+ Dodaj zadanie</button>}</div>
+        {czyDodawanieZadania && czyObserwowanyJestZalogowanym && <FormularzDodawaniaZadania blad={bladFormularza} czyWyborZadaniodawcy={czyWyborZadaniodawcy} formularz={noweZadanie} szkolenia={szkoleniaDostepne} ustawFormularz={ustawNoweZadanie} uzytkownicy={aktywniUzytkownicy} zapisz={dodajZadanie} />}
+        {zadaniaDoPokazania.length ? <div className="pulpit-lista-zadan">{zadaniaDoPokazania.map((zadanie) => {
+          const czyWykonawca = zadanie.zadaniobiorcaId === zalogowanyUzytkownik?.id
+          const czyMoznaEdytowacTermin = czyMoznaEdytowacZadanie(
+            zadanie,
+            zalogowanyUzytkownik?.id,
+            zalogowanyUzytkownik?.rola,
+          )
+          return <KartaZadania key={zadanie.id} zadanie={zadanie} teraz={teraz} zakresDniaPracy={zakresDniaPracy} uzytkownicy={uzytkownicy} otworz={() => ustawWybraneZadanie(zadanie)} wykonaj={zadanie.czyAutomatyczne || !czyWykonawca ? undefined : () => oznaczWykonane(zadanie)} zmienGodzine={!czyMoznaEdytowacTermin ? undefined : (godzina) => zmienGodzine(zadanie, godzina)} odloz={zadanie.czyTerminKrytyczny || !czyMoznaEdytowacTermin ? undefined : (nowaData) => odlozZadanie(zadanie, nowaData)} />
+        })}</div> : <p className="pulpit-pusty">Brak zadań bez przypisanej godziny.</p>}
+      </div>
+      {zadaniaWykonane.length > 0 && <details className="pulpit-wykonane"><summary>Wykonane ({zadaniaWykonane.length})</summary>{zadaniaWykonane.map((zadanie) => <KartaZadania key={zadanie.id} zadanie={zadanie} teraz={teraz} zakresDniaPracy={zakresDniaPracy} uzytkownicy={uzytkownicy} otworz={() => ustawWybraneZadanie(zadanie)} />)}</details>}
+    </section>}
+
+    {pokazPaczki && <section className="pulpit-sekcja" aria-labelledby="nadchodzace-paczki">
+      <div className="pulpit-sekcja__naglowek"><div><h2 id="nadchodzace-paczki">Nadchodzące paczki</h2><p>Widoczne od 7 dni przed planowaną wysyłką.</p></div></div>
+      {paczkiWidoczne.length ? <div className="pulpit-paczki">{paczkiWidoczne.map((paczka) => {
+        const gotowosc = pobierzGotowoscPaczki(paczka)
+        const opozniona = czyPaczkaOpozniona(paczka, teraz)
+        return <article className={'pulpit-paczka' + (opozniona ? ' pulpit-paczka--opozniona' : '')} key={paczka.id}>
+          <div><span className={'pulpit-status' + (opozniona ? ' pulpit-status--czerwony' : gotowosc.czyGotowa ? ' pulpit-status--zielony' : '')}>{opozniona ? 'OPÓŹNIONA' : gotowosc.czyGotowa ? 'GOTOWA' : pobierzTerminWzglednyPaczki(paczka, teraz)}</span><h3>{paczka.nazwaSzkolenia}</h3><p>{paczka.miasto} &middot; {paczka.terminySzkolenia.map(formatujDate).join(', ') || 'brak terminu'}</p><p>Trener: {paczka.trenerzy.join(', ') || 'brak'}</p><p>Planowana wysyłka: <strong>{formatujDate(paczka.planowanaDataWysylki)} &middot; {pobierzTerminWzglednyPaczki(paczka, teraz)}</strong></p></div>
+          <div className="pulpit-paczka__gotowosc"><strong>{gotowosc.tekst}</strong><span>Gotowość paczki</span>{paczka.brakujaceElementy.length > 0 && <div><b>Brakuje:</b><ul>{paczka.brakujaceElementy.map((brak) => <li key={brak}>{brak}</li>)}</ul></div>}<div className="pulpit-paczka__akcje"><button onClick={() => otworzPaczke?.(paczka.id)} type="button">Otwórz checklistę</button><button className="pulpit-przycisk-glowny" onClick={() => ustawPaczkeDoPotwierdzenia(paczka)} type="button">Oznacz jako wysłaną</button></div></div>
+        </article>
+      })}</div> : <p className="pulpit-pusty">Brak paczek w oknie wysyłki.</p>}
+    </section>}
+
+    {czyWykazZakupowOtwarty && <aside aria-label="Aktualne zapotrzebowania zakupowe" className="pulpit-drawer pulpit-drawer--zakupy">
+      <button aria-label={'Zamknij wykaz zakup\u{f3}w'} className="pulpit-drawer__zamknij" onClick={() => ustawCzyWykazZakupowOtwarty(false)} type="button">x</button>
+      <div className="pulpit-drawer__naglowek"><div><h2>Zakupy</h2><p>{'Aktywne zapotrzebowania ca\u{142}ej organizacji.'}</p></div><button className="pulpit-przycisk-glowny" onClick={otworzDodawanieZakupu} type="button">{'+ Zg\u{142}o\u{15b} zakup'}</button></div>
+      {aktywneZapotrzebowaniaZakupowe.length ? <div className="pulpit-zapotrzebowania">{aktywneZapotrzebowaniaZakupowe.map((zapotrzebowanie) => <article className="pulpit-zapotrzebowanie" key={zapotrzebowanie.id}>
+        <span className="pulpit-status">{zapotrzebowanie.status}</span>
+        <h3>{zapotrzebowanie.nazwa}</h3>
+        <p>{'Ilo\u{15b}\u{107}'}: {zapotrzebowanie.ilosc}</p>
+        <p>{'Zg\u{142}osi\u{142}'}: {pobierzNazweOsoby(uzytkownicy, zapotrzebowanie.utworzonePrzezId)}</p>
+        <p>{formatujDateGodzine(zapotrzebowanie.utworzonoAt)}</p>
+        {zapotrzebowanie.uwagi && <p>Uwagi: {zapotrzebowanie.uwagi}</p>}
+        <div className="pulpit-zapotrzebowanie__akcje"><button onClick={() => zmienStatusZapotrzebowaniaZakupowego(zapotrzebowanie, 'KUPIONE')} type="button">Oznacz jako kupione</button><button className="pulpit-przycisk-niebezpieczny" onClick={() => zmienStatusZapotrzebowaniaZakupowego(zapotrzebowanie, 'ANULOWANE')} type="button">Anuluj</button></div>
+      </article>)}</div> : <p className="pulpit-pusty">{'Brak aktywnych zapotrzebowa\u{144} zakupowych.'}</p>}
+    </aside>}
+
+    {czyDodawanieZakupu && <section aria-label={'Zg\u{142}oszenie zakupu'} aria-modal="true" className="pulpit-modal" role="dialog"><div>
+      <h2>{'Zg\u{142}o\u{15b} zakup'}</h2>
+      <FormularzZakupu anuluj={() => ustawCzyDodawanieZakupu(false)} blad={bladFormularzaZakupu} formularz={nowyZakup} ustawFormularz={ustawNowyZakup} zapisz={dodajZapotrzebowanieZakupowe} />
+    </div></section>}
+    {wybraneZadanie && <aside aria-label="Szczegóły zadania" className="pulpit-drawer">
+      <button aria-label="Zamknij szczegóły zadania" className="pulpit-drawer__zamknij" onClick={() => ustawWybraneZadanie(null)} type="button">×</button>
+      <span className="pulpit-status">{pobierzEtykieteStatusuZadania(wybraneZadanie, teraz)}</span>
+      <h2>{wybraneZadanie.tytul}</h2>
+      {wybraneZadanie.opis && <p>{wybraneZadanie.opis}</p>}
+      <dl>
+        <div><dt>Termin</dt><dd>{formatujDate(wybraneZadanie.data)}</dd></div>
+        <div><dt>Godzina</dt><dd>{etykietaTerminuZadania(wybraneZadanie)}</dd></div>
+        <div><dt>Priorytet</dt><dd>{etykietaPriorytetu(wybraneZadanie.priorytet)}</dd></div>
+        <div><dt>Zadaniodawca</dt><dd>{pobierzNazweOsoby(uzytkownicy, wybraneZadanie.zadaniodawcaId)}</dd></div>
+        <div><dt>Zadaniobiorca</dt><dd>{pobierzNazweOsoby(uzytkownicy, wybraneZadanie.zadaniobiorcaId)}</dd></div>
+        <div><dt>Przypomnienia</dt><dd>{wybraneZadanie.przypomnienia.length ? wybraneZadanie.przypomnienia.map(etykietaPrzypomnienia).join(', ') : 'Brak'}</dd></div>
+        <div><dt>Źródło</dt><dd>{wybraneZadanie.czyAutomatyczne ? 'Automatyczna reguła szkolenia' : 'Ręczne zadanie'}</dd></div>
+        <div><dt>Powiązane szkolenie</dt><dd>{wybraneZadanie.powiazaneSzkolenieId || 'Brak'}</dd></div>
+        {wybraneZadanie.status === 'WYKONANE' && <div><dt>Wykonano</dt><dd>{wybraneZadanie.wykonano ? formatujMoment(wybraneZadanie.wykonano) : 'Brak danych o czasie wykonania'}</dd></div>}
+      </dl>
+
+      {czyMoznaEdytowacWybrane && edytowaneZadanieId !== wybraneZadanie.id && <div className="pulpit-drawer__akcje">
+        <button onClick={() => rozpocznijEdycjeZadania(wybraneZadanie)} type="button">Edytuj zadanie</button>
+        {!wybraneZadanie.czyTerminKrytyczny && <button onClick={() => odlozZadanie(wybraneZadanie, przesunDate(wybraneZadanie.data, 1))} type="button">Odłóż o dzień</button>}
+      </div>}
+
+      {czyMoznaEdytowacWybrane && edytowaneZadanieId === wybraneZadanie.id && formularzEdycji && <div className="pulpit-drawer__edycja">
+        <h3>Edytuj zadanie</h3>
+        <FormularzDodawaniaZadania
+          anuluj={anulujEdycjeZadania}
+          blad={bladEdycji}
+          czyWyborZadaniodawcy={false}
+          etykietaZapisu="Zapisz zmiany"
+          formularz={formularzEdycji}
+          szkolenia={szkoleniaDostepne}
+          ustawFormularz={ustawFormularzEdycji}
+          uzytkownicy={aktywniUzytkownicy}
+          zapisz={zapiszEdycjeZadania}
+        />
+      </div>}
+
+      {czyMoznaWykonacWybrane && <div className="pulpit-drawer__akcje">
+        <button className="pulpit-przycisk-glowny" onClick={() => oznaczWykonane(wybraneZadanie)} type="button">{'\u2713'} Wykonane</button>
+      </div>}
+
+      {czyMoznaUsunacWybrane && <button className="pulpit-przycisk-niebezpieczny" onClick={() => { usunZadanieReczne(wybraneZadanie.id); ustawWybraneZadanie(null); anulujEdycjeZadania(); odswiezStan() }} type="button">Usuń zadanie</button>}
+      {wybraneZadanie.powiazaneSzkolenieId && <button className="pulpit-przycisk-glowny" onClick={() => otworzRekordZrodlowy?.(wybraneZadanie.powiazaneSzkolenieId)} type="button">Przejdź do rekordu źródłowego</button>}
+    </aside>}
+
+    {paczkaDoPotwierdzenia && <section aria-label="Potwierdzenie wysyłki" aria-modal="true" className="pulpit-modal" role="dialog"><div>
+      <h2>Potwierdź wysyłkę paczki</h2>
+      {czyWysylkaWymagaDodatkowegoPotwierdzenia(paczkaDoPotwierdzenia) && <p>Paczka nie jest oznaczona jako w pełni gotowa. Nadal brakuje: {paczkaDoPotwierdzenia.brakujaceElementy.join(', ')}. Czy na pewno oznaczyć jako wysłaną?</p>}
+      <div className="pulpit-modal__akcje"><button onClick={() => ustawPaczkeDoPotwierdzenia(null)} type="button">Wróć</button><button className="pulpit-przycisk-glowny" onClick={potwierdzWysylke} type="button">Potwierdzam wysyłkę</button></div>
+    </div></section>}
+  </section>
+}
+
+===== src/moduly/zamkniete/pulpit/logika/miniaturyZadan.ts =====
+import type { MiniaturaZadaniaPulpitu } from '../modele/pulpit'
+
+const maksymalnyWymiarMiniatury = 480
+const maksymalnyRozmiarPliku = 12 * 1024 * 1024
+
+function wczytajObraz(adres: string) {
+  return new Promise<HTMLImageElement>((rozwiaz, odrzuc) => {
+    const obraz = new Image()
+    obraz.onload = () => rozwiaz(obraz)
+    obraz.onerror = () => odrzuc(new Error('Nie udało się odczytać obrazu.'))
+    obraz.src = adres
+  })
+}
+
+export async function przygotujMiniatureZadania(plik: File): Promise<MiniaturaZadaniaPulpitu> {
+  if (!plik.type.startsWith('image/')) {
+    throw new Error('Wybierz plik graficzny.')
+  }
+
+  if (plik.size > maksymalnyRozmiarPliku) {
+    throw new Error('Obraz może mieć maksymalnie 12 MB.')
+  }
+
+  const adres = URL.createObjectURL(plik)
+
+  try {
+    const obraz = await wczytajObraz(adres)
+    const skala = Math.min(1, maksymalnyWymiarMiniatury / Math.max(obraz.naturalWidth, obraz.naturalHeight))
+    const szerokosc = Math.max(1, Math.round(obraz.naturalWidth * skala))
+    const wysokosc = Math.max(1, Math.round(obraz.naturalHeight * skala))
+    const plotno = document.createElement('canvas')
+    plotno.width = szerokosc
+    plotno.height = wysokosc
+    const kontekst = plotno.getContext('2d')
+
+    if (!kontekst) {
+      throw new Error('Przeglądarka nie może przygotować miniatury.')
+    }
+
+    kontekst.drawImage(obraz, 0, 0, szerokosc, wysokosc)
+
+    return {
+      daneUrl: plotno.toDataURL('image/webp', 0.82),
+      nazwaPliku: plik.name || 'obraz-ze-schowka',
+      szerokosc,
+      wysokosc,
+    }
+  } finally {
+    URL.revokeObjectURL(adres)
+  }
+}
+
+===== src/moduly/zamkniete/pulpit/modele/pulpit.ts =====
+export type StatusZadaniaPulpitu = 'OTWARTE' | 'WYKONANE'
+export type PriorytetZadaniaPulpitu = 'ZWYKLE' | 'PILNE' | 'ASAP'
+export type TypZrodlaZadania = 'RECZNE' | 'SZKOLENIE' | 'PACZKA'
+export type RodzajTerminuZadania = 'KONKRETNA_GODZINA' | 'DO_KONCA_DNIA'
+
+export type JednostkaPrzypomnienia = 'MINUTY' | 'GODZINY' | 'DNI'
+
+export type PrzypomnienieZadania = {
+  id: string
+  wartosc: number
+  jednostka: JednostkaPrzypomnienia
+}
+
+export type MiniaturaZadaniaPulpitu = {
+  daneUrl: string
+  nazwaPliku: string
+  szerokosc: number
+  wysokosc: number
+}
+
+export type ZadaniePulpitu = {
+  id: string
+  tytul: string
+  opis?: string
+  data: string
+  godzina?: string
+  rodzajTerminu?: RodzajTerminuZadania
+  utworzono: string
+  status: StatusZadaniaPulpitu
+  priorytet: PriorytetZadaniaPulpitu
+  typZrodla: TypZrodlaZadania
+  typZadania: string
+  wlascicielId: string
+  zadaniodawcaId: string
+  zadaniobiorcaId: string
+  przypomnienia: PrzypomnienieZadania[]
+  miniatura?: MiniaturaZadaniaPulpitu
+  powiazaneSzkolenieId?: string
+  powiazanyTypEncji?: string
+  powiazanaEncjaId?: string
+  czyAutomatyczne: boolean
+  czyTerminKrytyczny: boolean
+  wykonano?: string
+  odlozonoDo?: string
+}
+
+export type StanPulpitu = {
+  zadaniaReczne: ZadaniePulpitu[]
+  wyslanePaczki: Record<string, string>
+  zapotrzebowaniaZakupowe: ZapotrzebowanieZakupowe[]
+}
+
+export type StatusZapotrzebowaniaZakupowego = 'ZGLOSZONE' | 'DO_ZAKUPU' | 'W_REALIZACJI' | 'KUPIONE' | 'ANULOWANE' | 'ZAMKNIETE' | 'ARCHIWALNE'
+
+export type ZapotrzebowanieZakupowe = {
+  id: string
+  nazwa: string
+  ilosc: number
+  status: StatusZapotrzebowaniaZakupowego
+  uwagi?: string
+  utworzonePrzezId: string
+  utworzonoAt: string
+}
+
+export type PaczkaPulpitu = {
+  id: string
+  nazwaSzkolenia: string
+  miasto: string
+  terminySzkolenia: string[]
+  trenerzy: string[]
+  planowanaDataWysylki: string
+  wlascicielId: string
+  liczbaGotowych: number
+  liczbaWymaganych: number
+  brakujaceElementy: string[]
+  czyWyslana: boolean
+}
+
+===== src/moduly/zamkniete/pulpit/uslugi/magazynPulpitu.ts =====
+import type { RolaUzytkownika } from '../../../../kartoteki/uzytkownicy/typyUzytkownikow'
+import type { JednostkaPrzypomnienia, MiniaturaZadaniaPulpitu, PrzypomnienieZadania, StanPulpitu, StatusZapotrzebowaniaZakupowego, ZadaniePulpitu, ZapotrzebowanieZakupowe } from '../modele/pulpit'
+
+const kluczStanuPulpitu = 'ultimatePomagier.pulpit.v1'
+
+function pustyStan(): StanPulpitu {
+  return { zadaniaReczne: [], wyslanePaczki: {}, zapotrzebowaniaZakupowe: [] }
+}
+
+function tekst(wartosc: unknown) {
+  return typeof wartosc === 'string' ? wartosc.trim() : ''
+}
+
+function normalizujJednostke(wartosc: unknown): JednostkaPrzypomnienia | null {
+  if (wartosc === 'MINUTY' || wartosc === 'minutes') return 'MINUTY'
+  if (wartosc === 'GODZINY' || wartosc === 'hours') return 'GODZINY'
+  if (wartosc === 'DNI' || wartosc === 'days') return 'DNI'
+  return null
+}
+
+function normalizujPrzypomnienie(wartosc: unknown, indeks: number): PrzypomnienieZadania | null {
+  if (!wartosc || typeof wartosc !== 'object') return null
+  const dane = wartosc as Record<string, unknown>
+  const liczba = Number(dane.wartosc ?? dane.value)
+  const jednostka = normalizujJednostke(dane.jednostka ?? dane.unit)
+  if (!Number.isFinite(liczba) || liczba <= 0 || !jednostka) return null
+  return {
+    id: tekst(dane.id) || 'przypomnienie-' + indeks + '-' + liczba + '-' + jednostka,
+    wartosc: liczba,
+    jednostka,
+  }
+}
+
+function normalizujMiniatureZadania(wartosc: unknown): MiniaturaZadaniaPulpitu | null {
+  if (!wartosc || typeof wartosc !== 'object') return null
+  const dane = wartosc as Record<string, unknown>
+  const daneUrl = tekst(dane.daneUrl)
+  const szerokosc = Number(dane.szerokosc)
+  const wysokosc = Number(dane.wysokosc)
+
+  if (
+    !/^data:image\/(?:jpeg|png|webp);base64,/i.test(daneUrl)
+    || daneUrl.length > 750_000
+    || !Number.isFinite(szerokosc)
+    || !Number.isFinite(wysokosc)
+    || szerokosc <= 0
+    || wysokosc <= 0
+    || szerokosc > 480
+    || wysokosc > 480
+  ) return null
+
+  return {
+    daneUrl,
+    nazwaPliku: tekst(dane.nazwaPliku).slice(0, 120) || 'miniatura',
+    szerokosc,
+    wysokosc,
+  }
+}
+
+export function normalizujZadaniePulpitu(wartosc: unknown): ZadaniePulpitu | null {
+  if (!wartosc || typeof wartosc !== 'object') return null
+  const dane = wartosc as Record<string, unknown>
+  const id = tekst(dane.id)
+  const tytul = tekst(dane.tytul)
+  const data = tekst(dane.data)
+  if (!id || !tytul || !data) return null
+
+  const wlascicielId = tekst(dane.wlascicielId)
+  const zadaniodawcaId = tekst(dane.zadaniodawcaId) || tekst(dane.createdBy) || tekst(dane.userId) || wlascicielId
+  const zadaniobiorcaId = tekst(dane.zadaniobiorcaId) || zadaniodawcaId
+  const godzina = tekst(dane.godzina) || undefined
+  const rodzajTerminu = dane.rodzajTerminu === 'DO_KONCA_DNIA'
+    ? 'DO_KONCA_DNIA'
+    : dane.rodzajTerminu === 'KONKRETNA_GODZINA' || godzina
+      ? 'KONKRETNA_GODZINA'
+      : undefined
+  const przypomnienia = (Array.isArray(dane.przypomnienia) ? dane.przypomnienia : Array.isArray(dane.reminders) ? dane.reminders : [])
+    .map(normalizujPrzypomnienie)
+    .filter((przypomnienie): przypomnienie is PrzypomnienieZadania => Boolean(przypomnienie))
+
+  return {
+    ...(dane as unknown as ZadaniePulpitu),
+    id,
+    tytul,
+    data,
+    godzina: rodzajTerminu === 'DO_KONCA_DNIA' ? undefined : godzina,
+    rodzajTerminu,
+    utworzono: tekst(dane.utworzono) || new Date(0).toISOString(),
+    status: dane.status === 'WYKONANE' ? 'WYKONANE' : 'OTWARTE',
+    priorytet: dane.priorytet === 'ASAP' || dane.priorytet === 'PILNE' ? dane.priorytet : 'ZWYKLE',
+    typZrodla: dane.typZrodla === 'SZKOLENIE' || dane.typZrodla === 'PACZKA' ? dane.typZrodla : 'RECZNE',
+    typZadania: tekst(dane.typZadania) || 'ZADANIE_WLASNE',
+    wlascicielId: wlascicielId || zadaniobiorcaId || zadaniodawcaId,
+    zadaniodawcaId,
+    zadaniobiorcaId,
+    przypomnienia,
+    miniatura: normalizujMiniatureZadania(dane.miniatura) ?? undefined,
+    czyAutomatyczne: dane.czyAutomatyczne === true,
+    czyTerminKrytyczny: dane.czyTerminKrytyczny === true,
+  }
+}
+
+function normalizujStatusZapotrzebowaniaZakupowego(wartosc: unknown): StatusZapotrzebowaniaZakupowego | null {
+  if (wartosc === 'ZGLOSZONE' || wartosc === 'DO_ZAKUPU' || wartosc === 'W_REALIZACJI' || wartosc === 'KUPIONE' || wartosc === 'ANULOWANE' || wartosc === 'ZAMKNIETE' || wartosc === 'ARCHIWALNE') return wartosc
+  return null
+}
+
+export function normalizujZapotrzebowanieZakupowe(wartosc: unknown): ZapotrzebowanieZakupowe | null {
+  if (!wartosc || typeof wartosc !== 'object') return null
+  const dane = wartosc as Record<string, unknown>
+  const id = tekst(dane.id)
+  const nazwa = tekst(dane.nazwa)
+  const ilosc = Number(dane.ilosc)
+  const status = normalizujStatusZapotrzebowaniaZakupowego(dane.status)
+  const utworzonePrzezId = tekst(dane.utworzonePrzezId)
+  const utworzonoAt = tekst(dane.utworzonoAt)
+  if (!id || !nazwa || !Number.isFinite(ilosc) || ilosc <= 0 || !status || !utworzonePrzezId || !utworzonoAt) return null
+  return { id, nazwa, ilosc, status, uwagi: tekst(dane.uwagi) || undefined, utworzonePrzezId, utworzonoAt }
+}
+export function pobierzStanPulpitu(): StanPulpitu {
+  try {
+    const zapis = localStorage.getItem(kluczStanuPulpitu)
+    if (!zapis) return pustyStan()
+    const stan = JSON.parse(zapis) as Partial<StanPulpitu>
+    return {
+      zadaniaReczne: (Array.isArray(stan.zadaniaReczne) ? stan.zadaniaReczne : [])
+        .map(normalizujZadaniePulpitu)
+        .filter((zadanie): zadanie is ZadaniePulpitu => Boolean(zadanie)),
+      wyslanePaczki: stan.wyslanePaczki && typeof stan.wyslanePaczki === 'object' ? stan.wyslanePaczki : {},
+      zapotrzebowaniaZakupowe: (Array.isArray(stan.zapotrzebowaniaZakupowe) ? stan.zapotrzebowaniaZakupowe : [])
+        .map(normalizujZapotrzebowanieZakupowe)
+        .filter((zapotrzebowanie): zapotrzebowanie is ZapotrzebowanieZakupowe => Boolean(zapotrzebowanie)),
+    }
+  } catch {
+    return pustyStan()
+  }
+}
+
+export function zapiszStanPulpitu(stan: StanPulpitu) {
+  try { localStorage.setItem(kluczStanuPulpitu, JSON.stringify(stan)) } catch { return false }
+  return true
+}
+
+export function zapiszZadanieReczne(zadanie: ZadaniePulpitu) {
+  const stan = pobierzStanPulpitu()
+  const istnieje = stan.zadaniaReczne.some((obecne) => obecne.id === zadanie.id)
+  return zapiszStanPulpitu({ ...stan, zadaniaReczne: istnieje ? stan.zadaniaReczne.map((obecne) => obecne.id === zadanie.id ? zadanie : obecne) : [...stan.zadaniaReczne, zadanie] })
+}
+
+export type EdytowalnePolaZadania = Pick<
+  ZadaniePulpitu,
+  'tytul'
+  | 'data'
+  | 'godzina'
+  | 'rodzajTerminu'
+  | 'priorytet'
+  | 'zadaniobiorcaId'
+  | 'przypomnienia'
+  | 'miniatura'
+  | 'powiazaneSzkolenieId'
+  | 'odlozonoDo'
+>
+
+export function edytujZadanieRecznePrzezZadaniodawce(
+  zadanieId: string,
+  uzytkownikId: string,
+  rola: RolaUzytkownika | null | undefined,
+  zmiany: EdytowalnePolaZadania,
+): ZadaniePulpitu | null {
+  const stan = pobierzStanPulpitu()
+  const obecne = stan.zadaniaReczne.find((zadanie) => zadanie.id === zadanieId)
+
+  const czyArchitekt = rola === 'ARCHITEKT'
+  const czyWlasneOtwarteZadanie =
+    obecne?.status === 'OTWARTE'
+    && obecne.zadaniodawcaId === uzytkownikId
+
+  if (
+    !obecne
+    || obecne.czyAutomatyczne
+    || (!czyArchitekt && !czyWlasneOtwarteZadanie)
+  ) {
+    return null
+  }
+
+  const zaktualizowane: ZadaniePulpitu = {
+    ...obecne,
+    tytul: zmiany.tytul,
+    data: zmiany.data,
+    godzina: zmiany.godzina,
+    rodzajTerminu: zmiany.rodzajTerminu,
+    priorytet: zmiany.priorytet,
+    zadaniobiorcaId: zmiany.zadaniobiorcaId,
+    wlascicielId: zmiany.zadaniobiorcaId,
+    przypomnienia: zmiany.przypomnienia,
+    miniatura: Object.prototype.hasOwnProperty.call(zmiany, 'miniatura') ? zmiany.miniatura : obecne.miniatura,
+    powiazaneSzkolenieId: zmiany.powiazaneSzkolenieId,
+    odlozonoDo: zmiany.odlozonoDo ?? obecne.odlozonoDo,
+  }
+
+  const zapisano = zapiszStanPulpitu({
+    ...stan,
+    zadaniaReczne: stan.zadaniaReczne.map((zadanie) =>
+      zadanie.id === zadanieId ? zaktualizowane : zadanie
+    ),
+  })
+
+  return zapisano ? zaktualizowane : null
+}
+
+export function oznaczPaczkeJakoWyslana(idPaczki: string) {
+  const stan = pobierzStanPulpitu()
+  return zapiszStanPulpitu({ ...stan, wyslanePaczki: { ...stan.wyslanePaczki, [idPaczki]: new Date().toISOString() } })
+}
+export function usunZadanieReczne(zadanieId: string) {
+  const stan = pobierzStanPulpitu()
+  return zapiszStanPulpitu({ ...stan, zadaniaReczne: stan.zadaniaReczne.filter((zadanie) => zadanie.id !== zadanieId) })
+}
+
+export function zapiszZapotrzebowanieZakupowe(zapotrzebowanie: ZapotrzebowanieZakupowe) {
+  const stan = pobierzStanPulpitu()
+  const istnieje = stan.zapotrzebowaniaZakupowe.some((obecne) => obecne.id === zapotrzebowanie.id)
+  return zapiszStanPulpitu({ ...stan, zapotrzebowaniaZakupowe: istnieje ? stan.zapotrzebowaniaZakupowe.map((obecne) => obecne.id === zapotrzebowanie.id ? zapotrzebowanie : obecne) : [...stan.zapotrzebowaniaZakupowe, zapotrzebowanie] })
+}
+
+===== src/moduly/zamkniete/pulpit/pulpit.css =====
+.pulpit { display: grid; gap: 24px; }
+.pulpit__naglowek, .pulpit-sekcja__naglowek, .pulpit-podsekcja__naglowek { display: flex; gap: 16px; align-items: center; justify-content: space-between; }
+.pulpit__naglowek h1, .pulpit-sekcja h2, .pulpit-sekcja h3 { margin: 0; }
+.pulpit__wybor-kontekstu, .pulpit-formularz-zadania label { display: grid; gap: 5px; color: var(--ui-tekst-drugi); font-size: .82rem; }
+.pulpit select, .pulpit input, .pulpit button { font: inherit; }
+.pulpit select, .pulpit input { box-sizing: border-box; min-height: 35px; border: 1px solid color-mix(in srgb, var(--ui-akcent) 45%, transparent); border-radius: 6px; background: var(--ui-pole); color: var(--ui-tekst); padding: 7px; }
+.pulpit-kafelki { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
+.pulpit-kafelek { display: grid; gap: 5px; min-height: 130px; padding: 18px; border: 1px solid color-mix(in srgb, var(--ui-akcent) 35%, transparent); border-radius: 10px; background: var(--ui-powierzchnia); color: var(--ui-tekst); cursor: pointer; text-align: left; }
+.pulpit-kafelek:hover, .pulpit-kafelek--aktywny { border-color: var(--ui-akcent); background: var(--ui-akcent-mocny); }
+.pulpit-kafelek strong { font-size: 2.3rem; line-height: 1; }.pulpit-kafelek span { font-weight: 800; letter-spacing: .04em; }.pulpit-kafelek small { color: var(--ui-tekst-drugi); }
+.pulpit-sekcja { display: grid; gap: 18px; padding: 22px; border: 1px solid color-mix(in srgb, var(--ui-akcent) 28%, transparent); border-radius: 12px; background: var(--ui-panel); }
+.pulpit-sekcja__naglowek--plan { display: grid; grid-template-columns: 1fr auto 1fr; }
+.pulpit-nawigacja-daty { display: flex; grid-column: 2; gap: 7px; align-items: center; font-size: 1rem; font-weight: 700; }.pulpit-nawigacja-daty__strzalka { box-sizing: border-box; width: 40px; }.pulpit-nawigacja-daty__dzisiaj { box-sizing: border-box; width: 200px; }.pulpit button { border: 1px solid color-mix(in srgb, var(--ui-akcent) 40%, transparent); border-radius: 6px; background: var(--ui-powierzchnia); color: var(--ui-tekst); cursor: pointer; padding: 7px 10px; }.pulpit button:hover { border-color: var(--ui-akcent); background: var(--ui-akcent-mocny); }.pulpit button:focus-visible, .pulpit input:focus-visible, .pulpit select:focus-visible { outline: 2px solid #fef08a; outline-offset: 2px; }
+.pulpit-przycisk-glowny { background: var(--ui-akcent) !important; border-color: var(--ui-akcent) !important; color: var(--ui-tekst-na-akcencie) !important; font-weight: 800; }
+.pulpit-os-czasu { min-height: 180px; padding-top: 18px; overflow: hidden; }.pulpit-os-czasu__linia { position: relative; height: 8px; border-radius: 999px; background: var(--ui-akcent-mocny); }.pulpit-os-czasu__postep { height: 100%; border-radius: inherit; background: var(--ui-akcent); }.pulpit-os-czasu__teraz { position: absolute; top: -25px; color: #fef08a; font-size: .72rem; font-weight: 800; transform: translateX(-50%); }.pulpit-os-czasu__teraz::after { position: absolute; top: 18px; left: 50%; width: 2px; height: 21px; background: #fef08a; content: ''; }.pulpit-os-czasu__etykiety { display: flex; justify-content: space-between; margin-top: 8px; color: var(--ui-tekst-drugi); font-size: .74rem; }.pulpit-os-czasu__zadania { position: relative; height: 112px; }.pulpit-os-czasu__zadanie { position: absolute; top: 14px; width: min(265px, 36vw); transform: translateX(-8%); }
+.pulpit-podsekcja { display: grid; gap: 12px; }.pulpit-lista-zadan { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }.pulpit-zadanie { display: grid; gap: 10px; padding: 13px; border: 1px solid color-mix(in srgb, var(--ui-tekst-drugi) 30%, transparent); border-radius: 8px; background: var(--ui-powierzchnia); }.pulpit-zadanie--opoznione { border-color: #f87171; }.pulpit-zadanie--wykonane { opacity: .72; }.pulpit-zadanie__tresc { display: grid; gap: 4px; border: 0; background: transparent; padding: 0; text-align: left; }.pulpit-zadanie__tresc:hover { background: transparent; }.pulpit-zadanie__etykieta { color: var(--ui-tekst-drugi); font-size: .7rem; }.pulpit-zadanie__meta, .pulpit-zadanie__akcje { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }.pulpit-zadanie__akcje label { display: flex; gap: 4px; align-items: center; color: var(--ui-tekst-drugi); font-size: .78rem; }.pulpit-zadanie__akcje input { min-height: 30px; padding: 3px; }
+.pulpit-status { display: inline-flex; width: fit-content; border: 1px solid color-mix(in srgb, var(--ui-tekst-drugi) 45%, transparent); border-radius: 999px; padding: 3px 7px; color: var(--ui-tekst); font-size: .72rem; font-weight: 800; }.pulpit-status--czerwony { border-color: #f87171; background: #7f1d1d; color: #fee2e2; }.pulpit-status--zielony { border-color: #86efac; background: #14532d; color: #dcfce7; }.pulpit-status--zolty { border-color: #facc15; background: #713f12; color: #fef9c3; }
+.pulpit-formularz-zadania { display: grid; grid-template-columns: minmax(180px, 2fr) repeat(3, minmax(110px, 1fr)) auto; gap: 8px; padding: 12px; border-radius: 8px; background: var(--ui-pole); }.pulpit-pusty { color: var(--ui-tekst-drugi); }.pulpit-wykonane { display: grid; gap: 10px; }.pulpit-wykonane summary { cursor: pointer; color: var(--ui-tekst-drugi); }
+.pulpit-paczki { display: grid; gap: 14px; }.pulpit-paczka { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, .75fr); gap: 20px; padding: 17px; border: 1px solid color-mix(in srgb, var(--ui-akcent) 35%, transparent); border-radius: 9px; background: var(--ui-powierzchnia); }.pulpit-paczka--opozniona { border-color: #f87171; }.pulpit-paczka h3 { margin: 9px 0; }.pulpit-paczka p { margin: 5px 0; }.pulpit-paczka__gotowosc { display: grid; align-content: start; gap: 7px; color: var(--ui-tekst-drugi); }.pulpit-paczka__gotowosc > strong { color: var(--ui-tekst); font-size: 1.2rem; }.pulpit-paczka__gotowosc ul { margin: 5px 0 0; padding-left: 18px; }.pulpit-paczka__akcje { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 7px; }
+.pulpit-drawer { position: fixed; z-index: 30; top: 0; right: 0; width: min(430px, 100vw); height: 100vh; box-sizing: border-box; display: grid; align-content: start; gap: 16px; padding: 28px; overflow: auto; border-left: 1px solid var(--ui-akcent); background: var(--ui-panel); box-shadow: -18px 0 36px rgba(0, 0, 0, .35); }.pulpit-drawer h2 { margin: 0; }.pulpit-drawer__zamknij { position: absolute; top: 14px; right: 14px; font-size: 1.3rem; }.pulpit-drawer dl { display: grid; gap: 9px; margin: 0; }.pulpit-drawer dl div { display: grid; gap: 3px; }.pulpit-drawer dt { color: var(--ui-tekst-drugi); font-size: .75rem; }.pulpit-drawer dd { margin: 0; }
+.pulpit-modal { position: fixed; z-index: 40; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(0, 0, 0, .62); }.pulpit-modal > div { width: min(520px, 100%); padding: 24px; border: 1px solid #facc15; border-radius: 10px; background: var(--ui-powierzchnia); }.pulpit-modal h2 { margin-top: 0; }.pulpit-modal__akcje { display: flex; justify-content: end; gap: 8px; }
+@media (max-width: 860px) { .pulpit-kafelki { grid-template-columns: repeat(2, minmax(0, 1fr)); }.pulpit-formularz-zadania { grid-template-columns: 1fr 1fr; }.pulpit-os-czasu__zadanie { width: min(220px, 55vw); }.pulpit-paczka { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .pulpit__naglowek, .pulpit-sekcja__naglowek { align-items: stretch; flex-direction: column; }.pulpit-sekcja__naglowek--plan { display: flex; }.pulpit-kafelki { grid-template-columns: 1fr; }.pulpit-nawigacja-daty { flex-wrap: wrap; justify-content: center; }.pulpit-os-czasu { overflow-x: auto; }.pulpit-os-czasu__etykiety, .pulpit-os-czasu__linia, .pulpit-os-czasu__zadania { min-width: 560px; }.pulpit-formularz-zadania { grid-template-columns: 1fr; }.pulpit-sekcja { padding: 16px; } }
+
+
+.pulpit-os-czasu {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 205px;
+  padding: 38px 10px 0;
+  overflow: visible;
+  isolation: isolate;
+  container-type: inline-size;
+}
+
+.pulpit-os-czasu__linia {
+  position: relative;
+  z-index: 12;
+  height: 12px;
+  background: transparent;
+}
+
+.pulpit-os-czasu__odcinek {
+  position: absolute;
+  z-index: 0;
+  border-radius: 999px;
+}
+
+.pulpit-os-czasu__odcinek--przed-praca,
+.pulpit-os-czasu__odcinek--po-pracy {
+  top: 3px;
+  height: 6px;
+  background: var(--ui-pole);
+}
+
+.pulpit-os-czasu__odcinek--praca {
+  top: -6px;
+  height: 24px;
+  background: color-mix(in srgb, var(--ui-akcent) 48%, var(--ui-powierzchnia));
+  box-shadow: 0 0 8px color-mix(in srgb, var(--ui-akcent) 22%, transparent);
+}
+
+.pulpit-os-czasu__postep {
+  position: absolute;
+  z-index: 1;
+  top: 4px;
+  left: 0;
+  height: 4px;
+}
+
+.pulpit-os-czasu__wskaznik {
+  position: absolute;
+  z-index: 30;
+  top: -31px;
+  width: 0;
+  height: 48px;
+  pointer-events: none;
+}
+
+.pulpit-os-czasu__wskaznik::after {
+  position: absolute;
+  top: 25px;
+  left: -1px;
+  width: 2px;
+  height: 24px;
+  background: #fef08a;
+  box-shadow: 0 0 8px rgba(254, 240, 138, .72);
+  content: '';
+}
+
+.pulpit-os-czasu__etykieta-teraz {
+  position: absolute;
+  top: 0;
+  display: block;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: calc(100vw - 64px);
+  border: 1px solid rgba(254, 240, 138, .75);
+  border-radius: 5px;
+  background: var(--ui-powierzchnia);
+  color: #fff7a8;
+  font-size: .76rem;
+  font-weight: 900;
+  line-height: 1.25;
+  letter-spacing: .035em;
+  padding: 4px 7px;
+  white-space: nowrap;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, .38);
+}
+
+.pulpit-os-czasu__etykieta-teraz--poczatek { transform: translateX(0); }
+.pulpit-os-czasu__etykieta-teraz--srodek { transform: translateX(-50%); }
+.pulpit-os-czasu__etykieta-teraz--koniec { transform: translateX(-100%); }
+
+.pulpit-os-czasu__etykiety {
+  position: relative;
+  z-index: 2;
+  height: 40px;
+  margin-top: 8px;
+  color: var(--ui-tekst-drugi);
+  font-size: .68rem;
+}
+
+.pulpit-os-czasu__etykieta,
+.pulpit-os-czasu__etykieta-pracy {
+  position: absolute;
+  width: max-content;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.pulpit-os-czasu__etykieta--lewo { transform: translateX(0); }
+.pulpit-os-czasu__etykieta--prawo { transform: translateX(-100%); }
+
+.pulpit-os-czasu__etykieta-pracy {
+  top: 18px;
+  color: var(--ui-tekst-drugi);
+  font-size: .64rem;
+  font-weight: 700;
+}
+
+.pulpit-os-czasu__zadania {
+  position: relative;
+  z-index: 15;
+  height: 135px;
+  overflow: visible;
+}
+
+.pulpit-deadline {
+  --kolor-zadaniodawcy: #38bdf8;
+  --kolor-zadaniobiorcy: #9a3412;
+  position: absolute;
+  z-index: 18;
+  top: 0;
+  width: 0;
+  height: 115px;
+}
+
+.pulpit-deadline::before {
+  position: absolute;
+  top: -25px;
+  left: -1px;
+  width: 2px;
+  height: 48px;
+  background: #fb923c;
+  content: '';
+}
+
+.pulpit-deadline__linia-do-fajrantu {
+  position: absolute;
+  z-index: 0;
+  top: -17px;
+  left: 0;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--kolor-zadaniodawcy);
+  opacity: .62;
+  pointer-events: none;
+  box-shadow: 0 0 5px var(--kolor-zadaniodawcy);
+}
+
+.pulpit .pulpit-deadline__przycisk {
+  position: absolute;
+  z-index: 2;
+  top: 13px;
+  left: 0;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  width: max-content;
+  max-width: 190px;
+  min-height: 0;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  transform: translateX(-50%);
+}
+
+.pulpit .pulpit-deadline__przycisk:hover,
+.pulpit .pulpit-deadline__przycisk:focus-visible {
+  border: 0;
+  background: transparent;
+}
+
+.pulpit-deadline__romb {
+  position: relative;
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 4px solid var(--kolor-zadaniobiorcy);
+  background: transparent;
+  transform: rotate(45deg);
+  box-shadow:
+    0 0 0 2px rgba(255, 247, 237, .9);
+}
+
+.pulpit-deadline__romb span {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: var(--kolor-zadaniodawcy);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, .65);
+}
+
+.pulpit-deadline--zwykle .pulpit-deadline__romb {
+  box-shadow: 0 0 0 2px rgba(255, 247, 237, .9);
+}
+
+.pulpit-deadline--pilne::before {
+  box-shadow: 0 0 8px var(--kolor-zadaniobiorcy);
+}
+
+.pulpit-deadline--pilne .pulpit-deadline__romb {
+  box-shadow:
+    0 0 0 2px rgba(255, 247, 237, .9),
+    0 0 calc(var(--pulpit-deadline-glow) + 4px) var(--kolor-zadaniobiorcy);
+}
+
+.pulpit-deadline--asap::before {
+  box-shadow: 0 0 14px var(--kolor-zadaniobiorcy);
+}
+
+.pulpit-deadline--asap .pulpit-deadline__romb {
+  box-shadow:
+    0 0 0 2px rgba(255, 247, 237, .9),
+    0 0 calc(var(--pulpit-deadline-glow) + 12px) var(--kolor-zadaniobiorcy);
+}
+
+.pulpit-deadline--pilne:hover .pulpit-deadline__romb,
+.pulpit-deadline--pilne:focus-within .pulpit-deadline__romb {
+  box-shadow:
+    0 0 0 2px rgba(255, 247, 237, .9),
+    0 0 calc(var(--pulpit-deadline-glow) + 8px) var(--kolor-zadaniobiorcy);
+}
+
+.pulpit-deadline--asap:hover .pulpit-deadline__romb,
+.pulpit-deadline--asap:focus-within .pulpit-deadline__romb {
+  box-shadow:
+    0 0 0 2px rgba(255, 247, 237, .9),
+    0 0 calc(var(--pulpit-deadline-glow) + 16px) var(--kolor-zadaniobiorcy);
+}
+
+.pulpit-deadline__etykieta {
+  display: block;
+  max-width: 190px;
+  overflow: hidden;
+  color: #ffedd5;
+  font-size: .7rem;
+  font-weight: 850;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pulpit-deadline__plomien {
+  position: absolute;
+  top: -27px;
+  z-index: 3;
+  font-size: 1.15rem;
+  filter: drop-shadow(0 0 5px rgba(251, 146, 60, .95));
+  animation: pulpit-plomien 1.35s ease-in-out infinite;
+}
+
+.pulpit-deadline__tooltip {
+  position: absolute;
+  z-index: 50;
+  top: 66px;
+  left: 0;
+  display: grid;
+  width: min(285px, calc(100vw - 72px));
+  gap: 4px;
+  border: 1px solid #fb923c;
+  border-radius: 8px;
+  background: #1c1917;
+  color: #fff7ed;
+  font-size: .76rem;
+  line-height: 1.35;
+  padding: 10px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(-4px);
+  transition: opacity .14s ease, transform .14s ease;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, .46);
+}
+
+.pulpit-deadline:hover .pulpit-deadline__tooltip,
+.pulpit-deadline:focus-within .pulpit-deadline__tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.pulpit-deadline--lewo .pulpit-deadline__tooltip {
+  transform: translateX(0) translateY(-4px);
+}
+
+.pulpit-deadline--lewo:hover .pulpit-deadline__tooltip,
+.pulpit-deadline--lewo:focus-within .pulpit-deadline__tooltip {
+  transform: translateX(0) translateY(0);
+}
+
+.pulpit-deadline--prawo .pulpit-deadline__tooltip {
+  transform: translateX(-100%) translateY(-4px);
+}
+
+.pulpit-deadline--prawo:hover .pulpit-deadline__tooltip,
+.pulpit-deadline--prawo:focus-within .pulpit-deadline__tooltip {
+  transform: translateX(-100%) translateY(0);
+}
+
+.pulpit-status--asap {
+  border-color: #fb923c;
+  background: #7c2d12;
+  color: #ffedd5;
+}
+
+.pulpit-formularz-zadania {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 12px;
+  align-items: end;
+  padding: 16px;
+}
+
+.pulpit-formularz-zadania > label {
+  grid-column: span 3;
+}
+
+.pulpit-formularz-zadania__nazwa {
+  grid-column: span 6 !important;
+}
+
+.pulpit-formularz-zadania label > input,
+.pulpit-formularz-zadania label > select {
+  width: 100%;
+}
+
+.pulpit-przypomnienia {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 30%, transparent);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.pulpit-przypomnienia legend {
+  color: var(--ui-tekst-drugi);
+  font-size: .82rem;
+  font-weight: 700;
+  padding: 0 5px;
+}
+
+.pulpit-przypomnienie {
+  display: grid;
+  grid-template-columns: minmax(90px, 130px) minmax(150px, 220px) auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.pulpit-formularz-zadania__blad {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #fecaca;
+  font-weight: 700;
+}
+
+.pulpit-formularz-zadania__zapisz {
+  grid-column: -3 / -1;
+}
+
+.pulpit-drawer__akcje {
+  display: grid;
+  gap: 9px;
+}
+
+.pulpit-drawer__akcje label {
+  display: grid;
+  gap: 5px;
+  color: var(--ui-tekst-drugi);
+  font-size: .82rem;
+}
+
+.pulpit-przycisk-niebezpieczny {
+  border-color: #f87171 !important;
+  color: #fecaca !important;
+}
+
+@keyframes pulpit-plomien {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-2px) scale(1.06); }
+}
+
+@media (max-width: 980px) {
+  .pulpit-formularz-zadania > label { grid-column: span 6; }
+  .pulpit-formularz-zadania__nazwa { grid-column: 1 / -1 !important; }
+}
+
+@media (max-width: 560px) {
+  .pulpit-os-czasu { padding-inline: 4px; overflow: visible; }
+  .pulpit-os-czasu__etykiety,
+  .pulpit-os-czasu__linia,
+  .pulpit-os-czasu__zadania { min-width: 0; }
+  .pulpit-formularz-zadania { grid-template-columns: 1fr; }
+  .pulpit-formularz-zadania > label,
+  .pulpit-formularz-zadania__nazwa,
+  .pulpit-formularz-zadania__zapisz { grid-column: 1 !important; }
+  .pulpit-przypomnienie { grid-template-columns: 1fr; }
+  .pulpit-deadline__etykieta { max-width: 120px; }
+}
+
+@media (max-width: 720px) {
+  .pulpit-os-czasu__etykieta-pracy { display: none; }
+}
+
+@container (max-width: 430px) {
+  .pulpit-os-czasu__etykieta:nth-child(even) { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulpit-deadline__plomien { animation: none; }
+  .pulpit-deadline__tooltip { transition: none; }
+}
+
+.pulpit-kafelek--zakupy { border-color: rgba(56, 189, 248, .55); background: #06243a; }
+.pulpit-kafelek--zakupy:hover { border-color: #7dd3fc; background: #0c3a5a; }
+.pulpit-kafelek__naglowek { display: flex; align-items: center; gap: 8px; font-weight: 800; letter-spacing: .04em; }
+.pulpit-kafelek__ikona { width: 22px; height: 22px; color: #7dd3fc; }
+.pulpit-kafelek--zakupy em { color: #bae6fd; font-size: .8rem; font-style: normal; font-weight: 700; }
+.pulpit-drawer__naglowek { display: flex; align-items: start; justify-content: space-between; gap: 12px; padding-right: 28px; }
+.pulpit-drawer__naglowek p { margin: 5px 0 0; color: var(--ui-tekst-drugi); }
+.pulpit-zapotrzebowania { display: grid; gap: 12px; }
+.pulpit-zapotrzebowanie { display: grid; gap: 7px; padding: 14px; border: 1px solid rgba(125, 211, 252, .35); border-radius: 8px; background: #06243a; }
+.pulpit-zapotrzebowanie h3, .pulpit-zapotrzebowanie p { margin: 0; }
+.pulpit-zapotrzebowanie p { color: #cbe8f8; }
+.pulpit-zapotrzebowanie__akcje { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.pulpit-formularz-zakupu { display: grid; gap: 14px; }
+.pulpit-formularz-zakupu label { display: grid; gap: 5px; color: var(--ui-tekst-drugi); font-size: .9rem; }
+.pulpit-formularz-zakupu textarea { box-sizing: border-box; width: 100%; min-height: 90px; border: 1px solid color-mix(in srgb, var(--ui-akcent) 45%, transparent); border-radius: 6px; background: var(--ui-pole); color: var(--ui-tekst); font: inherit; padding: 7px; resize: vertical; }
+.pulpit-formularz-zakupu textarea:focus-visible { outline: 2px solid #fef08a; outline-offset: 2px; }
+.pulpit-formularz-zakupu__blad { margin: 0; color: #fecaca; font-weight: 700; }
+
+/* Edycja zadania w bocznym panelu — formularz ma osobny,
+   zwarty układ dopasowany do szerokości drawera. */
+.pulpit-drawer__edycja {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.pulpit-drawer__edycja > h3 {
+  margin: 0;
+}
+
+.pulpit-drawer__edycja .pulpit-formularz-zadania {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%;
+  box-sizing: border-box;
+  gap: 12px;
+  align-items: start;
+}
+
+.pulpit-drawer__edycja .pulpit-formularz-zadania > label {
+  grid-column: auto;
+  min-width: 0;
+}
+
+.pulpit-drawer__edycja .pulpit-formularz-zadania__nazwa {
+  grid-column: 1 / -1 !important;
+}
+
+.pulpit-drawer__edycja .pulpit-formularz-zadania > label:nth-of-type(5) {
+  grid-column: 1 / -1;
+}
+
+.pulpit-drawer__edycja .pulpit-formularz-zadania label > input,
+.pulpit-drawer__edycja .pulpit-formularz-zadania label > select {
+  width: 100%;
+  min-width: 0;
+}
+
+.pulpit-drawer__edycja .pulpit-przypomnienia {
+  grid-column: 1 / -1;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.pulpit-drawer__edycja .pulpit-przypomnienie {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.pulpit-drawer__edycja .pulpit-formularz-zadania__blad {
+  grid-column: 1 / -1;
+}
+
+.pulpit-drawer__edycja .pulpit-modal__akcje {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pulpit-drawer__edycja .pulpit-formularz-zadania__zapisz {
+  grid-column: auto;
+}
+
+@media (max-width: 440px) {
+  .pulpit-drawer {
+    padding-inline: 18px;
+  }
+
+  .pulpit-drawer__edycja .pulpit-formularz-zadania {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pulpit-drawer__edycja .pulpit-formularz-zadania > label,
+  .pulpit-drawer__edycja .pulpit-formularz-zadania__nazwa,
+  .pulpit-drawer__edycja .pulpit-formularz-zadania > label:nth-of-type(5) {
+    grid-column: 1 !important;
+  }
+}
+
+/* USTAWIENIA SYSTEMOWE PULPITU */
+.pulpit {
+  gap: calc(var(--ui-density-gap) * 1.3333);
+}
+
+.pulpit select,
+.pulpit input,
+.pulpit button:not(.pulpit-deadline__przycisk) {
+  border-radius: var(--ui-promien-pola);
+  transition-duration: var(--ui-transition-ms);
+}
+
+.pulpit select,
+.pulpit input {
+  border-color: var(--ui-obramowanie);
+  background: var(--ui-pole);
+  color: var(--ui-tekst);
+}
+
+.pulpit-kafelek,
+.pulpit-zadanie,
+.pulpit-paczka,
+.pulpit-modal > div {
+  border-radius: var(--ui-promien-karty);
+  border-color: var(--ui-obramowanie);
+  background: var(--ui-powierzchnia);
+  color: var(--ui-tekst);
+}
+
+.pulpit-sekcja,
+.pulpit-drawer {
+  border-color: var(--ui-obramowanie);
+  background: var(--ui-panel);
+  color: var(--ui-tekst);
+}
+
+.pulpit button:not(.pulpit-deadline__przycisk):not(.pulpit-zadanie__tresc):hover {
+  transform: scale(var(--ui-hover-scale));
+}
+
+.pulpit-przycisk-glowny {
+  border-color: var(--ui-akcent) !important;
+  background: var(--ui-akcent) !important;
+}
+
+.pulpit-os-czasu__postep {
+  background: var(--ui-akcent);
+}
+
+.pulpit-deadline__romb {
+  width: var(--pulpit-deadline-size);
+  height: var(--pulpit-deadline-size);
+  border-width: var(--pulpit-deadline-border);
+  border-style: solid;
+  border-color: var(--kolor-zadaniobiorcy);
+  background: transparent;
+  box-shadow:
+    0 0 0 2px rgba(255, 247, 237, .9);
+}
+
+.pulpit-deadline__romb span {
+  width: var(--pulpit-deadline-dot-size);
+  height: var(--pulpit-deadline-dot-size);
+}
+
+html[data-ui-pokaz-plomien-asap="false"] .pulpit-deadline__plomien {
+  display: none;
+}
+
+===== testy/pulpit.regresja.test.ts =====
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import test from 'node:test'
+import { obliczPostepCzasuDnia, pobierzEtykietyOsiCzasu, pobierzGraniceDniaPracyNaOsi, pobierzStanWskaznikaCzasu, pozycjaGodzinyNaOsi } from '../src/moduly/zamkniete/pulpit/logika/czasDnia.ts'
+import { domyslneUstawieniaAplikacji, normalizujUstawieniaAplikacji } from '../src/aplikacja/ustawienia/modelUstawienAplikacji.ts'
+import { eksportujUstawieniaAplikacji, importujUstawieniaAplikacji, pobierzUstawieniaAplikacji, zapiszUstawieniaAplikacji } from '../src/aplikacja/ustawienia/magazynUstawienAplikacji.ts'
+import { czyMoznaZmienicKontekstPulpitu } from '../src/moduly/zamkniete/pulpit/logika/kontekstPulpitu.ts'
+import { czyPaczkaOpozniona, czyPaczkaWidoczna, czyWysylkaWymagaDodatkowegoPotwierdzenia, pobierzGotowoscPaczki, sortujPaczki } from '../src/moduly/zamkniete/pulpit/logika/paczki.ts'
+import { obliczLicznikiPulpitu } from '../src/moduly/zamkniete/pulpit/logika/podsumowaniePulpitu.ts'
+import { obliczLiczbeAktywnychZapotrzebowanZakupowych, odmienRzeczDoZakupu, pobierzTekstLicznikaZakupow, walidujNoweZapotrzebowanieZakupowe } from '../src/moduly/zamkniete/pulpit/logika/zapotrzebowaniaZakupowe.ts'
+import { generujZadaniaAutomatyczne } from '../src/moduly/zamkniete/pulpit/logika/zadaniaAutomatyczne.ts'
+import { czyMoznaEdytowacZadanie, czyMoznaOznaczycZadanieRecznie, czyMoznaWybracZadaniodawce, czyZadanieDoKoncaDnia, czyZadanieOpoznione, czyZadanieWidoczneDlaUzytkownika, pobierzEtykieteStatusuZadania, pobierzGodzineLogicznegoDeadline, pobierzGodzineMarkeraZadania, pobierzMomentPrzypomnieniaZadania, pobierzSzerokoscLiniiDoFajrantu, pobierzZadaniaDeadline, rozstrzygnijPrzypisanieZadania, sortujZadaniaBezGodziny, walidujPrzypomnienia } from '../src/moduly/zamkniete/pulpit/logika/zadania.ts'
+import type { PaczkaPulpitu, StatusZapotrzebowaniaZakupowego, ZadaniePulpitu, ZapotrzebowanieZakupowe } from '../src/moduly/zamkniete/pulpit/modele/pulpit.ts'
+import { edytujZadanieRecznePrzezZadaniodawce, normalizujZadaniePulpitu, pobierzStanPulpitu, zapiszZadanieReczne, zapiszZapotrzebowanieZakupowe } from '../src/moduly/zamkniete/pulpit/uslugi/magazynPulpitu.ts'
+
+const teraz = new Date('2026-07-22T14:00:00')
+const zadanie = (zmiany: Partial<ZadaniePulpitu> = {}): ZadaniePulpitu => ({ id: 'zadanie', tytul: 'Zadanie', data: '2026-07-22', utworzono: '2026-07-22T08:00:00.000Z', status: 'OTWARTE', priorytet: 'ZWYKLE', typZrodla: 'RECZNE', typZadania: 'ZADANIE_WLASNE', wlascicielId: 'anna', zadaniodawcaId: 'anna', zadaniobiorcaId: 'anna', przypomnienia: [], czyAutomatyczne: false, czyTerminKrytyczny: false, ...zmiany })
+const paczka = (zmiany: Partial<PaczkaPulpitu> = {}): PaczkaPulpitu => ({ id: 'paczka', nazwaSzkolenia: 'Excel', miasto: 'Warszawa', terminySzkolenia: ['2026-07-30'], trenerzy: ['Anna Trener'], planowanaDataWysylki: '2026-07-29', wlascicielId: 'anna', liczbaGotowych: 5, liczbaWymaganych: 7, brakujaceElementy: ['materiały'], czyWyslana: false, ...zmiany })
+
+test('tylko Architekt może zmieniać kontekst Pulpitu', () => {
+  assert.equal(czyMoznaZmienicKontekstPulpitu('ARCHITEKT'), true)
+  assert.equal(czyMoznaZmienicKontekstPulpitu('ADMINISTRATOR'), false)
+  assert.equal(czyMoznaZmienicKontekstPulpitu('OPIEKUN'), false)
+})
+
+test('postęp czasu dnia obejmuje pełną dobę i skraca czas poza pracą', () => {
+  assert.equal(obliczPostepCzasuDnia(new Date('2026-07-22T00:00:00')), 0)
+  assert.ok(Math.abs(obliczPostepCzasuDnia(new Date('2026-07-22T12:00:00')) - 50.3875968992248) < 0.000001)
+  assert.ok(Math.abs(obliczPostepCzasuDnia(new Date('2026-07-22T18:00:00')) - 81.3953488372093) < 0.000001)
+  assert.ok(obliczPostepCzasuDnia(new Date('2026-07-22T23:59:00')) > 99.9)
+
+  const granice = pobierzGraniceDniaPracyNaOsi()
+  const skalaMinutyPrzedPraca = granice.poczatek / (7 * 60 + 45)
+  const skalaMinutyPracy = (granice.koniec - granice.poczatek) / (8 * 60 + 15)
+  const skalaMinutyPoPracy = (100 - granice.koniec) / (8 * 60)
+  assert.ok(Math.abs(skalaMinutyPracy / skalaMinutyPrzedPraca - 2) < 0.000001)
+  assert.ok(Math.abs(skalaMinutyPracy / skalaMinutyPoPracy - 2) < 0.000001)
+})
+
+test('status zadania rozróżnia opóźnione, wykonane i zadanie bez godziny', () => {
+  assert.equal(czyZadanieOpoznione(zadanie({ data: '2026-07-23', godzina: '09:00' }), teraz), false)
+  assert.equal(czyZadanieOpoznione(zadanie({ godzina: '13:59' }), teraz), true)
+  assert.equal(pobierzEtykieteStatusuZadania(zadanie({ status: 'WYKONANE', godzina: '13:00' }), teraz), 'Wykonane')
+  assert.equal(czyZadanieOpoznione(zadanie(), teraz), false)
+})
+
+test('zadania bez godziny są sortowane według pilności i utworzenia', () => {
+  const posortowane = sortujZadaniaBezGodziny([zadanie({ id: 'zwykle', utworzono: '2026-07-22T08:00:00Z' }), zadanie({ id: 'pilne-pozne', priorytet: 'PILNE', utworzono: '2026-07-22T10:00:00Z' }), zadanie({ id: 'pilne-wczesne', priorytet: 'PILNE', utworzono: '2026-07-22T09:00:00Z' })], teraz)
+  assert.deepEqual(posortowane.map((pozycja) => pozycja.id), ['pilne-wczesne', 'pilne-pozne', 'zwykle'])
+})
+
+test('reguły automatyczne wykrywają zatwierdzone braki i nie pozwalają ich ręcznie zamknąć', () => {
+  const zadania = generujZadaniaAutomatyczne([{ id: 'szkolenie-1', tytul: 'Szkolenie', wlascicielId: 'anna', data: '2026-07-22', czyMaTrenera: false, czyHotelWymagany: true, czyHotelZarezerwowany: false, czyDaneKlientaKompletne: false, czyMaterialyOdTreneraGotowe: false }])
+  assert.deepEqual(zadania.map((pozycja) => pozycja.typZadania), ['BRAK_TRENERA', 'BRAK_HOTELU', 'BRAK_DANYCH_KLIENTA', 'BRAK_MATERIALOW_TRENERA'])
+  assert.equal(czyMoznaOznaczycZadanieRecznie(zadania[0]), false)
+  assert.deepEqual(generujZadaniaAutomatyczne([{ id: 'szkolenie-2', tytul: 'Bez hotelu', wlascicielId: 'anna', data: '2026-07-22', czyMaTrenera: true, czyHotelWymagany: false, czyHotelZarezerwowany: false, czyDaneKlientaKompletne: true }]), [])
+})
+
+test('paczki są widoczne od siedmiu dni, pozostają po terminie i znikają po wysłaniu', () => {
+  assert.equal(czyPaczkaWidoczna(paczka({ planowanaDataWysylki: '2026-07-30' }), teraz), false)
+  assert.equal(czyPaczkaWidoczna(paczka({ planowanaDataWysylki: '2026-07-29' }), teraz), true)
+  assert.equal(czyPaczkaWidoczna(paczka({ planowanaDataWysylki: '2026-07-22' }), teraz), true)
+  assert.equal(czyPaczkaOpozniona(paczka({ planowanaDataWysylki: '2026-07-21' }), teraz), true)
+  assert.equal(czyPaczkaWidoczna(paczka({ planowanaDataWysylki: '2026-07-21', czyWyslana: true }), teraz), false)
+})
+
+test('paczki opóźnione są pierwsze, a gotowość pokazuje X/Y i procent', () => {
+  const posortowane = sortujPaczki([paczka({ id: 'pozniej', planowanaDataWysylki: '2026-07-28' }), paczka({ id: 'opozniona', planowanaDataWysylki: '2026-07-21' }), paczka({ id: 'wczesniej', planowanaDataWysylki: '2026-07-25' })], teraz)
+  assert.deepEqual(posortowane.map((pozycja) => pozycja.id), ['opozniona', 'wczesniej', 'pozniej'])
+  assert.deepEqual(pobierzGotowoscPaczki(paczka()), { procent: 71, tekst: '71% • 5/7', czyGotowa: false })
+  assert.deepEqual(pobierzGotowoscPaczki(paczka({ liczbaGotowych: 7, brakujaceElementy: [] })), { procent: 100, tekst: '100% • 7/7', czyGotowa: true })
+  assert.equal(czyWysylkaWymagaDodatkowegoPotwierdzenia(paczka()), true)
+  assert.equal(czyWysylkaWymagaDodatkowegoPotwierdzenia(paczka({ brakujaceElementy: [] })), false)
+})
+
+test('liczniki kafelków wynikają z aktualnych zadań i paczek', () => {
+  const automatyczne = zadanie({ id: 'blokada', czyAutomatyczne: true, priorytet: 'PILNE', godzina: '13:00' })
+  const liczniki = obliczLicznikiPulpitu([zadanie(), automatyczne], [paczka({ planowanaDataWysylki: '2026-07-29' })], teraz, '2026-07-22')
+  assert.deepEqual(liczniki, { doZrobienia: 2, pilne: 1, paczki: 1, blokady: 1 })
+})
+
+
+test('wskaźnik czasu pokazuje PREFAJRANT o 07:44', () => {
+  assert.deepEqual(pobierzStanWskaznikaCzasu(new Date('2026-07-22T07:44:00')), {
+    etykieta: 'PREFAJRANT',
+    pozycja: 23.979328165374678,
+    wyrownanieEtykiety: 'SRODEK',
+  })
+})
+
+test('wskaźnik czasu pokazuje TERAZ od 07:45 do 15:59', () => {
+  assert.equal(pobierzStanWskaznikaCzasu(new Date('2026-07-22T07:45:00')).etykieta, 'TERAZ')
+  assert.equal(pobierzStanWskaznikaCzasu(new Date('2026-07-22T15:59:00')).etykieta, 'TERAZ')
+})
+
+test('wskaźnik czasu pokazuje FAJRANT od 16:00', () => {
+  assert.deepEqual(pobierzStanWskaznikaCzasu(new Date('2026-07-22T16:00:00')), {
+    etykieta: 'FAJRANT',
+    pozycja: 75.1937984496124,
+    wyrownanieEtykiety: 'SRODEK',
+  })
+})
+
+test('etykieta czasu jest przypięta do wnętrza lewej i prawej krawędzi pełnej osi', () => {
+  const lewa = pobierzStanWskaznikaCzasu(new Date('2026-07-22T00:00:00'))
+  const prawa = pobierzStanWskaznikaCzasu(new Date('2026-07-22T23:59:00'))
+  assert.equal(lewa.pozycja, 0)
+  assert.equal(lewa.wyrownanieEtykiety, 'POCZATEK')
+  assert.ok(prawa.pozycja > 99.9)
+  assert.equal(prawa.wyrownanieEtykiety, 'KONIEC')
+})
+
+test('ASAP jest sortowane przed wszystkimi pozostałymi priorytetami', () => {
+  const posortowane = sortujZadaniaBezGodziny([
+    zadanie({ id: 'zwykle', priorytet: 'ZWYKLE' }),
+    zadanie({ id: 'pilne', priorytet: 'PILNE' }),
+    zadanie({ id: 'asap', priorytet: 'ASAP' }),
+  ], teraz)
+  assert.deepEqual(posortowane.map((pozycja) => pozycja.id), ['asap', 'pilne', 'zwykle'])
+})
+
+test('deadline trafia we właściwe miejsce pełnej osi czasu', () => {
+  const zakresPracy = { poczatek: '07:45', koniec: '16:00' }
+  assert.equal(pozycjaGodzinyNaOsi('00:00'), 0)
+  assert.ok(Math.abs(pozycjaGodzinyNaOsi('12:00') - 50.3875968992248) < 0.000001)
+  assert.ok(Math.abs(pozycjaGodzinyNaOsi('18:00') - 81.3953488372093) < 0.000001)
+  assert.ok(pozycjaGodzinyNaOsi('23:59') > 99.9)
+  assert.ok(Math.abs(pozycjaGodzinyNaOsi('13:52', zakresPracy) - 61.963824289405686) < 0.000001)
+})
+
+test('zadanie bez godziny nie tworzy markera deadline', () => {
+  const zadaniaDeadline = pobierzZadaniaDeadline([
+    zadanie({ id: 'z-godzina', godzina: '12:00' }),
+    zadanie({ id: 'bez-godziny' }),
+    zadanie({ id: 'inny-dzien', data: '2026-07-23', godzina: '12:00' }),
+  ], '2026-07-22', teraz)
+  assert.deepEqual(zadaniaDeadline.map((pozycja) => pozycja.id), ['z-godzina'])
+})
+
+test('zadanie do końca dnia ma logiczny deadline FAJRANT, marker utworzenia i linię do końca pracy', () => {
+  const zakresDniaPracy = { poczatek: '07:45', koniec: '16:00' }
+  const doKoncaDnia = zadanie({
+    id: 'do-konca-dnia',
+    rodzajTerminu: 'DO_KONCA_DNIA',
+    utworzono: '2026-07-22T10:30:00',
+  })
+
+  assert.equal(doKoncaDnia.godzina, undefined)
+  assert.equal(czyZadanieDoKoncaDnia(doKoncaDnia), true)
+  assert.equal(pobierzGodzineLogicznegoDeadline(doKoncaDnia, zakresDniaPracy), '16:00')
+  assert.equal(pobierzGodzineMarkeraZadania(doKoncaDnia, zakresDniaPracy), '10:30')
+  assert.ok(Math.abs(pozycjaGodzinyNaOsi(pobierzGodzineMarkeraZadania(doKoncaDnia, zakresDniaPracy)!, zakresDniaPracy) - 41.08527131782946) < 0.000001)
+  assert.ok(Math.abs(pozycjaGodzinyNaOsi(zakresDniaPracy.koniec, zakresDniaPracy) - 75.1937984496124) < 0.000001)
+  assert.ok(Math.abs(pobierzSzerokoscLiniiDoFajrantu(doKoncaDnia, zakresDniaPracy) - 34.10852713178294) < 0.000001)
+  assert.deepEqual(pobierzZadaniaDeadline([doKoncaDnia, zadanie({ id: 'bez-godziny' })], '2026-07-22', teraz, zakresDniaPracy).map((pozycja) => pozycja.id), ['do-konca-dnia'])
+  assert.equal(czyZadanieOpoznione(doKoncaDnia, new Date('2026-07-22T15:59:00'), zakresDniaPracy), false)
+  assert.equal(czyZadanieOpoznione(doKoncaDnia, new Date('2026-07-22T16:01:00'), zakresDniaPracy), true)
+  assert.equal(pobierzMomentPrzypomnieniaZadania(doKoncaDnia, { id: 'godzina', wartosc: 1, jednostka: 'GODZINY' }, zakresDniaPracy)?.getHours(), 15)
+})
+
+test('zadanie do końca dnia utworzone po FAJRANCIE zachowuje marker bez linii wstecz', () => {
+  const zakresDniaPracy = { poczatek: '07:45', koniec: '16:00' }
+  const poFajrancie = zadanie({
+    rodzajTerminu: 'DO_KONCA_DNIA',
+    utworzono: '2026-07-22T17:00:00',
+  })
+
+  assert.equal(pobierzGodzineMarkeraZadania(poFajrancie, zakresDniaPracy), '17:00')
+  assert.equal(pobierzSzerokoscLiniiDoFajrantu(poFajrancie, zakresDniaPracy), 0)
+  assert.equal(czyZadanieOpoznione(poFajrancie, new Date('2026-07-22T17:00:00'), zakresDniaPracy), true)
+})
+
+test('zadanie do końca dnia przełożone na następny dzień zaczyna się od początku pracy', () => {
+  const zakresDniaPracy = { poczatek: '07:45', koniec: '16:00' }
+  const przelozone = zadanie({
+    data: '2026-07-23',
+    odlozonoDo: '2026-07-23',
+    rodzajTerminu: 'DO_KONCA_DNIA',
+    utworzono: '2026-07-22T14:47:00',
+  })
+
+  assert.equal(pobierzGodzineMarkeraZadania(przelozone, zakresDniaPracy), '07:45')
+})
+
+test('domyślnie Zadaniodawca i Zadaniobiorca są aktualnym użytkownikiem', () => {
+  assert.deepEqual(rozstrzygnijPrzypisanieZadania('anna', 'OPIEKUN'), {
+    zadaniodawcaId: 'anna',
+    zadaniobiorcaId: 'anna',
+  })
+})
+
+test('zwykły użytkownik nie może zmienić Zadaniodawcy', () => {
+  assert.equal(czyMoznaWybracZadaniodawce('OPIEKUN'), false)
+  assert.deepEqual(rozstrzygnijPrzypisanieZadania('anna', 'OPIEKUN', 'jan', 'ewa'), {
+    zadaniodawcaId: 'anna',
+    zadaniobiorcaId: 'ewa',
+  })
+})
+
+test('Administrator może wybrać Zadaniodawcę, a Ja oznacza efektywnego Zadaniodawcę', () => {
+  assert.equal(czyMoznaWybracZadaniodawce('ADMINISTRATOR'), true)
+  assert.deepEqual(rozstrzygnijPrzypisanieZadania('admin', 'ADMINISTRATOR', 'jan'), {
+    zadaniodawcaId: 'jan',
+    zadaniobiorcaId: 'jan',
+  })
+})
+
+test('Zadaniobiorca widzi przypisane mu zadanie', () => {
+  assert.equal(czyZadanieWidoczneDlaUzytkownika(zadanie({ zadaniodawcaId: 'jan', zadaniobiorcaId: 'anna' }), 'anna'), true)
+})
+
+test('Zadaniodawca widzi zlecone zadanie', () => {
+  assert.equal(czyZadanieWidoczneDlaUzytkownika(zadanie({ zadaniodawcaId: 'jan', zadaniobiorcaId: 'anna' }), 'jan'), true)
+})
+
+test('można zapisać kilka różnych przypomnień, ale nie duplikaty', () => {
+  const rozne = [
+    { id: 'minuty', wartosc: 15, jednostka: 'MINUTY' as const },
+    { id: 'godziny', wartosc: 1, jednostka: 'GODZINY' as const },
+    { id: 'dni', wartosc: 1, jednostka: 'DNI' as const },
+  ]
+  assert.equal(walidujPrzypomnienia(rozne), null)
+  assert.match(walidujPrzypomnienia([...rozne, { id: 'duplikat', wartosc: 15, jednostka: 'MINUTY' }]) ?? '', /identyczne/)
+  assert.match(walidujPrzypomnienia([{ id: 'bledne', wartosc: 0, jednostka: 'DNI' }]) ?? '', /większa od zera/)
+})
+
+test('Architekt może edytować wszystkie ręczne zadania, a pozostali tylko własne otwarte', () => {
+  const otwarte = zadanie({
+    zadaniodawcaId: 'jan',
+    zadaniobiorcaId: 'anna',
+  })
+
+  assert.equal(
+    czyMoznaEdytowacZadanie(otwarte, 'jan', 'PRACOWNIK'),
+    true,
+  )
+
+  assert.equal(
+    czyMoznaEdytowacZadanie(otwarte, 'anna', 'PRACOWNIK'),
+    false,
+  )
+
+  assert.equal(
+    czyMoznaEdytowacZadanie(otwarte, 'administrator', 'ADMINISTRATOR'),
+    false,
+  )
+
+  assert.equal(
+    czyMoznaEdytowacZadanie(otwarte, 'kacper', 'ARCHITEKT'),
+    true,
+  )
+
+  assert.equal(
+    czyMoznaEdytowacZadanie(
+      { ...otwarte, status: 'WYKONANE' },
+      'kacper',
+      'ARCHITEKT',
+    ),
+    true,
+  )
+
+  assert.equal(
+    czyMoznaEdytowacZadanie(
+      { ...otwarte, status: 'WYKONANE' },
+      'jan',
+      'PRACOWNIK',
+    ),
+    false,
+  )
+
+  assert.equal(
+    czyMoznaEdytowacZadanie(
+      { ...otwarte, czyAutomatyczne: true },
+      'kacper',
+      'ARCHITEKT',
+    ),
+    false,
+  )
+})
+
+test('magazyn chroni edycję i zachowuje historyczne metadane zadania', () => {
+  const magazyn = new Map<string, string>()
+  globalThis.localStorage = {
+    getItem: (klucz: string) => magazyn.get(klucz) ?? null,
+    setItem: (klucz: string, wartosc: string) => magazyn.set(klucz, wartosc),
+    removeItem: (klucz: string) => magazyn.delete(klucz),
+    clear: () => magazyn.clear(),
+    key: () => null,
+    length: 0,
+  } as Storage
+
+  const oryginalne = zadanie({
+    id: 'edytowane',
+    tytul: 'Stary tytuł',
+    zadaniodawcaId: 'jan',
+    zadaniobiorcaId: 'anna',
+    wlascicielId: 'anna',
+    utworzono: '2026-07-20T08:00:00.000Z',
+  })
+
+  zapiszZadanieReczne(oryginalne)
+
+  const niedozwolone = edytujZadanieRecznePrzezZadaniodawce(
+    oryginalne.id,
+    'anna',
+    'PRACOWNIK',
+    {
+      tytul: 'Niedozwolona zmiana',
+      data: '2026-07-23',
+      godzina: '10:00',
+      priorytet: 'PILNE',
+      zadaniobiorcaId: 'anna',
+      przypomnienia: [],
+      powiazaneSzkolenieId: undefined,
+    },
+  )
+
+  assert.equal(niedozwolone, null)
+  assert.equal(pobierzStanPulpitu().zadaniaReczne[0]?.tytul, 'Stary tytuł')
+
+  const zaktualizowane = edytujZadanieRecznePrzezZadaniodawce(
+    oryginalne.id,
+    'jan',
+    'PRACOWNIK',
+    {
+      tytul: 'Nowy tytuł',
+      data: '2026-07-24',
+      godzina: '12:30',
+      priorytet: 'ASAP',
+      zadaniobiorcaId: 'ewa',
+      przypomnienia: [{ id: 'p1', wartosc: 15, jednostka: 'MINUTY' }],
+      powiazaneSzkolenieId: 'szkolenie-1',
+      odlozonoDo: '2026-07-24',
+    },
+  )
+
+  assert.ok(zaktualizowane)
+  assert.equal(zaktualizowane.id, oryginalne.id)
+  assert.equal(zaktualizowane.zadaniodawcaId, 'jan')
+  assert.equal(zaktualizowane.utworzono, '2026-07-20T08:00:00.000Z')
+  assert.equal(zaktualizowane.tytul, 'Nowy tytuł')
+  assert.equal(zaktualizowane.data, '2026-07-24')
+  assert.equal(zaktualizowane.godzina, '12:30')
+  assert.equal(zaktualizowane.zadaniobiorcaId, 'ewa')
+  assert.equal(zaktualizowane.wlascicielId, 'ewa')
+  assert.equal(zaktualizowane.odlozonoDo, '2026-07-24')
+
+  zapiszZadanieReczne({
+    ...zaktualizowane,
+    status: 'WYKONANE',
+    wykonano: '2026-07-22T21:15:00.000Z',
+  })
+
+  const poWykonaniu = edytujZadanieRecznePrzezZadaniodawce(
+    oryginalne.id,
+    'jan',
+    'PRACOWNIK',
+    {
+      tytul: 'Nie wolno',
+      data: '2026-07-25',
+      godzina: '13:00',
+      priorytet: 'ZWYKLE',
+      zadaniobiorcaId: 'jan',
+      przypomnienia: [],
+      powiazaneSzkolenieId: undefined,
+    },
+  )
+
+  assert.equal(poWykonaniu, null)
+
+  const wykonane = pobierzStanPulpitu().zadaniaReczne[0]
+  assert.equal(wykonane?.tytul, 'Nowy tytuł')
+  assert.equal(wykonane?.wykonano, '2026-07-22T21:15:00.000Z')
+
+  const korektaArchitekta = edytujZadanieRecznePrzezZadaniodawce(
+    oryginalne.id,
+    'kacper',
+    'ARCHITEKT',
+    {
+      tytul: 'Korekta Architekta',
+      data: '2026-07-26',
+      godzina: '14:15',
+      priorytet: 'PILNE',
+      zadaniobiorcaId: 'ewa',
+      przypomnienia: [],
+      powiazaneSzkolenieId: undefined,
+    },
+  )
+
+  assert.ok(korektaArchitekta)
+  assert.equal(korektaArchitekta.tytul, 'Korekta Architekta')
+  assert.equal(korektaArchitekta.status, 'WYKONANE')
+  assert.equal(korektaArchitekta.zadaniodawcaId, 'jan')
+  assert.equal(korektaArchitekta.zadaniobiorcaId, 'ewa')
+  assert.equal(korektaArchitekta.wykonano, '2026-07-22T21:15:00.000Z')
+})
+
+test('widok zapisuje moment wykonania i pokazuje brak czasu tylko dla starych danych', () => {
+  const widok = readFileSync('src/moduly/zamkniete/pulpit/WidokPulpitu.tsx', 'utf8')
+  assert.match(widok, /wykonano: new Date\(\)\.toISOString\(\)/)
+  assert.match(widok, /Brak danych o czasie wykonania/)
+  assert.match(widok, /Edytuj zadanie/)
+  assert.match(widok, /Zapisz zmiany/)
+  assert.match(widok, /Odłóż o dzień/)
+  assert.match(widok, /zapiszSzybkaEdycjeTerminu/)
+})
+
+test('stare zadanie bez nowych pól jest bezpiecznie normalizowane', () => {
+  const stare = normalizujZadaniePulpitu({
+    id: 'stare',
+    tytul: 'Starsze zadanie',
+    data: '2026-07-22',
+    utworzono: '2026-07-20T08:00:00.000Z',
+    status: 'OTWARTE',
+    priorytet: 'ZWYKLE',
+    typZrodla: 'RECZNE',
+    typZadania: 'ZADANIE_WLASNE',
+    wlascicielId: 'anna',
+    czyAutomatyczne: false,
+    czyTerminKrytyczny: false,
+  })
+  assert.ok(stare)
+  assert.equal(stare.zadaniodawcaId, 'anna')
+  assert.equal(stare.zadaniobiorcaId, 'anna')
+  assert.equal(stare.rodzajTerminu, undefined)
+  assert.deepEqual(stare.przypomnienia, [])
+})
+
+test('normalizacja zachowuje nowe terminy i rozróżnia stare zadanie godzinowe', () => {
+  const doKoncaDnia = normalizujZadaniePulpitu({
+    ...zadanie(),
+    godzina: undefined,
+    rodzajTerminu: 'DO_KONCA_DNIA',
+  })
+  const stareGodzinowe = normalizujZadaniePulpitu({
+    ...zadanie(),
+    godzina: '13:52',
+  })
+
+  assert.equal(doKoncaDnia?.rodzajTerminu, 'DO_KONCA_DNIA')
+  assert.equal(doKoncaDnia?.godzina, undefined)
+  assert.equal(stareGodzinowe?.rodzajTerminu, 'KONKRETNA_GODZINA')
+  assert.equal(stareGodzinowe?.godzina, '13:52')
+})
+
+const zapotrzebowanie = (zmiany: Partial<ZapotrzebowanieZakupowe> = {}): ZapotrzebowanieZakupowe => ({ id: 'zakup', nazwa: 'Papier A4', ilosc: 1, status: 'ZGLOSZONE', utworzonePrzezId: 'kacper', utworzonoAt: '2026-07-22T08:00:00.000Z', ...zmiany })
+
+test('kafelek ZAKUPY i formularz sa obecne w widoku Pulpitu', () => {
+  const widok = readFileSync('src/moduly/zamkniete/pulpit/WidokPulpitu.tsx', 'utf8')
+  assert.match(widok, /ZAKUPY/)
+  assert.match(widok, /pulpit-zakup-nazwa/)
+  assert.match(widok, /zapiszZapotrzebowanieZakupowe/)
+  assert.doesNotMatch(widok, /liczbaZakupow\s*=/)
+})
+
+test('licznik zakupow liczy pozycje aktywne, a nie ilosc sztuk', () => {
+  assert.equal(obliczLiczbeAktywnychZapotrzebowanZakupowych([]), 0)
+  assert.equal(obliczLiczbeAktywnychZapotrzebowanZakupowych([zapotrzebowanie({ ilosc: 10 })]), 1)
+  assert.equal(obliczLiczbeAktywnychZapotrzebowanZakupowych([zapotrzebowanie({ id: 'pierwsze' }), zapotrzebowanie({ id: 'drugie' }), zapotrzebowanie({ id: 'trzecie' })]), 3)
+})
+
+test('tylko wskazane statusy zapotrzebowan sa aktywne', () => {
+  const aktywne: StatusZapotrzebowaniaZakupowego[] = ['ZGLOSZONE', 'DO_ZAKUPU', 'W_REALIZACJI']
+  const nieaktywne: StatusZapotrzebowaniaZakupowego[] = ['KUPIONE', 'ANULOWANE', 'ZAMKNIETE', 'ARCHIWALNE']
+  for (const status of aktywne) assert.equal(obliczLiczbeAktywnychZapotrzebowanZakupowych([zapotrzebowanie({ status })]), 1)
+  for (const status of nieaktywne) assert.equal(obliczLiczbeAktywnychZapotrzebowanZakupowych([zapotrzebowanie({ status })]), 0)
+})
+
+test('walidacja zakupu odrzuca pusta nazwe oraz ilosc zero i ujemna', () => {
+  assert.ok(walidujNoweZapotrzebowanieZakupowe('   ', 1))
+  assert.ok(walidujNoweZapotrzebowanieZakupowe('Papier A4', 0))
+  assert.ok(walidujNoweZapotrzebowanieZakupowe('Papier A4', -1))
+  assert.equal(walidujNoweZapotrzebowanieZakupowe('Papier A4', 10), null)
+})
+
+test('odmiana rzeczy do zakupu i licznik 999 plus sa poprawne', () => {
+  assert.equal(odmienRzeczDoZakupu(1), 'rzecz do zakupu')
+  for (const liczba of [0, 2, 3, 4, 5, 11, 12, 14, 21, 22, 24, 25, 101, 102, 105]) {
+    assert.equal(odmienRzeczDoZakupu(liczba), 'rzeczy do zakupu')
+  }
+  assert.equal(pobierzTekstLicznikaZakupow(999), '999')
+  assert.equal(pobierzTekstLicznikaZakupow(1000), '999+')
+})
+
+test('brak rejestru zakupow nie powoduje crasha, a zapis zachowuje zglaszajacego i historie statusu', () => {
+  const magazyn = new Map<string, string>()
+  globalThis.localStorage = { getItem: (klucz: string) => magazyn.get(klucz) ?? null, setItem: (klucz: string, wartosc: string) => magazyn.set(klucz, wartosc), removeItem: (klucz: string) => magazyn.delete(klucz), clear: () => magazyn.clear(), key: () => null, length: 0 } as Storage
+  assert.deepEqual(pobierzStanPulpitu().zapotrzebowaniaZakupowe, [])
+  const zgloszone = zapotrzebowanie({ id: 'papier', utworzonePrzezId: 'aktualny-uzytkownik', ilosc: 10 })
+  zapiszZapotrzebowanieZakupowe(zgloszone)
+  zapiszZapotrzebowanieZakupowe({ ...zgloszone, status: 'KUPIONE' })
+  const zapisane = pobierzStanPulpitu().zapotrzebowaniaZakupowe
+  assert.equal(zapisane.length, 1)
+  assert.equal(zapisane[0]?.utworzonePrzezId, 'aktualny-uzytkownik')
+  assert.equal(zapisane[0]?.status, 'KUPIONE')
+})
+
+
+test('marker deadline rozróżnia kolorem Zadaniodawcę i Zadaniobiorcę', () => {
+  const widok = readFileSync('src/moduly/zamkniete/pulpit/WidokPulpitu.tsx', 'utf8')
+  const css = readFileSync('src/moduly/zamkniete/pulpit/pulpit.css', 'utf8')
+
+  assert.match(widok, /--kolor-zadaniodawcy/)
+  assert.match(widok, /--kolor-zadaniobiorcy/)
+  assert.match(widok, /zadanie\.zadaniodawcaId/)
+  assert.match(widok, /zadanie\.zadaniobiorcaId/)
+
+  assert.match(css, /border:\s*4px solid var\(--kolor-zadaniobiorcy\)/)
+  assert.match(css, /background:\s*transparent/)
+  assert.match(css, /width:\s*28px/)
+  assert.match(css, /height:\s*28px/)
+  assert.match(css, /background:\s*var\(--kolor-zadaniodawcy\)/)
+  assert.match(css, /width:\s*16px/)
+  assert.match(css, /height:\s*16px/)
+})
+
+test('marker deadline dodaje glow wyłącznie dla Pilne i mocniej dla ASAP', () => {
+  const widok = readFileSync('src/moduly/zamkniete/pulpit/WidokPulpitu.tsx', 'utf8')
+  const css = readFileSync('src/moduly/zamkniete/pulpit/pulpit.css', 'utf8')
+
+  assert.match(widok, /pulpit-deadline--pilne/)
+  assert.match(widok, /pulpit-deadline--asap/)
+  assert.match(widok, /pulpit-deadline--zwykle/)
+  assert.match(css, /\.pulpit-deadline--zwykle \.pulpit-deadline__romb/)
+  assert.match(css, /\.pulpit-deadline--pilne \.pulpit-deadline__romb/)
+  assert.match(css, /calc\(var\(--pulpit-deadline-glow\) \+ 4px\)/)
+  assert.match(css, /\.pulpit-deadline--asap \.pulpit-deadline__romb/)
+  assert.match(css, /calc\(var\(--pulpit-deadline-glow\) \+ 12px\)/)
+})
+
+test('marker wiąże każdy priorytet z jawną klasą, a do końca dnia używa koloru Zadaniodawcy', () => {
+  const widok = readFileSync('src/moduly/zamkniete/pulpit/WidokPulpitu.tsx', 'utf8')
+  const css = readFileSync('src/moduly/zamkniete/pulpit/pulpit.css', 'utf8')
+
+  assert.match(widok, /zadanie\.priorytet === 'ZWYKLE'/)
+  assert.match(widok, /pulpit-deadline--zwykle/)
+  assert.match(widok, /pulpit-deadline--pilne/)
+  assert.match(widok, /pulpit-deadline--asap/)
+  assert.match(widok, /pulpit-deadline--do-konca-dnia/)
+  assert.match(widok, /DO KOŃCA DNIA/)
+  assert.match(widok, /Do: FAJRANT/)
+  assert.match(css, /\.pulpit-deadline__linia-do-fajrantu/)
+  assert.match(css, /background:\s*var\(--kolor-zadaniodawcy\)/)
+  assert.match(css, /pointer-events:\s*none/)
+})
+
+test('odcinek czasu pracy ma podwójną grubość i pozostaje wyśrodkowany na osi', () => {
+  const css = readFileSync('src/moduly/zamkniete/pulpit/pulpit.css', 'utf8')
+
+  assert.match(css, /\.pulpit-os-czasu__odcinek--praca\s*\{[^}]*top:\s*-6px;[^}]*height:\s*24px;/s)
+  assert.match(css, /\.pulpit-os-czasu__odcinek--przed-praca,[^}]*\.pulpit-os-czasu__odcinek--po-pracy\s*\{[^}]*height:\s*6px;/s)
+})
+
+
+test('zakres dnia pracy steruje rozszerzonym segmentem pracy na całej osi', () => {
+  const zakres = { poczatek: '08:00', koniec: '17:00' }
+  const zadanieDoKoncaDnia = zadanie({ rodzajTerminu: 'DO_KONCA_DNIA', utworzono: '2026-07-22T12:30:00' })
+
+  assert.ok(Math.abs(obliczPostepCzasuDnia(new Date('2026-07-22T08:00:00'), zakres) - 24.242424242424242) < 0.000001)
+  assert.ok(Math.abs(obliczPostepCzasuDnia(new Date('2026-07-22T12:30:00'), zakres) - 51.515151515151516) < 0.000001)
+  assert.ok(Math.abs(obliczPostepCzasuDnia(new Date('2026-07-22T17:00:00'), zakres) - 78.78787878787878) < 0.000001)
+
+  assert.equal(pobierzStanWskaznikaCzasu(new Date('2026-07-22T07:59:00'), zakres).etykieta, 'PREFAJRANT')
+  assert.equal(pobierzStanWskaznikaCzasu(new Date('2026-07-22T08:00:00'), zakres).etykieta, 'TERAZ')
+  assert.equal(pobierzStanWskaznikaCzasu(new Date('2026-07-22T17:00:00'), zakres).etykieta, 'FAJRANT')
+
+  const etykiety = pobierzEtykietyOsiCzasu(zakres)
+  assert.deepEqual(etykiety, ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00', '23:59'])
+  const graniceZmodyfikowane = pobierzGraniceDniaPracyNaOsi(zakres)
+  const graniceDomyslne = pobierzGraniceDniaPracyNaOsi({ poczatek: '07:45', koniec: '16:00' })
+  assert.ok(Math.abs(graniceZmodyfikowane.poczatek - 24.242424242424242) < 0.000001)
+  assert.ok(Math.abs(graniceZmodyfikowane.koniec - 78.78787878787878) < 0.000001)
+  assert.ok(Math.abs(graniceDomyslne.poczatek - 24.031007751937985) < 0.000001)
+  assert.ok(Math.abs(graniceDomyslne.koniec - 75.1937984496124) < 0.000001)
+  assert.equal(pozycjaGodzinyNaOsi('12:30', zakres), 51.515151515151516)
+  assert.ok(Math.abs(pobierzSzerokoscLiniiDoFajrantu(zadanieDoKoncaDnia, zakres) - 27.272727272727266) < 0.000001)
+})
+
+test('widok ustawia etykiety i znaczniki według aktywnego zakresu dnia pracy', () => {
+  const widok = readFileSync('src/moduly/zamkniete/pulpit/WidokPulpitu.tsx', 'utf8')
+
+  assert.match(widok, /pozycjaGodzinyNaOsi\(godzinaMarkera, zakresDniaPracy\)/)
+  assert.match(widok, /pozycjaGodzinyNaOsi\(etykieta, zakresDniaPracy\)/)
+})
+
+test('system ustawień aplikacji ma bezpieczne wartości domyślne i ogranicza zakresy', () => {
+  const ustawienia = normalizujUstawieniaAplikacji({
+    wersja: 1,
+    wyglad: {
+      paleta: 'NIEISTNIEJACA',
+      gestosc: 'STANDARDOWA',
+      promienKart: 999,
+      promienPol: -10,
+      czasPrzejsciaMs: 9999,
+      skalaHover: 2,
+    },
+    pulpit: {
+      poczatekDnia: '18:00',
+      koniecDnia: '08:00',
+      deadline: {
+        rozmiarRombu: 999,
+        gruboscObramowania: 99,
+        rozmiarKropki: 99,
+        poswiata: 'MOCNA',
+        pokazPlomienAsap: false,
+      },
+    },
+    dostepnosc: {
+      ograniczAnimacje: true,
+    },
+  })
+
+  assert.equal(ustawienia.wyglad.paleta, 'DOMYSLNA')
+  assert.equal(ustawienia.wyglad.promienKart, 32)
+  assert.equal(ustawienia.wyglad.promienPol, 0)
+  assert.equal(ustawienia.wyglad.czasPrzejsciaMs, 600)
+  assert.equal(ustawienia.wyglad.skalaHover, 1.05)
+
+  assert.equal(ustawienia.pulpit.poczatekDnia, '07:45')
+  assert.equal(ustawienia.pulpit.koniecDnia, '16:00')
+  assert.equal(ustawienia.pulpit.deadline.rozmiarRombu, 48)
+  assert.equal(ustawienia.pulpit.deadline.gruboscObramowania, 8)
+  assert.equal(ustawienia.pulpit.deadline.rozmiarKropki, 24)
+  assert.equal(ustawienia.dostepnosc.ograniczAnimacje, true)
+})
+
+test('ustawienia zapisują się jako jeden wersjonowany rekord i poprawnie importują JSON', () => {
+  const magazyn = new Map<string, string>()
+
+  globalThis.localStorage = {
+    getItem: (klucz: string) => magazyn.get(klucz) ?? null,
+    setItem: (klucz: string, wartosc: string) => magazyn.set(klucz, wartosc),
+    removeItem: (klucz: string) => magazyn.delete(klucz),
+    clear: () => magazyn.clear(),
+    key: (indeks: number) => Array.from(magazyn.keys())[indeks] ?? null,
+    get length() { return magazyn.size },
+  } as Storage
+
+  const zmienione = normalizujUstawieniaAplikacji({
+    ...domyslneUstawieniaAplikacji,
+    wyglad: {
+      ...domyslneUstawieniaAplikacji.wyglad,
+      paleta: 'CRM',
+      promienKart: 14,
+    },
+    pulpit: {
+      ...domyslneUstawieniaAplikacji.pulpit,
+      poczatekDnia: '08:00',
+      koniecDnia: '17:00',
+      deadline: {
+        ...domyslneUstawieniaAplikacji.pulpit.deadline,
+        rozmiarRombu: 34,
+      },
+    },
+  })
+
+  assert.equal(zapiszUstawieniaAplikacji(zmienione), true)
+
+  const odczytane = pobierzUstawieniaAplikacji()
+  assert.equal(odczytane.wyglad.paleta, 'CRM')
+  assert.equal(odczytane.wyglad.promienKart, 14)
+  assert.equal(odczytane.pulpit.poczatekDnia, '08:00')
+  assert.equal(odczytane.pulpit.deadline.rozmiarRombu, 34)
+
+  const eksport = eksportujUstawieniaAplikacji(odczytane)
+  const importPoprawny = importujUstawieniaAplikacji(eksport)
+  assert.equal(importPoprawny.ok, true)
+
+  const importBlednyJson = importujUstawieniaAplikacji('{')
+  assert.equal(importBlednyJson.ok, false)
+
+  const importZlaWersja = importujUstawieniaAplikacji('{"wersja":2}')
+  assert.equal(importZlaWersja.ok, false)
+})
+
+test('CSS i Pulpit korzystają z centralnych zmiennych ustawień', () => {
+  const indexCss = readFileSync('src/index.css', 'utf8')
+  const pulpitCss = readFileSync('src/moduly/zamkniete/pulpit/pulpit.css', 'utf8')
+  const widok = readFileSync('src/moduly/zamkniete/pulpit/WidokPulpitu.tsx', 'utf8')
+
+  assert.match(indexCss, /--ui-promien-karty/)
+  assert.match(indexCss, /--pulpit-deadline-size/)
+  assert.match(indexCss, /data-ui-ogranicz-animacje/)
+
+  assert.match(pulpitCss, /var\(--pulpit-deadline-size\)/)
+  assert.match(pulpitCss, /var\(--pulpit-deadline-border\)/)
+  assert.match(pulpitCss, /var\(--pulpit-deadline-dot-size\)/)
+  assert.match(pulpitCss, /data-ui-pokaz-plomien-asap="false"/)
+
+  assert.match(widok, /pobierzUstawieniaAplikacji/)
+  assert.match(widok, /zakresDniaPracy/)
+})
+
+
+test('Etap 2 ustawień obsługuje nawigację, kafelki i wartości domyślne zadań', () => {
+  const domyslne = normalizujUstawieniaAplikacji({})
+
+  assert.equal(domyslne.nawigacja.szerokoscMenu, 280)
+  assert.equal(domyslne.nawigacja.wysokoscPrzyciskuMenu, 'STANDARDOWA')
+
+  assert.equal(domyslne.pulpit.widoczneKafelki.doZrobienia, true)
+  assert.equal(domyslne.pulpit.widoczneKafelki.pilne, true)
+  assert.equal(domyslne.pulpit.widoczneKafelki.paczki, true)
+  assert.equal(domyslne.pulpit.widoczneKafelki.blokady, true)
+  assert.equal(domyslne.pulpit.widoczneKafelki.zakupy, true)
+
+  assert.equal(domyslne.zadania.domyslnyPriorytet, 'ZWYKLE')
+  assert.equal(domyslne.zadania.domyslnaGodzina, '')
+  assert.deepEqual(domyslne.zadania.domyslnePrzypomnienia, {
+    piecMinut: false,
+    pietnascieMinut: false,
+    godzina: false,
+    dzien: false,
+  })
+})
+
+test('Etap 2 ustawień normalizuje zakres menu oraz konfigurację nowych zadań', () => {
+  const ustawienia = normalizujUstawieniaAplikacji({
+    wersja: 1,
+    nawigacja: {
+      szerokoscMenu: 999,
+      wysokoscPrzyciskuMenu: 'DUZA',
+    },
+    pulpit: {
+      widoczneKafelki: {
+        doZrobienia: false,
+        pilne: true,
+        paczki: false,
+        blokady: true,
+        zakupy: false,
+      },
+    },
+    zadania: {
+      domyslnyPriorytet: 'ASAP',
+      domyslnaGodzina: '14:30',
+      domyslnePrzypomnienia: {
+        piecMinut: true,
+        pietnascieMinut: true,
+        godzina: false,
+        dzien: true,
+      },
+    },
+  })
+
+  assert.equal(ustawienia.nawigacja.szerokoscMenu, 360)
+  assert.equal(ustawienia.nawigacja.wysokoscPrzyciskuMenu, 'DUZA')
+
+  assert.equal(ustawienia.pulpit.widoczneKafelki.doZrobienia, false)
+  assert.equal(ustawienia.pulpit.widoczneKafelki.paczki, false)
+  assert.equal(ustawienia.pulpit.widoczneKafelki.zakupy, false)
+
+  assert.equal(ustawienia.zadania.domyslnyPriorytet, 'ASAP')
+  assert.equal(ustawienia.zadania.domyslnaGodzina, '14:30')
+  assert.equal(ustawienia.zadania.domyslnePrzypomnienia.piecMinut, true)
+  assert.equal(ustawienia.zadania.domyslnePrzypomnienia.pietnascieMinut, true)
+  assert.equal(ustawienia.zadania.domyslnePrzypomnienia.godzina, false)
+  assert.equal(ustawienia.zadania.domyslnePrzypomnienia.dzien, true)
+})
+
+test('Etap 2 ustawień zachowuje zgodność ze starym rekordem wersji 1', () => {
+  const stare = normalizujUstawieniaAplikacji({
+    wersja: 1,
+    wyglad: {
+      paleta: 'DOMYSLNA',
+      gestosc: 'STANDARDOWA',
+      promienKart: 10,
+      promienPol: 6,
+      czasPrzejsciaMs: 150,
+      skalaHover: 1,
+    },
+    pulpit: {
+      poczatekDnia: '07:45',
+      koniecDnia: '16:00',
+      deadline: {
+        rozmiarRombu: 28,
+        gruboscObramowania: 5,
+        rozmiarKropki: 16,
+        poswiata: 'STANDARDOWA',
+        pokazPlomienAsap: true,
+      },
+    },
+    dostepnosc: {
+      ograniczAnimacje: false,
+    },
+  })
+
+  assert.equal(stare.nawigacja.szerokoscMenu, 280)
+  assert.equal(stare.pulpit.widoczneKafelki.zakupy, true)
+  assert.equal(stare.zadania.domyslnyPriorytet, 'ZWYKLE')
+})
+
+test('Pulpit respektuje widoczność kafelków i domyślne pola nowego zadania', () => {
+  const widok = readFileSync(
+    'src/moduly/zamkniete/pulpit/WidokPulpitu.tsx',
+    'utf8',
+  )
+
+  assert.match(widok, /widoczneKafelki\.doZrobienia/)
+  assert.match(widok, /widoczneKafelki\.pilne/)
+  assert.match(widok, /widoczneKafelki\.paczki/)
+  assert.match(widok, /widoczneKafelki\.blokady/)
+  assert.match(widok, /widoczneKafelki\.zakupy/)
+
+  assert.match(widok, /ustawienia\.zadania\.domyslnyPriorytet/)
+  assert.match(widok, /ustawienia\.zadania\.domyslnaGodzina/)
+  assert.match(widok, /domyslnePrzypomnienia\.piecMinut/)
+  assert.match(widok, /domyslnePrzypomnienia\.dzien/)
+})
+
+test('Nawigacja korzysta z centralnych zmiennych szerokości i wysokości menu', () => {
+  const css = readFileSync(
+    'src/aplikacja/layout/ukladAplikacji.css',
+    'utf8',
+  )
+
+  const magazyn = readFileSync(
+    'src/aplikacja/ustawienia/magazynUstawienAplikacji.ts',
+    'utf8',
+  )
+
+  assert.match(css, /--ui-menu-width/)
+  assert.match(css, /--ui-menu-button-height/)
+  assert.match(magazyn, /--ui-menu-width/)
+  assert.match(magazyn, /--ui-menu-button-height/)
+})
