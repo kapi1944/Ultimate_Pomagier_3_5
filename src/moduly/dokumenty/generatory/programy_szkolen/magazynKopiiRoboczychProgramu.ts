@@ -1,49 +1,42 @@
 import type { KopiaRobocza } from '../../../../wspolne/dokumenty/magazynKopiiRoboczych'
 import { pobierzKopieProgramowZRejestru, pobierzProgramPoId, usunProgramMiekko, zapiszProgramWRejestrze } from './rejestrProgramowSzkolen'
 import { repozytoriumWspolnychDokumentow } from '../../../../wspolne/dokumenty/rejestrDokumentow'
+import {
+  normalizujProgramSzkolenia,
+  type MetadaneProgramuSzkolenia,
+  type ModelProgramuSzkolenia,
+} from './modelProgramuSzkolenia'
 
 const kluczProgramuRoboczego = 'ultimate-pomagier-program-szkolenia-roboczy'
 const kluczAutosaveProgramu = 'ultimatePomagier.programySzkolen.autosave.v1'
 const kluczAktywnejKopiiProgramu = 'ultimatePomagier.programySzkolen.aktywnaKopiaRobocza'
-const kluczMigracjiKopiiProgramu = 'ultimatePomagier.programySzkolen.kopieRobocze.wspolnyMagazyn.v1'
+const prefiksIdAutosaveProgramu = 'autosave-programy-szkolen'
 
-type DaneProgramu = Record<string, unknown>
-
-export type AutosaveProgramu<TypDanych = DaneProgramu> = {
+export type AutosaveProgramu = {
   idSesji: string
   aktywnaKopiaId?: string
-  daneDokumentu: TypDanych
+  uzytkownikId?: string
+  daneDokumentu: ModelProgramuSzkolenia
   zapisano: string
-}
-
-export type MetadaneProgramu = {
-  organizator: 'SEMPER' | 'IIST'
-  liczbaDni: number
-  liczbaModulow: number
-  autor?: string
-  klient?: string
-  szkolenieId?: string
-  dataSzkolenia?: string
-  zrodloProgramu?: string
-  czyWynikParsowaniaZatwierdzony: boolean
 }
 
 export type TypOperacjiHistoriiProgramu = 'utworzenie_kopii' | 'aktualizacja_kopii' | 'utworzenie_nowej_kopii' | 'publikacja'
 
-export type WpisHistoriiProgramu<TypDanych = DaneProgramu> = {
+export type WpisHistoriiProgramu = {
   typOperacji: TypOperacjiHistoriiProgramu
   idWersji: string
   uzytkownik?: string
-  migawkaDokumentu: TypDanych
+  migawkaDokumentu: ModelProgramuSzkolenia
 }
 
-type DaneZapisuJawnejKopii<TypDanych> = {
+type DaneZapisuJawnejKopii = {
   idAktywnejKopii?: string | null
   tryb: 'zapisz' | 'aktualizuj' | 'utworz_nowa'
   tytul: string
   statusBiznesowy: string
-  daneDokumentu: TypDanych
-  metadane: MetadaneProgramu
+  daneDokumentu: ModelProgramuSzkolenia
+  metadane: MetadaneProgramuSzkolenia
+  uzytkownikId?: string
 }
 
 function czyObiekt(wartosc: unknown): wartosc is Record<string, unknown> {
@@ -66,7 +59,7 @@ function utworzIdSesji() {
   return `program-autosave-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 }
 
-function pobierzStarszyAutosaveProgramu<TypDanych>() {
+function pobierzStarszyAutosaveProgramu(): AutosaveProgramu | null {
   const dane = bezpiecznieParsuj(localStorage.getItem(kluczProgramuRoboczego))
 
   if (!czyObiekt(dane) || !Object.keys(dane).length) {
@@ -75,37 +68,75 @@ function pobierzStarszyAutosaveProgramu<TypDanych>() {
 
   return {
     idSesji: utworzIdSesji(),
-    daneDokumentu: dane as TypDanych,
+    daneDokumentu: normalizujProgramSzkolenia(dane),
     zapisano: new Date().toISOString(),
   }
 }
 
-export function pobierzAutosaveProgramu<TypDanych = DaneProgramu>(): AutosaveProgramu<TypDanych> | null {
-  const zapis = bezpiecznieParsuj(localStorage.getItem(kluczAutosaveProgramu))
+function pobierzIdAutosaveProgramu(uzytkownikId?: string) {
+  return `${prefiksIdAutosaveProgramu}-${uzytkownikId ?? 'bez-wlasciciela'}`
+}
 
-  if (czyObiekt(zapis) && typeof zapis.idSesji === 'string' && 'daneDokumentu' in zapis && typeof zapis.zapisano === 'string') {
+function jakoAutosaveProgramu(zapis: unknown, zapisano: string, dokumentId?: string | null): AutosaveProgramu | null {
+  if (!czyObiekt(zapis)) {
+    return null
+  }
+
+  if (typeof zapis.idSesji === 'string' && 'daneDokumentu' in zapis) {
     return {
       idSesji: zapis.idSesji,
-      aktywnaKopiaId: typeof zapis.aktywnaKopiaId === 'string' ? zapis.aktywnaKopiaId : undefined,
-      daneDokumentu: zapis.daneDokumentu as TypDanych,
-      zapisano: zapis.zapisano,
+      aktywnaKopiaId: typeof zapis.aktywnaKopiaId === 'string' ? zapis.aktywnaKopiaId : dokumentId ?? undefined,
+      uzytkownikId: typeof zapis.uzytkownikId === 'string' ? zapis.uzytkownikId : undefined,
+      daneDokumentu: normalizujProgramSzkolenia(zapis.daneDokumentu),
+      zapisano: typeof zapis.zapisano === 'string' ? zapis.zapisano : zapisano,
     }
   }
 
-  return pobierzStarszyAutosaveProgramu<TypDanych>()
+  return {
+    idSesji: utworzIdSesji(),
+    aktywnaKopiaId: dokumentId ?? undefined,
+    daneDokumentu: normalizujProgramSzkolenia(zapis),
+    zapisano,
+  }
 }
 
-export function zapiszAutosaveProgramu<TypDanych>(autosave: Omit<AutosaveProgramu<TypDanych>, 'zapisano'> & { zapisano?: string }) {
-  const zapis: AutosaveProgramu<TypDanych> = {
+export function pobierzAutosaveProgramu(uzytkownikId?: string): AutosaveProgramu | null {
+  const wspolny = repozytoriumWspolnychDokumentow.pobierzAutosave(pobierzIdAutosaveProgramu(uzytkownikId))
+    ?? repozytoriumWspolnychDokumentow.pobierzNajnowszyAutosaveGeneratora('programy_szkolen')
+  const zapisWspolny = wspolny ? jakoAutosaveProgramu(wspolny.dane, wspolny.zapisano, wspolny.dokumentId) : null
+
+  if (zapisWspolny) {
+    return uzytkownikId && zapisWspolny.uzytkownikId && zapisWspolny.uzytkownikId !== uzytkownikId ? null : zapisWspolny
+  }
+
+  const zapisLegacy = bezpiecznieParsuj(localStorage.getItem(kluczAutosaveProgramu))
+  const autosaveLegacy = jakoAutosaveProgramu(zapisLegacy, new Date().toISOString())
+  return autosaveLegacy ?? pobierzStarszyAutosaveProgramu()
+}
+
+export function zapiszAutosaveProgramu(autosave: Omit<AutosaveProgramu, 'zapisano'> & { zapisano?: string }) {
+  const zapis: AutosaveProgramu = {
     ...autosave,
+    daneDokumentu: normalizujProgramSzkolenia(autosave.daneDokumentu),
     zapisano: autosave.zapisano ?? new Date().toISOString(),
   }
 
-  localStorage.setItem(kluczAutosaveProgramu, JSON.stringify(zapis))
+  repozytoriumWspolnychDokumentow.zapiszAutosave({
+    id: pobierzIdAutosaveProgramu(zapis.uzytkownikId),
+    generatorId: 'programy_szkolen',
+    dokumentId: zapis.aktywnaKopiaId ?? null,
+    dane: zapis,
+    zapisano: zapis.zapisano,
+  })
   return zapis
 }
 
-export function usunAutosaveProgramu() {
+export function usunAutosaveProgramu(uzytkownikId?: string) {
+  if (uzytkownikId) {
+    repozytoriumWspolnychDokumentow.usunAutosave(pobierzIdAutosaveProgramu(uzytkownikId))
+  } else {
+    repozytoriumWspolnychDokumentow.usunAutosaveGeneratora('programy_szkolen')
+  }
   localStorage.removeItem(kluczAutosaveProgramu)
   localStorage.removeItem(kluczProgramuRoboczego)
 }
@@ -120,7 +151,6 @@ export function pobierzIdAktywnejKopiiProgramu() {
 
 export function ustawAktywnaKopieProgramu(id: string) {
   localStorage.setItem(kluczAktywnejKopiiProgramu, id)
-  localStorage.setItem(kluczMigracjiKopiiProgramu, 'true')
 }
 
 export function wyczyscAktywnaKopieProgramu() {
@@ -131,14 +161,14 @@ export function pobierzKopieRoboczeProgramu() {
   return pobierzKopieProgramowZRejestru()
 }
 
-export function pobierzAktywnaKopieProgramu<TypDanych = DaneProgramu>(): KopiaRobocza<TypDanych> | null {
+export function pobierzAktywnaKopieProgramu(): KopiaRobocza<ModelProgramuSzkolenia> | null {
   const id = pobierzIdAktywnejKopiiProgramu()
 
   if (!id) {
     return null
   }
 
-  return pobierzProgramPoId<TypDanych>(id)
+  return pobierzProgramPoId(id)
 }
 
 export function otworzKopieRoboczaProgramu(kopia: KopiaRobocza) {
@@ -153,8 +183,9 @@ export function usunKopieRoboczaProgramu(kopia: KopiaRobocza) {
   }
 }
 
-export function zapiszJawnaKopieProgramu<TypDanych>(dane: DaneZapisuJawnejKopii<TypDanych>) {
-  const rekord = zapiszProgramWRejestrze(dane)
+export function zapiszJawnaKopieProgramu(dane: DaneZapisuJawnejKopii) {
+  const znormalizowaneDane = normalizujProgramSzkolenia(dane.daneDokumentu)
+  const rekord = zapiszProgramWRejestrze({ ...dane, daneDokumentu: znormalizowaneDane })
   const typOperacji: TypOperacjiHistoriiProgramu = dane.tryb === 'aktualizuj' ? 'aktualizacja_kopii' : dane.tryb === 'utworz_nowa' ? 'utworzenie_nowej_kopii' : 'utworzenie_kopii'
 
   ustawAktywnaKopieProgramu(rekord.id)
@@ -167,18 +198,21 @@ export function zapiszJawnaKopieProgramu<TypDanych>(dane: DaneZapisuJawnejKopii<
       generatorId: 'programy_szkolen',
       typOperacji,
       idWersji: rekord.id,
-      migawkaDokumentu: dane.daneDokumentu,
+      migawkaDokumentu: znormalizowaneDane,
     },
   })
-  usunAutosaveProgramu()
+  usunAutosaveProgramu(dane.uzytkownikId)
 
   return rekord
 }
-export function pobierzHistorieProgramu<TypDanych = DaneProgramu>(idDokumentu?: string) {
+export function pobierzHistorieProgramu(idDokumentu?: string) {
   return repozytoriumWspolnychDokumentow
     .pobierzHistorie(idDokumentu)
     .filter((wpis) => wpis.typ === 'historia_programu' && Boolean(wpis.dane && typeof wpis.dane === 'object' && (wpis.dane as { generatorId?: unknown }).generatorId === 'programy_szkolen'))
-    .map((wpis) => (wpis.dane as { typOperacji: TypOperacjiHistoriiProgramu; idWersji: string; migawkaDokumentu: TypDanych }).migawkaDokumentu ? (wpis.dane as Omit<WpisHistoriiProgramu<TypDanych>, 'generatorId'>) : wpis.dane as WpisHistoriiProgramu<TypDanych>)
+    .map((wpis) => {
+      const dane = wpis.dane as WpisHistoriiProgramu & { generatorId?: string }
+      return dane.migawkaDokumentu ? { ...dane, migawkaDokumentu: normalizujProgramSzkolenia(dane.migawkaDokumentu) } : dane
+    })
 }
 
 export { kluczAutosaveProgramu }

@@ -29,8 +29,10 @@ export interface RepozytoriumWspolnychDokumentow {
   pobierzHistorie(dokumentId?: string): WpisHistoriiWspolnegoDokumentu[]
   dodajWpisHistorii(wpis: Omit<WpisHistoriiWspolnegoDokumentu, 'id' | 'data'> & Partial<Pick<WpisHistoriiWspolnegoDokumentu, 'id' | 'data'>>): WpisHistoriiWspolnegoDokumentu
   pobierzAutosave(id: string): AutosaveDokumentu | null
+  pobierzNajnowszyAutosaveGeneratora(generatorId: string): AutosaveDokumentu | null
   zapiszAutosave(autosave: Omit<AutosaveDokumentu, 'zapisano'> & { zapisano?: string }): AutosaveDokumentu
   usunAutosave(id: string): boolean
+  usunAutosaveGeneratora(generatorId: string): boolean
 }
 
 function czyObiekt(wartosc: unknown): wartosc is Record<string, unknown> { return Boolean(wartosc && typeof wartosc === 'object' && !Array.isArray(wartosc)) }
@@ -145,6 +147,10 @@ export const repozytoriumWspolnychDokumentow: RepozytoriumWspolnychDokumentow = 
   pobierzHistorie: (dokumentId) => pobierzStanRejestruDokumentow().historia.filter((wpis) => !dokumentId || wpis.dokumentId === dokumentId).sort((pierwszy, drugi) => Date.parse(drugi.data) - Date.parse(pierwszy.data)),
   dodajWpisHistorii(wpis) { const stan = pobierzStanRejestruDokumentow(); const rekord: WpisHistoriiWspolnegoDokumentu = { ...wpis, id: wpis.id?.trim() || utworzId('historia'), data: wpis.data ?? new Date().toISOString() }; const istniejacy = stan.historia.find((pozycja) => pozycja.id === rekord.id); if (istniejacy) return istniejacy; stan.historia.unshift(rekord); zapiszStan(stan); return rekord },
   pobierzAutosave: (id) => pobierzStanRejestruDokumentow().autosave.find((pozycja) => pozycja.id === id) ?? null,
+  pobierzNajnowszyAutosaveGeneratora: (generatorId) => pobierzStanRejestruDokumentow().autosave
+    .filter((pozycja) => pozycja.generatorId === generatorId)
+    .sort((pierwszy, drugi) => Date.parse(drugi.zapisano) - Date.parse(pierwszy.zapisano))[0] ?? null,
   zapiszAutosave(autosave) { const stan = pobierzStanRejestruDokumentow(); const rekord: AutosaveDokumentu = { ...autosave, zapisano: autosave.zapisano ?? new Date().toISOString() }; const indeks = stan.autosave.findIndex((pozycja) => pozycja.id === rekord.id); if (indeks === -1) stan.autosave.unshift(rekord); else stan.autosave[indeks] = rekord; zapiszStan(stan); return rekord },
   usunAutosave(id) { const stan = pobierzStanRejestruDokumentow(); const autosave = stan.autosave.filter((pozycja) => pozycja.id !== id); if (autosave.length === stan.autosave.length) return false; zapiszStan({ ...stan, autosave }); return true },
+  usunAutosaveGeneratora(generatorId) { const stan = pobierzStanRejestruDokumentow(); const autosave = stan.autosave.filter((pozycja) => pozycja.generatorId !== generatorId); if (autosave.length === stan.autosave.length) return false; zapiszStan({ ...stan, autosave }); return true },
 }

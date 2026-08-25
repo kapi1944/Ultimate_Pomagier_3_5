@@ -92,5 +92,6 @@ test('jawny zapis programu tworzy rekord wspólnego modelu z rozdzielonymi ustaw
   assert.equal(dokument?.typ, 'PROGRAM_SZKOLENIA')
   assert.equal(dokument?.status, 'ROBOCZY')
   assert.equal(dokument?.daneDokumentu.ustawienia, undefined)
-  assert.deepEqual(dokument?.ustawieniaDokumentu.ustawienia, { kolorAkcentuProgramu: '#DE1914' })
+  assert.equal(dokument?.ustawieniaDokumentu.ustawienia.kolorAkcentuProgramu, '#DE1914')
+  assert.equal(dokument?.ustawieniaDokumentu.ustawienia.szerokoscLogotypu, 90)
 })

@@ -27,7 +27,7 @@ const kluczeDokumentow = [
   'ultimate-pomagier.log-wymuszen-eksportu',
 ]
 const kluczeSzczegolow = ['ultimatePomagier.szczegolyOrganizacyjne.aktualnaWersja', 'ultimatePomagier.szczegolyOrganizacyjne.opublikowane', 'ultimatePomagier.szczegolyOrganizacyjne.autosave', 'ultimatePomagier.szczegolyOrganizacyjne.historia', 'ultimatePomagier.szczegolyOrganizacyjne.kopieRobocze']
-const kluczeProgramow = ['ultimate-pomagier-program-szkolenia-roboczy', 'ultimatePomagier.programySzkolen.autosave.v1', 'ultimatePomagier.programySzkolen.aktywnaKopiaRobocza', 'ultimatePomagier.programySzkolen.kopieRobocze.wspolnyMagazyn.v1']
+const kluczeProgramow = ['ultimate-pomagier-program-szkolenia-roboczy', 'ultimatePomagier.programySzkolen.autosave.v1', 'ultimatePomagier.programySzkolen.aktywnaKopiaRobocza']
 const kluczePulpitu = ['ultimatePomagier.pulpit.v1']
 const kluczeKartotek = ['ultimatePomagier.uzytkownicy.v1', 'ultimate-pomagier.kartoteki.trenerzy', 'ultimate-pomagier.kartoteki.klienci', 'ultimate-pomagier.kartoteki.lokalizacje', 'ultimate-pomagier.kartoteki.szablony-dokumentow']
 const kluczeUstawien = ['ultimatePomagier.ustawieniaAplikacji.v1', 'ultimatePomagier.menuPrzypiete', 'ultimatePomagier.menuWysuwanieZKrawedzi', 'ultimatePomagier.panelJakosciPrzypiety', 'ultimatePomagier.panelJakosciWysuwanieZKrawedzi', 'ultimate-pomagier.dyplomy.panel-ustawien-przypiety', 'ultimate-pomagier.dyplomy.panel-ustawien-wysuwanie', 'ultimate-pomagier-aktywny-widok']

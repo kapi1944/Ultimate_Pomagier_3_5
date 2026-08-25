@@ -15,18 +15,13 @@ import { pobierzProgramPoId } from './rejestrProgramowSzkolen'
 import { ustawObslugeNiezapisanychProgramow } from './strzeznikNiezapisanychProgramow'
 import {
   przygotujRaportEksportuDokumentu,
-  sprawdzDokumentBlokowy,
   type BlokDokumentu,
-  type DokumentBlokowy,
-  type ProblemDokumentu,
 } from '../../../../wspolne/dokumenty/modelBlokowy'
 import { parsujTekstProgramu } from './ParserTekstu'
 import { pobierzTytulDokumentuProgramu } from './tytulDokumentuProgramu'
 import RendererStronProgramu from './RendererStronProgramu'
 import {
   konfiguracjePresetowProgramu,
-  domyslnyPresetNowegoProgramu,
-  normalizujPresetWygladuProgramu,
   pobierzElementyIdentyfikacjiProgramu,
   zasugerujPresetProgramu,
   type ElementyIdentyfikacjiProgramu,
@@ -39,43 +34,23 @@ import {
   oczyscHtmlProgramu,
 } from './komponenty/konwersjaProgramuWysiwyg'
 import { czyUzytkownikMozeWymusicEksportProgramu } from './uprawnieniaEksportuProgramu'
-
-type ProfilFirmy = 'semper' | 'iist'
-type StylDni = 'pasek' | 'naglowek'
-type SeparacjaModulow = 'brak' | 'ramka' | 'linia' | 'separator-pytan'
-type StylPodpunktow = 'punktory' | 'numeracja'
-type StylListyGlownej = 'numeracja' | 'punktory'
-type FormatCudzyslowu = 'dolny-gorny' | 'gorny-gorny'
-
-type UstawieniaProgramu = {
-  presetWygladu: PresetWygladuProgramu
-  czyWyborPresetySwiadomy: boolean
-  czyJustowac: boolean
-  elementyIdentyfikacji: Partial<ElementyIdentyfikacjiProgramu>
-  profilFirmy: ProfilFirmy
-  kolorAkcentuProgramu: string
-  kolorReczny: boolean
-  formatowanieSkryptowe: boolean
-  stylDni: StylDni
-  separacjaModulow: SeparacjaModulow
-  stylPodpunktow: StylPodpunktow
-  stylListyGlownej: StylListyGlownej
-  stylePoziomowListy: string[]
-  gruboscObramowaniaTytulu: number
-  formatCudzyslowu: FormatCudzyslowu
-  szerokoscLogotypu: number
-  czyPogrubiacNaglowkiListyProgramu: boolean
-}
-
-type ZapisProgramuRoboczego = {
-  tytulSzkolenia: string
-  trescProgramu: string
-  trescProgramuHtml: string
-  czyWynikParsowaniaZatwierdzony: boolean
-  ustawienia: UstawieniaProgramu
-  logotypProgramu: string
-  linkLogotypu: string
-}
+import {
+  czyKolorProgramuPoprawny as sprawdzHex,
+  domyslneUstawieniaProgramu as domyslneUstawienia,
+  domyslnyProgramSzkolenia as domyslnyZapisProgramu,
+  normalizujProgramSzkolenia as normalizujZapisProgramu,
+  pobierzHtmlProgramuSzkolenia,
+  utworzDokumentProgramuSzkolenia,
+  walidujProgramSzkolenia,
+  type FormatCudzyslowuProgramu as FormatCudzyslowu,
+  type ModelProgramuSzkolenia as ZapisProgramuRoboczego,
+  type ProfilFirmyProgramu as ProfilFirmy,
+  type SeparacjaModulowProgramu as SeparacjaModulow,
+  type StylDniProgramu as StylDni,
+  type StylListyGlownejProgramu as StylListyGlownej,
+  type StylPodpunktowProgramu as StylPodpunktow,
+  type UstawieniaProgramuSzkolenia as UstawieniaProgramu,
+} from './modelProgramuSzkolenia'
 
 type DaneProfiluFirmy = {
   nazwa: string
@@ -84,7 +59,6 @@ type DaneProfiluFirmy = {
   stopka: string
 }
 
-const wzorzecHex = /^#[0-9a-f]{6}$/i
 const punktoryDoWyboru = ['•', '◦', '▪', '-', '–', '*']
 const etykietaNumeracjiListyGlownej = '1,2,3'
 
@@ -102,36 +76,6 @@ const daneProfilowFirmy: Record<ProfilFirmy, DaneProfiluFirmy> = {
     kontakt: 'Międzynarodowy Instytut Szkoleń Specjalistycznych IIST',
     stopka: 'IIST - robocza stopka dokumentu programu szkolenia',
   },
-}
-
-const domyslneUstawienia: UstawieniaProgramu = {
-  presetWygladu: domyslnyPresetNowegoProgramu,
-  czyWyborPresetySwiadomy: false,
-  czyJustowac: true,
-  elementyIdentyfikacji: {},
-  profilFirmy: 'semper',
-  kolorAkcentuProgramu: daneProfilowFirmy.semper.kolor,
-  kolorReczny: false,
-  formatowanieSkryptowe: true,
-  stylDni: 'pasek',
-  separacjaModulow: 'separator-pytan',
-  stylPodpunktow: 'punktory',
-  stylListyGlownej: 'numeracja',
-  stylePoziomowListy: ['•', '◦', '▪'],
-  gruboscObramowaniaTytulu: 1,
-  formatCudzyslowu: 'gorny-gorny',
-  szerokoscLogotypu: 90,
-  czyPogrubiacNaglowkiListyProgramu: true,
-}
-
-const domyslnyZapisProgramu: ZapisProgramuRoboczego = {
-  tytulSzkolenia: '',
-  trescProgramu: '',
-  trescProgramuHtml: '',
-  czyWynikParsowaniaZatwierdzony: false,
-  ustawienia: domyslneUstawienia,
-  logotypProgramu: '',
-  linkLogotypu: '',
 }
 
 const styleProgramuSzkolenia = `
@@ -999,10 +943,6 @@ const styleProgramuSzkolenia = `
 }
 `
 
-function sprawdzHex(kolor: string) {
-  return wzorzecHex.test(kolor)
-}
-
 function pobierzKolorAkcentu(ustawienia: UstawieniaProgramu) {
   return sprawdzHex(ustawienia.kolorAkcentuProgramu)
     ? ustawienia.kolorAkcentuProgramu
@@ -1019,30 +959,6 @@ function formatujTytulSzkolenia(tytul: string, formatCudzyslowu: FormatCudzyslow
   return formatCudzyslowu === 'gorny-gorny' ? `"${tekst}"` : `„${tekst}”`
 }
 
-function normalizujZapisProgramu(zapis: unknown): ZapisProgramuRoboczego {
-  const dane = zapis && typeof zapis === 'object' ? (zapis as Partial<ZapisProgramuRoboczego>) : {}
-  const trescProgramu = dane.trescProgramu ?? ''
-
-  return {
-    tytulSzkolenia: dane.tytulSzkolenia ?? '',
-    trescProgramu,
-    trescProgramuHtml: dane.trescProgramuHtml ?? konwertujTekstProgramuNaHtml(trescProgramu),
-    czyWynikParsowaniaZatwierdzony: dane.czyWynikParsowaniaZatwierdzony ?? false,
-    ustawienia: {
-      ...domyslneUstawienia,
-      ...dane.ustawienia,
-      presetWygladu: normalizujPresetWygladuProgramu(dane.ustawienia?.presetWygladu),
-      czyWyborPresetySwiadomy: dane.ustawienia?.czyWyborPresetySwiadomy ?? false,
-      czyJustowac: dane.ustawienia?.czyJustowac ?? konfiguracjePresetowProgramu[normalizujPresetWygladuProgramu(dane.ustawienia?.presetWygladu)].justowanie,
-      elementyIdentyfikacji: dane.ustawienia?.elementyIdentyfikacji ?? {},
-      stylePoziomowListy: dane.ustawienia?.stylePoziomowListy?.length
-        ? dane.ustawienia.stylePoziomowListy
-        : domyslneUstawienia.stylePoziomowListy,
-    },
-    logotypProgramu: dane.logotypProgramu ?? '',
-    linkLogotypu: dane.linkLogotypu ?? '',
-  }
-}
 function czyPlikTekstowy(plik: File) {
   return plik.type.startsWith('text/') || /\.(txt|md|csv|html?)$/i.test(plik.name)
 }
@@ -1078,14 +994,15 @@ type WlasciwosciWidokuProgramowSzkolen = {
 
 export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWidokuProgramowSzkolen) {
   const { zalogowanyUzytkownik } = useKontekstUzytkownika()
+  const zalogowanyUzytkownikId = zalogowanyUzytkownik?.id
   const obszarPodgladuRef = useRef<HTMLElement>(null)
   const [stanOdczytu, ustawStanOdczytu] = useState<'ladowanie' | 'gotowy' | 'blad'>(() => dokumentIdZTrasy ? 'ladowanie' : 'gotowy')
   const [bladOdczytu, ustawBladOdczytu] = useState('')
   const [aktywnaKopiaId, ustawAktywnaKopiaId] = useState<string | null>(() => dokumentIdZTrasy ? null : pobierzIdAktywnejKopiiProgramu())
-  const [daneProgramu, ustawDaneProgramu] = useState<ZapisProgramuRoboczego>(() => normalizujZapisProgramu(dokumentIdZTrasy ? undefined : pobierzAktywnaKopieProgramu<ZapisProgramuRoboczego>()?.daneDokumentu))
+  const [daneProgramu, ustawDaneProgramu] = useState<ZapisProgramuRoboczego>(() => normalizujZapisProgramu(dokumentIdZTrasy ? undefined : pobierzAktywnaKopieProgramu()?.daneDokumentu))
   const [ostatniJawnyZapis, ustawOstatniJawnyZapis] = useState(() => JSON.stringify(daneProgramu))
   const [idSesjiAutosave] = useState(() => `program-autosave-${crypto.randomUUID()}`)
-  const [autosaveDoDecyzji, ustawAutosaveDoDecyzji] = useState(() => pobierzAutosaveProgramu<ZapisProgramuRoboczego>())
+  const [autosaveDoDecyzji, ustawAutosaveDoDecyzji] = useState(() => pobierzAutosaveProgramu(zalogowanyUzytkownikId))
   const [komunikat, ustawKomunikat] = useState('')
   const [stanZapisu, ustawStanZapisu] = useState<'zapisano' | 'zapisywanie' | 'blad'>('zapisano')
 
@@ -1096,7 +1013,7 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
 
     const odroczonyOdczyt = window.setTimeout(() => {
       try {
-        const kopia = pobierzProgramPoId<ZapisProgramuRoboczego>(dokumentIdZTrasy)
+        const kopia = pobierzProgramPoId(dokumentIdZTrasy)
 
         if (!kopia) {
           ustawBladOdczytu('Nie znaleziono programu o wskazanym identyfikatorze lub ma niewłaściwy typ.')
@@ -1117,75 +1034,14 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
 
     return () => window.clearTimeout(odroczonyOdczyt)
   }, [dokumentIdZTrasy])
-  const { tytulSzkolenia, trescProgramu, trescProgramuHtml, czyWynikParsowaniaZatwierdzony, ustawienia, logotypProgramu, linkLogotypu } = daneProgramu
+  const { tytulSzkolenia, trescProgramu, czyWynikParsowaniaZatwierdzony, ustawienia, logotypProgramu, linkLogotypu } = daneProgramu
 
   const program = useMemo(() => parsujTekstProgramu(trescProgramu), [trescProgramu])
+  const trescProgramuHtml = useMemo(() => pobierzHtmlProgramuSzkolenia(daneProgramu), [daneProgramu])
   const tytulDokumentu = pobierzTytulDokumentuProgramu(tytulSzkolenia)
   const kolorNiepoprawny = !sprawdzHex(ustawienia.kolorAkcentuProgramu)
-  const dokumentProgramu = useMemo<DokumentBlokowy>(() => {
-    const organizator = ustawienia.profilFirmy === 'iist' ? 'IIST' : 'SEMPER'
-
-    return {
-      ...program.dokumentBlokowy,
-      dane: {
-        ...program.dokumentBlokowy.dane,
-        tytulSzkolenia: tytulDokumentu,
-        organizator,
-      },
-      strona: {
-        ...program.dokumentBlokowy.strona,
-        naglowek: {
-          ...program.dokumentBlokowy.strona.naglowek,
-          organizator,
-        },
-        stopka: {
-          ...program.dokumentBlokowy.strona.stopka,
-          organizator,
-        },
-        logotyp: {
-          ...program.dokumentBlokowy.strona.logotyp,
-          aktywny: Boolean(logotypProgramu),
-          zrodlo: logotypProgramu || undefined,
-          szerokoscProcent: ustawienia.szerokoscLogotypu,
-        },
-      },
-      metadane: {
-        ...program.dokumentBlokowy.metadane,
-        zatwierdzonyPrzezUzytkownika: czyWynikParsowaniaZatwierdzony,
-      },
-    }
-  }, [czyWynikParsowaniaZatwierdzony, logotypProgramu, program.dokumentBlokowy, tytulDokumentu, ustawienia.profilFirmy, ustawienia.szerokoscLogotypu])
-  const problemyDokumentu = useMemo<ProblemDokumentu[]>(() => {
-    const problemy = [
-      ...sprawdzDokumentBlokowy(dokumentProgramu),
-      ...program.dokumentBlokowy.problemy,
-    ]
-
-    if (!czyWynikParsowaniaZatwierdzony && trescProgramu.trim()) {
-      problemy.push({
-        id: 'wynik-parsowania-niezatwierdzony',
-        poziom: 'ostrzezenie',
-        kategoria: 'parser',
-        komunikat: 'Wynik parsowania nie został jeszcze zatwierdzony.',
-        czyBlokujeEksport: false,
-      })
-    }
-
-    if (kolorNiepoprawny) {
-      problemy.push({
-        id: 'kolor-akcentu-niepoprawny',
-        poziom: 'ostrzezenie',
-        kategoria: 'formatowanie',
-        komunikat: 'Kolor akcentu ma niepoprawny format i zostanie zastąpiony kolorem profilu.',
-        czyBlokujeEksport: false,
-      })
-    }
-
-    const unikalne = new Map<string, ProblemDokumentu>()
-    problemy.forEach((problem) => unikalne.set(`${problem.kategoria}-${problem.blokId ?? ''}-${problem.komunikat}`, problem))
-
-    return Array.from(unikalne.values())
-  }, [czyWynikParsowaniaZatwierdzony, dokumentProgramu, kolorNiepoprawny, program.dokumentBlokowy.problemy, trescProgramu])
+  const dokumentProgramu = useMemo(() => utworzDokumentProgramuSzkolenia(daneProgramu, program), [daneProgramu, program])
+  const problemyDokumentu = useMemo(() => walidujProgramSzkolenia(daneProgramu, dokumentProgramu), [daneProgramu, dokumentProgramu])
   const tytulZCudzyslowem = formatujTytulSzkolenia(tytulDokumentu, ustawienia.formatCudzyslowu)
   const kolorAkcentu = pobierzKolorAkcentu(ustawienia)
   const profil = daneProfilowFirmy[ustawienia.profilFirmy]
@@ -1229,6 +1085,7 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
         zapiszAutosaveProgramu({
           idSesji: idSesjiAutosave,
           aktywnaKopiaId: aktywnaKopiaId ?? undefined,
+          uzytkownikId: zalogowanyUzytkownikId,
           daneDokumentu: daneProgramu,
         })
         ustawStanZapisu('zapisano')
@@ -1238,7 +1095,7 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
     }, 500)
 
     return () => window.clearTimeout(odroczonyZapis)
-  }, [aktywnaKopiaId, autosaveDoDecyzji, czyNiezapisaneZmiany, daneProgramu, idSesjiAutosave])
+  }, [aktywnaKopiaId, autosaveDoDecyzji, czyNiezapisaneZmiany, daneProgramu, idSesjiAutosave, zalogowanyUzytkownikId])
 
   useEffect(() => {
     function ostrzezPrzedOdswiezeniem(zdarzenie: BeforeUnloadEvent) {
@@ -1264,7 +1121,6 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
   function zmienTrescProgramuHtml(html: string, tekst = konwertujHtmlNaTekstProgramu(html)) {
     ustawDaneProgramu((aktualne) => ({
       ...aktualne,
-      trescProgramuHtml: html,
       trescProgramu: tekst,
       czyWynikParsowaniaZatwierdzony: false,
     }))
@@ -1298,6 +1154,7 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
         tytul: daneProgramu.tytulSzkolenia,
         statusBiznesowy: daneProgramu.czyWynikParsowaniaZatwierdzony ? 'zatwierdzona' : 'robocza',
         daneDokumentu: daneProgramu,
+        uzytkownikId: zalogowanyUzytkownikId,
         metadane: {
           organizator: ustawienia.profilFirmy === 'iist' ? 'IIST' : 'SEMPER',
           liczbaDni: program.dni.length,
@@ -1319,7 +1176,7 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
       ustawStanZapisu('blad')
       ustawKomunikat('Nie udało się zapisać programu roboczo.')
     }
-  }, [aktywnaKopiaId, daneProgramu, liczbaModulow, program.dni.length, ustawienia.profilFirmy])
+  }, [aktywnaKopiaId, daneProgramu, liczbaModulow, program.dni.length, ustawienia.profilFirmy, zalogowanyUzytkownikId])
 
   function wyczyscProgram() {
     ustawDaneProgramu(domyslnyZapisProgramu)
@@ -1341,7 +1198,7 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
   }
 
   function odrzucAutosave() {
-    usunAutosaveProgramu()
+    usunAutosaveProgramu(zalogowanyUzytkownikId)
     ustawAutosaveDoDecyzji(null)
     ustawKomunikat('Odrzucono niezapisany draft.')
   }
