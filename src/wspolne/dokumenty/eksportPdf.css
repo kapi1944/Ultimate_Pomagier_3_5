@@ -2,6 +2,22 @@
 
 [data-pomin-w-eksporcie] { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 
+.akcje-eksportu-pdf__przycisk {
+  min-height: 38px;
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 35%, transparent);
+  border-radius: 6px;
+  padding: 8px 12px;
+  background: var(--ui-panel);
+  color: var(--ui-tekst);
+  cursor: pointer;
+  font: inherit;
+}
+
+.akcje-eksportu-pdf__przycisk:hover:not(:disabled) {
+  border-color: var(--ui-akcent);
+  background: var(--ui-akcent-mocny);
+}
+
 @media print {
   [data-pomin-w-eksporcie] { display: none !important; }
   .program-kartka-a4:not([data-strona-dokumentu]) { break-after: page; break-inside: avoid; }

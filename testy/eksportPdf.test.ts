@@ -1,10 +1,13 @@
 ﻿import assert from 'node:assert/strict'
 import test from 'node:test'
 import { czyMoznaRozpoczacEksport, pobierzPodzialStronA4, pobierzStronyDokumentu, utworzNazwePlikuPdf } from '../src/wspolne/dokumenty/eksportPdf.ts'
+import { utworzNazwePlikuDokumentu } from '../src/wspolne/dokumenty/nazwyDokumentow.ts'
 import { geometriaStronyProgramu, pobierzWymiaryStronyProgramu } from '../src/moduly/dokumenty/generatory/programy_szkolen/geometriaStronyProgramu.ts'
 
 test('nazwa PDF usuwa znaki niedozwolone i zachowuje polskie znaki', () => {
   assert.equal(utworzNazwePlikuPdf('Program: szkolenie "Zażółć"?.pdf'), 'Program szkolenie Zażółć.pdf')
+  assert.equal(utworzNazwePlikuDokumentu('ANKIETA', 'Ocena: Zażółć?'), 'Ankieta_Ocena Zażółć.pdf')
+  assert.equal(utworzNazwePlikuDokumentu('KARTA_NA_DRZWI', '', 'DOCX'), 'Karta-na-drzwi.docx')
 })
 
 test('podzial A4 tworzy przewidywalne strony dla krótkiego i długiego podglądu', () => {

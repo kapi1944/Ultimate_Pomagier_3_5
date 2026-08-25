@@ -1,0 +1,119 @@
+.generator-dokumentu {
+  width: 100%;
+  max-width: none;
+}
+
+.generator-dokumentu__naglowek {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.generator-dokumentu__naglowek h1,
+.generator-dokumentu__naglowek p {
+  margin-top: 0;
+}
+
+.generator-dokumentu__naglowek p {
+  margin-bottom: 0;
+  color: var(--ui-tekst-drugi);
+}
+
+.generator-dokumentu__akcje {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.generator-dokumentu__akcje > button {
+  min-height: 38px;
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 35%, transparent);
+  border-radius: 6px;
+  padding: 8px 12px;
+  background: var(--ui-panel);
+  color: var(--ui-tekst);
+  cursor: pointer;
+  font: inherit;
+}
+
+.generator-dokumentu__akcje > button:hover:not(:disabled) {
+  border-color: var(--ui-akcent);
+  background: var(--ui-akcent-mocny);
+}
+
+.generator-dokumentu__komunikat {
+  width: 100%;
+  color: var(--ui-tekst-drugi);
+  font-size: .92rem;
+}
+
+.generator-dokumentu__panele {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.generator-dokumentu__panel {
+  min-width: 0;
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 25%, transparent);
+  border-radius: 8px;
+  padding: 18px;
+  background: var(--ui-powierzchnia);
+}
+
+.generator-dokumentu__panel > h2 {
+  margin: 0 0 12px;
+  font-size: 1.1rem;
+}
+
+.generator-dokumentu__panel--edycja label {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.generator-dokumentu__panel--edycja input,
+.generator-dokumentu__panel--edycja textarea,
+.generator-dokumentu__panel--edycja select {
+  width: 100%;
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 35%, transparent);
+  border-radius: 6px;
+  padding: 9px 10px;
+  background: var(--ui-pole);
+  color: var(--ui-tekst);
+  font: inherit;
+}
+
+@media (max-width: 900px) {
+  .generator-dokumentu__panele {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  body:has(.generator-dokumentu) * {
+    visibility: hidden;
+  }
+
+  .generator-dokumentu,
+  .generator-dokumentu * {
+    visibility: hidden;
+  }
+
+  .generator-dokumentu__panel--podglad,
+  .generator-dokumentu__panel--podglad * {
+    visibility: visible;
+  }
+
+  .generator-dokumentu__panel--podglad {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    border: 0;
+  }
+}

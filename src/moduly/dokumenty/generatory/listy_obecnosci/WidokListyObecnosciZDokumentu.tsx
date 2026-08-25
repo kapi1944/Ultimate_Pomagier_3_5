@@ -1,6 +1,11 @@
 import { useState } from 'react'
 import type { KorektyReczneListyObecnosci } from '../../../../wspolne/integracje/szczegolyDoDokumentow'
 import WidokListObecnosci from './WidokListObecnosci'
+import UkladGeneratoraDokumentu, {
+  PanelGeneratoraDokumentu,
+  PasekAkcjiGeneratora,
+  UkladPaneliGeneratora,
+} from '../../wspolne/UkladGeneratoraDokumentu'
 import {
   pobierzListeObecnosciPoId,
   zapiszKorektyListyObecnosci,
@@ -68,14 +73,14 @@ function EdytorListyObecnosci({ dokumentId }: { dokumentId: string }) {
   }
 
   return (
-    <section className="widok prosty-generator-dokumentu">
-      <header className="prosty-generator-dokumentu__naglowek">
-        <p>Dokument roboczy</p>
-        <h1>Lista obecności</h1>
-        <span>{komunikat}</span>
-      </header>
-      <div className="prosty-generator-dokumentu__kolumny">
-        <section className="prosty-generator-dokumentu__panel">
+    <UkladGeneratoraDokumentu
+      akcje={<PasekAkcjiGeneratora><button type="button" onClick={zapiszDokument}>Zapisz</button></PasekAkcjiGeneratora>}
+      komunikat={komunikat}
+      opis="Dokument roboczy utworzony ze Szczegółów organizacyjnych."
+      tytul="Lista obecności"
+    >
+      <UkladPaneliGeneratora>
+        <PanelGeneratoraDokumentu tytul="Edycja" wariant="edycja">
           <label>
             <span>Tytuł dokumentu</span>
             <input value={tytulDokumentu} onChange={(zdarzenie) => ustawTytulDokumentu(zdarzenie.target.value)} />
@@ -88,9 +93,8 @@ function EdytorListyObecnosci({ dokumentId }: { dokumentId: string }) {
             <span>Uczestnicy (korekta ręczna)</span>
             <textarea rows={10} value={tekstUczestnikow} onChange={(zdarzenie) => ustawTekstUczestnikow(zdarzenie.target.value)} />
           </label>
-          <button type="button" onClick={zapiszDokument}>Zapisz</button>
-        </section>
-        <article className="prosty-generator-dokumentu__podglad">
+        </PanelGeneratoraDokumentu>
+        <PanelGeneratoraDokumentu tytul="Podgląd" wariant="podglad">
           <h2>{tytulSzkolenia || 'Bez tytułu szkolenia'}</h2>
           <p><strong>Grupa:</strong> {daneZrodlowe.nazwaGrupy}</p>
           <p><strong>Terminy:</strong> {daneZrodlowe.daty.join(', ')}</p>
@@ -99,9 +103,9 @@ function EdytorListyObecnosci({ dokumentId }: { dokumentId: string }) {
           <h3>Uczestnicy</h3>
           <ol>{uczestnicyDoPodgladu.map((uczestnik, indeks) => <li key={uczestnik.id ?? `${uczestnik.nazwaPelna}-${indeks}`}>{uczestnik.nazwaPelna}</li>)}</ol>
           <small>Źródło: Szczegóły {dokument.metadaneGeneratora.szczegolyOrganizacyjneId}, odcisk {dokument.metadaneGeneratora.odciskDanych}</small>
-        </article>
-      </div>
-    </section>
+        </PanelGeneratoraDokumentu>
+      </UkladPaneliGeneratora>
+    </UkladGeneratoraDokumentu>
   )
 }
 

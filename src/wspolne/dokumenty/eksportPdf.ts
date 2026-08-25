@@ -1,5 +1,6 @@
 ﻿import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
+import { oczyscNazwePliku } from './nazwyDokumentow'
 
 export type UstawieniaEksportuPdf = {
   obszarDokumentu: HTMLElement
@@ -8,15 +9,12 @@ export type UstawieniaEksportuPdf = {
   marginesMm?: number
 }
 
-const znakiNiedozwoloneWNazwie = /[<>:"/\\|?*]/g
-
 export function czyMoznaRozpoczacEksport(czyGenerowanie: boolean) {
   return !czyGenerowanie
 }
 
 export function utworzNazwePlikuPdf(nazwa: string) {
-  const bezNiedozwolonychZnakow = Array.from(nazwa).filter((znak) => znak.charCodeAt(0) >= 32).join('').replace(znakiNiedozwoloneWNazwie, ' ').replace(/\s+/g, ' ').trim().replace(/[. ]+$/g, '')
-  const bezRozszerzenia = bezNiedozwolonychZnakow.replace(/\.pdf$/i, '').trim().replace(/[. ]+$/g, '') || 'Dokument'
+  const bezRozszerzenia = oczyscNazwePliku(nazwa).replace(/\.pdf$/i, '').trim().replace(/[. ]+$/g, '') || 'Dokument'
   return `${bezRozszerzenia}.pdf`
 }
 

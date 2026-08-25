@@ -88,6 +88,32 @@ test('pięć modułów ma spójne trasy i pozycje Wszystkie', () => {
   })
 })
 
+test('generatory korzystają ze wspólnego układu paneli, paska akcji i jawnej konfiguracji zapisu', () => {
+  const prostyGenerator = odczytajZrodlo('../src/moduly/dokumenty/wspolne/ProstyGeneratorDokumentu.tsx')
+  const listaZDokumentu = odczytajZrodlo('../src/moduly/dokumenty/generatory/listy_obecnosci/WidokListyObecnosciZDokumentu.tsx')
+  const checklista = odczytajZrodlo('../src/moduly/dokumenty/generatory/checklisty_paczek/WidokChecklistPaczek.tsx')
+  const program = odczytajZrodlo('../src/moduly/dokumenty/generatory/programy_szkolen/WidokProgramowSzkolen.tsx')
+  const ankieta = odczytajZrodlo('../src/moduly/dokumenty/generatory/ankiety/WidokAnkiet.tsx')
+  const lista = odczytajZrodlo('../src/moduly/dokumenty/generatory/listy_obecnosci/WidokListObecnosci.tsx')
+  const karta = odczytajZrodlo('../src/moduly/dokumenty/generatory/karta_na_drzwi/WidokKartNaDrzwi.tsx')
+
+  assert.match(prostyGenerator, /UkladGeneratoraDokumentu/)
+  assert.match(prostyGenerator, /UkladPaneliGeneratora/)
+  assert.match(listaZDokumentu, /UkladPaneliGeneratora/)
+  assert.match(checklista, /UkladPaneliGeneratora/)
+  assert.match(prostyGenerator, /PasekAkcjiGeneratora/)
+  assert.match(checklista, /PasekAkcjiGeneratora/)
+  assert.match(program, /PasekAkcjiGeneratora/)
+  assert.match(program, /utworzNazwePlikuDokumentu\('PROGRAM_SZKOLENIA'/)
+
+  assert.match(ankieta, /typDokumentu="ANKIETA"/)
+  assert.match(ankieta, /generatorId="ankiety"/)
+  assert.match(lista, /typDokumentu="LISTA_OBECNOSCI"/)
+  assert.match(lista, /generatorId="listy_obecnosci"/)
+  assert.match(karta, /typDokumentu="KARTA_NA_DRZWI"/)
+  assert.match(karta, /generatorId="karta_na_drzwi"/)
+})
+
 test('wspólna lista filtruje typ, status, tekst, datę i sortowanie bez mieszania dokumentów', () => {
   const ankieta = { ...utworzNowyDokument({ id: 'ankieta-1', typ: 'ANKIETA', tytul: 'Ocena szkolenia', generatorId: 'ankiety', daneDokumentu: { tytulSzkolenia: 'Excel', trener: 'Anna Trener' }, ustawieniaDokumentu: {} }), status: 'OPUBLIKOWANY' as const, zmodyfikowano: '2026-07-20T10:00:00.000Z' }
   const dyplom = { ...utworzNowyDokument({ id: 'dyplom-1', typ: 'DYPLOM', tytul: 'Dyplom Excel', generatorId: 'dyplomy', daneDokumentu: { tytulSzkolenia: 'Excel', trener: 'Jan Trener' }, ustawieniaDokumentu: {} }), status: 'ROBOCZY' as const, zmodyfikowano: '2026-07-21T10:00:00.000Z' }

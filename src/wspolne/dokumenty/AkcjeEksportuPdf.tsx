@@ -7,9 +7,10 @@ type WlasciwosciAkcjiEksportuPdf = {
   nazwaPliku: string
   czyMoznaEksportowac?: () => boolean
   className?: string
+  classNamePrzycisku?: string
 }
 
-export default function AkcjeEksportuPdf({ obszarDokumentu, nazwaPliku, czyMoznaEksportowac = () => true, className }: WlasciwosciAkcjiEksportuPdf) {
+export default function AkcjeEksportuPdf({ obszarDokumentu, nazwaPliku, czyMoznaEksportowac = () => true, className, classNamePrzycisku = 'akcje-eksportu-pdf__przycisk' }: WlasciwosciAkcjiEksportuPdf) {
   const [czyGenerowanie, ustawCzyGenerowanie] = useState(false)
   const [blad, ustawBlad] = useState<string | null>(null)
 
@@ -36,10 +37,10 @@ export default function AkcjeEksportuPdf({ obszarDokumentu, nazwaPliku, czyMozna
   }
 
   return <div className={`akcje-eksportu-pdf ${className ?? ''}`} data-pomin-w-eksporcie>
-    <button className="program-szkolen__przycisk" disabled={czyGenerowanie} onClick={pobierzPdf} type="button">
+    <button className={classNamePrzycisku} disabled={czyGenerowanie} onClick={pobierzPdf} type="button">
       {czyGenerowanie ? 'Generowanie PDF...' : 'Pobierz PDF'}
     </button>
-    <button className="program-szkolen__przycisk" disabled={czyGenerowanie} onClick={drukuj} type="button">Drukuj</button>
+    <button className={classNamePrzycisku} disabled={czyGenerowanie} onClick={drukuj} type="button">Drukuj</button>
     {blad && <p className="akcje-eksportu-pdf__blad" role="alert">{blad}</p>}
   </div>
 }

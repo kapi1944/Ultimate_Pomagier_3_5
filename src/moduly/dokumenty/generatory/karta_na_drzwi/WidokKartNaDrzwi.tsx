@@ -53,7 +53,9 @@ export default function WidokKartNaDrzwi() {
       opis="Generator karty na drzwi dla szkolenia zamkniętego."
       etykietaDanychWejsciowych="Dane szkolenia"
       tekstPrzykladowy={tekstPrzykladowy}
-      kluczLocalStorage="ultimate-pomagier.karta-na-drzwi.szkic"
+      kluczSzkicu="ultimate-pomagier.karta-na-drzwi.szkic"
+      typDokumentu="KARTA_NA_DRZWI"
+      generatorId="karta_na_drzwi"
       generujDokument={generujDokument}
     />
   )

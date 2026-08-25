@@ -53,7 +53,9 @@ export default function WidokAnkiet() {
       opis="Wspólny generator ankiet dla SEMPER, IIST i klienta."
       etykietaDanychWejsciowych="Dane ankiety"
       tekstPrzykladowy={tekstPrzykladowy}
-      kluczLocalStorage="ultimate-pomagier.ankiety.szkic"
+      kluczSzkicu="ultimate-pomagier.ankiety.szkic"
+      typDokumentu="ANKIETA"
+      generatorId="ankiety"
       generujDokument={generujDokument}
     />
   )

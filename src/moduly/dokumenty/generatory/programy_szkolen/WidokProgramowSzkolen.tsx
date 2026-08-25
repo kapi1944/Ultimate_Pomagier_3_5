@@ -1,7 +1,9 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useKontekstUzytkownika } from '../../../../aplikacja/logowanie/useKontekstUzytkownika'
 import AkcjeEksportuPdf from '../../../../wspolne/dokumenty/AkcjeEksportuPdf'
+import { utworzNazwePlikuDokumentu } from '../../../../wspolne/dokumenty/nazwyDokumentow'
 import PanelKontroliJakosciDokumentu from '../../../../wspolne/dokumenty/PanelKontroliJakosciDokumentu'
+import { PasekAkcjiGeneratora } from '../../wspolne/UkladGeneratoraDokumentu'
 import {
   pobierzAktywnaKopieProgramu,
   pobierzAutosaveProgramu,
@@ -1481,12 +1483,13 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
 
       <header className="program-panel-roboczy program-szkolen__naglowek">
         <h1>Programy szkoleń</h1>
-        <div className="program-szkolen__akcje">
+        <PasekAkcjiGeneratora className="program-szkolen__akcje">
           <span role="status">{stanZapisu === 'zapisywanie' ? 'Zapisywanie...' : stanZapisu === 'blad' ? 'Błąd zapisu' : 'Zapisano'}</span>
           <AkcjeEksportuPdf
             className="program-szkolen__akcje-eksportu"
+            classNamePrzycisku="program-szkolen__przycisk"
             czyMoznaEksportowac={czyMoznaEksportowacProgram}
-            nazwaPliku={`Program_szkolenia_${tytulDokumentu || 'bez_tytulu'}`}
+            nazwaPliku={utworzNazwePlikuDokumentu('PROGRAM_SZKOLENIA', tytulDokumentu || 'bez tytułu')}
             obszarDokumentu={obszarPodgladuRef}
           />
           {aktywnaKopiaId ? (
@@ -1506,7 +1509,7 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
           <button className="program-szkolen__przycisk" onClick={wyczyscProgram} type="button">
             Wyczyść program
           </button>
-        </div>
+        </PasekAkcjiGeneratora>
       </header>
 
       {komunikat && <div className="program-panel-roboczy program-szkolen__komunikat">{komunikat}</div>}

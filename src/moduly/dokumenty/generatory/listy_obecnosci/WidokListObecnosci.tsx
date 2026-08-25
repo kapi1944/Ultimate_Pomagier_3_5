@@ -92,7 +92,9 @@ export default function WidokListObecnosci() {
       opis="Generator list obecności."
       etykietaDanychWejsciowych="Dane szkolenia i uczestnicy"
       tekstPrzykladowy={tekstPrzykladowy}
-      kluczLocalStorage="ultimate-pomagier.listy-obecnosci.szkic"
+      kluczSzkicu="ultimate-pomagier.listy-obecnosci.szkic"
+      typDokumentu="LISTA_OBECNOSCI"
+      generatorId="listy_obecnosci"
       generujDokument={generujDokument}
     />
   )
