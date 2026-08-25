@@ -18,6 +18,13 @@ import {
   type BlokDokumentu,
 } from '../../../../wspolne/dokumenty/modelBlokowy'
 import { parsujTekstProgramu } from './ParserTekstu'
+import {
+  importujTekstProgramu,
+  przygotujZmianyImportuProgramu,
+  zastosujZaakceptowaneZmianyImportuProgramu,
+  type TrybZastosowaniaImportuProgramu,
+  type WynikImportuProgramu,
+} from './pipelineImportuProgramu'
 import { pobierzTytulDokumentuProgramu } from './tytulDokumentuProgramu'
 import RendererStronProgramu from './RendererStronProgramu'
 import {
@@ -30,8 +37,6 @@ import {
 import { EdytorProgramuWysiwyg } from './komponenty/EdytorProgramuWysiwyg'
 import {
   konwertujHtmlNaTekstProgramu,
-  konwertujTekstProgramuNaHtml,
-  oczyscHtmlProgramu,
 } from './komponenty/konwersjaProgramuWysiwyg'
 import { czyUzytkownikMozeWymusicEksportProgramu } from './uprawnieniaEksportuProgramu'
 import {
@@ -1005,6 +1010,8 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
   const [autosaveDoDecyzji, ustawAutosaveDoDecyzji] = useState(() => pobierzAutosaveProgramu(zalogowanyUzytkownikId))
   const [komunikat, ustawKomunikat] = useState('')
   const [stanZapisu, ustawStanZapisu] = useState<'zapisano' | 'zapisywanie' | 'blad'>('zapisano')
+  const [wynikImportu, ustawWynikImportu] = useState<WynikImportuProgramu | null>(null)
+  const [trybImportu, ustawTrybImportu] = useState<TrybZastosowaniaImportuProgramu>('UZUPELNIJ')
 
   useEffect(() => {
     if (!dokumentIdZTrasy) {
@@ -1072,6 +1079,10 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
     .filter(({ indeks }) => indeks === 0 || czyPokazacPoziomyPodpunktow)
 
   const czyNiezapisaneZmiany = JSON.stringify(daneProgramu) !== ostatniJawnyZapis
+  const zmianyImportu = useMemo(
+    () => wynikImportu ? przygotujZmianyImportuProgramu(daneProgramu, wynikImportu) : [],
+    [daneProgramu, wynikImportu],
+  )
 
   useEffect(() => {
     if (!czyNiezapisaneZmiany || autosaveDoDecyzji) {
@@ -1335,13 +1346,31 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
       const zawartosc = String(czytnik.result ?? '')
       const czyHtml = plik.type === 'text/html' || /\.html?$/i.test(plik.name)
       const tekstProgramu = czyHtml ? konwertujHtmlNaTekstProgramu(zawartosc) : zawartosc
-      const htmlProgramu = czyHtml ? oczyscHtmlProgramu(zawartosc) : konwertujTekstProgramuNaHtml(zawartosc)
 
-      zmienTrescProgramuHtml(htmlProgramu, tekstProgramu)
-      ustawKomunikat(`Zaimportowano program z pliku: ${plik.name}.`)
+      ustawWynikImportu(importujTekstProgramu(tekstProgramu))
+      ustawTrybImportu('UZUPELNIJ')
+      ustawKomunikat(`Przygotowano wynik importu pliku: ${plik.name}. Sprawdź propozycje przed zastosowaniem.`)
     }
     czytnik.onerror = () => ustawKomunikat('Nie udało się odczytać pliku programu.')
     czytnik.readAsText(plik)
+  }
+
+  function zaakceptujImportProgramu() {
+    if (!wynikImportu) {
+      return
+    }
+
+    const zastosowanie = zastosujZaakceptowaneZmianyImportuProgramu(daneProgramu, wynikImportu, trybImportu)
+    ustawDaneProgramu(zastosowanie.model)
+    ustawWynikImportu(null)
+    ustawKomunikat(zastosowanie.zastosowanePola.length
+      ? 'Zastosowano zaakceptowane zmiany z importu. Wynik parsowania wymaga zatwierdzenia.'
+      : 'Import nie wprowadził zmian do programu.')
+  }
+
+  function anulujImportProgramu() {
+    ustawWynikImportu(null)
+    ustawKomunikat('Anulowano import. Aktualny program nie został zmieniony.')
   }
 
   function importujLogotypZPliku(plik?: File) {
@@ -1766,6 +1795,36 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
                   type="file"
                 />
               </label>
+
+              {wynikImportu && (
+                <div className="program-szkolen__komunikat" role="dialog" aria-label="Podgląd importu programu">
+                  <strong>Podgląd importu: {wynikImportu.zrodlo}</strong>
+                  {wynikImportu.ostrzezenia.map((ostrzezenie) => <p key={ostrzezenie}>Wymaga sprawdzenia: {ostrzezenie}</p>)}
+                  {wynikImportu.bledy.map((blad) => <p className="program-szkolen__blad" key={blad}>{blad}</p>)}
+                  <ul>
+                    {zmianyImportu.map((zmiana) => (
+                      <li key={zmiana.pole}>
+                        {zmiana.pole === 'tytulSzkolenia' ? 'Tytuł szkolenia' : 'Treść programu'}: {zmiana.stan === 'KONFLIKT' ? 'konflikt z aktualną wartością' : zmiana.stan === 'WYMAGA_SPRAWDZENIA' ? 'importowane — wymaga sprawdzenia' : zmiana.stan === 'GOTOWA_DO_ZASTOSOWANIA' ? 'importowane' : 'bez zmiany'}
+                        <details>
+                          <summary>Pokaż proponowaną wartość</summary>
+                          <pre>{zmiana.wartosc}</pre>
+                        </details>
+                      </li>
+                    ))}
+                  </ul>
+                  <label className="program-szkolen__etykieta">
+                    Tryb zastosowania
+                    <select className="program-szkolen__lista" onChange={(zdarzenie) => ustawTrybImportu(zdarzenie.target.value as TrybZastosowaniaImportuProgramu)} value={trybImportu}>
+                      <option value="UZUPELNIJ">Uzupełnij puste pola</option>
+                      <option value="ZASTAP">Zastąp istniejące wartości</option>
+                    </select>
+                  </label>
+                  <div className="program-szkolen__akcje">
+                    <button className="program-szkolen__przycisk" disabled={wynikImportu.bledy.length > 0} onClick={zaakceptujImportProgramu} type="button">Zastosuj import</button>
+                    <button className="program-szkolen__przycisk" onClick={anulujImportProgramu} type="button">Anuluj import</button>
+                  </div>
+                </div>
+              )}
 
               <div className="program-szkolen__srodtytul">Treść programu</div>
 
