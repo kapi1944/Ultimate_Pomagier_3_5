@@ -60,15 +60,12 @@ test('rejestr tworzy, aktualizuje, archiwizuje oraz obsługuje kosz dokumentów'
   assert.equal(repozytoriumWspolnychDokumentow.pobierzPoId(utworzony.id), null)
 })
 
-test('rejestr pomija uszkodzony rekord bez utraty pozostalych dokumentow', () => {
+test('rejestr przerywa odczyt uszkodzonego stanu zamiast traktować go jak pusty', () => {
   magazyn.clear()
   const poprawny = utworzDokument('poprawny')
   magazyn.set(kluczRejestruDokumentow, JSON.stringify({ wersja: 1, dokumenty: [poprawny, { id: 'uszkodzony' }] }))
 
-  const dokumenty = repozytoriumWspolnychDokumentow.pobierzWszystkie()
-
-  assert.equal(dokumenty.length, 1)
-  assert.equal(dokumenty[0].id, 'poprawny')
+  assert.throws(() => repozytoriumWspolnychDokumentow.pobierzWszystkie(), /uszkodzone dane/)
 })
 
 test('migracja tworzy kopie bezpieczenstwa przed zapisem nowej wersji rejestru', () => {
@@ -80,7 +77,7 @@ test('migracja tworzy kopie bezpieczenstwa przed zapisem nowej wersji rejestru',
 
   assert.equal(dokumenty[0]?.id, 'z-migracji')
   assert.equal(magazyn.get(kluczKopiiBezpieczenstwaRejestruDokumentow), zapisWersjiZero)
-  assert.match(magazyn.get(kluczRejestruDokumentow) ?? '', /"wersja":1/)
+  assert.equal((JSON.parse(magazyn.get(kluczRejestruDokumentow) ?? '{}') as { wersja?: number }).wersja, 3)
 })
 
 test('filtry i sortowanie pozostaja czystymi funkcjami', () => {

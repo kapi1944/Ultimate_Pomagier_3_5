@@ -40,7 +40,6 @@ import WidokGeneratoraSzczegolow from '../../moduly/zamkniete/szkolenia/generato
 import WidokSzkolenZamknietych from '../../moduly/zamkniete/szkolenia/WidokSzkolenZamknietych'
 import { pobierzSciezkeGeneratoraDokumentu } from '../../wspolne/dokumenty/konfiguracjaDokumentow'
 import type { Dokument } from '../../wspolne/dokumenty/modelDokumentu'
-import { migrujStarszeDokumenty } from '../../wspolne/dokumenty/migracjaStarszychDokumentow'
 import './ukladAplikacji.css'
 
 const kluczAktywnegoWidoku = 'ultimate-pomagier-aktywny-widok'
@@ -273,10 +272,6 @@ export default function UkladAplikacji() {
   const [czyWylogowanieDoPotwierdzenia, ustawCzyWylogowanieDoPotwierdzenia] = useState(false)
   const [wersjaProgramu, ustawWersjeProgramu] = useState(0)
   const [widokDoPotwierdzenia, ustawWidokDoPotwierdzenia] = useState<WidokNawigacji | null>(null)
-
-  useEffect(() => {
-    migrujStarszeDokumenty()
-  }, [])
 
   useEffect(() => {
     function zastosujZapisaneUstawienia() {

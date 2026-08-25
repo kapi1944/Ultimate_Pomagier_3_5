@@ -13,14 +13,11 @@ import type {
 } from '../typy'
 import { utworzPoczatkowaGrupe } from '../danePoczatkowe'
 import { repozytoriumWspolnychDokumentow } from '../../../../wspolne/dokumenty/rejestrDokumentow'
-import { repozytoriumDokumentow } from '../../../../wspolne/dokumenty/repozytoriumDokumentow'
 import { zapiszDokumentRoboczyGeneratora } from '../../../../wspolne/dokumenty/zapisDokumentuGeneratora'
 import { czyMoznaUtworzycAktualizacje, walidujPrzejscieStatusuSzczegolow, type AkcjaStatusuSzczegolow } from '../workflowStatusow'
 const kluczAktualnejWersji = 'ultimatePomagier.szczegolyOrganizacyjne.aktualnaWersja'
 
-const kluczOpublikowanychSzczegolow = 'ultimatePomagier.szczegolyOrganizacyjne.opublikowane'
 const kluczAutosave = 'ultimatePomagier.szczegolyOrganizacyjne.autosave'
-const kluczHistorii = 'ultimatePomagier.szczegolyOrganizacyjne.historia'
 export const wersjaEksportuSzczegolow = 'ultimate-pomagier-3.5-szczegoly-organizacyjne'
 
 function bezpiecznieParsuj<Typ>(wartosc: string | null, fallback: Typ): Typ {
@@ -71,37 +68,6 @@ function zapiszOpublikowaneSzczegoly(rekordy: OpublikowaneSzczegolyOrganizacyjne
   })
 }
 
-function zmigrujStarszeOpublikowaneSzczegoly() {
-  const rekordy = bezpiecznieParsuj<unknown>(localStorage.getItem(kluczOpublikowanychSzczegolow), [])
-
-  if (Array.isArray(rekordy)) {
-    zapiszOpublikowaneSzczegoly(rekordy.filter((rekord): rekord is OpublikowaneSzczegolyOrganizacyjne => Boolean(rekord && typeof rekord === 'object' && typeof (rekord as { id?: unknown }).id === 'string')))
-  }
-}
-
-function zmigrujStarszaHistorieSzczegolow() {
-  const historia = bezpiecznieParsuj<unknown>(localStorage.getItem(kluczHistorii), [])
-
-  if (!Array.isArray(historia)) {
-    return
-  }
-
-  const istniejaceId = new Set(repozytoriumDokumentow.pobierzHistorie('szczegoly_organizacyjne').map((wpis) => wpis.id))
-  historia.forEach((wpis) => {
-    if (!wpis || typeof wpis !== 'object' || typeof (wpis as { id?: unknown }).id !== 'string' || istniejaceId.has((wpis as { id: string }).id)) {
-      return
-    }
-
-    const staryWpis = wpis as WpisHistoriiSzczegolow
-    repozytoriumDokumentow.dodajWersjeHistorii({
-      id: staryWpis.id,
-      typGeneratora: 'szczegoly_organizacyjne',
-      data: staryWpis.data,
-      dane: staryWpis,
-    })
-  })
-}
-
 function utworzNazweOpublikowanegoRekordu(wersja: WersjaRoboczaGeneratora) {
   return wersja.nazwa.replace('[Kopia robocza]', '[Opublikowane]')
 }
@@ -137,12 +103,15 @@ function utworzEtykieteWersji(historia: WpisHistoriiSzczegolow[]) {
 }
 
 function zarejestrujHistorie(wpis: WpisHistoriiSzczegolow) {
-  repozytoriumDokumentow.dodajWersjeHistorii({
+  const dokument = wpis.dokumentId ? repozytoriumWspolnychDokumentow.pobierzPoId(wpis.dokumentId) : null
+  repozytoriumWspolnychDokumentow.dodajWpisHistorii({
     id: wpis.id,
-    typGeneratora: 'szczegoly_organizacyjne',
+    typ: 'historia_szczegolow',
     data: wpis.data,
-    dokumentId: wpis.dokumentId,
-    dane: wpis,
+    dokumentId: wpis.dokumentId ?? null,
+    dokumentLogicznyId: dokument?.dokumentLogicznyId ?? null,
+    dane: { generatorId: 'szczegoly_organizacyjne', wpis },
+    automatyczne: false,
   })
 }
 
@@ -159,7 +128,6 @@ export function pobierzKopieRobocze() {
 }
 
 export function pobierzOpublikowaneSzczegoly() {
-  zmigrujStarszeOpublikowaneSzczegoly()
   return repozytoriumWspolnychDokumentow
     .pobierzWszystkie()
     .filter((dokument) => dokument.typ === 'SZCZEGOLY_ORGANIZACYJNE' && dokument.generatorId === 'szczegoly_organizacyjne' && dokument.status === 'OPUBLIKOWANY' && !dokument.czyUsunietyMiekko)
@@ -179,10 +147,10 @@ export function usunAutosaveSzczegolow() {
 }
 
 export function pobierzHistorieSzczegolow() {
-  zmigrujStarszaHistorieSzczegolow()
-  return repozytoriumDokumentow
-    .pobierzHistorie('szczegoly_organizacyjne')
-    .map((wpis) => wpis.dane as WpisHistoriiSzczegolow)
+  return repozytoriumWspolnychDokumentow
+    .pobierzHistorie()
+    .filter((wpis) => wpis.typ === 'historia_szczegolow' && Boolean(wpis.dane && typeof wpis.dane === 'object' && (wpis.dane as { generatorId?: unknown }).generatorId === 'szczegoly_organizacyjne'))
+    .map((wpis) => (wpis.dane as { wpis: WpisHistoriiSzczegolow }).wpis)
 }
 
 export function dodajWpisHistoriiSzczegolow(wpis: Omit<WpisHistoriiSzczegolow, 'id' | 'data'>) {
@@ -192,7 +160,7 @@ export function dodajWpisHistoriiSzczegolow(wpis: Omit<WpisHistoriiSzczegolow, '
 
   zarejestrujHistorie({
     ...wpis,
-    id: `historia-${Date.now()}`,
+    id: `historia-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     data: new Date().toISOString(),
   })
 }

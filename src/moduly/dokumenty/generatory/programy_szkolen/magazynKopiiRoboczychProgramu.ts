@@ -1,6 +1,6 @@
 import type { KopiaRobocza } from '../../../../wspolne/dokumenty/magazynKopiiRoboczych'
 import { pobierzKopieProgramowZRejestru, pobierzProgramPoId, usunProgramMiekko, zapiszProgramWRejestrze } from './rejestrProgramowSzkolen'
-import { repozytoriumDokumentow } from '../../../../wspolne/dokumenty/repozytoriumDokumentow'
+import { repozytoriumWspolnychDokumentow } from '../../../../wspolne/dokumenty/rejestrDokumentow'
 
 const kluczProgramuRoboczego = 'ultimate-pomagier-program-szkolenia-roboczy'
 const kluczAutosaveProgramu = 'ultimatePomagier.programySzkolen.autosave.v1'
@@ -158,23 +158,27 @@ export function zapiszJawnaKopieProgramu<TypDanych>(dane: DaneZapisuJawnejKopii<
   const typOperacji: TypOperacjiHistoriiProgramu = dane.tryb === 'aktualizuj' ? 'aktualizacja_kopii' : dane.tryb === 'utworz_nowa' ? 'utworzenie_nowej_kopii' : 'utworzenie_kopii'
 
   ustawAktywnaKopieProgramu(rekord.id)
-  repozytoriumDokumentow.dodajWersjeHistorii({
-    typGeneratora: 'programy_szkolen',
+  repozytoriumWspolnychDokumentow.dodajWpisHistorii({
+    dokumentLogicznyId: rekord.dokumentLogicznyId,
+    typ: 'historia_programu',
     dokumentId: rekord.id,
+    automatyczne: false,
     dane: {
+      generatorId: 'programy_szkolen',
       typOperacji,
       idWersji: rekord.id,
       migawkaDokumentu: dane.daneDokumentu,
-    } satisfies WpisHistoriiProgramu<TypDanych>,
+    },
   })
   usunAutosaveProgramu()
 
   return rekord
 }
 export function pobierzHistorieProgramu<TypDanych = DaneProgramu>(idDokumentu?: string) {
-  return repozytoriumDokumentow
-    .pobierzHistorie('programy_szkolen', idDokumentu)
-    .map((wpis) => wpis.dane as WpisHistoriiProgramu<TypDanych>)
+  return repozytoriumWspolnychDokumentow
+    .pobierzHistorie(idDokumentu)
+    .filter((wpis) => wpis.typ === 'historia_programu' && Boolean(wpis.dane && typeof wpis.dane === 'object' && (wpis.dane as { generatorId?: unknown }).generatorId === 'programy_szkolen'))
+    .map((wpis) => (wpis.dane as { typOperacji: TypOperacjiHistoriiProgramu; idWersji: string; migawkaDokumentu: TypDanych }).migawkaDokumentu ? (wpis.dane as Omit<WpisHistoriiProgramu<TypDanych>, 'generatorId'>) : wpis.dane as WpisHistoriiProgramu<TypDanych>)
 }
 
 export { kluczAutosaveProgramu }

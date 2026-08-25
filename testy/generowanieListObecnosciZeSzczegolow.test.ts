@@ -13,7 +13,7 @@ import {
   type KontekstDokumentuSzkolenia,
 } from '../src/wspolne/integracje/szczegolyDoDokumentow/index.ts'
 import { pobierzKopieRoboczeGeneratora } from '../src/wspolne/dokumenty/magazynKopiiRoboczych.ts'
-import { repozytoriumDokumentow } from '../src/wspolne/dokumenty/repozytoriumDokumentow.ts'
+import { repozytoriumWspolnychDokumentow } from '../src/wspolne/dokumenty/rejestrDokumentow.ts'
 
 const magazyn = new Map<string, string>()
 
@@ -107,7 +107,7 @@ test('trzy wybrane grupy strategii JEDEN_NA_GRUPE tworza trzy dokumenty', () => 
 
   assert.equal(plan.pozycje.length, 3)
   assert.equal(wyniki.filter((wynik) => wynik.status === 'utworzono').length, 3)
-  assert.equal(repozytoriumDokumentow.pobierz({ typGeneratora: 'listy_obecnosci' }).length, 3)
+  assert.equal(repozytoriumWspolnychDokumentow.pobierzWszystkie().filter((dokument) => dokument.typ === 'LISTA_OBECNOSCI').length, 3)
 })
 
 test('bledna grupa nie blokuje poprawnej grupy', () => {
@@ -125,7 +125,7 @@ test('bledna grupa nie blokuje poprawnej grupy', () => {
   assert.equal(walidacjaBlednej.poprawny, false)
   assert.equal(walidacjaPoprawnej.poprawny, true)
   assert.equal(wynikPoprawnej?.status, 'utworzono')
-  assert.equal(repozytoriumDokumentow.pobierz({ typGeneratora: 'listy_obecnosci' }).length, 1)
+  assert.equal(repozytoriumWspolnychDokumentow.pobierzWszystkie().filter((dokument) => dokument.typ === 'LISTA_OBECNOSCI').length, 1)
 })
 
 test('wykrywa istniejaca kopie robocza i chroni przed podwojnym utworzeniem', () => {
@@ -137,14 +137,14 @@ test('wykrywa istniejaca kopie robocza i chroni przed podwojnym utworzeniem', ()
   assert.equal(pierwszy.status, 'utworzono')
   assert.equal(drugi.status, 'istnieje')
   assert.equal(pobierzIstniejacaKopieListyObecnosci('szczegoly-1', 'grupa-a')?.id, pierwszy.dokument?.id)
-  assert.equal(repozytoriumDokumentow.pobierz({ typGeneratora: 'listy_obecnosci' }).length, 1)
+  assert.equal(repozytoriumWspolnychDokumentow.pobierzWszystkie().filter((dokument) => dokument.typ === 'LISTA_OBECNOSCI').length, 1)
 })
 
 test('dokument jest widoczny w globalnym i typowanym rejestrze oraz w Dokumentach powiazanych', () => {
   wyczyscRepozytorium()
   const wynik = utworzListeObecnosciZeSzczegolow(utworzKontekst(), 'grupa-a')
 
-  assert.equal(repozytoriumDokumentow.pobierz().length, 1)
+  assert.equal(repozytoriumWspolnychDokumentow.pobierzWszystkie().filter((dokument) => dokument.typ === 'LISTA_OBECNOSCI').length, 1)
   assert.equal(pobierzKopieRoboczeGeneratora('listy_obecnosci').length, 1)
   assert.equal(pobierzListyObecnosciPowiazane('szczegoly-1').length, 1)
   assert.equal(pobierzListyObecnosciPowiazane('inne-szczegoly').length, 0)

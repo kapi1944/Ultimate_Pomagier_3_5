@@ -22,6 +22,9 @@ import {
   zastosujUstawieniaAplikacji,
   zapiszUstawieniaAplikacji,
 } from './magazynUstawienAplikacji'
+import { czyNalezyPrzypomniecOPelnymBackupu, przywrocBackup, serializujBackup, sprawdzBackup, utworzBackup, type BackupDanych, type KategoriaBackupu } from '../../wspolne/dane/backupDanych'
+import { analizujMigracjeStarszychDokumentow, wykonajMigracjeStarszychDokumentow, type RaportMigracjiStarszychDokumentow } from '../../wspolne/dokumenty/migracjaStarszychDokumentow'
+import { pobierzStanRejestruDokumentow } from '../../wspolne/dokumenty/rejestrDokumentow'
 import './widokUstawien.css'
 
 const kluczPrzypieciaPaneluJakosci = 'ultimatePomagier.panelJakosciPrzypiety'
@@ -35,6 +38,7 @@ type ZakladkaUstawien =
   | 'PULPIT'
   | 'ZADANIA'
   | 'DOSTEPNOSC'
+  | 'DANE'
 
 const etykietyPalet: Record<PaletaInterfejsu, string> = {
   DOMYSLNA: 'Domyślna',
@@ -64,6 +68,10 @@ function pobierzPlikJson(nazwa: string, zawartosc: string) {
   URL.revokeObjectURL(adres)
 }
 
+function pobierzStatusMigracji() {
+  try { return pobierzStanRejestruDokumentow().migracje[0]?.stan ?? 'NIE WYKONANO' } catch { return 'BŁĄD REJESTRU' }
+}
+
 export default function WidokUstawien() {
   const { zalogowanyUzytkownik } = useKontekstUzytkownika()
   const uzytkownikId = zalogowanyUzytkownik?.id ?? 'anonim'
@@ -79,6 +87,11 @@ export default function WidokUstawien() {
   const [czyWysuwaniePaneluJakosci, ustawCzyWysuwaniePaneluJakosci] = useState(() => pobierzBoolean(kluczWysuwaniaPaneluJakosci, true))
   const [trybMenu, ustawTrybMenu] = useState<TrybWidokuMenu>(preferencje.tryb)
   const [komunikat, ustawKomunikat] = useState('')
+  const [backupDoPrzywrocenia, ustawBackupDoPrzywrocenia] = useState<BackupDanych | null>(null)
+  const [kategoriaPrzywrocenia, ustawKategoriePrzywrocenia] = useState<KategoriaBackupu>('WSZYSTKO')
+  const [raportMigracji, ustawRaportMigracji] = useState<RaportMigracjiStarszychDokumentow | null>(null)
+  const [statusMigracji, ustawStatusMigracji] = useState(pobierzStatusMigracji)
+  const [czyPrzypomniecBackup, ustawCzyPrzypomniecBackup] = useState(czyNalezyPrzypomniecOPelnymBackupu)
 
   const czyMozeEdytowacSystemowe =
     zalogowanyUzytkownik?.rola === 'ADMINISTRATOR'
@@ -323,18 +336,36 @@ export default function WidokUstawien() {
     ustawKomunikat('Wczytano ustawienia do podglądu. Użyj „Zapisz ustawienia”, aby je utrwalić.')
   }
 
-  function eksportujDaneLokalne() {
-    const dane = Object.fromEntries(Array.from({ length: localStorage.length }, (_, indeks) => {
-      const klucz = localStorage.key(indeks) ?? ''
-      return [klucz, localStorage.getItem(klucz)]
-    }).filter(([klucz]) => klucz))
-
+  function eksportujDaneLokalne(kategoria: KategoriaBackupu = 'WSZYSTKO') {
+    const backup = utworzBackup([kategoria])
     pobierzPlikJson(
       'ultimate-pomagier-kopia-' + new Date().toISOString().slice(0, 10) + '.json',
-      JSON.stringify(dane, null, 2),
+      serializujBackup(backup),
     )
+    ustawCzyPrzypomniecBackup(false)
+    ustawKomunikat(`Przygotowano kopię danych: ${kategoria === 'WSZYSTKO' ? 'wszystko' : kategoria.toLowerCase()}.`)
+  }
 
-    ustawKomunikat('Przygotowano kopię danych lokalnych.')
+  async function wczytajBackup(plik: File | undefined) {
+    if (!plik) return
+    const wynik = sprawdzBackup(await plik.text())
+    if (!wynik.poprawny || !wynik.backup) { ustawBackupDoPrzywrocenia(null); ustawKomunikat(wynik.blad ?? 'Niepoprawny backup.'); return }
+    ustawBackupDoPrzywrocenia(wynik.backup)
+    ustawKomunikat('Backup został sprawdzony. Zapoznaj się z podsumowaniem i potwierdź przywracanie.')
+  }
+
+  function potwierdzPrzywrocenie() {
+    if (!backupDoPrzywrocenia || !window.confirm('Przywrócić wskazany backup? Najpierw powstanie kopia aktualnego stanu.')) return
+    try { const wynik = przywrocBackup(backupDoPrzywrocenia, [kategoriaPrzywrocenia]); ustawBackupDoPrzywrocenia(null); ustawKomunikat(`Przywrócono ${wynik.przywroconeKlucze.length} kluczy danych.`) } catch (blad) { ustawKomunikat(blad instanceof Error ? blad.message : 'Przywracanie nie powiodło się.') }
+  }
+
+  function sprawdzMigracje() {
+    try { const raport = analizujMigracjeStarszychDokumentow(); ustawRaportMigracji(raport); ustawKomunikat('Analiza danych do migracji jest gotowa. Nie zapisano żadnych danych.') } catch (blad) { ustawKomunikat(blad instanceof Error ? blad.message : 'Analiza migracji nie powiodła się.') }
+  }
+
+  function rozpocznijMigracje() {
+    if (!raportMigracji || !window.confirm('Utworzyć backup i rozpocząć migrację starszych danych?')) return
+    try { const raport = wykonajMigracjeStarszychDokumentow(); ustawRaportMigracji(raport); ustawStatusMigracji(pobierzStatusMigracji()); ustawKomunikat('Migracja została zweryfikowana i potwierdzona.') } catch (blad) { ustawKomunikat(blad instanceof Error ? blad.message : 'Migracja nie powiodła się.') }
   }
 
   return (
@@ -354,7 +385,8 @@ export default function WidokUstawien() {
           ['NAWIGACJA', 'Nawigacja'],
           ['PULPIT', 'Pulpit'],
           ['ZADANIA', 'Zadania'],
-          ['DOSTEPNOSC', 'Dostępność'],
+           ['DOSTEPNOSC', 'Dostępność'],
+           ['DANE', 'Dane i kopie'],
         ] as Array<[ZakladkaUstawien, string]>).map(([id, etykieta]) => (
           <button
             aria-selected={aktywnaZakladka === id}
@@ -432,10 +464,31 @@ export default function WidokUstawien() {
           {!czyMozeEdytowacSystemowe && <p className="ustawienia__informacja">Zmiana ustawień systemowych wymaga roli Administratora lub Architekta.</p>}
         </section>
 
+      </>}
+
+      {aktywnaZakladka === 'DANE' && <>
         <section className="ustawienia__karta">
-          <h2>Dane lokalne</h2>
-          <p>Aplikacja nadal działa w lokalnym modelu danych przeglądarki. Eksport tworzy kopię wszystkich kluczy używanych na tym urządzeniu.</p>
-          <button type="button" onClick={eksportujDaneLokalne}>Eksportuj pełną kopię JSON</button>
+          <h2>Kopia bezpieczeństwa</h2>
+          <p>Pełna kopia obejmuje trwałe dane aplikacji. Dla bezpieczeństwa nie obejmuje aktywnej sesji logowania.</p>
+          {czyPrzypomniecBackup && <p className="ustawienia__informacja">Od ostatniej pełnej kopii bezpieczeństwa minęło co najmniej 30 dni.</p>}
+          <div className="ustawienia__akcje">
+            <button type="button" onClick={() => eksportujDaneLokalne()}>Utwórz kopię teraz</button>
+            {(['DOKUMENTY', 'SZCZEGOLY_ORGANIZACYJNE', 'PROGRAMY', 'PULPIT_I_ZADANIA', 'KARTOTEKI', 'USTAWIENIA'] as KategoriaBackupu[]).map((kategoria) => <button key={kategoria} type="button" onClick={() => eksportujDaneLokalne(kategoria)}>Eksportuj: {kategoria.replaceAll('_', ' ')}</button>)}
+          </div>
+        </section>
+
+        <section className="ustawienia__karta">
+          <h2>Przywracanie</h2>
+          <p>Plik jest najpierw sprawdzany pod względem manifestu, wersji i sumy kontrolnej. Przed przywróceniem powstaje kopia aktualnego stanu.</p>
+          <label className="ustawienia__import">Wybierz backup JSON<input accept="application/json,.json" onChange={(zdarzenie) => { void wczytajBackup(zdarzenie.target.files?.[0]); zdarzenie.target.value = '' }} type="file" /></label>
+          {backupDoPrzywrocenia && <div className="ustawienia__informacja"><p>Backup z {new Date(backupDoPrzywrocenia.manifest.utworzono).toLocaleString('pl-PL')} zawiera {Object.values(backupDoPrzywrocenia.manifest.liczbaRekordow).reduce((suma, liczba) => suma + liczba, 0)} rekordów.</p><label className="ustawienia__pole">Zakres przywracania<select value={kategoriaPrzywrocenia} onChange={(zdarzenie) => ustawKategoriePrzywrocenia(zdarzenie.target.value as KategoriaBackupu)}><option value="WSZYSTKO">Wszystko</option>{(['DOKUMENTY', 'SZCZEGOLY_ORGANIZACYJNE', 'PROGRAMY', 'PULPIT_I_ZADANIA', 'KARTOTEKI', 'USTAWIENIA'] as KategoriaBackupu[]).map((kategoria) => <option key={kategoria} value={kategoria}>{kategoria.replaceAll('_', ' ')}</option>)}</select></label><button type="button" onClick={potwierdzPrzywrocenie}>Potwierdź przywracanie</button></div>}
+        </section>
+
+        <section className="ustawienia__karta">
+          <h2>Migracja starszych danych</h2>
+          <p>Migracja nie uruchamia się automatycznie. Status: {statusMigracji}. Analiza nie zapisuje danych; rozpoczęcie tworzy backup, zapisuje kandydat i odczytem weryfikuje wynik.</p>
+          <button type="button" onClick={sprawdzMigracje}>Sprawdź dane do migracji</button>
+          {raportMigracji && <div className="ustawienia__informacja"><p>Dokumenty: {raportMigracji.dokumenty}; historia: {raportMigracji.historia}; autosave: {raportMigracji.autosave}; konflikty: {raportMigracji.konflikty}; pominięte: {raportMigracji.pominiete}.</p>{raportMigracji.ostrzezenia.map((ostrzezenie) => <p key={ostrzezenie}>{ostrzezenie}</p>)} {!raportMigracji.wykonano && <button type="button" onClick={rozpocznijMigracje}>Utwórz backup i rozpocznij migrację</button>}</div>}
         </section>
       </>}
 
@@ -723,7 +776,7 @@ export default function WidokUstawien() {
         <PodgladUstawien />
       </>}
 
-      {aktywnaZakladka !== 'OGOLNE' && <div className="ustawienia__pasek-zapisu">
+      {aktywnaZakladka !== 'OGOLNE' && aktywnaZakladka !== 'DANE' && <div className="ustawienia__pasek-zapisu">
         {!czyMozeEdytowacSystemowe && <span>Tylko Administrator lub Architekt może zmieniać ustawienia systemowe.</span>}
 
         <button disabled={!czyMozeEdytowacSystemowe} onClick={resetujSekcje} type="button">Przywróć tę sekcję</button>

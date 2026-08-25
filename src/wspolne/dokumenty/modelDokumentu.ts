@@ -24,6 +24,26 @@ export type IntegralnoscDokumentu = {
   czyDaneZrodloweNowsze: boolean
 }
 
+export type PowiazaniaDokumentu = {
+  szkolenieId: string | null
+  grupaId: string | null
+  klientId: string | null
+  organizatorId: string | null
+  szczegolyOrganizacyjneId: string | null
+  wersjaSzczegolowId: string | null
+  odciskDanychZrodlowych: string | null
+}
+
+export type PochodzenieMigracjiDokumentu = {
+  magazyn: string
+  klucz: string
+  typLegacy: string
+  idLegacy: string
+  odciskZrodla: string
+  idMigracji: string
+  zmigrowano: string
+}
+
 export const typyDokumentow: TypDokumentu[] = [
   'PROGRAM_SZKOLENIA',
   'SZCZEGOLY_ORGANIZACYJNE',
@@ -51,6 +71,14 @@ export type Dokument<TDane, TUstawienia> = {
   daneDokumentu: TDane
   ustawieniaDokumentu: TUstawienia
   generatorId: string
+  dokumentLogicznyId: string
+  statusBiznesowy: string | null
+  widocznosc: string | null
+  zrodloUtworzenia: string | null
+  rekordZrodlowyId: string | null
+  wersjaFormatu: string | null
+  powiazania: PowiazaniaDokumentu
+  pochodzenieMigracji: PochodzenieMigracjiDokumentu | null
   szkolenieId: string | null
   klientId: string | null
   organizatorId: string | null
@@ -77,6 +105,14 @@ export type DaneNowegoDokumentu<TDane, TUstawienia> = {
   daneDokumentu: TDane
   ustawieniaDokumentu: TUstawienia
   generatorId: string
+  dokumentLogicznyId?: string
+  statusBiznesowy?: string | null
+  widocznosc?: string | null
+  zrodloUtworzenia?: string | null
+  rekordZrodlowyId?: string | null
+  wersjaFormatu?: string | null
+  powiazania?: Partial<PowiazaniaDokumentu>
+  pochodzenieMigracji?: PochodzenieMigracjiDokumentu | null
   szkolenieId?: string | null
   klientId?: string | null
   organizatorId?: string | null
@@ -98,9 +134,10 @@ function utworzIdDokumentu() {
 
 export function utworzNowyDokument<TDane, TUstawienia>(dane: DaneNowegoDokumentu<TDane, TUstawienia>): Dokument<TDane, TUstawienia> {
   const teraz = new Date().toISOString()
+  const id = dane.id?.trim() || utworzIdDokumentu()
 
   return {
-    id: dane.id?.trim() || utworzIdDokumentu(),
+    id,
     typ: dane.typ,
     tytul: dane.tytul.trim() || 'Bez tytulu',
     status: 'ROBOCZY',
@@ -109,6 +146,22 @@ export function utworzNowyDokument<TDane, TUstawienia>(dane: DaneNowegoDokumentu
     daneDokumentu: dane.daneDokumentu,
     ustawieniaDokumentu: dane.ustawieniaDokumentu,
     generatorId: dane.generatorId,
+    dokumentLogicznyId: dane.dokumentLogicznyId?.trim() || id,
+    statusBiznesowy: dane.statusBiznesowy ?? null,
+    widocznosc: dane.widocznosc ?? null,
+    zrodloUtworzenia: dane.zrodloUtworzenia ?? null,
+    rekordZrodlowyId: dane.rekordZrodlowyId ?? null,
+    wersjaFormatu: dane.wersjaFormatu ?? null,
+    powiazania: {
+      szkolenieId: dane.powiazania?.szkolenieId ?? dane.szkolenieId ?? null,
+      grupaId: dane.powiazania?.grupaId ?? null,
+      klientId: dane.powiazania?.klientId ?? dane.klientId ?? null,
+      organizatorId: dane.powiazania?.organizatorId ?? dane.organizatorId ?? null,
+      szczegolyOrganizacyjneId: dane.powiazania?.szczegolyOrganizacyjneId ?? dane.integralnosc?.idZrodlowychSzczegolow ?? null,
+      wersjaSzczegolowId: dane.powiazania?.wersjaSzczegolowId ?? null,
+      odciskDanychZrodlowych: dane.powiazania?.odciskDanychZrodlowych ?? dane.integralnosc?.znacznikDanychZrodlowych ?? null,
+    },
+    pochodzenieMigracji: dane.pochodzenieMigracji ?? null,
     szkolenieId: dane.szkolenieId ?? null,
     klientId: dane.klientId ?? null,
     organizatorId: dane.organizatorId ?? null,
@@ -158,6 +211,7 @@ export function walidujDokument(dokument: Dokument<unknown, unknown>): WynikWali
   if (!Number.isInteger(dokument.wersja) || dokument.wersja < 1) bledy.push('Wersja dokumentu musi byc dodatnia liczba calkowita.')
   if (!Number.isInteger(dokument.wersjaSchematu) || dokument.wersjaSchematu < 1) bledy.push('Wersja schematu musi byc dodatnia liczba calkowita.')
   if (!czyNiepustyTekst(dokument.generatorId)) bledy.push('Dokument musi wskazywac generator.')
+  if (!czyNiepustyTekst(dokument.dokumentLogicznyId)) bledy.push('Dokument musi wskazywac identyfikator logiczny.')
   if (dokument.integralnosc.powiazanieZeSzczegolami === 'SAMODZIELNY' && dokument.integralnosc.idZrodlowychSzczegolow !== null) bledy.push('Samodzielny dokument nie moze wskazywac Szczegolow organizacyjnych.')
   if (dokument.integralnosc.powiazanieZeSzczegolami === 'POWIAZANY_ZE_SZCZEGOLAMI' && !czyNiepustyTekst(dokument.integralnosc.idZrodlowychSzczegolow)) bledy.push('Powiazany dokument musi wskazywac Szczegoly organizacyjne.')
   if (!czyDataIsoLubNull(dokument.utworzono) || !czyDataIsoLubNull(dokument.zmodyfikowano) || !czyDataIsoLubNull(dokument.zaktualizowano) || !czyDataIsoLubNull(dokument.opublikowano)) bledy.push('Daty dokumentu musza miec format ISO.')

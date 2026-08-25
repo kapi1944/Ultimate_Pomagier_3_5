@@ -25,21 +25,18 @@ test('migracja prostych szkicow zachowuje zrodlo, tworzy kopie i jest idempotent
   assert.equal(dokument?.status, 'ROBOCZY')
   assert.equal((dokument?.daneDokumentu as { tekst?: string }).tekst, szkic)
   assert.equal(magazyn.get('ultimate-pomagier.listy-obecnosci.szkic'), szkic)
-  assert.equal(magazyn.get('ultimatePomagier.migracjaDokumentow.kopia.ultimate-pomagier.listy-obecnosci.szkic'), szkic)
+  assert.ok(magazyn.get('ultimatePomagier.backup.lokalny.v1.indeks'))
 
   const drugiRaport = migrujStarszeDokumenty()
   assert.equal(drugiRaport.przeniesione, 0)
   assert.equal(repozytoriumWspolnychDokumentow.pobierzWszystkie().filter((rekord) => rekord.typ === 'LISTA_OBECNOSCI').length, 1)
 })
 
-test('migracja pomija uszkodzony zapis dyplomu bez blokowania innych danych', () => {
+test('migracja przerywa przy uszkodzonym źródle i nie traktuje go jak pustego', () => {
   magazyn.clear()
   magazyn.set('ultimate-pomagier.dyplomy.generator-pawla', '{uszkodzony')
   magazyn.set('ultimate-pomagier.ankiety.szkic', 'Marka: SEMPER')
 
-  const raport = migrujStarszeDokumenty()
-
-  assert.equal(raport.bledne, 1)
-  assert.equal(repozytoriumWspolnychDokumentow.pobierzWszystkie().some((rekord) => rekord.typ === 'ANKIETA'), true)
-  assert.ok(magazyn.get(kluczRejestruDokumentow))
+  assert.throws(() => migrujStarszeDokumenty(), /Uszkodzony JSON źródła/)
+  assert.equal(magazyn.get(kluczRejestruDokumentow), undefined)
 })

@@ -175,7 +175,8 @@ function pobierzStan(): StanMagazynuDokumentow {
 }
 
 function zapiszStan(stan: StanMagazynuDokumentow) {
-  localStorage.setItem(kluczRepozytoriumDokumentow, JSON.stringify(stan))
+  void stan
+  throw new Error('Repozytorium legacy jest wyłącznie do odczytu. Użyj repozytoriumWspolnychDokumentow.')
 }
 
 function zaktualizujStanDokumentu<TypDanych>(typGeneratora: TypGeneratoraDokumentu, id: string, zmien: (dokument: RekordDokumentu) => RekordDokumentu<TypDanych>) {
