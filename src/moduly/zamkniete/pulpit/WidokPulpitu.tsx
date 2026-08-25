@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { useEffect, useId, useMemo, useState, type ClipboardEvent, type CSSProperties, type Dispatch, type DragEvent, type SetStateAction } from 'react'
 import { useKontekstUzytkownika } from '../../../aplikacja/logowanie/useKontekstUzytkownika'
 import { pobierzUstawieniaAplikacji } from '../../../aplikacja/ustawienia/magazynUstawienAplikacji'
 import { pobierzUzytkownikow } from '../../../kartoteki/uzytkownicy/magazynUzytkownikow'
@@ -6,6 +6,7 @@ import { pobierzNazweUzytkownika, pobierzNazweWyswietlanaUzytkownika, type Uzytk
 import { pobierzChecklistyPaczek, pobierzSzczegolyDoChecklisty } from '../../dokumenty/generatory/checklisty_paczek/rejestrChecklistPaczek'
 import { czyPozycjaJestAktywna } from '../../dokumenty/generatory/checklisty_paczek/modelChecklistyPaczki'
 import { pobierzEtykietyOsiCzasu, pobierzGraniceDniaPracyNaOsi, pobierzStanWskaznikaCzasu, pozycjaGodzinyNaOsi, type ZakresDniaPracy } from './logika/czasDnia'
+import { przygotujMiniatureZadania } from './logika/miniaturyZadan'
 import { czyPaczkaOpozniona, czyPaczkaWidoczna, czyWysylkaWymagaDodatkowegoPotwierdzenia, liczbaDniWidocznosciPaczki, pobierzGotowoscPaczki, pobierzTerminWzglednyPaczki, sortujPaczki } from './logika/paczki'
 import { generujZadaniaAutomatyczne } from './logika/zadaniaAutomatyczne'
 import { czyMoznaZmienicKontekstPulpitu } from './logika/kontekstPulpitu'
@@ -33,6 +34,7 @@ type FormularzZadania = {
   zadaniobiorcaId: string
   szkolenieId: string
   przypomnienia: PrzypomnienieZadania[]
+  miniatura?: ZadaniePulpitu['miniatura']
 }
 
 function pobierzRodzajTerminuZapisu(formularz: FormularzZadania) {
@@ -122,6 +124,7 @@ function pustyFormularz(
     zadaniobiorcaId: '',
     szkolenieId: '',
     przypomnienia,
+    miniatura: undefined,
   }
 }
 
@@ -136,6 +139,7 @@ function formularzZZadania(zadanie: ZadaniePulpitu): FormularzZadania {
     zadaniobiorcaId: zadanie.zadaniobiorcaId === zadanie.zadaniodawcaId ? '' : zadanie.zadaniobiorcaId,
     szkolenieId: zadanie.powiazaneSzkolenieId ?? '',
     przypomnienia: zadanie.przypomnienia.map((przypomnienie) => ({ ...przypomnienie })),
+    miniatura: zadanie.miniatura,
   }
 }
 
@@ -258,7 +262,7 @@ function MarkerDeadline({ zadanie, zakresDniaPracy, uzytkownicy, otworz }: { zad
 
   const czyDoKoncaDnia = czyZadanieDoKoncaDnia(zadanie)
   const godzinaMarkera = pobierzGodzineMarkeraZadania(zadanie, zakresDniaPracy)!
-  const pozycja = pozycjaGodzinyNaOsi(godzinaMarkera)
+  const pozycja = pozycjaGodzinyNaOsi(godzinaMarkera, zakresDniaPracy)
   const szerokoscLiniiDoFajrantu = pobierzSzerokoscLiniiDoFajrantu(zadanie, zakresDniaPracy)
   const identyfikatorTooltipa = 'deadline-tooltip-' + zadanie.id
   const klasaKrawedzi = pozycja <= 5 ? ' pulpit-deadline--lewo' : pozycja >= 95 ? ' pulpit-deadline--prawo' : ''
@@ -785,7 +789,7 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
         </div>
         <div className="pulpit-os-czasu__etykiety">
           {etykietyOsi.map((etykieta) => {
-            const pozycja = pozycjaGodzinyNaOsi(etykieta)
+            const pozycja = pozycjaGodzinyNaOsi(etykieta, zakresDniaPracy)
             const klasaKrawedzi = pozycja <= 5 ? ' pulpit-os-czasu__etykieta--lewo' : pozycja >= 95 ? ' pulpit-os-czasu__etykieta--prawo' : ''
             return <span className={'pulpit-os-czasu__etykieta' + klasaKrawedzi} key={etykieta} style={{ left: pozycja + '%' }}>{etykieta}</span>
           })}

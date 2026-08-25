@@ -10,6 +10,9 @@ export const domyslnyZakresDniaPracy: ZakresDniaPracy = {
 
 export const etykietyOsiCzasu = ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00', '23:59']
 
+const skalaCzasuPozaPraca = 0.5
+const liczbaMinutDoby = 24 * 60
+
 export type StanWskaznikaCzasu = {
   etykieta: 'PREFAJRANT' | 'TERAZ' | 'FAJRANT'
   pozycja: number
@@ -23,10 +26,6 @@ function pobierzMinuty(data: Date) {
 function minutyZGodziny(godzina: string) {
   const [godziny, minuty] = godzina.split(':').map(Number)
   return godziny * 60 + minuty
-}
-
-function pozycjaMinutNaOsi(minuty: number) {
-  return Math.min(100, Math.max(0, (minuty / (24 * 60)) * 100))
 }
 
 function normalizujZakres(zakres: ZakresDniaPracy = domyslnyZakresDniaPracy) {
@@ -43,12 +42,31 @@ function normalizujZakres(zakres: ZakresDniaPracy = domyslnyZakresDniaPracy) {
   return { poczatek, koniec }
 }
 
+function pozycjaMinutNaOsi(
+  minuty: number,
+  zakres: ZakresDniaPracy = domyslnyZakresDniaPracy,
+) {
+  const ograniczoneMinuty = Math.min(liczbaMinutDoby, Math.max(0, minuty))
+  const { poczatek, koniec } = normalizujZakres(zakres)
+  const dlugoscPrzedPraca = poczatek * skalaCzasuPozaPraca
+  const dlugoscPracy = koniec - poczatek
+  const dlugoscPoPracy = (liczbaMinutDoby - koniec) * skalaCzasuPozaPraca
+  const dlugoscOsi = dlugoscPrzedPraca + dlugoscPracy + dlugoscPoPracy
+
+  const pozycja = ograniczoneMinuty <= poczatek
+    ? ograniczoneMinuty * skalaCzasuPozaPraca
+    : ograniczoneMinuty <= koniec
+      ? dlugoscPrzedPraca + ograniczoneMinuty - poczatek
+      : dlugoscPrzedPraca + dlugoscPracy + (ograniczoneMinuty - koniec) * skalaCzasuPozaPraca
+
+  return (pozycja / dlugoscOsi) * 100
+}
+
 export function obliczPostepCzasuDnia(
   teraz: Date,
-  _zakres: ZakresDniaPracy = domyslnyZakresDniaPracy,
+  zakres: ZakresDniaPracy = domyslnyZakresDniaPracy,
 ) {
-  void _zakres
-  return pozycjaMinutNaOsi(pobierzMinuty(teraz))
+  return pozycjaMinutNaOsi(pobierzMinuty(teraz), zakres)
 }
 
 export function pobierzStanWskaznikaCzasu(
@@ -87,10 +105,9 @@ export function czyGodzinaMiesciSieWDniuPracy(
 
 export function pozycjaGodzinyNaOsi(
   godzina: string,
-  _zakres: ZakresDniaPracy = domyslnyZakresDniaPracy,
+  zakres: ZakresDniaPracy = domyslnyZakresDniaPracy,
 ) {
-  void _zakres
-  return pozycjaMinutNaOsi(minutyZGodziny(godzina))
+  return pozycjaMinutNaOsi(minutyZGodziny(godzina), zakres)
 }
 
 export function pobierzGraniceDniaPracyNaOsi(
@@ -98,8 +115,8 @@ export function pobierzGraniceDniaPracyNaOsi(
 ) {
   const { poczatek, koniec } = normalizujZakres(zakres)
   return {
-    poczatek: pozycjaMinutNaOsi(poczatek),
-    koniec: pozycjaMinutNaOsi(koniec),
+    poczatek: pozycjaMinutNaOsi(poczatek, zakres),
+    koniec: pozycjaMinutNaOsi(koniec, zakres),
   }
 }
 

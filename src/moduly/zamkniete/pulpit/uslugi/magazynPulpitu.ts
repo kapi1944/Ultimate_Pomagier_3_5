@@ -1,5 +1,5 @@
 import type { RolaUzytkownika } from '../../../../kartoteki/uzytkownicy/typyUzytkownikow'
-import type { JednostkaPrzypomnienia, PrzypomnienieZadania, StanPulpitu, StatusZapotrzebowaniaZakupowego, ZadaniePulpitu, ZapotrzebowanieZakupowe } from '../modele/pulpit'
+import type { JednostkaPrzypomnienia, MiniaturaZadaniaPulpitu, PrzypomnienieZadania, StanPulpitu, StatusZapotrzebowaniaZakupowego, ZadaniePulpitu, ZapotrzebowanieZakupowe } from '../modele/pulpit'
 
 const kluczStanuPulpitu = 'ultimatePomagier.pulpit.v1'
 
@@ -28,6 +28,32 @@ function normalizujPrzypomnienie(wartosc: unknown, indeks: number): Przypomnieni
     id: tekst(dane.id) || 'przypomnienie-' + indeks + '-' + liczba + '-' + jednostka,
     wartosc: liczba,
     jednostka,
+  }
+}
+
+function normalizujMiniatureZadania(wartosc: unknown): MiniaturaZadaniaPulpitu | null {
+  if (!wartosc || typeof wartosc !== 'object') return null
+  const dane = wartosc as Record<string, unknown>
+  const daneUrl = tekst(dane.daneUrl)
+  const szerokosc = Number(dane.szerokosc)
+  const wysokosc = Number(dane.wysokosc)
+
+  if (
+    !/^data:image\/(?:jpeg|png|webp);base64,/i.test(daneUrl)
+    || daneUrl.length > 750_000
+    || !Number.isFinite(szerokosc)
+    || !Number.isFinite(wysokosc)
+    || szerokosc <= 0
+    || wysokosc <= 0
+    || szerokosc > 480
+    || wysokosc > 480
+  ) return null
+
+  return {
+    daneUrl,
+    nazwaPliku: tekst(dane.nazwaPliku).slice(0, 120) || 'miniatura',
+    szerokosc,
+    wysokosc,
   }
 }
 
@@ -68,6 +94,7 @@ export function normalizujZadaniePulpitu(wartosc: unknown): ZadaniePulpitu | nul
     zadaniodawcaId,
     zadaniobiorcaId,
     przypomnienia,
+    miniatura: normalizujMiniatureZadania(dane.miniatura) ?? undefined,
     czyAutomatyczne: dane.czyAutomatyczne === true,
     czyTerminKrytyczny: dane.czyTerminKrytyczny === true,
   }
@@ -129,6 +156,7 @@ export type EdytowalnePolaZadania = Pick<
   | 'priorytet'
   | 'zadaniobiorcaId'
   | 'przypomnienia'
+  | 'miniatura'
   | 'powiazaneSzkolenieId'
   | 'odlozonoDo'
 >
@@ -165,6 +193,7 @@ export function edytujZadanieRecznePrzezZadaniodawce(
     zadaniobiorcaId: zmiany.zadaniobiorcaId,
     wlascicielId: zmiany.zadaniobiorcaId,
     przypomnienia: zmiany.przypomnienia,
+    miniatura: Object.prototype.hasOwnProperty.call(zmiany, 'miniatura') ? zmiany.miniatura : obecne.miniatura,
     powiazaneSzkolenieId: zmiany.powiazaneSzkolenieId,
     odlozonoDo: zmiany.odlozonoDo ?? obecne.odlozonoDo,
   }

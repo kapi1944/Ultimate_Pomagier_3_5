@@ -55,8 +55,8 @@
 }
 
 .pulpit-os-czasu__odcinek--praca {
-  top: 0;
-  height: 12px;
+  top: -6px;
+  height: 24px;
   background: color-mix(in srgb, var(--ui-akcent) 48%, var(--ui-powierzchnia));
   box-shadow: 0 0 8px color-mix(in srgb, var(--ui-akcent) 22%, transparent);
 }

@@ -11,6 +11,13 @@ export type PrzypomnienieZadania = {
   jednostka: JednostkaPrzypomnienia
 }
 
+export type MiniaturaZadaniaPulpitu = {
+  daneUrl: string
+  nazwaPliku: string
+  szerokosc: number
+  wysokosc: number
+}
+
 export type ZadaniePulpitu = {
   id: string
   tytul: string
@@ -27,6 +34,7 @@ export type ZadaniePulpitu = {
   zadaniodawcaId: string
   zadaniobiorcaId: string
   przypomnienia: PrzypomnienieZadania[]
+  miniatura?: MiniaturaZadaniaPulpitu
   powiazaneSzkolenieId?: string
   powiazanyTypEncji?: string
   powiazanaEncjaId?: string

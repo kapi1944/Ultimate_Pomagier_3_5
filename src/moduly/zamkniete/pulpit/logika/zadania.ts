@@ -70,7 +70,11 @@ export function pobierzSzerokoscLiniiDoFajrantu(
   if (!czyZadanieDoKoncaDnia(zadanie)) return 0
   const godzinaMarkera = pobierzGodzineMarkeraZadania(zadanie, zakresDniaPracy)
   if (!godzinaMarkera) return 0
-  return Math.max(0, pozycjaGodzinyNaOsi(zakresDniaPracy.koniec) - pozycjaGodzinyNaOsi(godzinaMarkera))
+  return Math.max(
+    0,
+    pozycjaGodzinyNaOsi(zakresDniaPracy.koniec, zakresDniaPracy)
+      - pozycjaGodzinyNaOsi(godzinaMarkera, zakresDniaPracy),
+  )
 }
 
 function czasDeadline(zadanie: ZadaniePulpitu, zakresDniaPracy: ZakresDniaPracy) {
