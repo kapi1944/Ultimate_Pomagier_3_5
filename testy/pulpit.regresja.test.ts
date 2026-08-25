@@ -591,7 +591,7 @@ test('system ustawień aplikacji ma bezpieczne wartości domyślne i ogranicza z
   assert.equal(ustawienia.wyglad.promienKart, 32)
   assert.equal(ustawienia.wyglad.promienPol, 0)
   assert.equal(ustawienia.wyglad.czasPrzejsciaMs, 600)
-  assert.equal(ustawienia.wyglad.skalaHover, 1.1)
+  assert.equal(ustawienia.wyglad.skalaHover, 1.05)
 
   assert.equal(ustawienia.pulpit.poczatekDnia, '07:45')
   assert.equal(ustawienia.pulpit.koniecDnia, '16:00')

@@ -1,4 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useKontekstUzytkownika } from '../../../../aplikacja/logowanie/useKontekstUzytkownika'
 import AkcjeEksportuPdf from '../../../../wspolne/dokumenty/AkcjeEksportuPdf'
 import PanelKontroliJakosciDokumentu from '../../../../wspolne/dokumenty/PanelKontroliJakosciDokumentu'
 import {
@@ -37,6 +38,7 @@ import {
   konwertujTekstProgramuNaHtml,
   oczyscHtmlProgramu,
 } from './komponenty/konwersjaProgramuWysiwyg'
+import { czyUzytkownikMozeWymusicEksportProgramu } from './uprawnieniaEksportuProgramu'
 
 type ProfilFirmy = 'semper' | 'iist'
 type StylDni = 'pasek' | 'naglowek'
@@ -1049,16 +1051,6 @@ function splaszczBloki(bloki: BlokDokumentu[]): BlokDokumentu[] {
   return bloki.flatMap((blok) => [blok, ...splaszczBloki(blok.dzieci)])
 }
 
-function czyUzytkownikJestArchitektem() {
-  try {
-    const rola = localStorage.getItem('ultimate-pomagier-rola-uzytkownika') ?? localStorage.getItem('rolaUzytkownika')
-
-    return rola === 'Architekt'
-  } catch {
-    return false
-  }
-}
-
 function zapiszLogWymuszeniaEksportu(raport: ReturnType<typeof przygotujRaportEksportuDokumentu>) {
   try {
     const klucz = 'ultimate-pomagier.log-wymuszen-eksportu'
@@ -1085,6 +1077,7 @@ type WlasciwosciWidokuProgramowSzkolen = {
 }
 
 export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWidokuProgramowSzkolen) {
+  const { zalogowanyUzytkownik } = useKontekstUzytkownika()
   const obszarPodgladuRef = useRef<HTMLElement>(null)
   const [stanOdczytu, ustawStanOdczytu] = useState<'ladowanie' | 'gotowy' | 'blad'>(() => dokumentIdZTrasy ? 'ladowanie' : 'gotowy')
   const [bladOdczytu, ustawBladOdczytu] = useState('')
@@ -1211,7 +1204,7 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
   )
   const liczbaModulow = blokiDokumentu.filter((blok) => blok.typ === 'Modul').length
   const liczbaPunktow = blokiDokumentu.filter((blok) => blok.typ === 'Punkt' || blok.typ === 'Podpunkt').length
-  const czyArchitekt = czyUzytkownikJestArchitektem()
+  const czyArchitekt = czyUzytkownikMozeWymusicEksportProgramu(zalogowanyUzytkownik)
   const gruboscObramowaniaTytulu = Number.isFinite(ustawienia.gruboscObramowaniaTytulu)
     ? Math.min(10, Math.max(0, ustawienia.gruboscObramowaniaTytulu))
     : domyslneUstawienia.gruboscObramowaniaTytulu
