@@ -1,7 +1,7 @@
 import { utworzKopieLokalnaPrzedOperacja } from '../dane/backupDanych'
 import { utworzNowyDokument, type Dokument, type StatusDokumentu, type TypDokumentu } from './modelDokumentu'
 import { kluczRepozytoriumDokumentow } from './repozytoriumDokumentow'
-import { pobierzStanRejestruDokumentow, zapiszStanRejestruDokumentow, type StanRejestruDokumentow } from './rejestrDokumentow'
+import { kluczRejestruDokumentow, pobierzStanRejestruDokumentowBezZapisu, zapiszStanRejestruDokumentow, type StanRejestruDokumentow } from './rejestrDokumentow'
 
 const kluczeProstychSzkicow: Array<{ klucz: string; typ: TypDokumentu; generatorId: string; tytul: string }> = [
   { klucz: 'ultimate-pomagier.listy-obecnosci.szkic', typ: 'LISTA_OBECNOSCI', generatorId: 'listy_obecnosci', tytul: 'Lista obecności' },
@@ -29,6 +29,28 @@ function stabilneId(typ: string, id: string, odcisk: string) { return `legacy-${
 function status(stanCyklu: string): StatusDokumentu { return stanCyklu === 'opublikowany' ? 'OPUBLIKOWANY' : stanCyklu === 'archiwalny' ? 'ZARCHIWIZOWANY' : 'ROBOCZY' }
 function typDokumentu(typ: RekordLegacy['typGeneratora']): TypDokumentu { return typ === 'programy_szkolen' ? 'PROGRAM_SZKOLENIA' : typ === 'szczegoly_organizacyjne' ? 'SZCZEGOLY_ORGANIZACYJNE' : 'LISTA_OBECNOSCI' }
 function raportPoczatkowy(): RaportMigracjiStarszychDokumentow { return { znalezione: 0, przeniesione: 0, pominiete: 0, bledne: 0, dokumenty: 0, historia: 0, autosave: 0, konflikty: 0, ostrzezenia: [], mapowanieId: {}, wykonano: false } }
+function kanonizuj(wartosc: unknown): string { if (Array.isArray(wartosc)) return `[${wartosc.map(kanonizuj).join(',')}]`; if (czyObiekt(wartosc)) return `{${Object.keys(wartosc).sort().map((klucz) => `${JSON.stringify(klucz)}:${kanonizuj(wartosc[klucz])}`).join(',')}}`; return JSON.stringify(wartosc) }
+function sprawdzUnikalnosc(nazwa: string, identyfikatory: string[]) { if (new Set(identyfikatory).size !== identyfikatory.length) throw new Error(`Walidacja migracji wykryła duplikaty: ${nazwa}.`) }
+function walidujZapisMigracji(oczekiwany: StanRejestruDokumentow, zapisany: StanRejestruDokumentow, mapowanieId: Record<string, string>) {
+  sprawdzUnikalnosc('ID dokumentów', zapisany.dokumenty.map((dokument) => dokument.id))
+  sprawdzUnikalnosc('ID historii', zapisany.historia.map((wpis) => wpis.id))
+  sprawdzUnikalnosc('ID autosave', zapisany.autosave.map((wpis) => wpis.id))
+  sprawdzUnikalnosc('ID kopii roboczych', zapisany.kopieRobocze.map((kopia) => kopia.id))
+  Object.entries(mapowanieId).forEach(([zrodlo, id]) => {
+    const dokument = zapisany.dokumenty.find((pozycja) => pozycja.id === id)
+    const pochodzenie = dokument?.pochodzenieMigracji
+    if (!pochodzenie || zrodlo !== kluczZrodla(pochodzenie.typLegacy, pochodzenie.idLegacy)) throw new Error(`Walidacja migracji nie potwierdziła mapowania ${zrodlo}.`)
+  })
+  zapisany.historia.filter((wpis) => wpis.pochodzenie && wpis.dokumentId).forEach((wpis) => {
+    if (!zapisany.dokumenty.some((dokument) => dokument.id === wpis.dokumentId)) throw new Error(`Historia ${wpis.id} wskazuje nieistniejący dokument.`)
+  })
+  if (kanonizuj(zapisany) !== kanonizuj(oczekiwany)) throw new Error('Fingerprint zapisanego stanu migracji różni się od oczekiwanego.')
+}
+function przywrocSurowyStanRejestru(zapis: string | null) {
+  if (zapis === null) localStorage.removeItem(kluczRejestruDokumentow)
+  else localStorage.setItem(kluczRejestruDokumentow, zapis)
+  if (localStorage.getItem(kluczRejestruDokumentow) !== zapis) throw new Error('Rollback migracji nie przywrócił stanu rejestru.')
+}
 
 function pobierzLegacy(): { dokumenty: RekordLegacy[]; historia: WpisLegacy[] } {
   const odczyt = odczytajJson(kluczRepozytoriumDokumentow)
@@ -61,7 +83,8 @@ function dodajDokumentLegacy(stan: StanRejestruDokumentow, rekord: RekordLegacy,
   if (kolizja) { raport.konflikty += 1; raport.ostrzezenia.push(`Konflikt ID legacy ${rekord.id}; zachowano dokument nowego rejestru.`) }
   const teraz = new Date().toISOString()
   const powiazania = pobierzPowiazania(rekord)
-  const dokument = utworzNowyDokument({ id, dokumentLogicznyId: id, typ: typDokumentu(rekord.typGeneratora), tytul: rekord.tytul, generatorId: rekord.typGeneratora, daneDokumentu: rekord.daneDokumentu, ustawieniaDokumentu: rekord.metadaneGeneratora ?? {}, statusBiznesowy: rekord.statusBiznesowy ?? null, widocznosc: rekord.widocznosc ?? null, zrodloUtworzenia: rekord.zrodlo ?? 'migracja', rekordZrodlowyId: rekord.rekordZrodlowyId ?? null, wersjaFormatu: rekord.wersjaFormatu ?? null, powiazania, szkolenieId: powiazania.szkolenieId, integralnosc: { powiazanieZeSzczegolami: powiazania.szczegolyOrganizacyjneId ? 'POWIAZANY_ZE_SZCZEGOLAMI' : 'SAMODZIELNY', idZrodlowychSzczegolow: powiazania.szczegolyOrganizacyjneId, znacznikDanychZrodlowych: powiazania.odciskDanychZrodlowych, reczneNadpisania: czyObiekt((rekord.daneDokumentu as Record<string, unknown>).korektyReczne) ? (rekord.daneDokumentu as Record<string, unknown>).korektyReczne as Record<string, unknown> : {} }, pochodzenieMigracji: { magazyn: 'repozytoriumDokumentow', klucz: kluczRepozytoriumDokumentow, typLegacy: rekord.typGeneratora, idLegacy: rekord.id, odciskZrodla: odcisk, idMigracji, zmigrowano: teraz } })
+  const daneDokumentu = czyObiekt(rekord.daneDokumentu) ? rekord.daneDokumentu : {}
+  const dokument = utworzNowyDokument({ id, dokumentLogicznyId: id, typ: typDokumentu(rekord.typGeneratora), tytul: rekord.tytul, generatorId: rekord.typGeneratora, daneDokumentu: rekord.daneDokumentu, ustawieniaDokumentu: rekord.metadaneGeneratora ?? {}, statusBiznesowy: rekord.statusBiznesowy ?? null, widocznosc: rekord.widocznosc ?? null, zrodloUtworzenia: rekord.zrodlo ?? 'migracja', rekordZrodlowyId: rekord.rekordZrodlowyId ?? null, wersjaFormatu: rekord.wersjaFormatu ?? null, powiazania, szkolenieId: powiazania.szkolenieId, integralnosc: { powiazanieZeSzczegolami: powiazania.szczegolyOrganizacyjneId ? 'POWIAZANY_ZE_SZCZEGOLAMI' : 'SAMODZIELNY', idZrodlowychSzczegolow: powiazania.szczegolyOrganizacyjneId, znacznikDanychZrodlowych: powiazania.odciskDanychZrodlowych, reczneNadpisania: czyObiekt(daneDokumentu.korektyReczne) ? daneDokumentu.korektyReczne : {} }, pochodzenieMigracji: { magazyn: 'repozytoriumDokumentow', klucz: kluczRepozytoriumDokumentow, typLegacy: rekord.typGeneratora, idLegacy: rekord.id, odciskZrodla: odcisk, idMigracji, zmigrowano: teraz } })
   const utworzono = data(rekord.utworzono, teraz); const zmodyfikowano = data(rekord.zaktualizowano, utworzono); const stanCyklu = status(rekord.stanCyklu)
   const docelowy: Dokument<unknown, unknown> = { ...dokument, utworzono, zmodyfikowano, zaktualizowano: zmodyfikowano, status: stanCyklu, opublikowano: stanCyklu === 'OPUBLIKOWANY' ? data(rekord.opublikowano, zmodyfikowano) : null, czyZarchiwizowany: stanCyklu === 'ZARCHIWIZOWANY', zarchiwizowano: stanCyklu === 'ZARCHIWIZOWANY' ? zmodyfikowano : null, czyUsunietyMiekko: rekord.stanCyklu === 'kosz', usunieto: rekord.stanCyklu === 'kosz' ? data(rekord.usunieto, zmodyfikowano) : null }
   stan.dokumenty.unshift(docelowy); stan.historia.unshift({ id: `migracja-dokumentu-${odcisk}`, dokumentId: id, dokumentLogicznyId: id, typ: 'migracja', data: teraz, dane: { rekord }, automatyczne: true, daneLegacy: rekord, pochodzenie: { magazyn: 'repozytoriumDokumentow', klucz: kluczRepozytoriumDokumentow, idLegacy: rekord.id } })
@@ -127,7 +150,7 @@ function dodajStarszeKopieSzczegolow(stan: StanRejestruDokumentow, raport: Rapor
 }
 
 export function analizujMigracjeStarszychDokumentow(): RaportMigracjiStarszychDokumentow {
-  const raport = raportPoczatkowy(); const stan = pobierzStanRejestruDokumentow(); const legacy = pobierzLegacy(); const kandydat = structuredClone(stan)
+  const raport = raportPoczatkowy(); const stan = pobierzStanRejestruDokumentowBezZapisu(); const legacy = pobierzLegacy(); const kandydat = structuredClone(stan)
   legacy.dokumenty.forEach((rekord) => dodajDokumentLegacy(kandydat, rekord, raport, 'migracja-reczna-v1'))
   legacy.historia.forEach((wpis) => dodajHistorieLegacy(kandydat, wpis, raport))
   const historiaSzczegolow = odczytajJson(kluczHistoriiSzczegolow)
@@ -139,19 +162,29 @@ export function analizujMigracjeStarszychDokumentow(): RaportMigracjiStarszychDo
 }
 
 export function wykonajMigracjeStarszychDokumentow(): RaportMigracjiStarszychDokumentow {
-  const raport = raportPoczatkowy(); const stan = pobierzStanRejestruDokumentow(); const kandydat = structuredClone(stan); const idMigracji = `migracja-reczna-${Date.now()}`; const legacy = pobierzLegacy()
+  const raport = raportPoczatkowy(); const surowyStanPrzed = localStorage.getItem(kluczRejestruDokumentow); const stan = pobierzStanRejestruDokumentowBezZapisu(); const kandydat = structuredClone(stan); const idMigracji = `migracja-reczna-${Date.now()}`; const legacy = pobierzLegacy()
   legacy.dokumenty.forEach((rekord) => dodajDokumentLegacy(kandydat, rekord, raport, idMigracji)); legacy.historia.forEach((wpis) => dodajHistorieLegacy(kandydat, wpis, raport))
   const historiaSzczegolow = odczytajJson(kluczHistoriiSzczegolow)
   if (historiaSzczegolow !== null) { if (!Array.isArray(historiaSzczegolow)) throw new Error('Historia Szczegółów ma nieobsługiwany schemat.'); historiaSzczegolow.forEach((wpis, indeks) => dodajHistorieLegacy(kandydat, { id: czyObiekt(wpis) && typeof wpis.id === 'string' ? wpis.id : `szczegoly-${indeks}`, typGeneratora: 'szczegoly_organizacyjne', dokumentId: czyObiekt(wpis) && typeof wpis.dokumentId === 'string' ? wpis.dokumentId : undefined, data: czyObiekt(wpis) && typeof wpis.data === 'string' ? wpis.data : undefined, dane: wpis }, raport)) }
   kluczeAutosave.forEach(({ klucz, generatorId }) => dodajAutosave(kandydat, klucz, generatorId, raport)); dodajProsteSzkice(kandydat, raport, idMigracji); dodajStarszeKopieSzczegolow(kandydat, raport, idMigracji)
-  utworzKopieLokalnaPrzedOperacja('PRZED_OPERACJA')
-  kandydat.migracje.unshift({ id: idMigracji, stan: 'OCZEKUJE_WERYFIKACJI', data: new Date().toISOString(), mapowanieId: raport.mapowanieId, raport: { ...raport } })
-  zapiszStanRejestruDokumentow(kandydat)
-  const odczyt = pobierzStanRejestruDokumentow(); if (odczyt.dokumenty.length !== kandydat.dokumenty.length || odczyt.historia.length !== kandydat.historia.length) throw new Error('Walidacja zapisu migracji nie powiodła się.')
-  odczyt.migracje[0].stan = 'POTWIERDZONA'
-  zapiszStanRejestruDokumentow(odczyt)
-  raport.wykonano = true
-  return raport
+  try {
+    utworzKopieLokalnaPrzedOperacja('PRZED_OPERACJA')
+    kandydat.migracje.unshift({ id: idMigracji, stan: 'OCZEKUJE_WERYFIKACJI', data: new Date().toISOString(), mapowanieId: raport.mapowanieId, raport: { ...raport } })
+    zapiszStanRejestruDokumentow(kandydat)
+    const odczyt = pobierzStanRejestruDokumentowBezZapisu()
+    walidujZapisMigracji(kandydat, odczyt, raport.mapowanieId)
+    const wpisMigracji = odczyt.migracje.find((wpis) => wpis.id === idMigracji)
+    if (!wpisMigracji) throw new Error('Nie odnaleziono wpisu wykonywanej migracji.')
+    wpisMigracji.stan = 'POTWIERDZONA'
+    zapiszStanRejestruDokumentow(odczyt)
+    const potwierdzony = pobierzStanRejestruDokumentowBezZapisu()
+    walidujZapisMigracji(odczyt, potwierdzony, raport.mapowanieId)
+    raport.wykonano = true
+    return raport
+  } catch (blad) {
+    try { przywrocSurowyStanRejestru(surowyStanPrzed) } catch (bladRollbacku) { throw new AggregateError([blad, bladRollbacku], 'Migracja nie powiodła się, a rollback rejestru był nieskuteczny.', { cause: bladRollbacku }) }
+    throw blad
+  }
 }
 
 export function migrujStarszeDokumenty(): RaportMigracjiStarszychDokumentow { return wykonajMigracjeStarszychDokumentow() }

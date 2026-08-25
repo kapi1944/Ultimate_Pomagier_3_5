@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { przywrocBackup, sprawdzBackup, utworzBackup, utworzKopieLokalnaPrzedOperacja } from '../src/wspolne/dane/backupDanych.ts'
-import { wykonajMigracjeStarszychDokumentow } from '../src/wspolne/dokumenty/migracjaStarszychDokumentow.ts'
+import { czyNalezyPrzypomniecOPelnymBackupu, kluczOstatniegoPelnegoBackupu, odczytajKopieLokalna, pobierzListeKopiiLokalnych, przywrocBackup, przywrocKopieLokalna, sprawdzBackup, sprawdzKopieLokalna, utworzBackup, utworzKopieLokalnaPrzedOperacja } from '../src/wspolne/dane/backupDanych.ts'
+import { analizujMigracjeStarszychDokumentow, wykonajMigracjeStarszychDokumentow } from '../src/wspolne/dokumenty/migracjaStarszychDokumentow.ts'
 import { kluczRejestruDokumentow, pobierzStanRejestruDokumentow } from '../src/wspolne/dokumenty/rejestrDokumentow.ts'
 import { kluczRepozytoriumDokumentow } from '../src/wspolne/dokumenty/repozytoriumDokumentow.ts'
 
@@ -20,6 +20,8 @@ function ustawDane() {
   magazyn.set('ultimatePomagier.uzytkownicy.v1', JSON.stringify([{ id: 'uzytkownik-testowy' }]))
   magazyn.set('ultimatePomagier.ustawieniaAplikacji.v1', JSON.stringify({ kontrast: 'wysoki' }))
 }
+
+function migawkaMagazynu() { return [...magazyn.entries()].sort(([pierwszy], [drugi]) => pierwszy.localeCompare(drugi)) }
 
 test('pełny i częściowy backup mają manifest oraz nie obejmują sesji', () => {
   magazyn.clear(); ustawDane(); magazyn.set('ultimatePomagier.sesjaUzytkownika.v1', JSON.stringify({ id: 'sesja' }))
@@ -45,6 +47,32 @@ test('lokalna rotacja zachowuje tylko trzy ostatnie kopie', () => {
   for (let indeks = 0; indeks < 4; indeks += 1) utworzKopieLokalnaPrzedOperacja('AUTOMATYCZNA')
   const indeks = JSON.parse(magazyn.get('ultimatePomagier.backup.lokalny.v1.indeks') ?? '[]') as unknown[]
   assert.equal(indeks.length, 3)
+})
+
+test('lokalną kopię można wylistować, odczytać, zweryfikować i przywrócić', () => {
+  magazyn.clear(); ustawDane()
+  const utworzona = utworzKopieLokalnaPrzedOperacja('AUTOMATYCZNA')
+  const lista = pobierzListeKopiiLokalnych()
+  assert.equal(lista.length, 1)
+  assert.equal(lista[0].klucz, utworzona.klucz)
+  assert.equal(lista[0].poprawna, true)
+  assert.equal(sprawdzKopieLokalna(utworzona.klucz).poprawny, true)
+  assert.equal(odczytajKopieLokalna(utworzona.klucz).manifest.sumaKontrolna, utworzona.backup.manifest.sumaKontrolna)
+  magazyn.set('ultimatePomagier.uzytkownicy.v1', JSON.stringify([{ id: 'zmieniony' }]))
+  przywrocKopieLokalna(utworzona.klucz)
+  assert.equal(magazyn.get('ultimatePomagier.uzytkownicy.v1'), JSON.stringify([{ id: 'uzytkownik-testowy' }]))
+})
+
+test('kopia przed operacją nie zmienia daty pełnego backupu użytkownika', () => {
+  magazyn.clear(); ustawDane()
+  const dataPelnego = '2026-07-01T00:00:00.000Z'
+  magazyn.set(kluczOstatniegoPelnegoBackupu, dataPelnego)
+  utworzKopieLokalnaPrzedOperacja('PRZED_OPERACJA')
+  assert.equal(magazyn.get(kluczOstatniegoPelnegoBackupu), dataPelnego)
+  assert.equal(czyNalezyPrzypomniecOPelnymBackupu(new Date('2026-08-25T00:00:00.000Z')), true)
+  utworzBackup(['WSZYSTKO'], true)
+  assert.notEqual(magazyn.get(kluczOstatniegoPelnegoBackupu), dataPelnego)
+  assert.equal(czyNalezyPrzypomniecOPelnymBackupu(new Date()), false)
 })
 
 test('restore pełny i częściowy tworzy kopię przed zmianą oraz weryfikuje wynik', () => {
@@ -91,4 +119,69 @@ test('migracja wykonuje backup przed zapisem i zachowuje fixture historii, autos
   assert.equal(stan.historia.some((wpis) => wpis.typ === 'migracja_historii'), true)
   assert.equal(stan.autosave.length, 1)
   assert.ok(magazyn.get('ultimatePomagier.backup.lokalny.v1.indeks'))
+})
+
+test('dry-run nie zmienia żadnego klucza ani wartości localStorage', () => {
+  magazyn.clear(); ustawDane()
+  magazyn.set(kluczRepozytoriumDokumentow, JSON.stringify({ dokumenty: [{ id: 'program-dry-run', typGeneratora: 'programy_szkolen', tytul: 'Program', stanCyklu: 'kopia_robocza', daneDokumentu: { moduly: [] }, metadaneGeneratora: {} }], historia: [] }))
+  magazyn.set('dowolny-klucz', 'wartość byte-for-byte')
+  const przed = migawkaMagazynu()
+  const raport = analizujMigracjeStarszychDokumentow()
+  assert.equal(raport.dokumenty, 1)
+  assert.deepEqual(migawkaMagazynu(), przed)
+})
+
+test('dry-run rejestru v2 nie migruje schematu ani nie tworzy jego kopii', () => {
+  magazyn.clear()
+  magazyn.set(kluczRejestruDokumentow, JSON.stringify({ wersja: 2, dokumenty: [], kopieRobocze: [] }))
+  const przed = migawkaMagazynu()
+  analizujMigracjeStarszychDokumentow()
+  assert.deepEqual(migawkaMagazynu(), przed)
+  assert.equal(magazyn.has('ultimatePomagier.rejestrDokumentow.kopia-bezpieczenstwa'), false)
+})
+
+test('migracja pustego legacy kończy się potwierdzonym, pustym rejestrem', () => {
+  magazyn.clear()
+  magazyn.set(kluczRepozytoriumDokumentow, JSON.stringify({ dokumenty: [], historia: [] }))
+  const raport = wykonajMigracjeStarszychDokumentow()
+  const stan = pobierzStanRejestruDokumentow()
+  assert.equal(raport.wykonano, true)
+  assert.equal(stan.dokumenty.length, 0)
+  assert.equal(stan.migracje[0].stan, 'POTWIERDZONA')
+})
+
+test('błąd zapisu migracji przywraca rejestr byte-for-byte', () => {
+  magazyn.clear(); ustawDane()
+  magazyn.set(kluczRepozytoriumDokumentow, JSON.stringify({ dokumenty: [{ id: 'program-rollback', typGeneratora: 'programy_szkolen', tytul: 'Program', stanCyklu: 'kopia_robocza', daneDokumentu: {}, metadaneGeneratora: {} }], historia: [] }))
+  const stanPrzed = magazyn.get(kluczRejestruDokumentow)!
+  const zapiszOryginalnie = localStorage.setItem
+  let czyRzucic = true
+  localStorage.setItem = ((klucz: string, wartosc: string) => {
+    if (klucz === kluczRejestruDokumentow && czyRzucic) { czyRzucic = false; throw new Error('Kontrolowany błąd zapisu migracji') }
+    magazyn.set(klucz, wartosc)
+  }) as Storage['setItem']
+  try { assert.throws(() => wykonajMigracjeStarszychDokumentow(), /Kontrolowany błąd zapisu migracji/) } finally { localStorage.setItem = zapiszOryginalnie }
+  assert.equal(magazyn.get(kluczRejestruDokumentow), stanPrzed)
+})
+
+test('błąd potwierdzenia migracji wycofuje wcześniej zapisany kandydat', () => {
+  magazyn.clear(); ustawDane()
+  magazyn.set(kluczRepozytoriumDokumentow, JSON.stringify({ dokumenty: [{ id: 'program-potwierdzenie', typGeneratora: 'programy_szkolen', tytul: 'Program', stanCyklu: 'kopia_robocza', daneDokumentu: {}, metadaneGeneratora: {} }], historia: [] }))
+  const stanPrzed = magazyn.get(kluczRejestruDokumentow)!
+  const zapiszOryginalnie = localStorage.setItem
+  let liczbaZapisowRejestru = 0
+  localStorage.setItem = ((klucz: string, wartosc: string) => {
+    if (klucz === kluczRejestruDokumentow && ++liczbaZapisowRejestru === 2) throw new Error('Kontrolowany błąd potwierdzenia')
+    magazyn.set(klucz, wartosc)
+  }) as Storage['setItem']
+  try { assert.throws(() => wykonajMigracjeStarszychDokumentow(), /Kontrolowany błąd potwierdzenia/) } finally { localStorage.setItem = zapiszOryginalnie }
+  assert.equal(magazyn.get(kluczRejestruDokumentow), stanPrzed)
+})
+
+test('uszkodzony rejestr docelowy zatrzymuje analizę bez zapisu', () => {
+  magazyn.clear()
+  magazyn.set(kluczRejestruDokumentow, '{uszkodzony')
+  const przed = migawkaMagazynu()
+  assert.throws(() => analizujMigracjeStarszychDokumentow(), /uszkodzony JSON/)
+  assert.deepEqual(migawkaMagazynu(), przed)
 })

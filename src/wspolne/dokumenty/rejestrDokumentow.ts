@@ -93,7 +93,7 @@ function przeksztalcDoV3(odczyt: Record<string, unknown>): StanRejestruDokumento
 }
 
 function zapiszStan(stan: StanRejestruDokumentow) { walidujStan(stan); localStorage.setItem(kluczRejestruDokumentow, JSON.stringify(stan)) }
-export function pobierzStanRejestruDokumentow(): StanRejestruDokumentow {
+export function pobierzStanRejestruDokumentowBezZapisu(): StanRejestruDokumentow {
   const zapis = localStorage.getItem(kluczRejestruDokumentow)
   if (zapis === null) return pustyStan()
   let odczyt: unknown
@@ -101,7 +101,14 @@ export function pobierzStanRejestruDokumentow(): StanRejestruDokumentow {
   if (!czyObiekt(odczyt)) throw new Error('Rejestr dokumentów ma nieobsługiwany schemat.')
   const wersja = typeof odczyt.wersja === 'number' ? odczyt.wersja : 0
   if (wersja > wersjaRejestruDokumentow) throw new Error('Rejestr dokumentów ma nowszą, nieobsługiwaną wersję.')
-  const stan = przeksztalcDoV3(odczyt)
+  return przeksztalcDoV3(odczyt)
+}
+export function pobierzStanRejestruDokumentow(): StanRejestruDokumentow {
+  const zapis = localStorage.getItem(kluczRejestruDokumentow)
+  const stan = pobierzStanRejestruDokumentowBezZapisu()
+  if (zapis === null) return stan
+  const odczyt = JSON.parse(zapis) as Record<string, unknown>
+  const wersja = typeof odczyt.wersja === 'number' ? odczyt.wersja : 0
   if (wersja < wersjaRejestruDokumentow) { localStorage.setItem(kluczKopiiBezpieczenstwaRejestruDokumentow, zapis); zapiszStan(stan) }
   return stan
 }

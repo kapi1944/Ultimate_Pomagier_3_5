@@ -6,7 +6,7 @@ export const kluczOstatniegoPelnegoBackupu = 'ultimatePomagier.backup.ostatniPel
 const prefiksKopiiLokalnej = 'ultimatePomagier.backup.lokalny.v1.'
 const kluczIndeksuKopiiLokalnych = `${prefiksKopiiLokalnej}indeks`
 
-type ManifestBackupu = {
+export type ManifestBackupu = {
   wersjaFormatu: number
   utworzono: string
   wersjaAplikacji: string
@@ -18,6 +18,7 @@ type ManifestBackupu = {
 
 export type BackupDanych = { manifest: ManifestBackupu; dane: Record<string, string> }
 export type WynikWalidacjiBackupu = { poprawny: boolean; backup: BackupDanych | null; blad: string | null }
+export type InformacjaOKopiiLokalnej = { klucz: string; data: string; rodzaj: RodzajKopiiLokalnej; manifest: ManifestBackupu | null; poprawna: boolean }
 
 const kluczeDokumentow = [
   'ultimatePomagier.rejestrDokumentow.v1', 'ultimatePomagier.dokumenty.wspolne.v1', 'ultimatePomagier.dokumenty.historiaEksportow.v1', 'ultimatePomagier.kopieRobocze',
@@ -45,7 +46,7 @@ function stabilnyTekst(dane: Record<string, string>) { return Object.keys(dane).
 function sumaKontrolna(dane: Record<string, string>) { let suma = 2166136261; for (const znak of stabilnyTekst(dane)) { suma ^= znak.charCodeAt(0); suma = Math.imul(suma, 16777619) } return (suma >>> 0).toString(16).padStart(8, '0') }
 function liczbaRekordow(wartosc: string) { try { const odczyt = JSON.parse(wartosc) as unknown; if (Array.isArray(odczyt)) return odczyt.length; if (odczyt && typeof odczyt === 'object' && Array.isArray((odczyt as { dokumenty?: unknown[] }).dokumenty)) return (odczyt as { dokumenty: unknown[] }).dokumenty.length; return 1 } catch { return 1 } }
 
-export function utworzBackup(kategorie: KategoriaBackupu[] = ['WSZYSTKO']): BackupDanych {
+export function utworzBackup(kategorie: KategoriaBackupu[] = ['WSZYSTKO'], czyPotwierdzonyPrzezUzytkownika = false): BackupDanych {
   const czyPelny = kategorie.includes('WSZYSTKO')
   const wybrane: KategoriaBackupu[] = czyPelny ? ['DOKUMENTY', 'SZCZEGOLY_ORGANIZACYJNE', 'PROGRAMY', 'PULPIT_I_ZADANIA', 'KARTOTEKI', 'USTAWIENIA'] : unikalne(kategorie) as KategoriaBackupu[]
   const dane: Record<string, string> = {}
@@ -58,7 +59,7 @@ export function utworzBackup(kategorie: KategoriaBackupu[] = ['WSZYSTKO']): Back
     klucze.forEach((klucz) => { dane[klucz] = localStorage.getItem(klucz)! })
   })
   const backup: BackupDanych = { manifest: { wersjaFormatu: wersjaFormatuBackupu, utworzono: new Date().toISOString(), wersjaAplikacji: 'ultimate-pomagier-3.5', sekcje, liczbaRekordow: liczba, schematy: { rejestrDokumentow: 3, backup: wersjaFormatuBackupu }, sumaKontrolna: sumaKontrolna(dane) }, dane }
-  if (czyPelny) localStorage.setItem(kluczOstatniegoPelnegoBackupu, backup.manifest.utworzono)
+  if (czyPelny && czyPotwierdzonyPrzezUzytkownika) localStorage.setItem(kluczOstatniegoPelnegoBackupu, backup.manifest.utworzono)
   return backup
 }
 
@@ -74,8 +75,26 @@ export function sprawdzBackup(tekst: string): WynikWalidacjiBackupu {
   return { poprawny: true, backup, blad: null }
 }
 
-function pobierzIndeksKopii() { try { const wartosc = JSON.parse(localStorage.getItem(kluczIndeksuKopiiLokalnych) ?? '[]') as unknown; return Array.isArray(wartosc) ? wartosc.filter((pozycja): pozycja is { klucz: string; data: string; rodzaj: RodzajKopiiLokalnej } => Boolean(pozycja && typeof pozycja === 'object' && typeof (pozycja as { klucz?: unknown }).klucz === 'string' && typeof (pozycja as { data?: unknown }).data === 'string')) : [] } catch { return [] } }
+function pobierzIndeksKopii() { try { const wartosc = JSON.parse(localStorage.getItem(kluczIndeksuKopiiLokalnych) ?? '[]') as unknown; return Array.isArray(wartosc) ? wartosc.filter((pozycja): pozycja is { klucz: string; data: string; rodzaj: RodzajKopiiLokalnej } => Boolean(pozycja && typeof pozycja === 'object' && typeof (pozycja as { klucz?: unknown }).klucz === 'string' && typeof (pozycja as { data?: unknown }).data === 'string' && ((pozycja as { rodzaj?: unknown }).rodzaj === 'AUTOMATYCZNA' || (pozycja as { rodzaj?: unknown }).rodzaj === 'PRZED_OPERACJA'))).slice(0, 3) : [] } catch { return [] } }
 function zapiszIndeksKopii(indeks: Array<{ klucz: string; data: string; rodzaj: RodzajKopiiLokalnej }>) { localStorage.setItem(kluczIndeksuKopiiLokalnych, JSON.stringify(indeks)) }
+
+export function sprawdzKopieLokalna(klucz: string): WynikWalidacjiBackupu {
+  if (!pobierzIndeksKopii().some((pozycja) => pozycja.klucz === klucz)) return { poprawny: false, backup: null, blad: 'Lokalna kopia nie istnieje w indeksie.' }
+  return sprawdzBackup(localStorage.getItem(klucz) ?? '')
+}
+
+export function odczytajKopieLokalna(klucz: string): BackupDanych {
+  const wynik = sprawdzKopieLokalna(klucz)
+  if (!wynik.poprawny || !wynik.backup) throw new Error(wynik.blad ?? 'Lokalna kopia jest niepoprawna.')
+  return wynik.backup
+}
+
+export function pobierzListeKopiiLokalnych(): InformacjaOKopiiLokalnej[] {
+  return pobierzIndeksKopii().map((pozycja) => {
+    const wynik = sprawdzKopieLokalna(pozycja.klucz)
+    return { ...pozycja, manifest: wynik.backup?.manifest ?? null, poprawna: wynik.poprawny }
+  })
+}
 
 export function utworzKopieLokalnaPrzedOperacja(rodzaj: RodzajKopiiLokalnej, kategorie: KategoriaBackupu[] = ['WSZYSTKO']) {
   const backup = utworzBackup(kategorie)
@@ -111,4 +130,8 @@ export function przywrocBackup(backup: BackupDanych, kategorie: KategoriaBackupu
     Object.entries(stanPrzed).forEach(([klucz, wartosc]) => { if (wartosc !== null) localStorage.setItem(klucz, wartosc) })
     throw blad
   }
+}
+
+export function przywrocKopieLokalna(klucz: string, kategorie: KategoriaBackupu[] = ['WSZYSTKO']) {
+  return przywrocBackup(odczytajKopieLokalna(klucz), kategorie)
 }

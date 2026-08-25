@@ -22,7 +22,7 @@ import {
   zastosujUstawieniaAplikacji,
   zapiszUstawieniaAplikacji,
 } from './magazynUstawienAplikacji'
-import { czyNalezyPrzypomniecOPelnymBackupu, przywrocBackup, serializujBackup, sprawdzBackup, utworzBackup, type BackupDanych, type KategoriaBackupu } from '../../wspolne/dane/backupDanych'
+import { czyNalezyPrzypomniecOPelnymBackupu, odczytajKopieLokalna, pobierzListeKopiiLokalnych, przywrocBackup, przywrocKopieLokalna, serializujBackup, sprawdzBackup, utworzBackup, type BackupDanych, type KategoriaBackupu } from '../../wspolne/dane/backupDanych'
 import { analizujMigracjeStarszychDokumentow, wykonajMigracjeStarszychDokumentow, type RaportMigracjiStarszychDokumentow } from '../../wspolne/dokumenty/migracjaStarszychDokumentow'
 import { pobierzStanRejestruDokumentow } from '../../wspolne/dokumenty/rejestrDokumentow'
 import './widokUstawien.css'
@@ -92,6 +92,7 @@ export default function WidokUstawien() {
   const [raportMigracji, ustawRaportMigracji] = useState<RaportMigracjiStarszychDokumentow | null>(null)
   const [statusMigracji, ustawStatusMigracji] = useState(pobierzStatusMigracji)
   const [czyPrzypomniecBackup, ustawCzyPrzypomniecBackup] = useState(czyNalezyPrzypomniecOPelnymBackupu)
+  const [kopieLokalne, ustawKopieLokalne] = useState(pobierzListeKopiiLokalnych)
 
   const czyMozeEdytowacSystemowe =
     zalogowanyUzytkownik?.rola === 'ADMINISTRATOR'
@@ -337,12 +338,13 @@ export default function WidokUstawien() {
   }
 
   function eksportujDaneLokalne(kategoria: KategoriaBackupu = 'WSZYSTKO') {
-    const backup = utworzBackup([kategoria])
+    const czyPelny = kategoria === 'WSZYSTKO'
+    const backup = utworzBackup([kategoria], czyPelny)
     pobierzPlikJson(
       'ultimate-pomagier-kopia-' + new Date().toISOString().slice(0, 10) + '.json',
       serializujBackup(backup),
     )
-    ustawCzyPrzypomniecBackup(false)
+    if (czyPelny) ustawCzyPrzypomniecBackup(false)
     ustawKomunikat(`Przygotowano kopię danych: ${kategoria === 'WSZYSTKO' ? 'wszystko' : kategoria.toLowerCase()}.`)
   }
 
@@ -356,7 +358,16 @@ export default function WidokUstawien() {
 
   function potwierdzPrzywrocenie() {
     if (!backupDoPrzywrocenia || !window.confirm('Przywrócić wskazany backup? Najpierw powstanie kopia aktualnego stanu.')) return
-    try { const wynik = przywrocBackup(backupDoPrzywrocenia, [kategoriaPrzywrocenia]); ustawBackupDoPrzywrocenia(null); ustawKomunikat(`Przywrócono ${wynik.przywroconeKlucze.length} kluczy danych.`) } catch (blad) { ustawKomunikat(blad instanceof Error ? blad.message : 'Przywracanie nie powiodło się.') }
+    try { const wynik = przywrocBackup(backupDoPrzywrocenia, [kategoriaPrzywrocenia]); ustawBackupDoPrzywrocenia(null); ustawKopieLokalne(pobierzListeKopiiLokalnych()); ustawKomunikat(`Przywrócono ${wynik.przywroconeKlucze.length} kluczy danych.`) } catch (blad) { ustawKomunikat(blad instanceof Error ? blad.message : 'Przywracanie nie powiodło się.') }
+  }
+
+  function przywrocLokalnaKopie(klucz: string) {
+    if (!window.confirm('Przywrócić tę lokalną kopię? Najpierw powstanie kopia aktualnego stanu.')) return
+    try { const wynik = przywrocKopieLokalna(klucz); ustawKopieLokalne(pobierzListeKopiiLokalnych()); ustawKomunikat(`Przywrócono ${wynik.przywroconeKlucze.length} kluczy z lokalnej kopii.`) } catch (blad) { ustawKomunikat(blad instanceof Error ? blad.message : 'Przywracanie lokalnej kopii nie powiodło się.') }
+  }
+
+  function pobierzLokalnaKopie(klucz: string) {
+    try { const backup = odczytajKopieLokalna(klucz); pobierzPlikJson(`ultimate-pomagier-kopia-lokalna-${backup.manifest.utworzono.slice(0, 10)}.json`, serializujBackup(backup)) } catch (blad) { ustawKomunikat(blad instanceof Error ? blad.message : 'Nie udało się pobrać lokalnej kopii.') }
   }
 
   function sprawdzMigracje() {
@@ -365,7 +376,7 @@ export default function WidokUstawien() {
 
   function rozpocznijMigracje() {
     if (!raportMigracji || !window.confirm('Utworzyć backup i rozpocząć migrację starszych danych?')) return
-    try { const raport = wykonajMigracjeStarszychDokumentow(); ustawRaportMigracji(raport); ustawStatusMigracji(pobierzStatusMigracji()); ustawKomunikat('Migracja została zweryfikowana i potwierdzona.') } catch (blad) { ustawKomunikat(blad instanceof Error ? blad.message : 'Migracja nie powiodła się.') }
+    try { const raport = wykonajMigracjeStarszychDokumentow(); ustawRaportMigracji(raport); ustawStatusMigracji(pobierzStatusMigracji()); ustawKopieLokalne(pobierzListeKopiiLokalnych()); ustawKomunikat('Migracja została zweryfikowana i potwierdzona.') } catch (blad) { ustawKomunikat(blad instanceof Error ? blad.message : 'Migracja nie powiodła się.') }
   }
 
   return (
@@ -475,6 +486,13 @@ export default function WidokUstawien() {
             <button type="button" onClick={() => eksportujDaneLokalne()}>Utwórz kopię teraz</button>
             {(['DOKUMENTY', 'SZCZEGOLY_ORGANIZACYJNE', 'PROGRAMY', 'PULPIT_I_ZADANIA', 'KARTOTEKI', 'USTAWIENIA'] as KategoriaBackupu[]).map((kategoria) => <button key={kategoria} type="button" onClick={() => eksportujDaneLokalne(kategoria)}>Eksportuj: {kategoria.replaceAll('_', ' ')}</button>)}
           </div>
+        </section>
+
+        <section className="ustawienia__karta">
+          <h2>Ostatnie lokalne kopie</h2>
+          <p>Przechowywane są maksymalnie trzy zweryfikowane kopie automatyczne lub utworzone przed operacją.</p>
+          {kopieLokalne.length === 0 && <p>Brak lokalnych kopii.</p>}
+          {kopieLokalne.map((kopia) => <div className="ustawienia__informacja" key={kopia.klucz}><p>{new Date(kopia.data).toLocaleString('pl-PL')} · {kopia.rodzaj === 'AUTOMATYCZNA' ? 'automatyczna' : 'przed operacją'} · {kopia.poprawna ? `${Object.values(kopia.manifest?.liczbaRekordow ?? {}).reduce((suma, liczba) => suma + liczba, 0)} rekordów` : 'kopia uszkodzona'}</p><div className="ustawienia__akcje"><button disabled={!kopia.poprawna} type="button" onClick={() => przywrocLokalnaKopie(kopia.klucz)}>Przywróć</button><button disabled={!kopia.poprawna} type="button" onClick={() => pobierzLokalnaKopie(kopia.klucz)}>Pobierz jako plik</button></div></div>)}
         </section>
 
         <section className="ustawienia__karta">
