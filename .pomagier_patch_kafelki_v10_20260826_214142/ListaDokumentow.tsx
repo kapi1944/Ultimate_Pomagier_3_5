@@ -17,21 +17,9 @@ type WlasciwosciListyDokumentow = {
   czyKosz?: boolean
   typyStale?: TypDokumentu[]
   otworzDokument?: (dokument: Dokument<unknown, unknown>) => void
-  otworzNowyDokument?: (typ: TypSzybkiegoDokumentu) => void
 }
 
 type StanLadowania = 'ladowanie' | 'gotowe' | 'blad'
-
-export type TypSzybkiegoDokumentu = 'program_szkolenia' | 'lista_obecnosci' | 'ankieta' | 'dyplom' | 'karta_na_drzwi' | 'checklista_paczki'
-
-const szybkieAkcjeDokumentow: { typ: TypSzybkiegoDokumentu; nazwa: string }[] = [
-  { typ: 'program_szkolenia', nazwa: 'Program szkolenia' },
-  { typ: 'lista_obecnosci', nazwa: 'Lista obecności' },
-  { typ: 'ankieta', nazwa: 'Ankieta' },
-  { typ: 'dyplom', nazwa: 'Dyplom' },
-  { typ: 'karta_na_drzwi', nazwa: 'Karta informacyjna / karta na drzwi' },
-  { typ: 'checklista_paczki', nazwa: 'Checklista wysyłki paczek' },
-]
 
 const etykietyStatusow: Record<StatusDokumentu, string> = {
   ROBOCZY: 'Roboczy',
@@ -53,7 +41,6 @@ export default function ListaDokumentow({
   czyKosz = false,
   typyStale,
   otworzDokument,
-  otworzNowyDokument,
 }: WlasciwosciListyDokumentow) {
   const { zalogowanyUzytkownik } = useKontekstUzytkownika()
   const [dokumenty, ustawDokumenty] = useState<Dokument<unknown, unknown>[]>([])
@@ -156,20 +143,6 @@ export default function ListaDokumentow({
         <div><h1>{tytul}</h1><p>{opis}</p></div>
         <button type="button" onClick={odswiez}>Odśwież</button>
       </header>
-
-      {!czyKosz && !typyStale?.length && otworzNowyDokument && (
-        <section aria-label="Utwórz nowy dokument" className="lista-dokumentow__szybkie-akcje">
-          {szybkieAkcjeDokumentow.map((akcja) => (
-            <button className="lista-dokumentow__szybka-akcja" key={akcja.typ} type="button" onClick={() => otworzNowyDokument(akcja.typ)}>
-              <strong>{akcja.nazwa}</strong>
-              <span className="lista-dokumentow__etykieta-szybkiej-akcji">
-                <span aria-hidden="true" className="lista-dokumentow__ikona-dodawania" />
-                <span>Utwórz nowy</span>
-              </span>
-            </button>
-          ))}
-        </section>
-      )}
 
       <form className="lista-dokumentow__filtry" onSubmit={(zdarzenie) => zdarzenie.preventDefault()}>
         <label>

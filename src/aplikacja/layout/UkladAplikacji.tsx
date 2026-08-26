@@ -15,6 +15,7 @@ import WidokProfiluUzytkownika from '../../kartoteki/uzytkownicy/WidokProfiluUzy
 import WidokKopiiRoboczychDokumentow from '../../moduly/dokumenty/WidokKopiiRoboczychDokumentow'
 import WidokUzytkownikow from '../../kartoteki/uzytkownicy/WidokUzytkownikow'
 import WidokWszystkichDokumentow from '../../moduly/dokumenty/WidokWszystkichDokumentow'
+import type { TypSzybkiegoDokumentu } from '../../moduly/dokumenty/ListaDokumentow'
 import WidokAnkiet from '../../moduly/dokumenty/generatory/ankiety/WidokAnkiet'
 import WidokDyplomow from '../../moduly/dokumenty/generatory/dyplomy/WidokDyplomow'
 import WidokKartNaDrzwi from '../../moduly/dokumenty/generatory/karta_na_drzwi/WidokKartNaDrzwi'
@@ -151,6 +152,19 @@ function pobierzWidokZakladkiKartotek(zakladka: ZakladkaKartotek): WidokNawigacj
   }
 }
 
+function otworzGeneratorZKafelka(typ: TypSzybkiegoDokumentu, ustawWidok: UstawWidok) {
+  const widokiGeneratorow: Record<TypSzybkiegoDokumentu, WidokNawigacji> = {
+    program_szkolenia: 'programy_szkolen',
+    lista_obecnosci: 'listy-obecnosci',
+    ankieta: 'ankiety',
+    dyplom: 'dyplomy',
+    karta_na_drzwi: 'karta-na-drzwi',
+    checklista_paczki: 'checklisty_paczek',
+  }
+
+  ustawWidok(widokiGeneratorow[typ])
+}
+
 function renderujWidok(
   widok: WidokNawigacji,
   zmienZakladkeKartotek: (zakladka: ZakladkaKartotek) => void,
@@ -182,7 +196,7 @@ function renderujWidok(
       return <WidokSzkolenOtwartych />
     case 'dokumenty':
     case 'dokumenty_wszystkie':
-      return <WidokWszystkichDokumentow otworzDokument={otworzDokument} />
+      return <WidokWszystkichDokumentow otworzDokument={otworzDokument} otworzNowyDokument={(typ) => otworzGeneratorZKafelka(typ, ustawAktywnyWidok)} />
     case 'dokumenty_kopie_robocze':
       return <WidokKopiiRoboczychDokumentow otworzDokument={otworzDokument} />
     case 'dokumenty_kosz':

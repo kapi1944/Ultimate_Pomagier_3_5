@@ -148,3 +148,29 @@ test('Kopie robocze i Wszystkie Dyplomy korzystają z jednej karty z miniaturą 
   assert.match(uklad, /Kopie robocze — Dyplomy/)
   assert.match(uklad, /Wszystkie dyplomy/)
 })
+
+test('widok Wszystkie dokumenty renderuje sześć kafelków tworzenia przed formularzem filtrów', () => {
+  const uklad = odczytajZrodlo('../src/aplikacja/layout/UkladAplikacji.tsx')
+  const widokWszystkich = odczytajZrodlo('../src/moduly/dokumenty/WidokWszystkichDokumentow.tsx')
+  const lista = odczytajZrodlo('../src/moduly/dokumenty/ListaDokumentow.tsx')
+  const nazwyKafelkow = [
+    'Program szkolenia',
+    'Lista obecności',
+    'Ankieta',
+    'Dyplom',
+    'Karta informacyjna / karta na drzwi',
+    'Checklista wysyłki paczek',
+  ]
+
+  assert.match(uklad, /case 'dokumenty_wszystkie':[\s\S]*<WidokWszystkichDokumentow[\s\S]*otworzNowyDokument/)
+  assert.match(widokWszystkich, /return <ListaDokumentow[\s\S]*otworzNowyDokument=/)
+
+  const indeksFiltrow = lista.indexOf('<form className="lista-dokumentow__filtry"')
+  assert.ok(indeksFiltrow > 0)
+
+  nazwyKafelkow.forEach((nazwa) => {
+    const indeksKafelka = lista.indexOf(nazwa)
+    assert.ok(indeksKafelka >= 0, `Brak kafelka: ${nazwa}`)
+    assert.ok(indeksKafelka < indeksFiltrow, `Kafelek ${nazwa} musi być przed filtrami`)
+  })
+})

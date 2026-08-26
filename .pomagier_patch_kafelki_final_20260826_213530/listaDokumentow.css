@@ -1,7 +1,6 @@
 .lista-dokumentow {
   display: grid;
   gap: 18px;
-  container-type: inline-size;
 }
 
 .lista-dokumentow__naglowek,
@@ -55,115 +54,6 @@
   border-radius: 8px;
   background: var(--ui-panel);
   padding: 14px;
-}
-
-.lista-dokumentow__szybkie-akcje {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.lista-dokumentow__szybka-akcja {
-  display: flex;
-  min-width: 0;
-  min-height: 112px !important;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 16px !important;
-  border-color: color-mix(in srgb, var(--ui-akcent) 38%, transparent) !important;
-  border-radius: 10px !important;
-  background: linear-gradient(
-    145deg,
-    color-mix(in srgb, var(--ui-akcent) 6%, var(--ui-panel)),
-    var(--ui-panel) 72%
-  ) !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-  cursor: pointer;
-  text-align: left;
-  transition:
-    transform 160ms ease,
-    border-color 160ms ease,
-    background 160ms ease,
-    box-shadow 160ms ease;
-}
-
-.lista-dokumentow__szybka-akcja strong {
-  color: var(--ui-tekst);
-  font-size: 0.98rem;
-  font-weight: 650;
-  line-height: 1.25;
-}
-
-.lista-dokumentow__etykieta-szybkiej-akcji {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  color: var(--ui-akcent);
-  font-size: 0.82rem;
-  font-weight: 600;
-  line-height: 1.2;
-}
-
-.lista-dokumentow__ikona-dodawania {
-  position: relative;
-  display: inline-grid;
-  width: 26px;
-  height: 26px;
-  flex: 0 0 26px;
-  place-items: center;
-  border: 1px solid color-mix(in srgb, var(--ui-akcent) 45%, transparent);
-  border-radius: 7px;
-  background: color-mix(in srgb, var(--ui-akcent) 14%, transparent);
-  box-shadow: 0 0 0 color-mix(in srgb, var(--ui-akcent) 0%, transparent);
-  transition:
-    border-color 160ms ease,
-    background 160ms ease,
-    box-shadow 160ms ease;
-}
-
-.lista-dokumentow__ikona-dodawania::before,
-.lista-dokumentow__ikona-dodawania::after {
-  position: absolute;
-  width: 10px;
-  height: 2px;
-  border-radius: 999px;
-  background: currentColor;
-  content: '';
-}
-
-.lista-dokumentow__ikona-dodawania::after {
-  transform: rotate(90deg);
-}
-
-.lista-dokumentow__szybka-akcja:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--ui-akcent) 82%, transparent) !important;
-  background: linear-gradient(
-    145deg,
-    color-mix(in srgb, var(--ui-akcent) 13%, var(--ui-panel)),
-    color-mix(in srgb, var(--ui-akcent-mocny) 34%, var(--ui-panel))
-  ) !important;
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.2);
-  transform: translateY(-2px);
-}
-
-.lista-dokumentow__szybka-akcja:hover:not(:disabled) .lista-dokumentow__ikona-dodawania,
-.lista-dokumentow__szybka-akcja:focus-visible .lista-dokumentow__ikona-dodawania {
-  border-color: color-mix(in srgb, var(--ui-akcent) 78%, transparent);
-  background: color-mix(in srgb, var(--ui-akcent) 24%, transparent);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--ui-akcent) 18%, transparent);
-}
-
-.lista-dokumentow__szybka-akcja:active:not(:disabled) {
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.14);
-  transform: translateY(0);
-  transition-duration: 80ms;
-}
-
-.lista-dokumentow__szybka-akcja:focus-visible {
-  border-color: var(--ui-akcent) !important;
-  outline: 2px solid #fef08a;
-  outline-offset: 3px;
 }
 
 .lista-dokumentow__filtry label {
@@ -426,31 +316,6 @@
   100% {
     transform: translateY(-170%) scaleY(2.2);
     opacity: 1;
-  }
-}
-
-@container (max-width: 1050px) {
-  .lista-dokumentow__szybkie-akcje {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@container (max-width: 720px) {
-  .lista-dokumentow__szybkie-akcje {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@container (max-width: 420px) {
-  .lista-dokumentow__szybkie-akcje {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .lista-dokumentow__szybka-akcja,
-  .lista-dokumentow__ikona-dodawania {
-    transition: none;
   }
 }
 
