@@ -6,6 +6,7 @@ import { zbudujBledyDanychKlienta } from '../src/moduly/zamkniete/szczegoly_orga
 import { czyWszystkieListyBledowRozwiniete, deduplikujBledySekcji, zbudujPozycjeChecklistyPublikacji } from '../src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/logikaChecklistyPublikacji.ts'
 import { przejdzDoPolaFormularza } from '../src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/nawigacjaDoPola.ts'
 import { pobierzIdPola } from '../src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/identyfikatoryPol.ts'
+import { pobierzIdKompletnychSekcji } from '../src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/logikaPaskaStickySzczegolow.ts'
 import type { KluczSekcjiSzczegolow, ModelSekcyjnySzczegolow, ProblemWalidacji } from '../src/moduly/zamkniete/szczegoly_organizacyjne/typy.ts'
 
 function utworzDane() {
@@ -88,6 +89,18 @@ test('stan zbiorczego rozwijania obejmuje wyłącznie sekcje z błędami', () =>
 
   assert.equal(czyWszystkieListyBledowRozwiniete(pozycje, new Set()), false)
   assert.equal(czyWszystkieListyBledowRozwiniete(pozycje, new Set(['klient'])), true)
+})
+
+test('sticky pasek oznacza jako kompletne tylko sekcje z uzupełnionymi wymaganymi polami', () => {
+  const blad: ProblemWalidacji = { sekcja: 'Dane klienta', pole: 'odbiorca.nazwa', komunikat: 'Błąd', poziom: 'blad', czyBlokuje: true }
+  const model = utworzModelChecklisty([
+    { klucz: 'podstawoweInformacje', etykieta: 'Podstawowe informacje' },
+    { klucz: 'grupySzkoleniowe', etykieta: 'Grupy szkoleniowe' },
+    { klucz: 'klient', etykieta: 'Dane klienta', bledy: [blad] },
+    { klucz: 'harmonogram', etykieta: 'Harmonogram' },
+  ])
+
+  assert.deepEqual([...pobierzIdKompletnychSekcji(model)], ['podstawowe-informacje', 'grupy-szkoleniowe', 'harmonogram'])
 })
 
 test('synchronizacja rozwiniętych sekcji usuwa wyłącznie sekcje bez aktualnych błędów', async () => {

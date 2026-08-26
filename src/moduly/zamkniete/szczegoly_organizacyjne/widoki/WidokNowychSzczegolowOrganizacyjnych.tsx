@@ -9,6 +9,7 @@ import PanelDokumentowPowiazanych from '../komponenty/PanelDokumentowPowiazanych
 import PanelTworzeniaListObecnosci from '../komponenty/PanelTworzeniaListObecnosci'
 import PanelWykrytychProblemow from '../komponenty/PanelWykrytychProblemow'
 import PasekStickySzczegolow from '../komponenty/PasekStickySzczegolow'
+import { pobierzIdKompletnychSekcji } from '../komponenty/logikaPaskaStickySzczegolow'
 import { PoleCheckbox, PoleLiczbowe, PoleTekstowe, PoleTekstoweWielowierszowe, PoleWyboru, ZnacznikBleduPola } from '../komponenty/PolaSzczegolow'
 import PrzelacznikTakNie from '../komponenty/PrzelacznikTakNie'
 import { pobierzIdBleduPola } from '../komponenty/identyfikatoryPol'
@@ -303,6 +304,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
   const [czyHistoriaRozwinieta, ustawCzyHistoriaRozwinieta] = useState(false)
   const liczbaProblemowBlokujacych = generator.problemyWalidacji.filter((problem) => problem.czyBlokuje).length
   const statusFormularza = `${generator.daneFormularza.status} | ${generator.czyFormularzKompletny ? 'Kompletny' : `Niepełny (${liczbaProblemowBlokujacych})`}`
+  const kompletneSekcjeNawigacji = useMemo(() => pobierzIdKompletnychSekcji(generator.modelSekcyjny), [generator.modelSekcyjny])
   const miejscowosciDoPodpowiedzi = useMemo(
     () => [...new Set(pobierzLokalizacjeZMagazynu().map((lokalizacja) => lokalizacja.nazwa))].sort((pierwsza, druga) => pierwsza.localeCompare(druga, 'pl')),
     [],
@@ -580,34 +582,35 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
       <DostawcaBledowPol bledyPol={generator.bledyPol}>
       <div className="szczegoly-obszar-roboczy">
         <PasekStickySzczegolow
-        sekcje={sekcjeNawigacji}
-        status={statusFormularza}
-        tytul="Nowe szczegóły organizacyjne"
-        akcje={
-          <>
-            {generator.daneFormularza.status === 'NIEPEŁNE' && (
-              <button disabled={generator.czyTylkoPodglad} type="button" onClick={generator.zapiszWersje}>
-                Zapisz wersję roboczą
-              </button>
-            )}
-            {generator.daneFormularza.status === 'PEŁNE' && (
-              <button disabled={!generator.czyFormularzKompletny || generator.czyTylkoPodglad} type="button" onClick={generator.opublikujSzczegoly}>
-                Opublikuj
-              </button>
-            )}
-            {(generator.daneFormularza.status === 'OCZEKUJĄCE' || generator.daneFormularza.status === 'ZAAKCEPTOWANE') && (
-              <button disabled={generator.czyTylkoPodglad} type="button" onClick={generator.zapiszWersje}>
-                Utwórz aktualizację
-              </button>
-            )}
-            {generator.daneFormularza.status === 'GOTOWE' && (
-              <button disabled={generator.czyTylkoPodglad} type="button" onClick={generator.zapiszWersje}>
-                Zapisz zmianę workflow
-              </button>
-            )}
-          </>
-        }
-      />
+          kompletneSekcje={kompletneSekcjeNawigacji}
+          sekcje={sekcjeNawigacji}
+          status={statusFormularza}
+          tytul="Nowe szczegóły organizacyjne"
+          akcje={
+            <>
+              {generator.daneFormularza.status === 'NIEPEŁNE' && (
+                <button disabled={generator.czyTylkoPodglad} type="button" onClick={generator.zapiszWersje}>
+                  Zapisz wersję roboczą
+                </button>
+              )}
+              {generator.daneFormularza.status === 'PEŁNE' && (
+                <button disabled={!generator.czyFormularzKompletny || generator.czyTylkoPodglad} type="button" onClick={generator.opublikujSzczegoly}>
+                  Opublikuj
+                </button>
+              )}
+              {(generator.daneFormularza.status === 'OCZEKUJĄCE' || generator.daneFormularza.status === 'ZAAKCEPTOWANE') && (
+                <button disabled={generator.czyTylkoPodglad} type="button" onClick={generator.zapiszWersje}>
+                  Utwórz aktualizację
+                </button>
+              )}
+              {generator.daneFormularza.status === 'GOTOWE' && (
+                <button disabled={generator.czyTylkoPodglad} type="button" onClick={generator.zapiszWersje}>
+                  Zapisz zmianę workflow
+                </button>
+              )}
+            </>
+          }
+        />
 
       <p className="szczegoly-komunikat">{generator.komunikat}</p>
       <PanelTworzeniaListObecnosci
