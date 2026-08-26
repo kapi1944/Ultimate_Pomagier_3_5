@@ -350,3 +350,72 @@
     max-width: 180px;
   }
 }
+
+
+/* Szybkie tworzenie dokumentów na ekranie „Wszystkie dokumenty”. */
+.dokumenty-szybkie-akcje {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+  margin: 12px 0 16px;
+}
+
+.dokumenty-szybka-akcja {
+  min-width: 0;
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid currentColor;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform 120ms ease,
+    background-color 120ms ease;
+}
+
+.dokumenty-szybka-akcja:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.dokumenty-szybka-akcja:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.dokumenty-szybka-akcja-plus {
+  flex: 0 0 auto;
+  font-size: 2.15rem;
+  line-height: 1;
+  font-weight: 500;
+}
+
+.dokumenty-szybka-akcja-etykieta {
+  min-width: 0;
+}
+
+@media (max-width: 1400px) {
+  .dokumenty-szybkie-akcje {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .dokumenty-szybkie-akcje {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .dokumenty-szybkie-akcje {
+    grid-template-columns: 1fr;
+  }
+}
