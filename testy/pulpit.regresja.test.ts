@@ -5,6 +5,7 @@ import { obliczPostepCzasuDnia, pobierzEtykietyOsiCzasu, pobierzGraniceDniaPracy
 import { domyslneUstawieniaAplikacji, normalizujUstawieniaAplikacji } from '../src/aplikacja/ustawienia/modelUstawienAplikacji.ts'
 import { eksportujUstawieniaAplikacji, importujUstawieniaAplikacji, pobierzUstawieniaAplikacji, zapiszUstawieniaAplikacji } from '../src/aplikacja/ustawienia/magazynUstawienAplikacji.ts'
 import { czyMoznaZmienicKontekstPulpitu } from '../src/moduly/zamkniete/pulpit/logika/kontekstPulpitu.ts'
+import { formularzZZadania } from '../src/moduly/zamkniete/pulpit/logika/formularzZadania.ts'
 import { czyPaczkaOpozniona, czyPaczkaWidoczna, czyWysylkaWymagaDodatkowegoPotwierdzenia, pobierzGotowoscPaczki, sortujPaczki } from '../src/moduly/zamkniete/pulpit/logika/paczki.ts'
 import { obliczLicznikiPulpitu } from '../src/moduly/zamkniete/pulpit/logika/podsumowaniePulpitu.ts'
 import { obliczLiczbeAktywnychZapotrzebowanZakupowych, odmienRzeczDoZakupu, pobierzTekstLicznikaZakupow, walidujNoweZapotrzebowanieZakupowe } from '../src/moduly/zamkniete/pulpit/logika/zapotrzebowaniaZakupowe.ts'
@@ -12,7 +13,7 @@ import { generujZadaniaAutomatyczne } from '../src/moduly/zamkniete/pulpit/logik
 import { normalizujKadrMiniatury } from '../src/moduly/zamkniete/pulpit/logika/miniaturyZadan.ts'
 import { czyMoznaEdytowacZadanie, czyMoznaOznaczycZadanieRecznie, czyMoznaWybracZadaniodawce, czyZadanieDoKoncaDnia, czyZadanieOpoznione, czyZadanieWidoczneDlaUzytkownika, pobierzEtykieteStatusuZadania, pobierzGodzineLogicznegoDeadline, pobierzGodzineMarkeraZadania, pobierzMomentPrzypomnieniaZadania, pobierzSzerokoscLiniiDoFajrantu, pobierzZadaniaDeadline, rozstrzygnijPrzypisanieZadania, sortujZadaniaBezGodziny, walidujPrzypomnienia } from '../src/moduly/zamkniete/pulpit/logika/zadania.ts'
 import type { PaczkaPulpitu, StatusZapotrzebowaniaZakupowego, ZadaniePulpitu, ZapotrzebowanieZakupowe } from '../src/moduly/zamkniete/pulpit/modele/pulpit.ts'
-import { edytujZadanieRecznePrzezZadaniodawce, normalizujZadaniePulpitu, pobierzStanPulpitu, zapiszZadanieReczne, zapiszZapotrzebowanieZakupowe } from '../src/moduly/zamkniete/pulpit/uslugi/magazynPulpitu.ts'
+import { edytujZadanieRecznePrzezZadaniodawce, normalizujZadaniePulpitu, pobierzStanPulpitu, usunZadanieReczne, zapiszZadanieReczne, zapiszZapotrzebowanieZakupowe } from '../src/moduly/zamkniete/pulpit/uslugi/magazynPulpitu.ts'
 
 const teraz = new Date('2026-07-22T14:00:00')
 const zadanie = (zmiany: Partial<ZadaniePulpitu> = {}): ZadaniePulpitu => ({ id: 'zadanie', tytul: 'Zadanie', data: '2026-07-22', utworzono: '2026-07-22T08:00:00.000Z', status: 'OTWARTE', priorytet: 'ZWYKLE', typZrodla: 'RECZNE', typZadania: 'ZADANIE_WLASNE', wlascicielId: 'anna', zadaniodawcaId: 'anna', zadaniobiorcaId: 'anna', przypomnienia: [], czyAutomatyczne: false, czyTerminKrytyczny: false, ...zmiany })
@@ -297,6 +298,16 @@ test('magazyn chroni edycję i zachowuje historyczne metadane zadania', () => {
     zadaniobiorcaId: 'anna',
     wlascicielId: 'anna',
     utworzono: '2026-07-20T08:00:00.000Z',
+    miniatura: {
+      daneUrl: 'data:image/webp;base64,AAAA',
+      zrodloDaneUrl: 'data:image/webp;base64,BBBB',
+      nazwaPliku: 'zadanie.webp',
+      szerokosc: 320,
+      wysokosc: 180,
+      szerokoscZrodla: 1200,
+      wysokoscZrodla: 800,
+      kadr: { x: 0.25, y: -0.15, zoom: 1.4, proporcja: '16:9' },
+    },
   })
 
   zapiszZadanieReczne(oryginalne)
@@ -345,6 +356,8 @@ test('magazyn chroni edycję i zachowuje historyczne metadane zadania', () => {
   assert.equal(zaktualizowane.zadaniobiorcaId, 'ewa')
   assert.equal(zaktualizowane.wlascicielId, 'ewa')
   assert.equal(zaktualizowane.odlozonoDo, '2026-07-24')
+  assert.equal(pobierzStanPulpitu().zadaniaReczne.length, 1)
+  assert.deepEqual(zaktualizowane.miniatura, oryginalne.miniatura)
 
   zapiszZadanieReczne({
     ...zaktualizowane,
@@ -394,6 +407,66 @@ test('magazyn chroni edycję i zachowuje historyczne metadane zadania', () => {
   assert.equal(korektaArchitekta.zadaniodawcaId, 'jan')
   assert.equal(korektaArchitekta.zadaniobiorcaId, 'ewa')
   assert.equal(korektaArchitekta.wykonano, '2026-07-22T21:15:00.000Z')
+  assert.deepEqual(korektaArchitekta.miniatura, oryginalne.miniatura)
+})
+
+test('istniejące zadanie jest ładowane do wspólnego formularza edycji ze wszystkimi danymi', () => {
+  const miniatura = {
+    daneUrl: 'data:image/webp;base64,AAAA',
+    zrodloDaneUrl: 'data:image/webp;base64,BBBB',
+    nazwaPliku: 'kadr.webp',
+    szerokosc: 320,
+    wysokosc: 180,
+    szerokoscZrodla: 1200,
+    wysokoscZrodla: 800,
+    kadr: { x: 0.3, y: -0.2, zoom: 1.5, proporcja: '4:3' as const },
+  }
+  const edytowane = zadanie({
+    tytul: 'Przygotuj dokumenty',
+    data: '2026-07-25',
+    godzina: '11:45',
+    rodzajTerminu: 'KONKRETNA_GODZINA',
+    priorytet: 'PILNE',
+    zadaniodawcaId: 'jan',
+    zadaniobiorcaId: 'anna',
+    powiazaneSzkolenieId: 'szkolenie-1',
+    przypomnienia: [{ id: 'p1', wartosc: 15, jednostka: 'MINUTY' }],
+    miniatura,
+  })
+
+  const formularz = formularzZZadania(edytowane)
+
+  assert.deepEqual(formularz, {
+    tytul: 'Przygotuj dokumenty',
+    data: '2026-07-25',
+    godzina: '11:45',
+    rodzajTerminu: 'KONKRETNA_GODZINA',
+    priorytet: 'PILNE',
+    zadaniodawcaId: 'jan',
+    zadaniobiorcaId: 'anna',
+    szkolenieId: 'szkolenie-1',
+    przypomnienia: [{ id: 'p1', wartosc: 15, jednostka: 'MINUTY' }],
+    miniatura,
+  })
+  assert.notEqual(formularz.przypomnienia, edytowane.przypomnienia)
+})
+
+test('usunięcie zadania korzysta z istniejącego magazynu i nie narusza pozostałych zadań', () => {
+  const magazyn = new Map<string, string>()
+  globalThis.localStorage = {
+    getItem: (klucz: string) => magazyn.get(klucz) ?? null,
+    setItem: (klucz: string, wartosc: string) => magazyn.set(klucz, wartosc),
+    removeItem: (klucz: string) => magazyn.delete(klucz),
+    clear: () => magazyn.clear(),
+    key: () => null,
+    length: 0,
+  } as Storage
+
+  zapiszZadanieReczne(zadanie({ id: 'do-usuniecia' }))
+  zapiszZadanieReczne(zadanie({ id: 'pozostaje' }))
+
+  assert.equal(usunZadanieReczne('do-usuniecia'), true)
+  assert.deepEqual(pobierzStanPulpitu().zadaniaReczne.map((pozycja) => pozycja.id), ['pozostaje'])
 })
 
 test('widok zapisuje moment wykonania i pokazuje brak czasu tylko dla starych danych', () => {
@@ -404,6 +477,37 @@ test('widok zapisuje moment wykonania i pokazuje brak czasu tylko dla starych da
   assert.match(widok, /Zapisz zmiany/)
   assert.match(widok, /Odłóż o dzień/)
   assert.match(widok, /zapiszSzybkaEdycjeTerminu/)
+})
+
+test('Pulpit używa jednego szerokiego formularza create edit pod osią czasu', () => {
+  const widok = readFileSync('src/moduly/zamkniete/pulpit/WidokPulpitu.tsx', 'utf8')
+  const css = readFileSync('src/moduly/zamkniete/pulpit/pulpit.css', 'utf8')
+
+  assert.match(widok, /useState<TrybFormularzaZadania>\('create'\)/)
+  assert.match(widok, /ustawFormularzZadania\(formularzZZadania\(zadanie\)\)/)
+  assert.match(widok, /ustawTrybFormularzaZadania\('edit'\)/)
+  assert.match(widok, /scrollIntoView\(\{ behavior: 'smooth', block: 'start' \}\)/)
+  assert.match(widok, /trybFormularzaZadania === 'edit' \? 'Edytuj zadanie' : 'Dodaj zadanie'/)
+  assert.match(widok, /trybFormularzaZadania === 'edit' \? zapiszEdycjeZadania : dodajZadanie/)
+  assert.match(widok, /Usuń zadanie/)
+  assert.match(widok, /\{'\\u2713'\} Wykonane/)
+  assert.match(widok, /Anuluj/)
+  assert.doesNotMatch(widok, /pulpit-drawer__edycja/)
+  assert.doesNotMatch(css, /pulpit-drawer__edycja/)
+  assert.ok(widok.indexOf('pulpit-formularz-zadania__kontener') < widok.indexOf('aria-label="Szczegóły zadania"'))
+})
+
+test('anulowanie edycji czyści wybór i przywraca pusty tryb tworzenia bez zapisu', () => {
+  const widok = readFileSync('src/moduly/zamkniete/pulpit/WidokPulpitu.tsx', 'utf8')
+  const poczatek = widok.indexOf('function przywrocTrybTworzenia')
+  const koniec = widok.indexOf('function oznaczWykonane', poczatek)
+  const przywracanie = widok.slice(poczatek, koniec)
+
+  assert.match(przywracanie, /ustawTrybFormularzaZadania\('create'\)/)
+  assert.match(przywracanie, /ustawEdytowaneZadanieId\(null\)/)
+  assert.match(przywracanie, /ustawWybraneZadanie\(null\)/)
+  assert.match(przywracanie, /ustawFormularzZadania\(pustyFormularz/)
+  assert.doesNotMatch(przywracanie, /zapiszZadanieReczne|edytujZadanieRecznePrzezZadaniodawce/)
 })
 
 test('stare zadanie bez nowych pól jest bezpiecznie normalizowane', () => {
@@ -882,8 +986,7 @@ test('widok zapisuje miniaturę przy tworzeniu i edycji oraz renderuje ją nad m
   const widok = readFileSync('src/moduly/zamkniete/pulpit/WidokPulpitu.tsx', 'utf8')
   const css = readFileSync('src/moduly/zamkniete/pulpit/pulpit.css', 'utf8')
 
-  assert.match(widok, /miniatura:\s*noweZadanie\.miniatura/)
-  assert.match(widok, /miniatura:\s*formularzEdycji\.miniatura/)
+  assert.match(widok, /miniatura:\s*formularzZadania\.miniatura/g)
   assert.match(widok, /pulpit-os-czasu__miniatury/)
   assert.match(widok, /MiniaturaZadaniaNaOsi/)
   assert.match(widok, /pozycjaGodzinyNaOsi\(godzinaMarkera, zakresDniaPracy\)/)
