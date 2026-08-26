@@ -9,6 +9,7 @@
   --checklista-pomaranczowy: #f4ae4a;
   --checklista-zolty: #e7d96b;
   --checklista-zielony: #59ce7d;
+  container-type: inline-size;
   color: var(--checklista-tekst);
 }
 
@@ -194,12 +195,12 @@
 .checklista-paczki__wydruk-tabela-wysylki th { background: #f5f5f5; }
 .checklista-paczki__wydruk-podpis-pakujacego { display: block; min-height: 14px; border-bottom: 1px solid #111; }
 
-@media (max-width: 1180px) {
+@container (max-width: 1180px) {
   .checklista-paczki__uklad-roboczy { grid-template-columns: 1fr; }
   .checklista-paczki__panel-podgladu { position: static; max-height: none; }
 }
 
-@media (max-width: 840px) {
+@container (max-width: 840px) {
   .checklista-paczki__kroki, .checklista-paczki__dane-szkolenia, .checklista-paczki__siatka-wysylki { grid-template-columns: 1fr; }
   .checklista-paczki__siatka-wysylki fieldset { grid-column: auto; }
   .checklista-paczki fieldset { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -208,7 +209,7 @@
   .checklista-paczki__kolumna-status { grid-column: span 2; }
 }
 
-@media (max-width: 560px) {
+@container (max-width: 560px) {
   .checklista-paczki__naglowek, .checklista-paczki__naglowek-sekcji { align-items: stretch; }
   .checklista-paczki__akcje-glowne, .checklista-paczki__akcje-glowne button { width: 100%; }
   .checklista-paczki__wiersz, .checklista-paczki__kolumna-status, .checklista-paczki fieldset { grid-template-columns: 1fr; }

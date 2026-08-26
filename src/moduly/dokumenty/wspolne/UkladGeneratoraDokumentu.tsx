@@ -1,4 +1,4 @@
-import { forwardRef, type PropsWithChildren, type ReactNode } from 'react'
+import { forwardRef, useCallback, useEffect, useState, type PropsWithChildren, type ReactNode } from 'react'
 import './ukladGeneratoraDokumentu.css'
 
 type WlasciwosciUkladuGeneratoraDokumentu = PropsWithChildren<{
@@ -23,8 +23,42 @@ type WlasciwosciPaneluGeneratora = PropsWithChildren<{
   className?: string
 }>
 
+type WlasciwosciPaneluUstawienGeneratora = PropsWithChildren<{
+  id: string
+  tytul: string
+  czyOtwarty: boolean
+  zamknij: () => void
+  akcjeNaglowka?: ReactNode
+  className?: string
+  onMouseEnter?: () => void
+  onMouseLeave?: () => void
+  czyPrzypiety: boolean
+  czyWysuwanieWlaczone: boolean
+  przelaczPrzypiecie: () => void
+  przelaczWysuwanie: () => void
+}>
+
+type OpcjePaneluUstawienGeneratora = {
+  kluczPrzypiecia?: string
+  kluczWysuwania?: string
+  czyOtwartyPoczatkowo?: boolean
+}
+
 function polaczKlasy(...klasy: Array<string | undefined>) {
   return klasy.filter(Boolean).join(' ')
+}
+
+function pobierzUstawienieLogicznePanelu(klucz: string | undefined, wartoscDomyslna: boolean) {
+  if (!klucz) {
+    return wartoscDomyslna
+  }
+
+  try {
+    const wartosc = localStorage.getItem(klucz)
+    return wartosc === null ? wartoscDomyslna : wartosc === 'true'
+  } catch {
+    return wartoscDomyslna
+  }
 }
 
 export function PasekAkcjiGeneratora({ children, className }: WlasciwosciPaskaAkcjiGeneratora) {
@@ -48,6 +82,120 @@ export const PanelGeneratoraDokumentu = forwardRef<HTMLElement, WlasciwosciPanel
     )
   },
 )
+
+export function usePanelUstawienGeneratora({
+  kluczPrzypiecia,
+  kluczWysuwania,
+  czyOtwartyPoczatkowo = false,
+}: OpcjePaneluUstawienGeneratora = {}) {
+  const [czyPrzypiety, ustawCzyPrzypiety] = useState(() => pobierzUstawienieLogicznePanelu(kluczPrzypiecia, false))
+  const [czyWysuwanieWlaczone, ustawCzyWysuwanieWlaczone] = useState(() => pobierzUstawienieLogicznePanelu(kluczWysuwania, true))
+  const [czyOtwarty, ustawCzyOtwarty] = useState(() => czyOtwartyPoczatkowo || czyPrzypiety)
+
+  useEffect(() => {
+    if (!kluczPrzypiecia) {
+      return
+    }
+
+    try {
+      localStorage.setItem(kluczPrzypiecia, String(czyPrzypiety))
+    } catch {
+      return
+    }
+  }, [czyPrzypiety, kluczPrzypiecia])
+
+  useEffect(() => {
+    if (!kluczWysuwania) {
+      return
+    }
+
+    try {
+      localStorage.setItem(kluczWysuwania, String(czyWysuwanieWlaczone))
+    } catch {
+      return
+    }
+  }, [czyWysuwanieWlaczone, kluczWysuwania])
+
+  const otworz = useCallback(() => ustawCzyOtwarty(true), [])
+  const zamknij = useCallback(() => {
+    ustawCzyPrzypiety(false)
+    ustawCzyOtwarty(false)
+  }, [])
+  const przelacz = useCallback(() => ustawCzyOtwarty((czyPanelJestOtwarty) => !czyPanelJestOtwarty), [])
+  const przelaczPrzypiecie = useCallback(() => {
+    const czyPrzypiac = !czyPrzypiety
+    ustawCzyPrzypiety(czyPrzypiac)
+    ustawCzyOtwarty(czyPrzypiac)
+  }, [czyPrzypiety])
+  const przelaczWysuwanie = useCallback(() => ustawCzyWysuwanieWlaczone((czyWlaczone) => !czyWlaczone), [])
+  const otworzZKrawedzi = useCallback(() => {
+    if (czyWysuwanieWlaczone) {
+      otworz()
+    }
+  }, [czyWysuwanieWlaczone, otworz])
+  const schowajJesliOdpiety = useCallback(() => {
+    if (!czyPrzypiety) {
+      ustawCzyOtwarty(false)
+    }
+  }, [czyPrzypiety])
+
+  return {
+    czyOtwarty,
+    czyPrzypiety,
+    czyWysuwanieWlaczone,
+    otworz,
+    otworzZKrawedzi,
+    zamknij,
+    przelacz,
+    przelaczPrzypiecie,
+    przelaczWysuwanie,
+    schowajJesliOdpiety,
+  }
+}
+
+export function PanelUstawienGeneratoraDokumentu({
+  akcjeNaglowka,
+  children,
+  className,
+  czyOtwarty,
+  id,
+  onMouseEnter,
+  onMouseLeave,
+  czyPrzypiety,
+  czyWysuwanieWlaczone,
+  przelaczPrzypiecie,
+  przelaczWysuwanie,
+  tytul,
+  zamknij,
+}: WlasciwosciPaneluUstawienGeneratora) {
+  return (
+    <aside
+      aria-hidden={!czyOtwarty}
+      aria-label={tytul}
+      className={polaczKlasy('generator-panel-ustawien', czyOtwarty && 'generator-panel-ustawien--otwarty', className)}
+      id={id}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
+      <header className="generator-panel-ustawien__naglowek">
+        <h2>{tytul}</h2>
+        <div className="generator-panel-ustawien__akcje">
+          <button aria-pressed={czyWysuwanieWlaczone} className="generator-panel-ustawien__przycisk" onClick={przelaczWysuwanie} title={czyWysuwanieWlaczone ? 'Wyłącz wysuwanie z prawej krawędzi' : 'Włącz wysuwanie z prawej krawędzi'} type="button">
+            ↪ {czyWysuwanieWlaczone ? 'Wyłącz wysuwanie' : 'Włącz wysuwanie'}
+          </button>
+          <button aria-pressed={czyPrzypiety} className="generator-panel-ustawien__przycisk" onClick={przelaczPrzypiecie} title={czyPrzypiety ? 'Odepnij panel ustawień' : 'Przypnij panel ustawień'} type="button">
+            📌 {czyPrzypiety ? 'Odepnij panel' : 'Przypnij panel'}
+          </button>
+          {akcjeNaglowka}
+          <button aria-label={`Zamknij: ${tytul}`} className="generator-panel-ustawien__zamknij" onClick={zamknij} type="button">
+            Zamknij
+          </button>
+        </div>
+      </header>
+      {children}
+    </aside>
+  )
+}
 
 export default function UkladGeneratoraDokumentu({
   akcje,

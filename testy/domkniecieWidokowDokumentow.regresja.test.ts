@@ -90,8 +90,11 @@ test('pięć modułów ma spójne trasy i pozycje Wszystkie', () => {
 
 test('generatory korzystają ze wspólnego układu paneli, paska akcji i jawnej konfiguracji zapisu', () => {
   const prostyGenerator = odczytajZrodlo('../src/moduly/dokumenty/wspolne/ProstyGeneratorDokumentu.tsx')
+  const ukladGeneratora = odczytajZrodlo('../src/moduly/dokumenty/wspolne/ukladGeneratoraDokumentu.css')
   const listaZDokumentu = odczytajZrodlo('../src/moduly/dokumenty/generatory/listy_obecnosci/WidokListyObecnosciZDokumentu.tsx')
   const checklista = odczytajZrodlo('../src/moduly/dokumenty/generatory/checklisty_paczek/WidokChecklistPaczek.tsx')
+  const stylChecklisty = odczytajZrodlo('../src/moduly/dokumenty/generatory/checklisty_paczek/widokChecklistPaczek.css')
+  const stylDyplomow = odczytajZrodlo('../src/moduly/dokumenty/generatory/dyplomy/widokDyplomow.css')
   const program = odczytajZrodlo('../src/moduly/dokumenty/generatory/programy_szkolen/WidokProgramowSzkolen.tsx')
   const ankieta = odczytajZrodlo('../src/moduly/dokumenty/generatory/ankiety/WidokAnkiet.tsx')
   const lista = odczytajZrodlo('../src/moduly/dokumenty/generatory/listy_obecnosci/WidokListObecnosci.tsx')
@@ -105,6 +108,12 @@ test('generatory korzystają ze wspólnego układu paneli, paska akcji i jawnej 
   assert.match(checklista, /PasekAkcjiGeneratora/)
   assert.match(program, /PasekAkcjiGeneratora/)
   assert.match(program, /utworzNazwePlikuDokumentu\('PROGRAM_SZKOLENIA'/)
+  assert.match(ukladGeneratora, /container-type: inline-size/)
+  assert.match(ukladGeneratora, /@container \(max-width: 900px\)/)
+  assert.match(stylChecklisty, /@container \(max-width: 1180px\)/)
+  assert.match(program, /@container \(max-width: 760px\)/)
+  assert.match(stylDyplomow, /@container obszar-roboczy \(max-width: 1280px\)/)
+  assert.doesNotMatch(stylDyplomow, /\.dyplomy--panel-ustawien-otwarty\s*\{\s*width:/)
 
   assert.match(ankieta, /typDokumentu="ANKIETA"/)
   assert.match(ankieta, /generatorId="ankiety"/)

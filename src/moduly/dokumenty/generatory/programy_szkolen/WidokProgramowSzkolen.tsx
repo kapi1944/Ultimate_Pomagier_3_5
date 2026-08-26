@@ -848,7 +848,7 @@ const styleProgramuSzkolenia = `
   }
 }
 
-@media (max-width: 760px) {
+@container (max-width: 760px) {
   .program-szkolen__uklad {
     grid-template-columns: 1fr;
   }

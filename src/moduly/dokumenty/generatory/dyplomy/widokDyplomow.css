@@ -1,23 +1,8 @@
 .dyplomy {
-  --szerokosc-panelu-ustawien: min(420px, calc(100vw - 22px));
-
   display: grid;
   width: 100%;
   gap: 18px;
   color: var(--ui-tekst);
-}
-
-.uklad-aplikacji__kolumna-glowna:has(.dyplomy--panel-ustawien-otwarty) {
-  margin-right: min(420px, calc(100vw - 22px));
-  transition: margin-right 220ms ease;
-}
-
-.dyplomy {
-  transition: width 220ms ease;
-}
-
-.dyplomy--panel-ustawien-otwarty {
-  width: calc(100% - var(--szerokosc-panelu-ustawien));
 }
 
 .dyplomy *,
@@ -130,45 +115,8 @@
   width: 14px;
 }
 
-.dyplomy--panel-ustawien-otwarty .dyplomy__strefa-aktywacji {
+.dyplomy:has(.generator-panel-ustawien--otwarty) .dyplomy__strefa-aktywacji {
   pointer-events: none;
-}
-
-.dyplomy__sekcja--ustawienia {
-  position: fixed;
-  inset: 0 0 0 auto;
-  z-index: 32;
-  width: var(--szerokosc-panelu-ustawien);
-  height: 100vh;
-  overflow-y: auto;
-  border-radius: 0;
-  box-shadow: -18px 0 36px rgba(0, 0, 0, 0.36);
-  opacity: 0;
-  pointer-events: none;
-  transform: translateX(100%);
-  transition: opacity 180ms ease, transform 220ms ease;
-}
-
-.dyplomy--panel-ustawien-otwarty .dyplomy__sekcja--ustawienia {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateX(0);
-}
-
-.dyplomy__ustawienia-naglowek {
-  display: grid;
-  gap: 12px;
-  margin-bottom: 14px;
-}
-
-.dyplomy__ustawienia-naglowek h2 {
-  margin-bottom: 0;
-}
-
-.dyplomy__ustawienia-akcje {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
 }
 
 .dyplomy__checklista {
@@ -1046,7 +994,7 @@
   white-space: pre-wrap;
 }
 
-@media (max-width: 1280px) {
+@container obszar-roboczy (max-width: 1280px) {
   .dyplomy__uklad {
     grid-template-columns: 1fr;
   }
@@ -1056,12 +1004,8 @@
   }
 }
 
-@media (max-width: 760px) {
-  .uklad-aplikacji__kolumna-glowna:has(.dyplomy--panel-ustawien-otwarty) { margin-right: 0; }
-
+@container obszar-roboczy (max-width: 760px) {
   .dyplomy__strefa-aktywacji { display: none; }
-
-  .dyplomy__sekcja--ustawienia { width: min(380px, 92vw); }
 
   .dyplomy__siatka--dwie,
   .dyplomy__siatka--trzy,
@@ -1102,7 +1046,7 @@
 
   .menu-boczne,
   .dyplomy__strefa-aktywacji,
-  .dyplomy__sekcja--ustawienia,
+  .generator-panel-ustawien,
   .dyplomy__naglowek,
   .dyplomy__komunikat,
   .dyplomy__uklad {
@@ -1205,12 +1149,5 @@
   .dyplom-kartka__szczegoly p,
   .dyplom-kartka__stopka {
     color: #000000 !important;
-  }
-}
-
-
-@media (max-width: 900px) {
-  .dyplomy--panel-ustawien-otwarty {
-    width: 100%;
   }
 }
