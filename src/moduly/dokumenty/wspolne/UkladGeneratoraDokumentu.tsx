@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useEffect, useState, type PropsWithChildren, type ReactNode } from 'react'
+import { createContext, forwardRef, useCallback, useContext, useEffect, useMemo, useState, type CSSProperties, type PropsWithChildren, type ReactNode } from 'react'
 import './ukladGeneratoraDokumentu.css'
 
 type WlasciwosciUkladuGeneratoraDokumentu = PropsWithChildren<{
@@ -44,7 +44,46 @@ type OpcjePaneluUstawienGeneratora = {
   czyOtwartyPoczatkowo?: boolean
 }
 
-function polaczKlasy(...klasy: Array<string | undefined>) {
+type KontekstPaneluGeneratora = {
+  czyOtwarty: boolean
+  czyPrzypiety: boolean
+  czyWysuwanieWlaczone: boolean
+  idPanelu: string
+  otworz: () => void
+  przelacz: () => void
+  przelaczPrzypiecie: () => void
+  przelaczWysuwanie: () => void
+  schowajJesliOdpiety: () => void
+  tytulPanelu: string
+  zamknij: () => void
+}
+
+type WlasciwosciObszaruZPanelemGeneratora = PropsWithChildren<{
+  idPanelu: string
+  tytulPanelu: string
+  kluczPrzypiecia: string
+  kluczWysuwania: string
+  className?: string
+  szerokoscPanelu?: string
+}>
+
+type WlasciwosciPrzyciskuPaneluGeneratora = PropsWithChildren<{
+  className?: string
+}>
+
+const KontekstPaneluGeneratora = createContext<KontekstPaneluGeneratora | null>(null)
+
+function useKontekstPaneluGeneratora() {
+  const kontekst = useContext(KontekstPaneluGeneratora)
+
+  if (!kontekst) {
+    throw new Error('Element panelu generatora musi znajdować się w ObszarZPanelemGeneratora.')
+  }
+
+  return kontekst
+}
+
+function polaczKlasy(...klasy: Array<string | false | undefined>) {
   return klasy.filter(Boolean).join(' ')
 }
 
@@ -83,7 +122,7 @@ export const PanelGeneratoraDokumentu = forwardRef<HTMLElement, WlasciwosciPanel
   },
 )
 
-export function usePanelUstawienGeneratora({
+function usePanelUstawienGeneratora({
   kluczPrzypiecia,
   kluczWysuwania,
   czyOtwartyPoczatkowo = false,
@@ -194,6 +233,87 @@ export function PanelUstawienGeneratoraDokumentu({
       </header>
       {children}
     </aside>
+  )
+}
+
+export function ObszarZPanelemGeneratora({
+  children,
+  className,
+  idPanelu,
+  kluczPrzypiecia,
+  kluczWysuwania,
+  szerokoscPanelu,
+  tytulPanelu,
+}: WlasciwosciObszaruZPanelemGeneratora) {
+  const {
+    czyOtwarty,
+    czyPrzypiety,
+    czyWysuwanieWlaczone,
+    otworz,
+    otworzZKrawedzi,
+    przelacz,
+    przelaczPrzypiecie,
+    przelaczWysuwanie,
+    schowajJesliOdpiety,
+    zamknij,
+  } = usePanelUstawienGeneratora({ kluczPrzypiecia, kluczWysuwania })
+  const styl = szerokoscPanelu
+    ? ({ '--szerokosc-panelu-generatora': szerokoscPanelu } as CSSProperties)
+    : undefined
+  const kontekst = useMemo<KontekstPaneluGeneratora>(() => ({
+    czyOtwarty,
+    czyPrzypiety,
+    czyWysuwanieWlaczone,
+    idPanelu,
+    otworz,
+    przelacz,
+    przelaczPrzypiecie,
+    przelaczWysuwanie,
+    schowajJesliOdpiety,
+    tytulPanelu,
+    zamknij,
+  }), [czyOtwarty, czyPrzypiety, czyWysuwanieWlaczone, idPanelu, otworz, przelacz, przelaczPrzypiecie, przelaczWysuwanie, schowajJesliOdpiety, tytulPanelu, zamknij])
+
+  return (
+    <KontekstPaneluGeneratora.Provider value={kontekst}>
+      <div
+        className={polaczKlasy('generator-z-panelem', czyOtwarty && 'generator-z-panelem--otwarty', className)}
+        style={styl}
+      >
+        <div className="generator-z-panelem__tresc">
+          {children}
+        </div>
+        <div aria-hidden="true" className="generator-z-panelem__strefa-aktywacji" onMouseEnter={otworzZKrawedzi} />
+      </div>
+    </KontekstPaneluGeneratora.Provider>
+  )
+}
+
+export function PrzyciskPaneluGeneratora({ children, className }: WlasciwosciPrzyciskuPaneluGeneratora) {
+  const { czyOtwarty, idPanelu, przelacz } = useKontekstPaneluGeneratora()
+
+  return <button aria-controls={idPanelu} aria-expanded={czyOtwarty} className={className} onClick={przelacz} type="button">{children}</button>
+}
+
+export function PanelBocznyGeneratora({ children, className }: PropsWithChildren<{ className?: string }>) {
+  const panel = useKontekstPaneluGeneratora()
+
+  return (
+    <PanelUstawienGeneratoraDokumentu
+      className={className}
+      czyOtwarty={panel.czyOtwarty}
+      czyPrzypiety={panel.czyPrzypiety}
+      czyWysuwanieWlaczone={panel.czyWysuwanieWlaczone}
+      id={panel.idPanelu}
+      onMouseEnter={panel.otworz}
+      onMouseLeave={panel.schowajJesliOdpiety}
+      przelaczPrzypiecie={panel.przelaczPrzypiecie}
+      przelaczWysuwanie={panel.przelaczWysuwanie}
+      tytul={panel.tytulPanelu}
+      zamknij={panel.zamknij}
+    >
+      {children}
+    </PanelUstawienGeneratoraDokumentu>
   )
 }
 

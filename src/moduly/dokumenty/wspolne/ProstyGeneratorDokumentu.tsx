@@ -4,8 +4,11 @@ import AkcjeEksportuPdf from '../../../wspolne/dokumenty/AkcjeEksportuPdf'
 import type { TypDokumentu } from '../../../wspolne/dokumenty/modelDokumentu'
 import { utworzNazwePlikuDokumentu } from '../../../wspolne/dokumenty/nazwyDokumentow'
 import UkladGeneratoraDokumentu, {
+  ObszarZPanelemGeneratora,
+  PanelBocznyGeneratora,
   PanelGeneratoraDokumentu,
   PasekAkcjiGeneratora,
+  PrzyciskPaneluGeneratora,
   UkladPaneliGeneratora,
 } from './UkladGeneratoraDokumentu'
 import { useStanProstegoGeneratora } from './useStanProstegoGeneratora'
@@ -73,6 +76,7 @@ export default function ProstyGeneratorDokumentu({
 
   const akcje = (
     <PasekAkcjiGeneratora>
+      <PrzyciskPaneluGeneratora>Edytuj dane</PrzyciskPaneluGeneratora>
       <button type="button" onClick={() => ustawKomunikatAkcji(zapiszWRejestr())}>Generuj i zapisz</button>
       <button type="button" onClick={obsluzKopiowanie}>Kopiuj wynik</button>
       <AkcjeEksportuPdf nazwaPliku={nazwaPliku} obszarDokumentu={obszarPodgladuRef} />
@@ -81,6 +85,12 @@ export default function ProstyGeneratorDokumentu({
   )
 
   return (
+    <ObszarZPanelemGeneratora
+      idPanelu={`panel-danych-${generatorId}`}
+      kluczPrzypiecia={`ultimate-pomagier.panel-generatora.${generatorId}.przypiety`}
+      kluczWysuwania={`ultimate-pomagier.panel-generatora.${generatorId}.wysuwanie`}
+      tytulPanelu={etykietaDanychWejsciowych}
+    >
     <UkladGeneratoraDokumentu
       akcje={akcje}
       className="prosty-generator"
@@ -88,20 +98,21 @@ export default function ProstyGeneratorDokumentu({
       opis={opis}
       tytul={tytul}
     >
+      <PanelBocznyGeneratora>
+        <label className="prosty-generator__etykieta" htmlFor={`${kluczSzkicu}-dane`}>{etykietaDanychWejsciowych}</label>
+        <textarea
+          className="prosty-generator__textarea"
+          id={`${kluczSzkicu}-dane`}
+          onChange={(zdarzenie) => zmienDaneWejsciowe(zdarzenie.target.value)}
+          value={daneWejsciowe}
+        />
+      </PanelBocznyGeneratora>
       <UkladPaneliGeneratora>
-        <PanelGeneratoraDokumentu wariant="edycja">
-          <label className="prosty-generator__etykieta" htmlFor={`${kluczSzkicu}-dane`}>{etykietaDanychWejsciowych}</label>
-          <textarea
-            className="prosty-generator__textarea"
-            id={`${kluczSzkicu}-dane`}
-            onChange={(zdarzenie) => zmienDaneWejsciowe(zdarzenie.target.value)}
-            value={daneWejsciowe}
-          />
-        </PanelGeneratoraDokumentu>
         <PanelGeneratoraDokumentu ref={obszarPodgladuRef} tytul="Wygenerowany dokument" wariant="podglad">
           <pre className="prosty-generator__wynik">{wygenerowanyDokument}</pre>
         </PanelGeneratoraDokumentu>
       </UkladPaneliGeneratora>
     </UkladGeneratoraDokumentu>
+    </ObszarZPanelemGeneratora>
   )
 }

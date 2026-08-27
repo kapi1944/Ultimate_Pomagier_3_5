@@ -3,7 +3,7 @@ import { useKontekstUzytkownika } from '../../../../aplikacja/logowanie/useKonte
 import AkcjeEksportuPdf from '../../../../wspolne/dokumenty/AkcjeEksportuPdf'
 import { utworzNazwePlikuDokumentu } from '../../../../wspolne/dokumenty/nazwyDokumentow'
 import PanelKontroliJakosciDokumentu from '../../../../wspolne/dokumenty/PanelKontroliJakosciDokumentu'
-import { PasekAkcjiGeneratora } from '../../wspolne/UkladGeneratoraDokumentu'
+import { ObszarZPanelemGeneratora, PanelBocznyGeneratora, PasekAkcjiGeneratora, PrzyciskPaneluGeneratora } from '../../wspolne/UkladGeneratoraDokumentu'
 import {
   pobierzAktywnaKopieProgramu,
   pobierzAutosaveProgramu,
@@ -155,7 +155,7 @@ const styleProgramuSzkolenia = `
 
 .program-szkolen__uklad {
   display: grid;
-  grid-template-columns: minmax(420px, 1fr) minmax(0, 800px) minmax(260px, 420px);
+  grid-template-columns: minmax(420px, 1fr) minmax(0, 800px);
   justify-content: stretch;
   gap: 20px;
   align-items: start;
@@ -191,12 +191,6 @@ const styleProgramuSzkolenia = `
   justify-self: center;
   width: min(100%, 800px);
   order: 3;
-}
-
-.program-szkolen__sekcja--ustawienia {
-  grid-column: 3;
-  grid-row: 1 / span 2;
-  order: 5;
 }
 
 .program-szkolen__sekcja h2 {
@@ -842,10 +836,6 @@ const styleProgramuSzkolenia = `
     grid-template-columns: minmax(420px, 1fr) minmax(0, 800px);
   }
 
-  .program-szkolen__sekcja--ustawienia {
-    grid-column: 1 / -1;
-    grid-row: 3;
-  }
 }
 
 @container (max-width: 760px) {
@@ -1478,12 +1468,20 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
     )
   }
   return (
+    <ObszarZPanelemGeneratora
+      idPanelu="panel-ustawien-programu-szkolenia"
+      kluczPrzypiecia="ultimate-pomagier.panel-generatora.programy-szkolen.przypiety"
+      kluczWysuwania="ultimate-pomagier.panel-generatora.programy-szkolen.wysuwanie"
+      szerokoscPanelu="520px"
+      tytulPanelu="Ustawienia programu szkolenia"
+    >
     <section className="widok program-szkolen">
       <style>{styleProgramuSzkolenia}</style>
 
       <header className="program-panel-roboczy program-szkolen__naglowek">
         <h1>Programy szkoleń</h1>
         <PasekAkcjiGeneratora className="program-szkolen__akcje">
+          <PrzyciskPaneluGeneratora className="program-szkolen__przycisk">Ustawienia programu</PrzyciskPaneluGeneratora>
           <span role="status">{stanZapisu === 'zapisywanie' ? 'Zapisywanie...' : stanZapisu === 'blad' ? 'Błąd zapisu' : 'Zapisano'}</span>
           <AkcjeEksportuPdf
             className="program-szkolen__akcje-eksportu"
@@ -1526,8 +1524,7 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
 
       <div className="program-szkolen__uklad">
         <div className="program-panel-roboczy program-szkolen__panel">
-          <section className="program-szkolen__sekcja program-szkolen__sekcja--ustawienia">
-            <h2>USTAWIENIA</h2>
+          <PanelBocznyGeneratora className="program-szkolen__sekcja program-szkolen__sekcja--ustawienia">
             <div className="program-szkolen__siatka">
               <PanelKontroliJakosciDokumentu
                 czyZatwierdzony={czyWynikParsowaniaZatwierdzony}
@@ -1764,7 +1761,7 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
                 )}
               </div>
             </div>
-          </section>
+          </PanelBocznyGeneratora>
 
           <section className="program-szkolen__sekcja program-szkolen__sekcja--logotypy">
             <h2>LOGOTYPY</h2>
@@ -1929,6 +1926,7 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
         </section>
       </div>
     </section>
+    </ObszarZPanelemGeneratora>
   )
 }
 

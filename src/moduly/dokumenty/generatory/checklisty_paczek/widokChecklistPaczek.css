@@ -89,10 +89,9 @@
 .checklista-paczki__lista span { color: var(--checklista-tekst-wtorny); }
 .checklista-paczki__pilna { color: #ffd5b0; }
 
-.checklista-paczki__uklad-roboczy { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(390px, .9fr); align-items: start; gap: 18px; }
+.checklista-paczki__uklad-roboczy { display: block; }
 .checklista-paczki__formularz { min-width: 0; }
-.checklista-paczki__panel-podgladu { position: sticky; top: 14px; min-width: 0; max-height: calc(100vh - 32px); overflow: auto; padding: 14px; border: 1px solid var(--checklista-obramowanie); border-radius: 10px; background: var(--ui-panel); }
-.checklista-paczki__panel-podgladu > h2 { margin: 0 0 12px; font-size: 1rem; }
+.checklista-paczki__panel-podgladu { background: var(--ui-panel); }
 
 .checklista-paczki__dane-szkolenia { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 18px; }
 .checklista-paczki__dane-szkolenia p { margin-bottom: 0; overflow-wrap: anywhere; }
@@ -194,11 +193,6 @@
 .checklista-paczki__wydruk-tabela-wysylki th, .checklista-paczki__wydruk-tabela-wysylki td { width: 25% !important; }
 .checklista-paczki__wydruk-tabela-wysylki th { background: #f5f5f5; }
 .checklista-paczki__wydruk-podpis-pakujacego { display: block; min-height: 14px; border-bottom: 1px solid #111; }
-
-@container (max-width: 1180px) {
-  .checklista-paczki__uklad-roboczy { grid-template-columns: 1fr; }
-  .checklista-paczki__panel-podgladu { position: static; max-height: none; }
-}
 
 @container (max-width: 840px) {
   .checklista-paczki__kroki, .checklista-paczki__dane-szkolenia, .checklista-paczki__siatka-wysylki { grid-template-columns: 1fr; }

@@ -6,8 +6,9 @@ import { zapiszDokumentRoboczyGeneratora } from '../../../../wspolne/dokumenty/z
 import { trenerzyKartotekiStartowi } from '../../../zamkniete/szczegoly_organizacyjne/stale'
 import type { TrenerKartoteki } from '../../../zamkniete/szczegoly_organizacyjne/typy'
 import {
-  PanelUstawienGeneratoraDokumentu,
-  usePanelUstawienGeneratora,
+  ObszarZPanelemGeneratora,
+  PanelBocznyGeneratora,
+  PrzyciskPaneluGeneratora,
 } from '../../wspolne/UkladGeneratoraDokumentu'
 import './widokDyplomow.css'
 
@@ -130,14 +131,6 @@ const rodzajeGodzin: RodzajGodzin[] = [
 ]
 const trybyTytulu: TrybTytuluDyplomu[] = ['certyfikat', 'zaswiadczenie', 'dyplom']
 
-function pobierzUstawienieLogiczne(klucz: string, wartoscDomyslna: boolean) {
-  try {
-    const wartosc = localStorage.getItem(klucz)
-    return wartosc === null ? wartoscDomyslna : wartosc === 'true'
-  } catch {
-    return wartoscDomyslna
-  }
-}
 const dniTygodnia = ['Pon', 'Wt', 'Sr', 'Czw', 'Pt', 'Sob', 'Nd']
 const nazwyMiesiecy = [
   '',
@@ -1010,21 +1003,6 @@ export default function WidokDyplomow() {
   const [idWybranegoDodatkuDolnego, ustawIdWybranegoDodatkuDolnego] = useState('')
   const [trybPodgladuStron, ustawTrybPodgladuStron] = useState<TrybPodgladuStron>('pierwsza')
   const [ukladPodgladuStron, ustawUkladPodgladuStron] = useState<UkladPodgladuStron>('pod_soba')
-  const {
-    czyOtwarty: czyPanelUstawienOtwarty,
-    czyPrzypiety: czyPanelUstawienPrzypiety,
-    czyWysuwanieWlaczone: czyWysuwaniePaneluUstawienWlaczone,
-    otworz: otworzPanelUstawien,
-    otworzZKrawedzi: otworzPanelUstawienZKrawedzi,
-    przelacz: przelaczPanelUstawien,
-    przelaczPrzypiecie: przelaczPrzypieciePaneluUstawien,
-    przelaczWysuwanie: przelaczWysuwaniePaneluUstawien,
-    schowajJesliOdpiety: schowajPanelUstawienJesliOdpiety,
-    zamknij: zamknijPanelUstawien,
-  } = usePanelUstawienGeneratora({
-    kluczPrzypiecia: kluczPrzypieciaPaneluUstawien,
-    kluczWysuwania: kluczWysuwaniaPaneluUstawien,
-  })
   const [indeksUczestnikaPierwszejStrony, ustawIndeksUczestnikaPierwszejStrony] = useState(0)
   const uczestnicyDoDruku = useMemo(
     () => dane.uczestnicy.filter((uczestnik) => uczestnik.imieNazwisko.trim()),
@@ -1485,7 +1463,13 @@ export default function WidokDyplomow() {
   }
 
   return (
-    <section className={`widok dyplomy${czyPanelUstawienOtwarty ? ' dyplomy--panel-ustawien-otwarty' : ''}`}>
+    <ObszarZPanelemGeneratora
+      idPanelu="panel-ustawien-dyplomu"
+      kluczPrzypiecia={kluczPrzypieciaPaneluUstawien}
+      kluczWysuwania={kluczWysuwaniaPaneluUstawien}
+      tytulPanelu="Ustawienia dyplomu"
+    >
+    <section className="widok dyplomy">
       <header className="dyplomy__naglowek">
         <div>
           <h1>Generator Dyplomów</h1>
@@ -1493,9 +1477,9 @@ export default function WidokDyplomow() {
         </div>
 
         <div className="dyplomy__akcje">
-          <button aria-controls="panel-ustawien-dyplomu" aria-expanded={czyPanelUstawienOtwarty} className="dyplomy__przycisk" onClick={przelaczPanelUstawien} type="button">
+          <PrzyciskPaneluGeneratora className="dyplomy__przycisk">
             Ustawienia dyplomu
-          </button>
+          </PrzyciskPaneluGeneratora>
           <button className="dyplomy__przycisk dyplomy__przycisk--glowny" onClick={drukujDyplomy} type="button">
             Drukuj / PDF
           </button>
@@ -1512,22 +1496,10 @@ export default function WidokDyplomow() {
         {komunikat}
       </div>
 
-      <div aria-hidden="true" className="dyplomy__strefa-aktywacji" onMouseEnter={otworzPanelUstawienZKrawedzi} />
-
       <div className="dyplomy__uklad">
         <div className="dyplomy__panel-pracy">
-          <PanelUstawienGeneratoraDokumentu
+          <PanelBocznyGeneratora
             className="dyplomy__panel-ustawien"
-            czyOtwarty={czyPanelUstawienOtwarty}
-            czyPrzypiety={czyPanelUstawienPrzypiety}
-            czyWysuwanieWlaczone={czyWysuwaniePaneluUstawienWlaczone}
-            id="panel-ustawien-dyplomu"
-            onMouseEnter={otworzPanelUstawien}
-            onMouseLeave={schowajPanelUstawienJesliOdpiety}
-            przelaczPrzypiecie={przelaczPrzypieciePaneluUstawien}
-            przelaczWysuwanie={przelaczWysuwaniePaneluUstawien}
-            tytul="Ustawienia dyplomu"
-            zamknij={zamknijPanelUstawien}
           >
             <div className="dyplomy__siatka dyplomy__siatka--trzy">
               <div className="dyplomy__pole dyplomy__pole--pelne">
@@ -1726,7 +1698,7 @@ export default function WidokDyplomow() {
                 ))}
               </ul>
             </section>
-          </PanelUstawienGeneratoraDokumentu>
+          </PanelBocznyGeneratora>
 
           <section className="dyplomy__sekcja">
             <h2>Termin</h2>
@@ -2267,5 +2239,6 @@ export default function WidokDyplomow() {
         ))}
       </div>
     </section>
+    </ObszarZPanelemGeneratora>
   )
 }

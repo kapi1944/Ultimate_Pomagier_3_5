@@ -108,17 +108,6 @@
   background: var(--ui-powierzchnia);
 }
 
-.dyplomy__strefa-aktywacji {
-  position: fixed;
-  inset: 0 0 0 auto;
-  z-index: 30;
-  width: 14px;
-}
-
-.dyplomy:has(.generator-panel-ustawien--otwarty) .dyplomy__strefa-aktywacji {
-  pointer-events: none;
-}
-
 .dyplomy__checklista {
   display: grid;
   gap: 8px;
@@ -1005,8 +994,6 @@
 }
 
 @container obszar-roboczy (max-width: 760px) {
-  .dyplomy__strefa-aktywacji { display: none; }
-
   .dyplomy__siatka--dwie,
   .dyplomy__siatka--trzy,
   .dyplomy__kalendarz-naglowek,

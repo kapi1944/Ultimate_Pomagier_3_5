@@ -2,8 +2,11 @@ import { useState } from 'react'
 import type { KorektyReczneListyObecnosci } from '../../../../wspolne/integracje/szczegolyDoDokumentow'
 import WidokListObecnosci from './WidokListObecnosci'
 import UkladGeneratoraDokumentu, {
+  ObszarZPanelemGeneratora,
+  PanelBocznyGeneratora,
   PanelGeneratoraDokumentu,
   PasekAkcjiGeneratora,
+  PrzyciskPaneluGeneratora,
   UkladPaneliGeneratora,
 } from '../../wspolne/UkladGeneratoraDokumentu'
 import {
@@ -73,27 +76,33 @@ function EdytorListyObecnosci({ dokumentId }: { dokumentId: string }) {
   }
 
   return (
+    <ObszarZPanelemGeneratora
+      idPanelu="panel-edycji-listy-obecnosci"
+      kluczPrzypiecia="ultimate-pomagier.panel-generatora.listy-obecnosci.przypiety"
+      kluczWysuwania="ultimate-pomagier.panel-generatora.listy-obecnosci.wysuwanie"
+      tytulPanelu="Edycja listy obecności"
+    >
     <UkladGeneratoraDokumentu
-      akcje={<PasekAkcjiGeneratora><button type="button" onClick={zapiszDokument}>Zapisz</button></PasekAkcjiGeneratora>}
+      akcje={<PasekAkcjiGeneratora><PrzyciskPaneluGeneratora>Edytuj dane</PrzyciskPaneluGeneratora><button type="button" onClick={zapiszDokument}>Zapisz</button></PasekAkcjiGeneratora>}
       komunikat={komunikat}
       opis="Dokument roboczy utworzony ze Szczegółów organizacyjnych."
       tytul="Lista obecności"
     >
+      <PanelBocznyGeneratora>
+        <label>
+          <span>Tytuł dokumentu</span>
+          <input value={tytulDokumentu} onChange={(zdarzenie) => ustawTytulDokumentu(zdarzenie.target.value)} />
+        </label>
+        <label>
+          <span>Tytuł szkolenia (korekta ręczna)</span>
+          <input value={tytulSzkolenia} onChange={(zdarzenie) => ustawTytulSzkolenia(zdarzenie.target.value)} />
+        </label>
+        <label>
+          <span>Uczestnicy (korekta ręczna)</span>
+          <textarea rows={10} value={tekstUczestnikow} onChange={(zdarzenie) => ustawTekstUczestnikow(zdarzenie.target.value)} />
+        </label>
+      </PanelBocznyGeneratora>
       <UkladPaneliGeneratora>
-        <PanelGeneratoraDokumentu tytul="Edycja" wariant="edycja">
-          <label>
-            <span>Tytuł dokumentu</span>
-            <input value={tytulDokumentu} onChange={(zdarzenie) => ustawTytulDokumentu(zdarzenie.target.value)} />
-          </label>
-          <label>
-            <span>Tytuł szkolenia (korekta ręczna)</span>
-            <input value={tytulSzkolenia} onChange={(zdarzenie) => ustawTytulSzkolenia(zdarzenie.target.value)} />
-          </label>
-          <label>
-            <span>Uczestnicy (korekta ręczna)</span>
-            <textarea rows={10} value={tekstUczestnikow} onChange={(zdarzenie) => ustawTekstUczestnikow(zdarzenie.target.value)} />
-          </label>
-        </PanelGeneratoraDokumentu>
         <PanelGeneratoraDokumentu tytul="Podgląd" wariant="podglad">
           <h2>{tytulSzkolenia || 'Bez tytułu szkolenia'}</h2>
           <p><strong>Grupa:</strong> {daneZrodlowe.nazwaGrupy}</p>
@@ -106,6 +115,7 @@ function EdytorListyObecnosci({ dokumentId }: { dokumentId: string }) {
         </PanelGeneratoraDokumentu>
       </UkladPaneliGeneratora>
     </UkladGeneratoraDokumentu>
+    </ObszarZPanelemGeneratora>
   )
 }
 
