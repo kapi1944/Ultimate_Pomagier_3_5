@@ -1,5 +1,6 @@
 import type { DokumentBlokowy, ProblemDokumentu } from '../../../../wspolne/dokumenty/modelBlokowy'
 import { sprawdzDokumentBlokowy } from '../../../../wspolne/dokumenty/modelBlokowy'
+import { normalizujBlokiSwobodneDokumentu, type BlokSwobodnyDokumentu } from '../../../../wspolne/dokumenty/modelSwobodnychBlokow'
 import { konwertujTekstProgramuNaHtml } from './komponenty/konwersjaProgramuWysiwyg'
 import { parsujTekstProgramu, type ProgramSzkolenia } from './ParserTekstu'
 import {
@@ -35,6 +36,7 @@ export type UstawieniaProgramuSzkolenia = {
   formatCudzyslowu: FormatCudzyslowuProgramu
   szerokoscLogotypu: number
   czyPogrubiacNaglowkiListyProgramu: boolean
+  blokiSwobodne?: BlokSwobodnyDokumentu[]
 }
 
 export type ModelProgramuSzkolenia = {
@@ -113,6 +115,7 @@ export function normalizujProgramSzkolenia(zapis: unknown): ModelProgramuSzkolen
   const stylePoziomowListy = Array.isArray(ustawienia.stylePoziomowListy)
     ? ustawienia.stylePoziomowListy.filter((styl): styl is string => typeof styl === 'string')
     : []
+  const czyZapisMaBlokiSwobodne = Array.isArray(ustawienia.blokiSwobodne)
 
   return {
     tytulSzkolenia: tekstLubDomyslny(dane.tytulSzkolenia),
@@ -140,6 +143,7 @@ export function normalizujProgramSzkolenia(zapis: unknown): ModelProgramuSzkolen
       formatCudzyslowu: ustawienia.formatCudzyslowu === 'dolny-gorny' ? 'dolny-gorny' : 'gorny-gorny',
       szerokoscLogotypu: liczbaLubDomyslna(ustawienia.szerokoscLogotypu, domyslneUstawieniaProgramu.szerokoscLogotypu),
       czyPogrubiacNaglowkiListyProgramu: typeof ustawienia.czyPogrubiacNaglowkiListyProgramu === 'boolean' ? ustawienia.czyPogrubiacNaglowkiListyProgramu : domyslneUstawieniaProgramu.czyPogrubiacNaglowkiListyProgramu,
+      ...(czyZapisMaBlokiSwobodne ? { blokiSwobodne: normalizujBlokiSwobodneDokumentu(ustawienia.blokiSwobodne) } : {}),
     },
     logotypProgramu: tekstLubDomyslny(dane.logotypProgramu),
     linkLogotypu: tekstLubDomyslny(dane.linkLogotypu),
@@ -158,6 +162,7 @@ export function utworzDokumentProgramuSzkolenia(
 
   return {
     ...wynikParsowania.dokumentBlokowy,
+    ...(dane.ustawienia.blokiSwobodne ? { blokiSwobodne: dane.ustawienia.blokiSwobodne } : {}),
     dane: {
       ...wynikParsowania.dokumentBlokowy.dane,
       tytulSzkolenia: dane.tytulSzkolenia.trim() || 'Program szkolenia',

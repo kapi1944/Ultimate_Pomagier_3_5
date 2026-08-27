@@ -1,3 +1,5 @@
+import type { BlokSwobodnyDokumentu } from './modelSwobodnychBlokow'
+
 export type TypBlokuDokumentu =
   | 'Logotyp'
   | 'Tytul'
@@ -154,6 +156,7 @@ export type SzablonBlokowyDokumentu = {
   wyglad: WygladDokumentu
   ustawieniaEksportu: ModelStronyA4['ustawieniaEksportu']
   problemyWalidacji: ProblemDokumentu[]
+  blokiSwobodne?: BlokSwobodnyDokumentu[]
 }
 
 export type DokumentBlokowy = {
@@ -165,6 +168,7 @@ export type DokumentBlokowy = {
   wyglad: WygladDokumentu
   problemy: ProblemDokumentu[]
   raportyEksportu: RaportEksportuDokumentu[]
+  blokiSwobodne?: BlokSwobodnyDokumentu[]
   metadane: {
     wersjaModelu: number
     zrodlo: 'parser' | 'uzytkownik' | 'szablon' | 'import'

@@ -1,5 +1,7 @@
 import { Fragment, useMemo, type CSSProperties, type ReactNode, type RefObject } from 'react'
 import type { DokumentBlokowy } from '../../../../wspolne/dokumenty/modelBlokowy'
+import RendererSwobodnychBlokow from '../../../../wspolne/dokumenty/RendererSwobodnychBlokow'
+import type { KontekstSwobodnychBlokow } from '../../../../wspolne/dokumenty/modelSwobodnychBlokow'
 import { geometriaStronyProgramu, pobierzWymiaryStronyProgramu } from './geometriaStronyProgramu'
 import type { FragmentDniaProgramu, FragmentModuluProgramu, GrupaPunktowProgramu, ModelPaginacjiProgramu, StronaProgramu } from './paginatorProgramu'
 import { utworzModelPaginacjiProgramu, utworzModelPaginacjiProgramuDlaTekstuSurowego } from './paginatorProgramu'
@@ -33,6 +35,7 @@ type WlasciwosciRendereraStronProgramu = WlasciwosciWygladuTrescProgramu & {
   stopkaOrganizatora: string
   czyFormatowanieSkryptowe: boolean
   tekstSurowy: string
+  kontekstSwobodnychBlokow: KontekstSwobodnychBlokow
 }
 
 type WlasciwosciStronyFizycznej = {
@@ -53,6 +56,8 @@ type WlasciwosciStronyFizycznej = {
   atrybutyStrony?: Record<string, string | true>
   atrybutyTresci?: Record<string, string>
   zawartosc?: ReactNode
+  kontekstSwobodnychBlokow: KontekstSwobodnychBlokow
+  blokiSwobodne: DokumentBlokowy['blokiSwobodne']
 }
 
 function RendererZawartosciStrony({ strona, wyglad }: { strona?: StronaProgramu; wyglad: WlasciwosciWygladuTrescProgramu }) {
@@ -87,6 +92,8 @@ function StronaFizycznaProgramu({
   atrybutyStrony,
   atrybutyTresci,
   zawartosc,
+  kontekstSwobodnychBlokow,
+  blokiSwobodne,
 }: WlasciwosciStronyFizycznej) {
   const profil = profileOrganizatorowProgramu[profilFirmy]
   const tresc = zawartosc ?? <RendererZawartosciStrony strona={strona} wyglad={wyglad} />
@@ -116,6 +123,7 @@ function StronaFizycznaProgramu({
         </header>
         <main className="program-dotychczasowy__tresc program-kartka-a4__tresc" {...atrybutyTresci}>{tresc}</main>
         <footer className="program-kartka-a4__stopka">{stopkaOrganizatora}</footer>
+        <RendererSwobodnychBlokow bloki={blokiSwobodne ?? []} kontekst={kontekstSwobodnychBlokow} numerStrony={strona?.numer ?? 1} />
       </article>
     )
   }
@@ -139,6 +147,7 @@ function StronaFizycznaProgramu({
         {elementy.stopkaFirmowa && <div className="program-semper__stopka-pas"><div><strong>{profil.nazwa}</strong><br />NIP {profil.nip} REGON {profil.regon}<br />{profil.adres}</div>{elementy.hasloMarki && <div>{profil.haslo}</div>}</div>}
         {elementy.mapaPolski && profilFirmy === 'semper' && <img aria-hidden="true" className="program-semper__mapa" src={mapaPolskiSemper} alt="" />}
       </footer>
+      <RendererSwobodnychBlokow bloki={blokiSwobodne ?? []} kontekst={kontekstSwobodnychBlokow} numerStrony={strona?.numer ?? 1} />
     </article>
   )
 }
@@ -250,6 +259,7 @@ export default function RendererStronProgramu({
   stopkaOrganizatora,
   czyFormatowanieSkryptowe,
   tekstSurowy,
+  kontekstSwobodnychBlokow,
   ...wyglad
 }: WlasciwosciRendereraStronProgramu) {
   const model = useMemo(
@@ -280,6 +290,8 @@ export default function RendererStronProgramu({
     nazwaOrganizatora,
     kontaktOrganizatora,
     stopkaOrganizatora,
+    kontekstSwobodnychBlokow,
+    blokiSwobodne: dokument.blokiSwobodne,
   }
 
   return (

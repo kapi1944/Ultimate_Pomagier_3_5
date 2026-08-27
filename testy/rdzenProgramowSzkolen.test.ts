@@ -35,7 +35,22 @@ function przykladowyProgram() {
     tytulSzkolenia: 'Bezpieczna komunikacja',
     trescProgramu: '1. Wprowadzenie\n- Zasady komunikacji',
     czyWynikParsowaniaZatwierdzony: true,
-    ustawienia: { profilFirmy: 'semper', kolorAkcentuProgramu: '#DE1914' },
+    ustawienia: {
+      profilFirmy: 'semper',
+      kolorAkcentuProgramu: '#DE1914',
+      blokiSwobodne: [{
+        id: 'oznaczenie-testowe',
+        typ: 'tekst',
+        xMm: 10,
+        yMm: 10,
+        szerokoscMm: 30,
+        wysokoscMm: 8,
+        przypisanieDoStrony: { rodzaj: 'pierwsza' },
+        widoczny: true,
+        indeksWarstwy: 2,
+        dane: { zrodlo: { rodzaj: 'statyczne', tekst: 'Wersja testowa' }, rozmiarCzcionkiPt: 9, gruboscCzcionki: 700, wyrownanie: 'lewo', interlinia: 1.2 },
+      }],
+    },
   })
 }
 

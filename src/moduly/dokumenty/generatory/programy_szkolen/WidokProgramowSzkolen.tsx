@@ -34,6 +34,9 @@ import { importujDocxProgramu } from './adapterDocxProgramu'
 import { importujPdfProgramu } from './adapterPdfProgramu'
 import { pobierzTytulDokumentuProgramu } from './tytulDokumentuProgramu'
 import RendererStronProgramu from './RendererStronProgramu'
+import { utworzKontekstSwobodnychBlokowProgramu } from './adapterSwobodnychBlokowProgramu'
+import logotypSemper from './zasoby/logotyp-semper.png'
+import mapaPolskiSemper from './zasoby/mapa-polski-semper.png'
 import {
   konfiguracjePresetowProgramu,
   pobierzElementyIdentyfikacjiProgramu,
@@ -787,6 +790,7 @@ const styleProgramuSzkolenia = `
 }
 
 .program-dotychczasowy__strona {
+  position: relative;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   width: var(--program-szerokosc-strony);
@@ -1068,6 +1072,16 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
   const tytulZCudzyslowem = formatujTytulSzkolenia(tytulDokumentu, ustawienia.formatCudzyslowu)
   const kolorAkcentu = pobierzKolorAkcentu(ustawienia)
   const profil = daneProfilowFirmy[ustawienia.profilFirmy]
+  const kontekstSwobodnychBlokow = useMemo(
+    () => utworzKontekstSwobodnychBlokowProgramu(daneProgramu, {
+      nazwaOrganizatora: profil.nazwa,
+      kontaktOrganizatora: profil.kontakt,
+      stopkaOrganizatora: profil.stopka,
+      logotypOrganizatora: ustawienia.profilFirmy === 'semper' ? logotypSemper : undefined,
+      mapaOrganizatora: ustawienia.profilFirmy === 'semper' ? mapaPolskiSemper : undefined,
+    }),
+    [daneProgramu, profil.kontakt, profil.nazwa, profil.stopka, ustawienia.profilFirmy],
+  )
   const presetWygladu = ustawienia.presetWygladu
   const elementyIdentyfikacji = pobierzElementyIdentyfikacjiProgramu(presetWygladu, ustawienia.elementyIdentyfikacji)
   const sugestiaPresety = useMemo(() => zasugerujPresetProgramu(dokumentProgramu), [dokumentProgramu])
@@ -1883,6 +1897,7 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
             gruboscObramowaniaTytulu={gruboscObramowaniaTytulu}
             kolorAkcentu={kolorAkcentu}
             kontaktOrganizatora={profil.kontakt}
+            kontekstSwobodnychBlokow={kontekstSwobodnychBlokow}
             logotypUzytkownika={logotypProgramu}
             nazwaOrganizatora={profil.nazwa}
             preset={presetWygladu}

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { utworzDokumentZTekstu } from '../src/wspolne/dokumenty/utworzDokumentZTekstu.ts'
+import { normalizujBlokiSwobodneDokumentu } from '../src/wspolne/dokumenty/modelSwobodnychBlokow.ts'
 import type { ElementDokumentu } from '../src/wspolne/dokumenty/typyDokumentu.ts'
 import { utworzSzablonRoboczyZDokumentu } from '../src/moduly/dokumenty/replikator_dokumentow/parserDocxReplikatora.ts'
 import {
@@ -87,6 +88,27 @@ sprawdz('tworzenie szablonu zapisuje DokumentBlokowy jako źródło prawdy', () 
   assert.equal(szablon.dokumentBlokowy.id, szablonRoboczy.dokumentBlokowy.id)
   assert.ok(szablon.dokumentBlokowy.struktura.length > 0)
   assert.equal(szablon.status, 'Roboczy')
+})
+
+sprawdz('szablon i historia wersji zachowuja wspolna konfiguracje swobodnych blokow', () => {
+  const { dokument, szablonRoboczy } = utworzSzablonRoboczy()
+  szablonRoboczy.dokumentBlokowy.blokiSwobodne = normalizujBlokiSwobodneDokumentu([{
+    id: 'podpis-szablonu',
+    typ: 'tekst',
+    xMm: 20,
+    yMm: 270,
+    szerokoscMm: 80,
+    wysokoscMm: 10,
+    przypisanieDoStrony: { rodzaj: 'kazda' },
+    widoczny: true,
+    indeksWarstwy: 3,
+    dane: { zrodlo: { rodzaj: 'statyczne', tekst: 'Podpis' }, rozmiarCzcionkiPt: 9, gruboscCzcionki: 400, wyrownanie: 'lewo', interlinia: 1.2 },
+  }])
+  const szablon = zapiszNowySzablonZReplikatora(szablonRoboczy, dokument, 'Opiekun')
+  const odczytany = pobierzSzablonyDokumentowZKartoteki()[0]
+
+  assert.equal(odczytany.dokumentBlokowy.blokiSwobodne?.[0]?.id, 'podpis-szablonu')
+  assert.equal(szablon.historiaWersji[0].dokumentBlokowy.blokiSwobodne?.[0]?.id, 'podpis-szablonu')
 })
 
 sprawdz('wykrywanie konfliktu nazwy znajduje istniejący szablon', () => {
