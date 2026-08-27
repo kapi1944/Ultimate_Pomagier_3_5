@@ -9,7 +9,7 @@ import UkladGeneratoraDokumentu, {
   PanelGeneratoraDokumentu,
   PasekAkcjiGeneratora,
   PrzyciskPaneluGeneratora,
-  UkladPaneliGeneratora,
+  UkladFormularzaIPodgladu,
 } from './UkladGeneratoraDokumentu'
 import { useStanProstegoGeneratora } from './useStanProstegoGeneratora'
 import './prostyGeneratorDokumentu.css'
@@ -23,6 +23,27 @@ type KonfiguracjaGeneratora = {
   typDokumentu: TypDokumentu
   generatorId: string
   generujDokument: (daneWejsciowe: string) => string
+}
+
+type WlasciwosciFormularzaDanych = {
+  daneWejsciowe: string
+  etykieta: string
+  idPola: string
+  zmienDaneWejsciowe: (wartosc: string) => void
+}
+
+function FormularzDanych({ daneWejsciowe, etykieta, idPola, zmienDaneWejsciowe }: WlasciwosciFormularzaDanych) {
+  return (
+    <>
+      <label className="prosty-generator__etykieta" htmlFor={idPola}>{etykieta}</label>
+      <textarea
+        className="prosty-generator__textarea"
+        id={idPola}
+        onChange={(zdarzenie) => zmienDaneWejsciowe(zdarzenie.target.value)}
+        value={daneWejsciowe}
+      />
+    </>
+  )
 }
 
 export default function ProstyGeneratorDokumentu({
@@ -99,19 +120,26 @@ export default function ProstyGeneratorDokumentu({
       tytul={tytul}
     >
       <PanelBocznyGeneratora>
-        <label className="prosty-generator__etykieta" htmlFor={`${kluczSzkicu}-dane`}>{etykietaDanychWejsciowych}</label>
-        <textarea
-          className="prosty-generator__textarea"
-          id={`${kluczSzkicu}-dane`}
-          onChange={(zdarzenie) => zmienDaneWejsciowe(zdarzenie.target.value)}
-          value={daneWejsciowe}
+        <FormularzDanych
+          daneWejsciowe={daneWejsciowe}
+          etykieta={etykietaDanychWejsciowych}
+          idPola={`${kluczSzkicu}-dane-panel`}
+          zmienDaneWejsciowe={zmienDaneWejsciowe}
         />
       </PanelBocznyGeneratora>
-      <UkladPaneliGeneratora>
+      <UkladFormularzaIPodgladu>
+        <PanelGeneratoraDokumentu tytul={etykietaDanychWejsciowych} wariant="edycja">
+          <FormularzDanych
+            daneWejsciowe={daneWejsciowe}
+            etykieta={etykietaDanychWejsciowych}
+            idPola={`${kluczSzkicu}-dane`}
+            zmienDaneWejsciowe={zmienDaneWejsciowe}
+          />
+        </PanelGeneratoraDokumentu>
         <PanelGeneratoraDokumentu ref={obszarPodgladuRef} tytul="Wygenerowany dokument" wariant="podglad">
           <pre className="prosty-generator__wynik">{wygenerowanyDokument}</pre>
         </PanelGeneratoraDokumentu>
-      </UkladPaneliGeneratora>
+      </UkladFormularzaIPodgladu>
     </UkladGeneratoraDokumentu>
     </ObszarZPanelemGeneratora>
   )

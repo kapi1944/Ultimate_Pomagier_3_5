@@ -7,7 +7,7 @@ import UkladGeneratoraDokumentu, {
   PanelGeneratoraDokumentu,
   PasekAkcjiGeneratora,
   PrzyciskPaneluGeneratora,
-  UkladPaneliGeneratora,
+  UkladFormularzaIPodgladu,
 } from '../../wspolne/UkladGeneratoraDokumentu'
 import {
   pobierzListeObecnosciPoId,
@@ -89,20 +89,26 @@ function EdytorListyObecnosci({ dokumentId }: { dokumentId: string }) {
       tytul="Lista obecności"
     >
       <PanelBocznyGeneratora>
-        <label>
-          <span>Tytuł dokumentu</span>
-          <input value={tytulDokumentu} onChange={(zdarzenie) => ustawTytulDokumentu(zdarzenie.target.value)} />
-        </label>
-        <label>
-          <span>Tytuł szkolenia (korekta ręczna)</span>
-          <input value={tytulSzkolenia} onChange={(zdarzenie) => ustawTytulSzkolenia(zdarzenie.target.value)} />
-        </label>
-        <label>
-          <span>Uczestnicy (korekta ręczna)</span>
-          <textarea rows={10} value={tekstUczestnikow} onChange={(zdarzenie) => ustawTekstUczestnikow(zdarzenie.target.value)} />
-        </label>
+        <FormularzListyObecnosci
+          tekstUczestnikow={tekstUczestnikow}
+          tytulDokumentu={tytulDokumentu}
+          tytulSzkolenia={tytulSzkolenia}
+          zmienTekstUczestnikow={ustawTekstUczestnikow}
+          zmienTytulDokumentu={ustawTytulDokumentu}
+          zmienTytulSzkolenia={ustawTytulSzkolenia}
+        />
       </PanelBocznyGeneratora>
-      <UkladPaneliGeneratora>
+      <UkladFormularzaIPodgladu>
+        <PanelGeneratoraDokumentu tytul="Edycja" wariant="edycja">
+          <FormularzListyObecnosci
+            tekstUczestnikow={tekstUczestnikow}
+            tytulDokumentu={tytulDokumentu}
+            tytulSzkolenia={tytulSzkolenia}
+            zmienTekstUczestnikow={ustawTekstUczestnikow}
+            zmienTytulDokumentu={ustawTytulDokumentu}
+            zmienTytulSzkolenia={ustawTytulSzkolenia}
+          />
+        </PanelGeneratoraDokumentu>
         <PanelGeneratoraDokumentu tytul="Podgląd" wariant="podglad">
           <h2>{tytulSzkolenia || 'Bez tytułu szkolenia'}</h2>
           <p><strong>Grupa:</strong> {daneZrodlowe.nazwaGrupy}</p>
@@ -113,9 +119,35 @@ function EdytorListyObecnosci({ dokumentId }: { dokumentId: string }) {
           <ol>{uczestnicyDoPodgladu.map((uczestnik, indeks) => <li key={uczestnik.id ?? `${uczestnik.nazwaPelna}-${indeks}`}>{uczestnik.nazwaPelna}</li>)}</ol>
           <small>Źródło: Szczegóły {dokument.metadaneGeneratora.szczegolyOrganizacyjneId}, odcisk {dokument.metadaneGeneratora.odciskDanych}</small>
         </PanelGeneratoraDokumentu>
-      </UkladPaneliGeneratora>
+      </UkladFormularzaIPodgladu>
     </UkladGeneratoraDokumentu>
     </ObszarZPanelemGeneratora>
+  )
+}
+
+type WlasciwosciFormularzaListyObecnosci = {
+  tekstUczestnikow: string
+  tytulDokumentu: string
+  tytulSzkolenia: string
+  zmienTekstUczestnikow: (wartosc: string) => void
+  zmienTytulDokumentu: (wartosc: string) => void
+  zmienTytulSzkolenia: (wartosc: string) => void
+}
+
+function FormularzListyObecnosci({
+  tekstUczestnikow,
+  tytulDokumentu,
+  tytulSzkolenia,
+  zmienTekstUczestnikow,
+  zmienTytulDokumentu,
+  zmienTytulSzkolenia,
+}: WlasciwosciFormularzaListyObecnosci) {
+  return (
+    <>
+      <label><span>Tytuł dokumentu</span><input value={tytulDokumentu} onChange={(zdarzenie) => zmienTytulDokumentu(zdarzenie.target.value)} /></label>
+      <label><span>Tytuł szkolenia (korekta ręczna)</span><input value={tytulSzkolenia} onChange={(zdarzenie) => zmienTytulSzkolenia(zdarzenie.target.value)} /></label>
+      <label><span>Uczestnicy (korekta ręczna)</span><textarea rows={10} value={tekstUczestnikow} onChange={(zdarzenie) => zmienTekstUczestnikow(zdarzenie.target.value)} /></label>
+    </>
   )
 }
 

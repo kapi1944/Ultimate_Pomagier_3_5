@@ -13,7 +13,7 @@ type WlasciwosciPaskaAkcjiGeneratora = PropsWithChildren<{
   className?: string
 }>
 
-type WlasciwosciUkladuPaneliGeneratora = PropsWithChildren<{
+type WlasciwosciUkladuFormularzaIPodgladu = PropsWithChildren<{
   className?: string
 }>
 
@@ -104,8 +104,8 @@ export function PasekAkcjiGeneratora({ children, className }: WlasciwosciPaskaAk
   return <div className={polaczKlasy('generator-dokumentu__akcje', className)}>{children}</div>
 }
 
-export function UkladPaneliGeneratora({ children, className }: WlasciwosciUkladuPaneliGeneratora) {
-  return <div className={polaczKlasy('generator-dokumentu__panele', className)}>{children}</div>
+export function UkladFormularzaIPodgladu({ children, className }: WlasciwosciUkladuFormularzaIPodgladu) {
+  return <div className={polaczKlasy('generator-dokumentu__obszar-roboczy', className)}>{children}</div>
 }
 
 export const PanelGeneratoraDokumentu = forwardRef<HTMLElement, WlasciwosciPaneluGeneratora>(

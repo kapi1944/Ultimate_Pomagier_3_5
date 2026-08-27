@@ -89,8 +89,6 @@
 .checklista-paczki__lista span { color: var(--checklista-tekst-wtorny); }
 .checklista-paczki__pilna { color: #ffd5b0; }
 
-.checklista-paczki__uklad-roboczy { display: block; }
-.checklista-paczki__formularz { min-width: 0; }
 .checklista-paczki__panel-podgladu { background: var(--ui-panel); }
 
 .checklista-paczki__dane-szkolenia { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 18px; }
