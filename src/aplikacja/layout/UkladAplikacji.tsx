@@ -30,7 +30,7 @@ import {
   ustawAktywnaKopieProgramu,
 } from '../../moduly/dokumenty/generatory/programy_szkolen/magazynKopiiRoboczychProgramu'
 import WidokKopiiRoboczychGeneratora from '../../wspolne/dokumenty/WidokKopiiRoboczychGeneratora'
-import { czyProgramMaNiezapisaneZmiany, zapiszProgramPrzedWyjsciem } from '../../moduly/dokumenty/generatory/programy_szkolen/strzeznikNiezapisanychProgramow'
+import { czyDokumentMaNiezapisaneZmiany, zapiszDokumentPrzedWyjsciem } from '../../moduly/dokumenty/wspolne/strzeznikNiezapisanegoDokumentu'
 import WidokReplikatoraDokumentow from '../../moduly/dokumenty/replikator_dokumentow/WidokReplikatoraDokumentow'
 import WidokSzkolenOtwartych from '../../moduly/otwarte/WidokSzkolenOtwartych'
 import WidokPulpitu from '../../moduly/zamkniete/pulpit/WidokPulpitu'
@@ -318,9 +318,10 @@ export default function UkladAplikacji() {
 
   function ustawWidok(widok: WidokNawigacji, opcje: OpcjeZmianyWidoku = {}) {
     const czyToNowyProgram = widok === 'programy_szkolen' && !opcje.zachowajKopieProgramu
-    const czyZmianaWymagaPotwierdzenia = (aktywnyWidok === 'programy_szkolen' && (widok !== aktywnyWidok || czyToNowyProgram)) || (aktywnyWidok === 'profil_uzytkownika' && czyProfilMaNiezapisaneZmiany)
+    const czyZmianaWymagaPotwierdzenia = widok !== aktywnyWidok || czyToNowyProgram
+    const czyProfilWymagaPotwierdzenia = aktywnyWidok === 'profil_uzytkownika' && czyProfilMaNiezapisaneZmiany
 
-    if (!opcje.pomijajOstrzezenie && czyZmianaWymagaPotwierdzenia && czyProgramMaNiezapisaneZmiany()) {
+    if (!opcje.pomijajOstrzezenie && czyZmianaWymagaPotwierdzenia && (czyProfilWymagaPotwierdzenia || czyDokumentMaNiezapisaneZmiany())) {
       ustawWidokDoPotwierdzenia(widok)
       return
     }
@@ -339,7 +340,7 @@ export default function UkladAplikacji() {
       return
     }
 
-    zapiszProgramPrzedWyjsciem()
+    zapiszDokumentPrzedWyjsciem()
     const docelowyWidok = widokDoPotwierdzenia
     ustawWidokDoPotwierdzenia(null)
     if (docelowyWidok) wykonajZmianeWidoku(docelowyWidok, { pomijajOstrzezenie: true })
@@ -458,7 +459,7 @@ export default function UkladAplikacji() {
         return
       }
 
-      if (aktywnyWidok === 'programy_szkolen' && poprawnyWidok !== aktywnyWidok && czyProgramMaNiezapisaneZmiany()) {
+      if (poprawnyWidok !== aktywnyWidok && czyDokumentMaNiezapisaneZmiany()) {
         const sciezkaBiezacegoWidoku = pobierzSciezkeGeneratora(aktywnyWidok) ?? '/'
         window.history.pushState({ widok: aktywnyWidok }, '', sciezkaBiezacegoWidoku)
         ustawWidokDoPotwierdzenia(poprawnyWidok)
@@ -483,7 +484,7 @@ export default function UkladAplikacji() {
       </div>
       {(widokDoPotwierdzenia || czyWylogowanieDoPotwierdzenia) && (
         <section className="program-panel-roboczy program-szkolen__komunikat" role="dialog" aria-modal="true" aria-label="Niezapisane zmiany">
-          <strong>Masz niezapisane zmiany {czyWylogowanieDoPotwierdzenia || aktywnyWidok === 'profil_uzytkownika' ? 'profilu' : 'programu'}.</strong>
+          <strong>Masz niezapisane zmiany {czyWylogowanieDoPotwierdzenia || aktywnyWidok === 'profil_uzytkownika' ? 'profilu' : 'dokumentu'}.</strong>
           <div className="program-szkolen__akcje">
             <button type="button" onClick={() => { ustawWidokDoPotwierdzenia(null); ustawCzyWylogowanieDoPotwierdzenia(false) }}>Wróć do edycji</button>
             {!czyWylogowanieDoPotwierdzenia && <button type="button" onClick={zapiszIWyjdz}>Zapisz i kontynuuj</button>}

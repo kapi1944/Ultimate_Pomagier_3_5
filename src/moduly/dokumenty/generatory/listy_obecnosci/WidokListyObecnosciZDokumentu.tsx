@@ -9,6 +9,8 @@ import UkladGeneratoraDokumentu, {
   PrzyciskPaneluGeneratora,
   UkladFormularzaIPodgladu,
 } from '../../wspolne/UkladGeneratoraDokumentu'
+import StatusZapisuDokumentu from '../../wspolne/StatusZapisuDokumentu'
+import { useOchronaNiezapisanegoDokumentu, useStanDokumentu } from '../../wspolne/useStanDokumentu'
 import {
   pobierzListeObecnosciPoId,
   zapiszKorektyListyObecnosci,
@@ -49,6 +51,34 @@ function EdytorListyObecnosci({ dokumentId }: { dokumentId: string }) {
     return uczestnicy.map((uczestnik) => uczestnik.nazwaPelna).join('\n')
   })
   const [komunikat, ustawKomunikat] = useState('')
+  const stanFormularza = { tekstUczestnikow, tytulDokumentu, tytulSzkolenia }
+  const stanDokumentu = useStanDokumentu({ dane: stanFormularza, czyAutosaveAktywny: false })
+
+  function zapiszDokument() {
+    if (!dokument) {
+      return
+    }
+
+    stanDokumentu.rozpocznijZapis()
+    const korektyDoZapisu: KorektyReczneListyObecnosci = {
+      ...dokument.daneDokumentu.korektyReczne,
+      tytulSzkolenia,
+      uczestnicy: utworzKorekteUczestnikow(dokument, tekstUczestnikow),
+    }
+    const zaktualizowany = zapiszKorektyListyObecnosci(dokument.id, tytulDokumentu, korektyDoZapisu)
+
+    if (!zaktualizowany) {
+      stanDokumentu.oznaczBladZapisu()
+      ustawKomunikat('Nie udało się zapisać Listy obecności.')
+      return
+    }
+
+    ustawDokument(zaktualizowany)
+    stanDokumentu.oznaczJakoZapisany(stanFormularza)
+    ustawKomunikat('Zapisano ręczne korekty dokumentu.')
+  }
+
+  useOchronaNiezapisanegoDokumentu(stanDokumentu.czyNiezapisaneZmiany, zapiszDokument)
 
   if (!dokument) {
     return <section className="widok"><p>Nie odnaleziono Listy obecności.</p></section>
@@ -63,18 +93,6 @@ function EdytorListyObecnosci({ dokumentId }: { dokumentId: string }) {
   }
   const uczestnicyDoPodgladu = korekty.uczestnicy ?? daneZrodlowe.uczestnicy
 
-  function zapiszDokument() {
-    const zaktualizowany = zapiszKorektyListyObecnosci(dokumentDoEdycji.id, tytulDokumentu, korekty)
-
-    if (!zaktualizowany) {
-      ustawKomunikat('Nie udało się zapisać Listy obecności.')
-      return
-    }
-
-    ustawDokument(zaktualizowany)
-    ustawKomunikat('Zapisano ręczne korekty dokumentu.')
-  }
-
   return (
     <ObszarZPanelemGeneratora
       idPanelu="panel-edycji-listy-obecnosci"
@@ -83,7 +101,7 @@ function EdytorListyObecnosci({ dokumentId }: { dokumentId: string }) {
       tytulPanelu="Edycja listy obecności"
     >
     <UkladGeneratoraDokumentu
-      akcje={<PasekAkcjiGeneratora><PrzyciskPaneluGeneratora>Edytuj dane</PrzyciskPaneluGeneratora><button type="button" onClick={zapiszDokument}>Zapisz</button></PasekAkcjiGeneratora>}
+      akcje={<PasekAkcjiGeneratora><StatusZapisuDokumentu stan={stanDokumentu.stanZapisu} /><PrzyciskPaneluGeneratora>Edytuj dane</PrzyciskPaneluGeneratora><button type="button" onClick={zapiszDokument}>Zapisz</button></PasekAkcjiGeneratora>}
       komunikat={komunikat}
       opis="Dokument roboczy utworzony ze Szczegółów organizacyjnych."
       tytul="Lista obecności"

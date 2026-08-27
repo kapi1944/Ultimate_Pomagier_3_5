@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { TypDokumentu } from '../../../wspolne/dokumenty/modelDokumentu'
 import { zapiszDokumentRoboczyGeneratora } from '../../../wspolne/dokumenty/zapisDokumentuGeneratora'
+import { useOchronaNiezapisanegoDokumentu, useStanDokumentu } from './useStanDokumentu'
 
 export type KonfiguracjaStanuProstegoGeneratora = {
   typDokumentu: TypDokumentu
@@ -9,15 +10,6 @@ export type KonfiguracjaStanuProstegoGeneratora = {
   kluczSzkicu: string
   danePoczatkowe: string
   uzytkownikId?: string
-}
-
-export type StanZapisuGeneratora = 'lokalny' | 'zapisywanie' | 'zapisany' | 'blad'
-
-const komunikatyStanu: Record<StanZapisuGeneratora, string> = {
-  lokalny: 'Szkic zapisany lokalnie.',
-  zapisywanie: 'Zapisywanie kopii roboczej...',
-  zapisany: 'Automatycznie zapisano kopię roboczą.',
-  blad: 'Szkic lokalny zapisano, ale zapis w rejestrze nie powiódł się.',
 }
 
 export function useStanProstegoGeneratora({
@@ -30,69 +22,58 @@ export function useStanProstegoGeneratora({
 }: KonfiguracjaStanuProstegoGeneratora) {
   const [daneWejsciowe, ustawDaneWejsciowe] = useState(() => localStorage.getItem(kluczSzkicu) ?? danePoczatkowe)
   const [idDokumentu, ustawIdDokumentu] = useState<string | null>(() => localStorage.getItem(`${kluczSzkicu}.dokumentId`))
-  const [stanZapisu, ustawStanZapisu] = useState<StanZapisuGeneratora>('lokalny')
-  const czyZmienionoPrzezUzytkownika = useRef(false)
 
-  const zapiszWRejestr = useCallback((komunikatPoZapisie = 'Podgląd jest aktualny. Dokument roboczy zapisano w rejestrze.') => {
-    ustawStanZapisu('zapisywanie')
+  const zapiszDane = useCallback((tekst: string) => {
+    const dokument = zapiszDokumentRoboczyGeneratora({
+      id: idDokumentu,
+      typ: typDokumentu,
+      generatorId,
+      tytul: tytulDokumentu,
+      daneDokumentu: { tekst },
+      ustawieniaDokumentu: {},
+      autorId: uzytkownikId,
+      wlascicielId: uzytkownikId,
+    })
 
-    try {
-      const dokument = zapiszDokumentRoboczyGeneratora({
-        id: idDokumentu,
-        typ: typDokumentu,
-        generatorId,
-        tytul: tytulDokumentu,
-        daneDokumentu: { tekst: daneWejsciowe },
-        ustawieniaDokumentu: {},
-        autorId: uzytkownikId,
-        wlascicielId: uzytkownikId,
-      })
-
-      if (!dokument) {
-        ustawStanZapisu('blad')
-        return 'Podgląd jest aktualny, ale nie udało się zapisać dokumentu roboczego.'
-      }
-
-      ustawIdDokumentu(dokument.id)
-      localStorage.setItem(`${kluczSzkicu}.dokumentId`, dokument.id)
-      ustawStanZapisu('zapisany')
-      return komunikatPoZapisie
-    } catch {
-      ustawStanZapisu('blad')
-      return 'Podgląd jest aktualny, ale nie udało się zapisać dokumentu roboczego.'
+    if (!dokument) {
+      throw new Error('Nie udało się zapisać dokumentu roboczego.')
     }
-  }, [daneWejsciowe, generatorId, idDokumentu, kluczSzkicu, typDokumentu, tytulDokumentu, uzytkownikId])
+
+    ustawIdDokumentu(dokument.id)
+    localStorage.setItem(`${kluczSzkicu}.dokumentId`, dokument.id)
+  }, [generatorId, idDokumentu, kluczSzkicu, typDokumentu, tytulDokumentu, uzytkownikId])
+
+  const stanDokumentu = useStanDokumentu({ dane: daneWejsciowe, zapiszAutomatycznie: zapiszDane })
 
   useEffect(() => {
     localStorage.setItem(kluczSzkicu, daneWejsciowe)
-    if (!czyZmienionoPrzezUzytkownika.current) return
+  }, [daneWejsciowe, kluczSzkicu])
 
-    ustawStanZapisu('zapisywanie')
-    const identyfikator = window.setTimeout(() => {
-      zapiszWRejestr()
-    }, 650)
+  useOchronaNiezapisanegoDokumentu(stanDokumentu.czyNiezapisaneZmiany, () => {
+    void stanDokumentu.zapiszTeraz()
+  })
 
-    return () => window.clearTimeout(identyfikator)
-  }, [daneWejsciowe, kluczSzkicu, zapiszWRejestr])
+  const zapiszWRejestr = useCallback(async (komunikatPoZapisie = 'Podgląd jest aktualny. Dokument roboczy zapisano w rejestrze.') => {
+    return await stanDokumentu.zapiszTeraz()
+      ? komunikatPoZapisie
+      : 'Podgląd jest aktualny, ale nie udało się zapisać dokumentu roboczego.'
+  }, [stanDokumentu])
 
   function zmienDaneWejsciowe(wartosc: string) {
-    czyZmienionoPrzezUzytkownika.current = true
     ustawDaneWejsciowe(wartosc)
   }
 
   function wyczysc() {
-    czyZmienionoPrzezUzytkownika.current = false
     ustawDaneWejsciowe('')
     ustawIdDokumentu(null)
     localStorage.removeItem(kluczSzkicu)
     localStorage.removeItem(`${kluczSzkicu}.dokumentId`)
-    ustawStanZapisu('lokalny')
+    stanDokumentu.oznaczJakoZapisany('')
   }
 
   return {
     daneWejsciowe,
-    komunikatStanu: komunikatyStanu[stanZapisu],
-    stanZapisu,
+    stanZapisu: stanDokumentu.stanZapisu,
     zapiszWRejestr,
     zmienDaneWejsciowe,
     wyczysc,

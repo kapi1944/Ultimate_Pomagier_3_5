@@ -12,6 +12,7 @@ import UkladGeneratoraDokumentu, {
   UkladFormularzaIPodgladu,
 } from './UkladGeneratoraDokumentu'
 import { useStanProstegoGeneratora } from './useStanProstegoGeneratora'
+import StatusZapisuDokumentu from './StatusZapisuDokumentu'
 import './prostyGeneratorDokumentu.css'
 
 type KonfiguracjaGeneratora = {
@@ -61,7 +62,7 @@ export default function ProstyGeneratorDokumentu({
   const obszarPodgladuRef = useRef<HTMLElement>(null)
   const {
     daneWejsciowe,
-    komunikatStanu,
+    stanZapisu,
     zapiszWRejestr,
     zmienDaneWejsciowe,
     wyczysc,
@@ -98,7 +99,8 @@ export default function ProstyGeneratorDokumentu({
   const akcje = (
     <PasekAkcjiGeneratora>
       <PrzyciskPaneluGeneratora>Edytuj dane</PrzyciskPaneluGeneratora>
-      <button type="button" onClick={() => ustawKomunikatAkcji(zapiszWRejestr())}>Generuj i zapisz</button>
+      <StatusZapisuDokumentu stan={stanZapisu} />
+      <button type="button" onClick={() => void zapiszWRejestr().then(ustawKomunikatAkcji)}>Generuj i zapisz</button>
       <button type="button" onClick={obsluzKopiowanie}>Kopiuj wynik</button>
       <AkcjeEksportuPdf nazwaPliku={nazwaPliku} obszarDokumentu={obszarPodgladuRef} />
       <button type="button" onClick={obsluzCzyszczenie}>Nowy / wyczyść</button>
@@ -115,7 +117,7 @@ export default function ProstyGeneratorDokumentu({
     <UkladGeneratoraDokumentu
       akcje={akcje}
       className="prosty-generator"
-      komunikat={komunikatAkcji ?? komunikatStanu}
+      komunikat={komunikatAkcji}
       opis={opis}
       tytul={tytul}
     >

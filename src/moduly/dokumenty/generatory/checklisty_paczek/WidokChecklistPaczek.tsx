@@ -26,6 +26,8 @@ import {
 } from './modelChecklistyPaczki'
 import { AkcjeRekordu } from '../../../../wspolne/komponenty/AkcjeRekordu'
 import { ObszarZPanelemGeneratora, PanelBocznyGeneratora, PanelGeneratoraDokumentu, PasekAkcjiGeneratora, PrzyciskPaneluGeneratora, UkladFormularzaIPodgladu } from '../../wspolne/UkladGeneratoraDokumentu'
+import StatusZapisuDokumentu from '../../wspolne/StatusZapisuDokumentu'
+import { useStanDokumentu } from '../../wspolne/useStanDokumentu'
 import {
   dodajZalacznikChecklisty,
   duplikujIstniejacaChecklistePaczki,
@@ -198,13 +200,32 @@ export default function WidokChecklistPaczek({ dokumentIdZTrasy }: WlasciwosciWi
   const [komunikat, ustawKomunikat] = useState('')
   const [podgladChecklistyId, ustawPodgladChecklistyId] = useState<string | null>(null)
   const dokument = dokumentIdZTrasy ? pobierzChecklistePaczki(dokumentIdZTrasy) : null
+  const stanDokumentu = useStanDokumentu({
+    dane: dokument?.daneDokumentu ?? null,
+    czyAutosaveAktywny: false,
+  })
   const checklisty = pobierzChecklistyPaczek()
   const szczegoly = pobierzSzczegolyDoChecklisty()
   const wybraneSzczegoly = szczegoly.find((pozycja) => pozycja.id === wybraneSzczegolyId)
   const aktorId = zalogowanyUzytkownik?.id ?? null
 
-  function odswiez(tekst: string) { ustawKomunikat(tekst); ustawOdswiezacz((obecny) => obecny + 1) }
-  function zapisz(dane: DaneChecklistyPaczki, opis?: string) { if (dokument && zapiszChecklistePaczki(dokument.id, dane, aktorId, opis)) odswiez('Zapisano checklistę.') }
+  function odswiez(tekst: string) {
+    const zapisanyDokument = dokument ? pobierzChecklistePaczki(dokument.id) : null
+    if (zapisanyDokument) stanDokumentu.oznaczJakoZapisany(zapisanyDokument.daneDokumentu)
+    ustawKomunikat(tekst)
+    ustawOdswiezacz((obecny) => obecny + 1)
+  }
+  function zapisz(dane: DaneChecklistyPaczki, opis?: string) {
+    if (!dokument) return
+    stanDokumentu.rozpocznijZapis()
+    if (zapiszChecklistePaczki(dokument.id, dane, aktorId, opis)) {
+      stanDokumentu.oznaczJakoZapisany(dane)
+      odswiez('Zapisano checklistę.')
+      return
+    }
+    stanDokumentu.oznaczBladZapisu()
+    ustawKomunikat('Nie udało się zapisać checklisty.')
+  }
 
   function duplikujCheckliste(id: string) {
     const wynik = duplikujIstniejacaChecklistePaczki(id, aktorId)
@@ -278,7 +299,7 @@ export default function WidokChecklistPaczek({ dokumentIdZTrasy }: WlasciwosciWi
   }
 
   return <ObszarZPanelemGeneratora idPanelu="panel-podgladu-checklisty-paczki" kluczPrzypiecia="ultimate-pomagier.panel-generatora.checklisty-paczek.przypiety" kluczWysuwania="ultimate-pomagier.panel-generatora.checklisty-paczek.wysuwanie" szerokoscPanelu="680px" tytulPanelu="Podgląd wydruku"><section className="widok checklista-paczki">
-    <header className="checklista-paczki__naglowek"><div><h1>Checklista paczki</h1><p>{dane.identyfikator} · <strong>{dane.statusChecklisty}</strong></p></div><PasekAkcjiGeneratora className="checklista-paczki__akcje-glowne"><button disabled={czyZablokowana} type="button" onClick={() => zapisz({ ...dane, statusChecklisty: 'KOPIA_ROBOCZA' }, 'Zapisano kopię roboczą.')}>Zapisz kopię roboczą</button><PrzyciskPaneluGeneratora>Podgląd wydruku</PrzyciskPaneluGeneratora><button disabled={czyZablokowana} type="button" onClick={() => { if (zarejestrujWydrukChecklisty(dokument.id, aktorId)) { odswiez('Zapisano wersję wydruku.'); window.print() } }}>Drukuj</button></PasekAkcjiGeneratora>{komunikat && <p aria-live="polite" className="checklista-paczki__komunikat">{komunikat}</p>}</header>
+    <header className="checklista-paczki__naglowek"><div><h1>Checklista paczki</h1><p>{dane.identyfikator} · <strong>{dane.statusChecklisty}</strong></p></div><PasekAkcjiGeneratora className="checklista-paczki__akcje-glowne"><StatusZapisuDokumentu stan={stanDokumentu.stanZapisu} /><button disabled={czyZablokowana} type="button" onClick={() => zapisz({ ...dane, statusChecklisty: 'KOPIA_ROBOCZA' }, 'Zapisano kopię roboczą.')}>Zapisz kopię roboczą</button><PrzyciskPaneluGeneratora>Podgląd wydruku</PrzyciskPaneluGeneratora><button disabled={czyZablokowana} type="button" onClick={() => { if (zarejestrujWydrukChecklisty(dokument.id, aktorId)) { odswiez('Zapisano wersję wydruku.'); window.print() } }}>Drukuj</button></PasekAkcjiGeneratora>{komunikat && <p aria-live="polite" className="checklista-paczki__komunikat">{komunikat}</p>}</header>
     {dane.czyDaneZrodloweNowsze && <p role="alert" className="checklista-paczki__ostrzezenie">Dane źródłowe zmieniły się po ostatnim wydruku.</p>}
     <UkladFormularzaIPodgladu><PanelGeneratoraDokumentu className="checklista-paczki__formularz" wariant="edycja">
       <section className="checklista-paczki__karta"><h2>Dane szkolenia</h2><div className="checklista-paczki__dane-szkolenia"><p><strong>Nazwa szkolenia:</strong> {migawka?.tytulSzkolenia || 'brak'}</p><p><strong>Grupa:</strong> {migawka?.nazwaGrupy || 'brak'}</p><p><strong>Klient:</strong> <input disabled={czyZablokowana} value={dane.klient} onChange={(zdarzenie) => zapisz({ ...dane, klient: zdarzenie.target.value, czyKlientNadpisany: zdarzenie.target.value !== (migawka?.klient ?? '') })} /></p>{dane.czyKlientNadpisany && <small>Zmieniono ręcznie</small>}<p><strong>Liczba uczestników:</strong> {uczestnicy}</p><p><strong>Trener / trenerzy:</strong> {migawka?.trenerzy.join(', ') || 'brak'}</p><p><strong>Data / terminy:</strong> {formatujTerminyZPrzerwami(migawka?.terminy ?? []) || 'brak'}</p><p><strong>Miejsce:</strong> {migawka?.miejsce || 'brak'}</p><p><strong>Opiekun:</strong> {nazwaOpiekuna}</p><label><input checked={dane.pilna} disabled={czyZablokowana} type="checkbox" onChange={(zdarzenie) => zapisz({ ...dane, pilna: zdarzenie.target.checked })} /> Pilna</label><label>Wysyłacz<select disabled={czyZablokowana} value={dane.wysylaczId ?? ''} onChange={(zdarzenie) => zapisz({ ...dane, wysylaczId: zdarzenie.target.value || null })}><option value="">Nieprzypisany</option>{aktywniUzytkownicy.filter((uzytkownik) => uzytkownik.odznaki.includes('WYSYLACZ')).map((uzytkownik) => <option key={uzytkownik.id} value={uzytkownik.id}>{pobierzNazweWyswietlanaUzytkownika(uzytkownik)}</option>)}</select></label></div></section>

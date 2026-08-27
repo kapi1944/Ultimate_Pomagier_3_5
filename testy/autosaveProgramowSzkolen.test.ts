@@ -1,5 +1,6 @@
 ﻿import assert from 'node:assert/strict'
 import test from 'node:test'
+import { readFileSync } from 'node:fs'
 import {
   kluczAutosaveProgramu,
   pobierzAutosaveProgramu,
@@ -10,7 +11,8 @@ import {
   zapiszAutosaveProgramu,
   zapiszJawnaKopieProgramu,
 } from '../src/moduly/dokumenty/generatory/programy_szkolen/magazynKopiiRoboczychProgramu.ts'
-import { czyProgramMaNiezapisaneZmiany, ustawObslugeNiezapisanychProgramow } from '../src/moduly/dokumenty/generatory/programy_szkolen/strzeznikNiezapisanychProgramow.ts'
+import { czyDokumentMaNiezapisaneZmiany, ustawObslugeNiezapisanegoDokumentu } from '../src/moduly/dokumenty/wspolne/strzeznikNiezapisanegoDokumentu.ts'
+import { czyStanDokumentuZmieniony, utworzOdciskStanuDokumentu } from '../src/moduly/dokumenty/wspolne/useStanDokumentu.ts'
 import { repozytoriumWspolnychDokumentow } from '../src/wspolne/dokumenty/rejestrDokumentow.ts'
 
 const magazyn = new Map<string, string>()
@@ -19,6 +21,7 @@ globalThis.localStorage = { getItem: (klucz: string) => magazyn.get(klucz) ?? nu
 function dane(tresc = 'Treść programu') { return { tytulSzkolenia: 'Program testowy', trescProgramu: tresc, czyWynikParsowaniaZatwierdzony: false } }
 function metadane() { return { organizator: 'SEMPER' as const, liczbaDni: 1, liczbaModulow: 2, czyWynikParsowaniaZatwierdzony: false } }
 function zapiszPierwsza() { return zapiszJawnaKopieProgramu({ tryb: 'zapisz', tytul: 'Program testowy', statusBiznesowy: 'robocza', daneDokumentu: dane(), metadane: metadane() }) }
+function odczytajZrodlo(sciezka: string) { return readFileSync(new URL(sciezka, import.meta.url), 'utf8') }
 
 test('autosave nie pojawia się na liście kopii roboczych i można go przywrócić', () => {
   magazyn.clear()
@@ -62,11 +65,36 @@ test('pusty stan po wyczyszczeniu pozostaje wyłącznie autosave', () => {
 
 test('wykrywa niezapisane zmiany', () => {
   let czyNiezapisane = true
-  const wyczysc = ustawObslugeNiezapisanychProgramow({ czySaNiezapisaneZmiany: () => czyNiezapisane, zapiszPrzedWyjsciem: () => { czyNiezapisane = false } })
-  assert.equal(czyProgramMaNiezapisaneZmiany(), true)
+  const wyczysc = ustawObslugeNiezapisanegoDokumentu({ czySaNiezapisaneZmiany: () => czyNiezapisane, zapiszPrzedWyjsciem: () => { czyNiezapisane = false } })
+  assert.equal(czyDokumentMaNiezapisaneZmiany(), true)
   czyNiezapisane = false
-  assert.equal(czyProgramMaNiezapisaneZmiany(), false)
+  assert.equal(czyDokumentMaNiezapisaneZmiany(), false)
   wyczysc()
+})
+
+test('wspólny odcisk rozpoznaje zmianę względem zapisanego dokumentu', () => {
+  const zapisany = utworzOdciskStanuDokumentu({ tytul: 'Program', liczbaDni: 2 })
+  assert.equal(czyStanDokumentuZmieniony(utworzOdciskStanuDokumentu({ tytul: 'Program', liczbaDni: 2 }), zapisany), false)
+  assert.equal(czyStanDokumentuZmieniony(utworzOdciskStanuDokumentu({ tytul: 'Program', liczbaDni: 3 }), zapisany), true)
+})
+
+test('sześć generatorów korzysta ze wspólnego stanu i statusu zapisu', () => {
+  const wspolnyHook = odczytajZrodlo('../src/moduly/dokumenty/wspolne/useStanDokumentu.ts')
+  const stanProstegoGeneratora = odczytajZrodlo('../src/moduly/dokumenty/wspolne/useStanProstegoGeneratora.ts')
+  const prostyGenerator = odczytajZrodlo('../src/moduly/dokumenty/wspolne/ProstyGeneratorDokumentu.tsx')
+  const programy = odczytajZrodlo('../src/moduly/dokumenty/generatory/programy_szkolen/WidokProgramowSzkolen.tsx')
+  const dyplomy = odczytajZrodlo('../src/moduly/dokumenty/generatory/dyplomy/WidokDyplomow.tsx')
+  const listy = odczytajZrodlo('../src/moduly/dokumenty/generatory/listy_obecnosci/WidokListyObecnosciZDokumentu.tsx')
+  const checklisty = odczytajZrodlo('../src/moduly/dokumenty/generatory/checklisty_paczek/WidokChecklistPaczek.tsx')
+  const aplikacja = odczytajZrodlo('../src/aplikacja/layout/UkladAplikacji.tsx')
+
+  assert.match(wspolnyHook, /opoznienieAutosave/)
+  assert.match(wspolnyHook, /window\.setTimeout/)
+  assert.match(wspolnyHook, /beforeunload/)
+  for (const zrodlo of [stanProstegoGeneratora, programy, dyplomy, listy, checklisty]) assert.match(zrodlo, /useStanDokumentu/)
+  for (const zrodlo of [prostyGenerator, programy, dyplomy, listy, checklisty]) assert.match(zrodlo, /StatusZapisuDokumentu/)
+  assert.match(aplikacja, /czyDokumentMaNiezapisaneZmiany/)
+  assert.doesNotMatch(programy, /ostrzezPrzedOdswiezeniem/)
 })
 
 test('każdy jawny zapis dodaje historię z migawką', () => {

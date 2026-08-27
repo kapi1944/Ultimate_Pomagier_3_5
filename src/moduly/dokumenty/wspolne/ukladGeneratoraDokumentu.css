@@ -63,6 +63,17 @@
   min-width: 0;
 }
 
+.generator-dokumentu__status-zapisu {
+  color: var(--ui-tekst-drugi);
+  font-size: .86rem;
+  white-space: nowrap;
+}
+
+.generator-dokumentu__status-zapisu--niezapisane,
+.generator-dokumentu__status-zapisu--blad {
+  color: var(--ui-akcent);
+}
+
 .generator-dokumentu__panel {
   min-width: 0;
   container-type: inline-size;

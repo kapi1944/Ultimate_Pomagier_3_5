@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import type { CSSProperties, ChangeEvent } from 'react'
 import { pobierzLokalizacjeZMagazynu } from '../../../../kartoteki/lokalizacje/magazynLokalizacji'
 import type { TrybTytuluDyplomu } from '../../../../wspolne/dokumenty/typyDokumentu'
@@ -10,6 +10,8 @@ import {
   PanelBocznyGeneratora,
   PrzyciskPaneluGeneratora,
 } from '../../wspolne/UkladGeneratoraDokumentu'
+import StatusZapisuDokumentu from '../../wspolne/StatusZapisuDokumentu'
+import { useOchronaNiezapisanegoDokumentu, useStanDokumentu } from '../../wspolne/useStanDokumentu'
 import './widokDyplomow.css'
 
 type TrybSzkolenia = 'stacjonarne' | 'online'
@@ -1087,9 +1089,13 @@ export default function WidokDyplomow() {
   const opcjeZapisuDat = useMemo(() => pobierzOpcjeZapisuDat(dane.wybraneDaty), [dane.wybraneDaty])
   const skutecznyTrybZapisuDat = pobierzSkutecznyTrybZapisuDat(dane.wybraneDaty, dane.trybZapisuDat)
 
-  useEffect(() => {
-    localStorage.setItem(kluczZapisuDyplomow, JSON.stringify(dane))
-  }, [dane])
+  const zapiszSzkicDyplomow = useCallback((daneDoZapisu: ZapisDyplomow) => {
+    localStorage.setItem(kluczZapisuDyplomow, JSON.stringify(daneDoZapisu))
+  }, [])
+  const stanDokumentu = useStanDokumentu({ dane, zapiszAutomatycznie: zapiszSzkicDyplomow })
+  useOchronaNiezapisanegoDokumentu(stanDokumentu.czyNiezapisaneZmiany, () => {
+    void stanDokumentu.zapiszTeraz()
+  })
 
   function zmienPole<Nazwa extends keyof ZapisDyplomow>(nazwa: Nazwa, wartosc: ZapisDyplomow[Nazwa]) {
     ustawDane((aktualne) => ({
@@ -1379,6 +1385,7 @@ export default function WidokDyplomow() {
   }
 
   function zapiszRoboczo() {
+    stanDokumentu.rozpocznijZapis()
     try {
       const typ = dane.trybTytulu === 'certyfikat' ? 'CERTYFIKAT' : dane.trybTytulu === 'zaswiadczenie' ? 'ZASWIADCZENIE' : 'DYPLOM'
       const dokument = zapiszDokumentRoboczyGeneratora({
@@ -1394,14 +1401,16 @@ export default function WidokDyplomow() {
       }
       localStorage.setItem(kluczDokumentuDyplomow, dokument.id)
       localStorage.setItem(kluczZapisuDyplomow, JSON.stringify(dane))
+      stanDokumentu.oznaczJakoZapisany(dane)
       ustawKomunikat('Dokument roboczy zapisano w rejestrze.')
     } catch {
+      stanDokumentu.oznaczBladZapisu()
       ustawKomunikat('Nie udało się zapisać dokumentu roboczego.')
     }
   }
   function wyczyscGenerator() {
     const pustyZapis = utworzDomyslnyZapis()
-    ustawDane({
+    const wyczyszczoneDane = {
       ...pustyZapis,
       tytulSzkolenia: '',
       miejsceSzkolenia: '',
@@ -1414,8 +1423,10 @@ export default function WidokDyplomow() {
       tloSzablonu: '',
       drugaStronaAktywna: false,
       trescDrugiejStrony: '',
-    })
+    }
+    ustawDane(wyczyszczoneDane)
     localStorage.removeItem(kluczZapisuDyplomow)
+    stanDokumentu.oznaczJakoZapisany(wyczyszczoneDane)
     ustawTrybPodgladuStron('pierwsza')
     ustawUkladPodgladuStron('pod_soba')
     ustawKomunikat('Wyczyszczono generator dyplomów.')
@@ -1477,6 +1488,7 @@ export default function WidokDyplomow() {
         </div>
 
         <div className="dyplomy__akcje">
+          <StatusZapisuDokumentu stan={stanDokumentu.stanZapisu} />
           <PrzyciskPaneluGeneratora className="dyplomy__przycisk">
             Ustawienia dyplomu
           </PrzyciskPaneluGeneratora>
