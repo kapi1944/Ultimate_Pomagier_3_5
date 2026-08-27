@@ -1,5 +1,6 @@
 ﻿import { useState, type RefObject } from 'react'
 import { czyMoznaRozpoczacEksport, drukujDokument, pobierzPdfDokumentu } from './eksportPdf'
+import { wykonajEksportPoPrzygotowaniu } from './przygotowanieEksportu'
 import './eksportPdf.css'
 
 type WlasciwosciAkcjiEksportuPdf = {
@@ -8,9 +9,11 @@ type WlasciwosciAkcjiEksportuPdf = {
   czyMoznaEksportowac?: () => boolean
   className?: string
   classNamePrzycisku?: string
+  przygotujEksport?: () => void | Promise<void>
+  zakonczEksport?: () => void
 }
 
-export default function AkcjeEksportuPdf({ obszarDokumentu, nazwaPliku, czyMoznaEksportowac = () => true, className, classNamePrzycisku = 'akcje-eksportu-pdf__przycisk' }: WlasciwosciAkcjiEksportuPdf) {
+export default function AkcjeEksportuPdf({ obszarDokumentu, nazwaPliku, czyMoznaEksportowac = () => true, className, classNamePrzycisku = 'akcje-eksportu-pdf__przycisk', przygotujEksport, zakonczEksport }: WlasciwosciAkcjiEksportuPdf) {
   const [czyGenerowanie, ustawCzyGenerowanie] = useState(false)
   const [blad, ustawBlad] = useState<string | null>(null)
 
@@ -24,7 +27,11 @@ export default function AkcjeEksportuPdf({ obszarDokumentu, nazwaPliku, czyMozna
     ustawBlad(null)
     ustawCzyGenerowanie(true)
     try {
-      await pobierzPdfDokumentu({ obszarDokumentu: obszarDokumentu.current, nazwaPliku, format: 'a4' })
+      await wykonajEksportPoPrzygotowaniu({
+        przygotuj: przygotujEksport,
+        wykonaj: () => pobierzPdfDokumentu({ obszarDokumentu: obszarDokumentu.current!, nazwaPliku, format: 'a4' }),
+        zakoncz: zakonczEksport,
+      })
     } catch {
       ustawBlad('Nie udalo sie utworzyc pliku PDF. Sprawdz obrazy w podgladzie i sprobuj ponownie.')
     } finally {
@@ -32,8 +39,14 @@ export default function AkcjeEksportuPdf({ obszarDokumentu, nazwaPliku, czyMozna
     }
   }
 
-  function drukuj() {
-    if (czyMoznaRozpoczacEksport(czyGenerowanie) && czyMoznaEksportowac()) drukujDokument()
+  async function drukuj() {
+    if (!czyMoznaRozpoczacEksport(czyGenerowanie) || !czyMoznaEksportowac()) return
+    ustawBlad(null)
+    try {
+      await wykonajEksportPoPrzygotowaniu({ przygotuj: przygotujEksport, wykonaj: drukujDokument, zakoncz: zakonczEksport })
+    } catch {
+      ustawBlad('Nie udało się przygotować dokumentu do druku.')
+    }
   }
 
   return <div className={`akcje-eksportu-pdf ${className ?? ''}`} data-pomin-w-eksporcie>

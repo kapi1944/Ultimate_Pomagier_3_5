@@ -3,6 +3,7 @@ import { useKontekstUzytkownika } from '../../../../aplikacja/logowanie/useKonte
 import AkcjeEksportuPdf from '../../../../wspolne/dokumenty/AkcjeEksportuPdf'
 import { utworzNazwePlikuDokumentu } from '../../../../wspolne/dokumenty/nazwyDokumentow'
 import PanelKontroliJakosciDokumentu from '../../../../wspolne/dokumenty/PanelKontroliJakosciDokumentu'
+import type { TrybRenderowaniaDokumentu } from '../../../../wspolne/dokumenty/trybRenderowaniaDokumentu'
 import { ObszarZPanelemGeneratora, PanelBocznyGeneratora, PasekAkcjiGeneratora, PrzyciskPaneluGeneratora } from '../../wspolne/UkladGeneratoraDokumentu'
 import StatusZapisuDokumentu from '../../wspolne/StatusZapisuDokumentu'
 import { useOchronaNiezapisanegoDokumentu, useStanDokumentu } from '../../wspolne/useStanDokumentu'
@@ -1012,6 +1013,8 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
   const [wynikImportu, ustawWynikImportu] = useState<WynikImportuProgramu | null>(null)
   const [trybImportu, ustawTrybImportu] = useState<TrybZastosowaniaImportuProgramu>('UZUPELNIJ')
   const [zaakceptowanePolaImportu, ustawZaakceptowanePolaImportu] = useState<PoleImportuProgramu[]>([])
+  const [trybRenderowania, ustawTrybRenderowania] = useState<TrybRenderowaniaDokumentu>('roboczy')
+  const trybPrzedEksportemRef = useRef<TrybRenderowaniaDokumentu>('roboczy')
   const zapiszAutosave = useCallback((daneDoZapisu: ZapisProgramuRoboczego) => {
     zapiszAutosaveProgramu({
       idSesji: idSesjiAutosave,
@@ -1112,6 +1115,39 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
     () => wynikImportu ? przygotujZmianyImportuProgramu(daneProgramu, wynikImportu) : [],
     [daneProgramu, wynikImportu],
   )
+
+  async function przygotujFinalnyRenderer() {
+    trybPrzedEksportemRef.current = trybRenderowania
+    ustawTrybRenderowania('finalny')
+
+    await new Promise<void>((rozwiaz, odrzuc) => {
+      let liczbaProb = 0
+
+      function sprawdzGotowosc() {
+        const renderer = obszarPodgladuRef.current?.querySelector<HTMLElement>('[data-testid="program-strony"][data-tryb-renderowania="finalny"]')
+        const czyGotowy = Boolean(renderer?.querySelector('[data-strona-dokumentu]') && !renderer.querySelector('.program-strony__oczekiwanie'))
+
+        if (czyGotowy) {
+          rozwiaz()
+          return
+        }
+
+        liczbaProb += 1
+        if (liczbaProb >= 60) {
+          odrzuc(new Error('Finalny renderer dokumentu nie jest gotowy.'))
+          return
+        }
+
+        window.requestAnimationFrame(sprawdzGotowosc)
+      }
+
+      window.requestAnimationFrame(sprawdzGotowosc)
+    })
+  }
+
+  function zakonczFinalnyRenderer() {
+    ustawTrybRenderowania(trybPrzedEksportemRef.current)
+  }
 
   function zmienDane<Nazwa extends keyof ZapisProgramuRoboczego>(nazwa: Nazwa, wartosc: ZapisProgramuRoboczego[Nazwa]) {
     ustawDaneProgramu((aktualne) => ({
@@ -1477,6 +1513,8 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
             czyMoznaEksportowac={czyMoznaEksportowacProgram}
             nazwaPliku={utworzNazwePlikuDokumentu('PROGRAM_SZKOLENIA', tytulDokumentu || 'bez tytułu')}
             obszarDokumentu={obszarPodgladuRef}
+            przygotujEksport={przygotujFinalnyRenderer}
+            zakonczEksport={zakonczFinalnyRenderer}
           />
           {aktywnaKopiaId ? (
             <>
@@ -1514,6 +1552,9 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
         <div className="program-panel-roboczy program-szkolen__panel">
           <PanelBocznyGeneratora className="program-szkolen__sekcja program-szkolen__sekcja--ustawienia">
             <div className="program-szkolen__siatka">
+              <label className="program-szkolen__etykieta">
+                <span><input checked={trybRenderowania === 'roboczy'} onChange={(zdarzenie) => ustawTrybRenderowania(zdarzenie.target.checked ? 'roboczy' : 'finalny')} type="checkbox" /> Podgląd roboczy</span>
+              </label>
               <PanelKontroliJakosciDokumentu
                 czyZatwierdzony={czyWynikParsowaniaZatwierdzony}
                 diagnostykaParsera={diagnostykaParsera}
@@ -1910,6 +1951,7 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
             stylPodpunktow={ustawienia.stylPodpunktow}
             stylePoziomowListy={ustawienia.stylePoziomowListy}
             tekstSurowy={trescProgramu}
+            trybRenderowania={trybRenderowania}
             tytul={tytulZCudzyslowem || 'Program szkolenia'}
           />
         </section>

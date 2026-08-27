@@ -101,7 +101,7 @@ function utworzSygnatureWyniku(wynik: WynikPaginacjiProgramu) {
 
 export function usePaginacjaProgramu(model: ModelPaginacjiProgramu, kluczUkladu: string) {
   const obszarPomiarowyRef = useRef<HTMLDivElement>(null)
-  const [wynik, ustawWynik] = useState<WynikPaginacjiProgramu | null>(null)
+  const [stanWyniku, ustawStanWyniku] = useState<{ kluczUkladu: string; wynik: WynikPaginacjiProgramu } | null>(null)
   const sygnaturaWynikuRef = useRef('')
 
   const przeliczPaginacje = useCallback(() => {
@@ -125,7 +125,7 @@ export function usePaginacjaProgramu(model: ModelPaginacjiProgramu, kluczUkladu:
     }
 
     sygnaturaWynikuRef.current = sygnatura
-    ustawWynik(nowyWynik)
+    ustawStanWyniku({ kluczUkladu, wynik: nowyWynik })
   }, [kluczUkladu, model])
 
   useLayoutEffect(() => {
@@ -156,7 +156,7 @@ export function usePaginacjaProgramu(model: ModelPaginacjiProgramu, kluczUkladu:
 
   return {
     obszarPomiarowyRef: obszarPomiarowyRef as RefObject<HTMLDivElement>,
-    wynik,
-    czyPomiaryGotowe: Boolean(wynik),
+    wynik: stanWyniku?.wynik ?? null,
+    czyPomiaryGotowe: stanWyniku?.kluczUkladu === kluczUkladu,
   }
 }

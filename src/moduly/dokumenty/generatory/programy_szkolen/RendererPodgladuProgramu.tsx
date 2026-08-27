@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
+import ElementPomocniczyEdytora from '../../../../wspolne/dokumenty/ElementPomocniczyEdytora'
 import type { BlokDokumentu, DokumentBlokowy } from '../../../../wspolne/dokumenty/modelBlokowy'
+import { czyPokazacElementyPomocniczeEdytora, type TrybRenderowaniaDokumentu } from '../../../../wspolne/dokumenty/trybRenderowaniaDokumentu'
 import type { FragmentDniaProgramu, FragmentModuluProgramu, GrupaPunktowProgramu } from './paginatorProgramu'
 import { utworzModelPaginacjiProgramu } from './paginatorProgramu'
 import { pobierzGruboscTekstuPozycjiListyProgramu } from './stylPozycjiListyProgramu'
@@ -20,6 +22,7 @@ export type WlasciwosciWygladuTrescProgramu = {
 
 type WlasciwosciRendereraPodgladuProgramu = WlasciwosciWygladuTrescProgramu & {
   dokument: DokumentBlokowy
+  trybRenderowania: TrybRenderowaniaDokumentu
 }
 
 function renderujMarkdownInline(tekst: string): ReactNode[] {
@@ -80,6 +83,7 @@ export function RendererGrupyPunktowProgramu({
   atrybutyPomiaru,
   atrybutyPomiaruListy,
   czyTrescSurowa,
+  trybRenderowania,
 }: {
   grupyPunktow: GrupaPunktowProgramu[]
   poczatkowyIndeksNumeracji: number
@@ -89,6 +93,7 @@ export function RendererGrupyPunktowProgramu({
   atrybutyPomiaru?: (grupa: GrupaPunktowProgramu) => Record<string, string>
   atrybutyPomiaruListy?: Record<string, string>
   czyTrescSurowa?: boolean
+  trybRenderowania: TrybRenderowaniaDokumentu
 }) {
   const liczniki = [poczatkowyIndeksNumeracji]
 
@@ -114,7 +119,7 @@ export function RendererGrupyPunktowProgramu({
             return (
               <div
                 className={`program-kartka-a4__pozycja${
-                  blok.statusDiagnostyczny === 'do_sprawdzenia' ? ' program-kartka-a4__pozycja--niepewna' : ''
+                  blok.statusDiagnostyczny === 'do_sprawdzenia' && czyPokazacElementyPomocniczeEdytora(trybRenderowania) ? ' program-kartka-a4__pozycja--niepewna' : ''
                 }`}
                 key={blok.id}
                 style={{ marginLeft: `${Math.min(poziom, 8) * 22}px` }}
@@ -140,6 +145,7 @@ export function RendererFragmentuModuluProgramu({
   atrybutyPomiaruGrup,
   atrybutyPomiaruListy,
   czyUkrywacPusty,
+  trybRenderowania,
 }: {
   fragment: FragmentModuluProgramu
   indeksModulu: number
@@ -148,6 +154,7 @@ export function RendererFragmentuModuluProgramu({
   atrybutyPomiaruGrup?: (grupa: GrupaPunktowProgramu) => Record<string, string>
   atrybutyPomiaruListy?: Record<string, string>
   czyUkrywacPusty?: boolean
+  trybRenderowania: TrybRenderowaniaDokumentu
 }) {
   const { modul, grupyPunktow, czyPokazacTytul, poczatkowyIndeksNumeracji } = fragment
   const { kolorAkcentu, separacjaModulow, stylPodpunktow, stylListyGlownej, stylePoziomowListy, czyPogrubiacNaglowkiListyProgramu } = wyglad
@@ -162,7 +169,7 @@ export function RendererFragmentuModuluProgramu({
         separacjaModulow === 'separator-pytan' && indeksModulu > 0
           ? ' program-kartka-a4__modul--separator-pytan'
           : ''
-      }${modul.blok.statusDiagnostyczny === 'do_sprawdzenia' ? ' program-kartka-a4__modul--niepewny' : ''}`}
+      }${modul.blok.statusDiagnostyczny === 'do_sprawdzenia' && czyPokazacElementyPomocniczeEdytora(trybRenderowania) ? ' program-kartka-a4__modul--niepewny' : ''}`}
       style={separacjaModulow === 'separator-pytan' && indeksModulu > 0 ? { borderColor: kolorAkcentu } : undefined}
       {...atrybutyPomiaru}
     >
@@ -181,9 +188,12 @@ export function RendererFragmentuModuluProgramu({
           atrybutyPomiaru={atrybutyPomiaruGrup}
           atrybutyPomiaruListy={atrybutyPomiaruListy}
           czyTrescSurowa={czyTrescSurowa}
+          trybRenderowania={trybRenderowania}
         />
       ) : !czyUkrywacPusty ? (
-        <div className="program-kartka-a4__pusty">Brak podpunktów.</div>
+        <ElementPomocniczyEdytora trybRenderowania={trybRenderowania}>
+          <div className="program-kartka-a4__pusty">Brak podpunktów.</div>
+        </ElementPomocniczyEdytora>
       ) : null}
     </article>
   )
@@ -193,10 +203,12 @@ export function RendererFragmentuDniaProgramu({
   fragment,
   wyglad,
   atrybutyPomiaru,
+  trybRenderowania,
 }: {
   fragment: FragmentDniaProgramu
   wyglad: WlasciwosciWygladuTrescProgramu
   atrybutyPomiaru?: Record<string, string>
+  trybRenderowania: TrybRenderowaniaDokumentu
 }) {
   const { dzien, czyPokazacNaglowek, moduly } = fragment
 
@@ -216,18 +228,18 @@ export function RendererFragmentuDniaProgramu({
       )}
       <div className="program-kartka-a4__moduly">
         {moduly.map((modul, indeksModulu) => (
-          <RendererFragmentuModuluProgramu fragment={modul} indeksModulu={indeksModulu} key={`${modul.modul.id}-${modul.poczatkowyIndeksNumeracji}`} wyglad={wyglad} />
+          <RendererFragmentuModuluProgramu fragment={modul} indeksModulu={indeksModulu} key={`${modul.modul.id}-${modul.poczatkowyIndeksNumeracji}`} trybRenderowania={trybRenderowania} wyglad={wyglad} />
         ))}
       </div>
     </section>
   )
 }
 
-export default function RendererPodgladuProgramu({ dokument, ...wyglad }: WlasciwosciRendereraPodgladuProgramu) {
+export default function RendererPodgladuProgramu({ dokument, trybRenderowania, ...wyglad }: WlasciwosciRendereraPodgladuProgramu) {
   const model = utworzModelPaginacjiProgramu(dokument)
 
   if (!model.dni.length) {
-    return <div className="program-kartka-a4__pusty">Brak treści programu.</div>
+    return <ElementPomocniczyEdytora trybRenderowania={trybRenderowania}><div className="program-kartka-a4__pusty">Brak treści programu.</div></ElementPomocniczyEdytora>
   }
 
   return (
@@ -245,6 +257,7 @@ export default function RendererPodgladuProgramu({ dokument, ...wyglad }: Wlasci
             })),
           }}
           key={dzien.id}
+          trybRenderowania={trybRenderowania}
           wyglad={wyglad}
         />
       ))}

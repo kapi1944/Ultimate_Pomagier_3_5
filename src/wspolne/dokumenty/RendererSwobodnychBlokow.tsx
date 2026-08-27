@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react'
+import type { TrybRenderowaniaDokumentu } from './trybRenderowaniaDokumentu'
 import {
   czyBlokWidocznyNaStronie,
   pobierzTekstBloku,
@@ -11,6 +12,7 @@ type WlasciwosciRendereraSwobodnychBlokow = {
   bloki: BlokSwobodnyDokumentu[]
   numerStrony: number
   kontekst: KontekstSwobodnychBlokow
+  trybRenderowania: TrybRenderowaniaDokumentu
 }
 
 const wyrownanieCss = {
@@ -34,7 +36,7 @@ function pobierzStylPolozenia(blok: BlokSwobodnyDokumentu): CSSProperties {
   }
 }
 
-export default function RendererSwobodnychBlokow({ bloki, numerStrony, kontekst }: WlasciwosciRendereraSwobodnychBlokow) {
+export default function RendererSwobodnychBlokow({ bloki, numerStrony, kontekst, trybRenderowania }: WlasciwosciRendereraSwobodnychBlokow) {
   return bloki.filter((blok) => czyBlokWidocznyNaStronie(blok, numerStrony)).map((blok) => {
     const stylPolozenia = pobierzStylPolozenia(blok)
 
@@ -42,6 +44,7 @@ export default function RendererSwobodnychBlokow({ bloki, numerStrony, kontekst 
       return (
         <div
           data-blok-swobodny={blok.id}
+          data-tryb-renderowania={trybRenderowania}
           key={blok.id}
           style={{
             ...stylPolozenia,
@@ -65,6 +68,7 @@ export default function RendererSwobodnychBlokow({ bloki, numerStrony, kontekst 
       <img
         alt={blok.dane.tekstAlternatywny}
         data-blok-swobodny={blok.id}
+        data-tryb-renderowania={trybRenderowania}
         key={blok.id}
         src={zrodlo}
         style={{

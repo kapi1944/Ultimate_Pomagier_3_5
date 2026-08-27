@@ -1,7 +1,9 @@
 import { Fragment, useMemo, type CSSProperties, type ReactNode, type RefObject } from 'react'
 import type { DokumentBlokowy } from '../../../../wspolne/dokumenty/modelBlokowy'
+import ElementPomocniczyEdytora from '../../../../wspolne/dokumenty/ElementPomocniczyEdytora'
 import RendererSwobodnychBlokow from '../../../../wspolne/dokumenty/RendererSwobodnychBlokow'
 import type { KontekstSwobodnychBlokow } from '../../../../wspolne/dokumenty/modelSwobodnychBlokow'
+import type { TrybRenderowaniaDokumentu } from '../../../../wspolne/dokumenty/trybRenderowaniaDokumentu'
 import { geometriaStronyProgramu, pobierzWymiaryStronyProgramu } from './geometriaStronyProgramu'
 import type { FragmentDniaProgramu, FragmentModuluProgramu, GrupaPunktowProgramu, ModelPaginacjiProgramu, StronaProgramu } from './paginatorProgramu'
 import { utworzModelPaginacjiProgramu, utworzModelPaginacjiProgramuDlaTekstuSurowego } from './paginatorProgramu'
@@ -36,6 +38,7 @@ type WlasciwosciRendereraStronProgramu = WlasciwosciWygladuTrescProgramu & {
   czyFormatowanieSkryptowe: boolean
   tekstSurowy: string
   kontekstSwobodnychBlokow: KontekstSwobodnychBlokow
+  trybRenderowania: TrybRenderowaniaDokumentu
 }
 
 type WlasciwosciStronyFizycznej = {
@@ -58,17 +61,18 @@ type WlasciwosciStronyFizycznej = {
   zawartosc?: ReactNode
   kontekstSwobodnychBlokow: KontekstSwobodnychBlokow
   blokiSwobodne: DokumentBlokowy['blokiSwobodne']
+  trybRenderowania: TrybRenderowaniaDokumentu
 }
 
-function RendererZawartosciStrony({ strona, wyglad }: { strona?: StronaProgramu; wyglad: WlasciwosciWygladuTrescProgramu }) {
+function RendererZawartosciStrony({ strona, wyglad, trybRenderowania }: { strona?: StronaProgramu; wyglad: WlasciwosciWygladuTrescProgramu; trybRenderowania: TrybRenderowaniaDokumentu }) {
   if (!strona?.fragmentyDni.length) {
-    return <div className="program-kartka-a4__pusty">Brak treści programu.</div>
+    return <ElementPomocniczyEdytora trybRenderowania={trybRenderowania}><div className="program-kartka-a4__pusty">Brak treści programu.</div></ElementPomocniczyEdytora>
   }
 
   return (
     <>
       {strona.fragmentyDni.map((fragmentDnia) => (
-        <RendererFragmentuDniaProgramu fragment={fragmentDnia} key={fragmentDnia.dzien.id} wyglad={wyglad} />
+        <RendererFragmentuDniaProgramu fragment={fragmentDnia} key={fragmentDnia.dzien.id} trybRenderowania={trybRenderowania} wyglad={wyglad} />
       ))}
     </>
   )
@@ -94,9 +98,10 @@ function StronaFizycznaProgramu({
   zawartosc,
   kontekstSwobodnychBlokow,
   blokiSwobodne,
+  trybRenderowania,
 }: WlasciwosciStronyFizycznej) {
   const profil = profileOrganizatorowProgramu[profilFirmy]
-  const tresc = zawartosc ?? <RendererZawartosciStrony strona={strona} wyglad={wyglad} />
+  const tresc = zawartosc ?? <RendererZawartosciStrony strona={strona} trybRenderowania={trybRenderowania} wyglad={wyglad} />
 
   if (preset === 'DOTYCHCZASOWY') {
     return (
@@ -123,7 +128,7 @@ function StronaFizycznaProgramu({
         </header>
         <main className="program-dotychczasowy__tresc program-kartka-a4__tresc" {...atrybutyTresci}>{tresc}</main>
         <footer className="program-kartka-a4__stopka">{stopkaOrganizatora}</footer>
-        <RendererSwobodnychBlokow bloki={blokiSwobodne ?? []} kontekst={kontekstSwobodnychBlokow} numerStrony={strona?.numer ?? 1} />
+        <RendererSwobodnychBlokow bloki={blokiSwobodne ?? []} kontekst={kontekstSwobodnychBlokow} numerStrony={strona?.numer ?? 1} trybRenderowania={trybRenderowania} />
       </article>
     )
   }
@@ -147,7 +152,7 @@ function StronaFizycznaProgramu({
         {elementy.stopkaFirmowa && <div className="program-semper__stopka-pas"><div><strong>{profil.nazwa}</strong><br />NIP {profil.nip} REGON {profil.regon}<br />{profil.adres}</div>{elementy.hasloMarki && <div>{profil.haslo}</div>}</div>}
         {elementy.mapaPolski && profilFirmy === 'semper' && <img aria-hidden="true" className="program-semper__mapa" src={mapaPolskiSemper} alt="" />}
       </footer>
-      <RendererSwobodnychBlokow bloki={blokiSwobodne ?? []} kontekst={kontekstSwobodnychBlokow} numerStrony={strona?.numer ?? 1} />
+      <RendererSwobodnychBlokow bloki={blokiSwobodne ?? []} kontekst={kontekstSwobodnychBlokow} numerStrony={strona?.numer ?? 1} trybRenderowania={trybRenderowania} />
     </article>
   )
 }
@@ -195,6 +200,7 @@ function ObszarPomiaruProgramu({
                 atrybutyPomiaru={{ 'data-pomiar-dnia': '', 'data-pomiar-naglowka-dnia': dzien.id }}
                 fragment={utworzFragmentPomiarowyDnia(dzien)}
                 key={`naglowek-${dzien.id}`}
+                trybRenderowania={wlasciwosciStrony.trybRenderowania}
                 wyglad={wlasciwosciStrony.wyglad}
               />
             ))}
@@ -205,6 +211,7 @@ function ObszarPomiaruProgramu({
                     atrybutyPomiaru={{ 'data-pomiar-modulu': modul.id, 'data-pomiar-modulu-calego': modul.id }}
                     fragment={utworzFragmentPomiarowyModulu(modul, true, modul.grupyPunktow)}
                     indeksModulu={0}
+                    trybRenderowania={wlasciwosciStrony.trybRenderowania}
                     wyglad={wlasciwosciStrony.wyglad}
                   />
                   <RendererFragmentuModuluProgramu
@@ -212,6 +219,7 @@ function ObszarPomiaruProgramu({
                     czyUkrywacPusty
                     fragment={utworzFragmentPomiarowyModulu(modul, true, [])}
                     indeksModulu={0}
+                    trybRenderowania="finalny"
                     wyglad={wlasciwosciStrony.wyglad}
                   />
                   <RendererFragmentuModuluProgramu
@@ -219,12 +227,14 @@ function ObszarPomiaruProgramu({
                     czyUkrywacPusty
                     fragment={utworzFragmentPomiarowyModulu(modul, false, [])}
                     indeksModulu={0}
+                    trybRenderowania="finalny"
                     wyglad={wlasciwosciStrony.wyglad}
                   />
                   <RendererFragmentuModuluProgramu
                     atrybutyPomiaru={{ 'data-pomiar-modulu-kolejnego': modul.id }}
                     fragment={utworzFragmentPomiarowyModulu(modul, true, modul.grupyPunktow)}
                     indeksModulu={1}
+                    trybRenderowania={wlasciwosciStrony.trybRenderowania}
                     wyglad={wlasciwosciStrony.wyglad}
                   />
                   <RendererFragmentuModuluProgramu
@@ -232,6 +242,7 @@ function ObszarPomiaruProgramu({
                     atrybutyPomiaruListy={{ 'data-pomiar-listy': '' }}
                     fragment={utworzFragmentPomiarowyModulu(modul, false, modul.grupyPunktow)}
                     indeksModulu={0}
+                    trybRenderowania={wlasciwosciStrony.trybRenderowania}
                     wyglad={wlasciwosciStrony.wyglad}
                   />
                 </Fragment>
@@ -260,6 +271,7 @@ export default function RendererStronProgramu({
   czyFormatowanieSkryptowe,
   tekstSurowy,
   kontekstSwobodnychBlokow,
+  trybRenderowania,
   ...wyglad
 }: WlasciwosciRendereraStronProgramu) {
   const model = useMemo(
@@ -275,7 +287,7 @@ export default function RendererStronProgramu({
     '--program-odstep-poziomy': `${geometriaStronyProgramu.odstepPoziomyMm}mm`,
     '--program-wysokosc-stopki': `${geometriaStronyProgramu.wysokoscStopkiMm}mm`,
   } as CSSProperties
-  const kluczUkladu = JSON.stringify({ dokument: dokument.struktura, tekstSurowy, czyFormatowanieSkryptowe, preset, profilFirmy, tytul, elementy, czyJustowac, logotypUzytkownika, szerokoscLogotypu, gruboscObramowaniaTytulu, wyglad })
+  const kluczUkladu = JSON.stringify({ dokument: dokument.struktura, tekstSurowy, czyFormatowanieSkryptowe, preset, profilFirmy, tytul, elementy, czyJustowac, logotypUzytkownika, szerokoscLogotypu, gruboscObramowaniaTytulu, trybRenderowania, wyglad })
   const { obszarPomiarowyRef, wynik, czyPomiaryGotowe } = usePaginacjaProgramu(model, kluczUkladu)
   const wlasciwosciStrony = {
     preset,
@@ -292,10 +304,11 @@ export default function RendererStronProgramu({
     stopkaOrganizatora,
     kontekstSwobodnychBlokow,
     blokiSwobodne: dokument.blokiSwobodne,
+    trybRenderowania,
   }
 
   return (
-    <div className={`program-strony program-strony--${preset.toLowerCase()}`} data-testid="program-strony" style={stylGeometrii}>
+    <div className={`program-strony program-strony--${preset.toLowerCase()}`} data-testid="program-strony" data-tryb-renderowania={trybRenderowania} style={stylGeometrii}>
       <ObszarPomiaruProgramu model={model} obszarPomiarowyRef={obszarPomiarowyRef} wlasciwosciStrony={wlasciwosciStrony} />
       {czyPomiaryGotowe && wynik ? (
         wynik.strony.map((strona) => (
