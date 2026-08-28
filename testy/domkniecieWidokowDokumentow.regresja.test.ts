@@ -130,8 +130,10 @@ test('generatory korzystają ze wspólnego układu paneli, paska akcji i jawnej 
   assert.doesNotMatch(stylDyplomow, /\.dyplomy--panel-ustawien-otwarty\s*\{\s*width:/)
   assert.doesNotMatch(stylChecklisty, /checklista-paczki__uklad-roboczy/)
 
-  assert.match(ankieta, /typDokumentu="ANKIETA"/)
-  assert.match(ankieta, /generatorId="ankiety"/)
+  assert.match(ankieta, /UkladFormularzaIPodgladu/)
+  assert.match(ankieta, /PasekAkcjiGeneratora/)
+  assert.match(ankieta, /useStanDokumentu\(\{ dane, zapiszAutomatycznie: zapiszDane \}\)/)
+  assert.match(ankieta, /zapiszDokumentRoboczyGeneratora\(\{ id: idDokumentu, typ: 'ANKIETA', generatorId: 'ankiety'/)
   assert.match(lista, /typDokumentu="LISTA_OBECNOSCI"/)
   assert.match(lista, /generatorId="listy_obecnosci"/)
   assert.match(karta, /typDokumentu="KARTA_NA_DRZWI"/)
