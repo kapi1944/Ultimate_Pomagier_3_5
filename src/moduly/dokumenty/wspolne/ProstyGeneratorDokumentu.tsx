@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import { useKontekstUzytkownika } from '../../../aplikacja/logowanie/useKontekstUzytkownika'
 import AkcjeEksportuPdf from '../../../wspolne/dokumenty/AkcjeEksportuPdf'
 import type { TypDokumentu } from '../../../wspolne/dokumenty/modelDokumentu'
-import { utworzNazwePlikuDokumentu } from '../../../wspolne/dokumenty/nazwyDokumentow'
+import { zbudujNazweEksportowanegoDokumentu } from '../../../wspolne/dokumenty/nazwyDokumentow'
 import UkladGeneratoraDokumentu, {
   ObszarZPanelemGeneratora,
   PanelBocznyGeneratora,
@@ -75,7 +75,8 @@ export default function ProstyGeneratorDokumentu({
     uzytkownikId: zalogowanyUzytkownik?.id,
   })
   const wygenerowanyDokument = useMemo(() => generujDokument(daneWejsciowe), [daneWejsciowe, generujDokument])
-  const nazwaPliku = utworzNazwePlikuDokumentu(typDokumentu, tytul)
+  const daneNazwyEksportu = { typDokumentu, dataUtworzenia: new Date() }
+  const nazwaPliku = zbudujNazweEksportowanegoDokumentu(daneNazwyEksportu)
 
   async function obsluzKopiowanie() {
     if (!wygenerowanyDokument.trim()) {
@@ -102,7 +103,7 @@ export default function ProstyGeneratorDokumentu({
       <StatusZapisuDokumentu stan={stanZapisu} />
       <button type="button" onClick={() => void zapiszWRejestr().then(ustawKomunikatAkcji)}>Generuj i zapisz</button>
       <button type="button" onClick={obsluzKopiowanie}>Kopiuj wynik</button>
-      <AkcjeEksportuPdf nazwaPliku={nazwaPliku} obszarDokumentu={obszarPodgladuRef} />
+      <AkcjeEksportuPdf daneNazwyEksportu={daneNazwyEksportu} nazwaPliku={nazwaPliku} obszarDokumentu={obszarPodgladuRef} />
       <button type="button" onClick={obsluzCzyszczenie}>Nowy / wyczyść</button>
     </PasekAkcjiGeneratora>
   )
