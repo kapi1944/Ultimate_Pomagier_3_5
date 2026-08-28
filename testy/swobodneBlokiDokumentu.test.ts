@@ -2,9 +2,14 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
   czyBlokWidocznyNaStronie,
+  deserializujKonfiguracjeSwobodnychBlokow,
+  duplikujBlokSwobodny,
   normalizujBlokiSwobodneDokumentu,
   pobierzTekstBloku,
   pobierzZrodloObrazuBloku,
+  przesunBlokSwobodny,
+  serializujKonfiguracjeSwobodnychBlokow,
+  zmienRozmiarBlokuSwobodnego,
 } from '../src/wspolne/dokumenty/modelSwobodnychBlokow.ts'
 import { normalizujProgramSzkolenia, utworzDokumentProgramuSzkolenia } from '../src/moduly/dokumenty/generatory/programy_szkolen/modelProgramuSzkolenia.ts'
 import { utworzKontekstSwobodnychBlokowProgramu } from '../src/moduly/dokumenty/generatory/programy_szkolen/adapterSwobodnychBlokowProgramu.ts'
@@ -76,4 +81,27 @@ test('adapter Programu udostepnia wspolnemu modelowi pola i logotypy organizator
   assert.equal(kontekst.zasobyObrazow?.logotyp_programu, 'data:logo-programu')
   assert.equal(kontekst.zasobyObrazow?.logotyp_organizatora, 'data:logo-semper')
   assert.equal(kontekst.zasobyObrazow?.mapa_organizatora, 'data:mapa-semper')
+})
+
+test('geometria jest zapisana w milimetrach, ograniczana do A4 i przyciagana do osi', () => {
+  const blok = bloki[0]!
+  const przyOsi = przesunBlokSwobodny(blok, 105 - (blok.xMm + blok.szerokoscMm / 2) + 1, 0, 2)
+  assert.equal(przyOsi.blok.xMm + przyOsi.blok.szerokoscMm / 2, 105)
+  assert.equal(przyOsi.prowadnice.pionowa, 105)
+  const pozaStrona = przesunBlokSwobodny(blok, 500, 500, 0).blok
+  assert.equal(pozaStrona.xMm + pozaStrona.szerokoscMm, 210)
+  assert.equal(pozaStrona.yMm + pozaStrona.wysokoscMm, 297)
+  const rozmiar = zmienRozmiarBlokuSwobodnego(blok, 80, 5, true)
+  assert.equal(rozmiar.szerokoscMm / rozmiar.wysokoscMm, blok.szerokoscMm / blok.wysokoscMm)
+})
+
+test('konfiguracja ma wersje schematu, czyta zapis legacy i duplikuje bez dzielenia tozsamosci', () => {
+  const zapis = serializujKonfiguracjeSwobodnychBlokow(bloki)
+  assert.match(zapis, /"wersjaSchematu":1/)
+  assert.deepEqual(deserializujKonfiguracjeSwobodnychBlokow(zapis), bloki)
+  assert.deepEqual(deserializujKonfiguracjeSwobodnychBlokow(JSON.stringify(bloki)), bloki)
+  const kopia = duplikujBlokSwobodny(bloki[0]!, 'kopia-1')
+  assert.equal(kopia.id, 'kopia-1')
+  assert.equal(kopia.pochodzenie, 'uzytkownik')
+  assert.equal(kopia.zablokowany, false)
 })

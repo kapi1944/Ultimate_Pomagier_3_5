@@ -6,6 +6,13 @@ export type PrzypisanieBlokuDoStrony =
 export type WyrownanieTekstuBloku = 'lewo' | 'srodek' | 'prawo' | 'wyjustuj'
 export type GruboscCzcionkiBloku = 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900
 export type TrybDopasowaniaObrazu = 'contain' | 'cover'
+export type PochodzenieBlokuSwobodnego = 'szablon' | 'uzytkownik'
+export type RodzinaCzcionkiBloku = 'Arial' | 'Georgia' | 'Times New Roman' | 'Verdana'
+
+export const WERSJA_SCHEMATU_SWOBODNYCH_BLOKOW = 1 as const
+export const SZEROKOSC_STRONY_A4_MM = 210
+export const WYSOKOSC_STRONY_A4_MM = 297
+export const RODZINY_CZCIONEK_BLOKU: RodzinaCzcionkiBloku[] = ['Arial', 'Georgia', 'Times New Roman', 'Verdana']
 
 export type ZrodloTekstuBloku =
   | { rodzaj: 'statyczne'; tekst: string }
@@ -14,6 +21,7 @@ export type ZrodloTekstuBloku =
 export type ZrodloObrazuBloku =
   | { rodzaj: 'adres'; adres: string }
   | { rodzaj: 'zasob_organizatora'; klucz: string }
+  | { rodzaj: 'zasob_uzytkownika'; klucz: string }
 
 type PodstawaBlokuSwobodnego = {
   id: string
@@ -24,6 +32,10 @@ type PodstawaBlokuSwobodnego = {
   przypisanieDoStrony: PrzypisanieBlokuDoStrony
   widoczny: boolean
   indeksWarstwy: number
+  nazwa?: string
+  zablokowany?: boolean
+  pochodzenie?: PochodzenieBlokuSwobodnego
+  idBlokuSzablonu?: string
 }
 
 export type BlokTekstowySwobodny = PodstawaBlokuSwobodnego & {
@@ -36,6 +48,9 @@ export type BlokTekstowySwobodny = PodstawaBlokuSwobodnego & {
     wyrownanie: WyrownanieTekstuBloku
     interlinia: number
     kolor?: string
+    kursywa?: boolean
+    podkreslenie?: boolean
+    marginesWewnetrznyMm?: number
   }
 }
 
@@ -54,6 +69,21 @@ export type BlokSwobodnyDokumentu = BlokTekstowySwobodny | BlokObrazuSwobodny
 export type KontekstSwobodnychBlokow = {
   dane: Record<string, unknown>
   zasobyObrazow?: Record<string, string | undefined>
+}
+
+export type KonfiguracjaSwobodnychBlokow = {
+  wersjaSchematu: typeof WERSJA_SCHEMATU_SWOBODNYCH_BLOKOW
+  bloki: BlokSwobodnyDokumentu[]
+}
+
+export type ProwadniceBloku = {
+  pionowa?: number
+  pozioma?: number
+}
+
+export type WynikGeometriiBloku = {
+  blok: BlokSwobodnyDokumentu
+  prowadnice: ProwadniceBloku
 }
 
 function czyObiekt(wartosc: unknown): wartosc is Record<string, unknown> {
@@ -87,6 +117,10 @@ function normalizujPodstaweBloku(dane: Record<string, unknown>) {
     przypisanieDoStrony: normalizujPrzypisanieDoStrony(dane.przypisanieDoStrony),
     widoczny: dane.widoczny !== false,
     indeksWarstwy: Math.trunc(liczbaLubDomyslna(dane.indeksWarstwy, 0)),
+    ...(typeof dane.nazwa === 'string' && dane.nazwa.trim() ? { nazwa: dane.nazwa.trim() } : {}),
+    zablokowany: dane.zablokowany === true,
+    pochodzenie: dane.pochodzenie === 'szablon' ? 'szablon' as const : 'uzytkownik' as const,
+    ...(typeof dane.idBlokuSzablonu === 'string' && dane.idBlokuSzablonu ? { idBlokuSzablonu: dane.idBlokuSzablonu } : {}),
   }
 }
 
@@ -119,6 +153,9 @@ function normalizujBlokTekstowy(dane: Record<string, unknown>): BlokTekstowySwob
         : 'lewo',
       interlinia: Math.max(0.1, liczbaLubDomyslna(ustawienia.interlinia, 1.2)),
       ...(typeof ustawienia.kolor === 'string' && ustawienia.kolor.trim() ? { kolor: ustawienia.kolor } : {}),
+      kursywa: ustawienia.kursywa === true,
+      podkreslenie: ustawienia.podkreslenie === true,
+      marginesWewnetrznyMm: Math.max(0, liczbaLubDomyslna(ustawienia.marginesWewnetrznyMm, 0)),
     },
   }
 }
@@ -134,8 +171,8 @@ function normalizujBlokObrazu(dane: Record<string, unknown>): BlokObrazuSwobodny
     ...podstawa,
     typ: 'obraz',
     dane: {
-      zrodlo: zrodlo.rodzaj === 'zasob_organizatora'
-        ? { rodzaj: 'zasob_organizatora', klucz: tekstLubDomyslny(zrodlo.klucz) }
+      zrodlo: zrodlo.rodzaj === 'zasob_organizatora' || zrodlo.rodzaj === 'zasob_uzytkownika'
+        ? { rodzaj: zrodlo.rodzaj, klucz: tekstLubDomyslny(zrodlo.klucz) }
         : { rodzaj: 'adres', adres: tekstLubDomyslny(zrodlo.adres) },
       tekstAlternatywny: tekstLubDomyslny(ustawienia.tekstAlternatywny),
       zachowajProporcje: ustawienia.zachowajProporcje !== false,
@@ -145,14 +182,94 @@ function normalizujBlokObrazu(dane: Record<string, unknown>): BlokObrazuSwobodny
 }
 
 export function normalizujBlokiSwobodneDokumentu(wartosc: unknown): BlokSwobodnyDokumentu[] {
-  if (!Array.isArray(wartosc)) return []
+  const lista = czyObiekt(wartosc) && Array.isArray(wartosc.bloki) ? wartosc.bloki : wartosc
+  if (!Array.isArray(lista)) return []
 
-  return wartosc.flatMap((blok) => {
+  return lista.flatMap((blok) => {
     if (!czyObiekt(blok)) return []
     if (blok.typ === 'tekst') return normalizujBlokTekstowy(blok) ?? []
     if (blok.typ === 'obraz') return normalizujBlokObrazu(blok) ?? []
     return []
   })
+}
+
+export function serializujKonfiguracjeSwobodnychBlokow(bloki: BlokSwobodnyDokumentu[]) {
+  const konfiguracja: KonfiguracjaSwobodnychBlokow = {
+    wersjaSchematu: WERSJA_SCHEMATU_SWOBODNYCH_BLOKOW,
+    bloki: normalizujBlokiSwobodneDokumentu(bloki),
+  }
+  return JSON.stringify(konfiguracja)
+}
+
+export function deserializujKonfiguracjeSwobodnychBlokow(tekst: string | null) {
+  if (!tekst?.trim()) return []
+  try {
+    return normalizujBlokiSwobodneDokumentu(JSON.parse(tekst) as unknown)
+  } catch {
+    return []
+  }
+}
+
+function ogranicz(wartosc: number, minimum: number, maksimum: number) {
+  return Math.min(Math.max(wartosc, minimum), maksimum)
+}
+
+function znajdzPrzyciagniecie(wartosci: number[], cele: number[], prog: number) {
+  let najlepsze: { roznica: number; cel: number } | null = null
+  for (const wartosc of wartosci) {
+    for (const cel of cele) {
+      const roznica = cel - wartosc
+      if (Math.abs(roznica) <= prog && (!najlepsze || Math.abs(roznica) < Math.abs(najlepsze.roznica))) najlepsze = { roznica, cel }
+    }
+  }
+  return najlepsze
+}
+
+export function ograniczBlokDoStrony(blok: BlokSwobodnyDokumentu): BlokSwobodnyDokumentu {
+  const szerokoscMm = ogranicz(blok.szerokoscMm, 4, SZEROKOSC_STRONY_A4_MM)
+  const wysokoscMm = ogranicz(blok.wysokoscMm, 4, WYSOKOSC_STRONY_A4_MM)
+  return {
+    ...blok,
+    szerokoscMm,
+    wysokoscMm,
+    xMm: ogranicz(blok.xMm, 0, SZEROKOSC_STRONY_A4_MM - szerokoscMm),
+    yMm: ogranicz(blok.yMm, 0, WYSOKOSC_STRONY_A4_MM - wysokoscMm),
+  }
+}
+
+export function przesunBlokSwobodny(blok: BlokSwobodnyDokumentu, przesuniecieX: number, przesuniecieY: number, progPrzyciaganiaMm = 2): WynikGeometriiBloku {
+  let wynik = ograniczBlokDoStrony({ ...blok, xMm: blok.xMm + przesuniecieX, yMm: blok.yMm + przesuniecieY })
+  const pionowe = [wynik.xMm, wynik.xMm + wynik.szerokoscMm / 2, wynik.xMm + wynik.szerokoscMm]
+  const poziome = [wynik.yMm, wynik.yMm + wynik.wysokoscMm / 2, wynik.yMm + wynik.wysokoscMm]
+  const przyciagniecieX = znajdzPrzyciagniecie(pionowe, [0, SZEROKOSC_STRONY_A4_MM / 2, SZEROKOSC_STRONY_A4_MM], progPrzyciaganiaMm)
+  const przyciagniecieY = znajdzPrzyciagniecie(poziome, [0, WYSOKOSC_STRONY_A4_MM / 2, WYSOKOSC_STRONY_A4_MM], progPrzyciaganiaMm)
+  if (przyciagniecieX) wynik = ograniczBlokDoStrony({ ...wynik, xMm: wynik.xMm + przyciagniecieX.roznica })
+  if (przyciagniecieY) wynik = ograniczBlokDoStrony({ ...wynik, yMm: wynik.yMm + przyciagniecieY.roznica })
+  return { blok: wynik, prowadnice: { pionowa: przyciagniecieX?.cel, pozioma: przyciagniecieY?.cel } }
+}
+
+export function zmienRozmiarBlokuSwobodnego(blok: BlokSwobodnyDokumentu, szerokoscMm: number, wysokoscMm: number, zachowajProporcje = false) {
+  const proporcja = blok.szerokoscMm / Math.max(blok.wysokoscMm, 1)
+  const wysokoscPoProporcji = zachowajProporcje ? szerokoscMm / proporcja : wysokoscMm
+  return ograniczBlokDoStrony({ ...blok, szerokoscMm, wysokoscMm: wysokoscPoProporcji })
+}
+
+export function duplikujBlokSwobodny(blok: BlokSwobodnyDokumentu, id: string): BlokSwobodnyDokumentu {
+  return ograniczBlokDoStrony({
+    ...blok,
+    id,
+    nazwa: `${blok.nazwa ?? (blok.typ === 'tekst' ? 'Tekst' : 'Obraz')} — kopia`,
+    pochodzenie: 'uzytkownik',
+    idBlokuSzablonu: undefined,
+    zablokowany: false,
+    xMm: blok.xMm + 4,
+    yMm: blok.yMm + 4,
+  })
+}
+
+export function przywrocBlokSzablonu(blok: BlokSwobodnyDokumentu, blokiSzablonu: BlokSwobodnyDokumentu[]) {
+  const idSzablonu = blok.idBlokuSzablonu ?? blok.id
+  return blokiSzablonu.find((domyslny) => domyslny.id === idSzablonu) ?? blok
 }
 
 export function czyBlokWidocznyNaStronie(blok: BlokSwobodnyDokumentu, numerStrony: number) {

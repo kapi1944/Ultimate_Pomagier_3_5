@@ -4,6 +4,7 @@ import {
   zapiszStanRejestruDokumentow,
   type StanRejestruDokumentow,
 } from '../dokumenty/rejestrDokumentow'
+import { KLUCZ_ZASOBOW_OBRAZOW_DOKUMENTU } from '../dokumenty/zasobyObrazowDokumentu'
 
 export type KategoriaBackupu = 'DOKUMENTY' | 'SZCZEGOLY_ORGANIZACYJNE' | 'PROGRAMY' | 'PULPIT_I_ZADANIA' | 'KARTOTEKI' | 'USTAWIENIA' | 'WSZYSTKO'
 export type RodzajKopiiLokalnej = 'AUTOMATYCZNA' | 'PRZED_OPERACJA'
@@ -33,6 +34,7 @@ const kluczeDokumentow = [
   'ultimate-pomagier.listy-obecnosci.szkic', 'ultimate-pomagier.listy-obecnosci.szkic.dokumentId', 'ultimate-pomagier.ankiety.szkic', 'ultimate-pomagier.ankiety.szkic.dokumentId',
   'ultimate-pomagier.karta-na-drzwi.szkic', 'ultimate-pomagier.karta-na-drzwi.szkic.dokumentId', 'ultimate-pomagier.dyplomy.generator-pawla', 'ultimate-pomagier.dyplomy.generator-pawla.dokumentId',
   'ultimate-pomagier.log-wymuszen-eksportu',
+  KLUCZ_ZASOBOW_OBRAZOW_DOKUMENTU,
 ]
 const kluczeSzczegolow = ['ultimatePomagier.szczegolyOrganizacyjne.aktualnaWersja', 'ultimatePomagier.szczegolyOrganizacyjne.opublikowane', 'ultimatePomagier.szczegolyOrganizacyjne.autosave', 'ultimatePomagier.szczegolyOrganizacyjne.historia', 'ultimatePomagier.szczegolyOrganizacyjne.kopieRobocze']
 const kluczeProgramow = ['ultimate-pomagier-program-szkolenia-roboczy', 'ultimatePomagier.programySzkolen.autosave.v1', 'ultimatePomagier.programySzkolen.aktywnaKopiaRobocza']

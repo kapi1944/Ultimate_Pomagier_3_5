@@ -66,6 +66,88 @@
   resize: vertical;
 }
 
+.generator-ankiet__aktywny-preset {
+  margin: 0;
+  padding: 8px 10px;
+  border-left: 3px solid var(--ui-akcent);
+  background: color-mix(in srgb, var(--ui-akcent) 8%, transparent);
+  color: var(--ui-tekst-drugi);
+}
+
+.generator-ankiet__ochrona-presets p {
+  margin-top: 0;
+  color: var(--ui-tekst-drugi);
+}
+
+.generator-ankiet__edytor-sekcji,
+.generator-ankiet__karta-sekcji {
+  display: grid;
+  gap: 10px;
+}
+
+.generator-ankiet__karta-sekcji {
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--ui-tekst-drugi) 20%, transparent);
+  border-radius: 7px;
+  background: var(--ui-powierzchnia);
+}
+
+.generator-ankiet__karta-sekcji > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.generator-ankiet__widocznosc-sekcji {
+  display: flex !important;
+  align-items: center;
+  gap: 7px;
+  font-weight: 700;
+}
+
+.generator-ankiet__widocznosc-sekcji input {
+  width: auto;
+}
+
+.generator-ankiet__kolejnosc-sekcji {
+  display: flex;
+  gap: 4px;
+}
+
+.generator-ankiet__kolejnosc-sekcji button {
+  min-width: 30px;
+  min-height: 30px;
+}
+
+.generator-ankiet__pytanie {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  padding: 7px;
+}
+
+.generator-ankiet__pytanie > div:nth-child(2) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(145px, .42fr);
+  gap: 6px;
+}
+
+.generator-ankiet__uchwyt-pytania {
+  color: var(--ui-tekst-drugi);
+  cursor: grab;
+  font-weight: 700;
+}
+
+.generator-ankiet__akcje-pytania {
+  display: flex;
+  gap: 4px;
+}
+
+.generator-ankiet__akcja-usun {
+  border-color: color-mix(in srgb, #b42318 25%, transparent) !important;
+  color: color-mix(in srgb, #b42318 70%, var(--ui-tekst)) !important;
+}
+
 .generator-ankiet__akcje-pytania {
   display: grid;
   gap: 5px;
@@ -426,6 +508,229 @@
   font-size: .68em;
 }
 
+.ankieta-a4__opis-email {
+  margin: 0 0 1em;
+  padding: .35em;
+  background: #e6edf5;
+}
+
+.ankieta-a4--nowoczesna {
+  padding: 12mm 15mm 14mm;
+  font-size: clamp(4.6px, 1.22cqw, 9.7px);
+  color: #20242a;
+}
+
+.ankieta-nowoczesna__naglowek {
+  height: 21mm;
+  border-bottom: .7mm solid #565b62;
+}
+
+.ankieta-nowoczesna__naglowek--semper {
+  border-bottom-color: #b14b47;
+}
+
+.ankieta-nowoczesna__naglowek--iist {
+  border-bottom-color: #315777;
+}
+
+.ankieta-nowoczesna__tresc {
+  display: grid;
+  gap: 2.2em;
+  margin-top: 5mm;
+  padding-bottom: 12mm;
+}
+
+.ankieta-nowoczesna__dane {
+  padding: 1.5em 1.7em;
+  border: 1px solid #c9cdd1;
+  border-left: .7mm solid #565b62;
+}
+
+.ankieta-nowoczesna__tytul-szkolenia {
+  display: grid;
+  grid-template-columns: 18% minmax(0, 1fr);
+  gap: 1em;
+  padding-bottom: 1em;
+  border-bottom: 1px solid #d9dcdf;
+}
+
+.ankieta-nowoczesna__dane span,
+.ankieta-nowoczesna__dane dt {
+  color: #61666c;
+  font-size: .9em;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.ankieta-nowoczesna__dane strong {
+  overflow-wrap: anywhere;
+  font-size: 1.18em;
+}
+
+.ankieta-nowoczesna__dane dl {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1.4fr;
+  gap: 1.2em;
+  margin: 1em 0 0;
+}
+
+.ankieta-nowoczesna__dane dl > div {
+  min-width: 0;
+}
+
+.ankieta-nowoczesna__dane dt,
+.ankieta-nowoczesna__dane dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.ankieta-nowoczesna__dane dd {
+  margin-top: .4em;
+  line-height: 1.3;
+}
+
+.ankieta-nowoczesna__sekcja {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.ankieta-nowoczesna__sekcja > header {
+  margin-bottom: 1em;
+  padding-bottom: .65em;
+  border-bottom: 1px solid #aeb2b6;
+}
+
+.ankieta-nowoczesna__sekcja > header h2,
+.ankieta-nowoczesna__sekcja > header p {
+  margin: 0;
+}
+
+.ankieta-nowoczesna__sekcja > header h2 {
+  font-size: 1.35em;
+  letter-spacing: .02em;
+}
+
+.ankieta-nowoczesna__sekcja > header p {
+  margin-top: .35em;
+  color: #60656a;
+  font-size: .95em;
+}
+
+.ankieta-nowoczesna__sekcja--ocena table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.ankieta-nowoczesna__sekcja--ocena th,
+.ankieta-nowoczesna__sekcja--ocena td {
+  border-bottom: 1px solid #c4c7ca;
+}
+
+.ankieta-nowoczesna__sekcja--ocena th:first-child,
+.ankieta-nowoczesna__sekcja--ocena td:first-child {
+  width: 48%;
+  padding: .85em .7em;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.ankieta-nowoczesna__sekcja--ocena th:not(:first-child),
+.ankieta-nowoczesna__sekcja--ocena td:not(:first-child) {
+  width: 13%;
+  padding: .65em .2em;
+  text-align: center;
+}
+
+.ankieta-nowoczesna__sekcja--ocena th {
+  background: #f4f5f5;
+  font-size: .86em;
+  font-weight: 600;
+}
+
+.ankieta-nowoczesna__sekcja--ocena th span {
+  display: block;
+}
+
+.ankieta-nowoczesna__checkbox,
+.ankieta-nowoczesna__tak-nie i {
+  display: inline-block;
+  width: 2.25em;
+  aspect-ratio: 1;
+  box-sizing: border-box;
+  border: 1.25px solid #4b4f53;
+  background: #fff;
+}
+
+.ankieta-nowoczesna__pytanie {
+  margin-top: 1.4em;
+  break-inside: avoid;
+}
+
+.ankieta-nowoczesna__pytanie > p {
+  margin: 0 0 .5em;
+  font-size: 1.05em;
+}
+
+.ankieta-nowoczesna__linie {
+  display: grid;
+  gap: 1.8em;
+}
+
+.ankieta-nowoczesna__linie span,
+.ankieta-nowoczesna__jedna-linia span {
+  display: block;
+  height: 1.2em;
+  border-bottom: 1px solid #6f7478;
+}
+
+.ankieta-nowoczesna__jedna-linia {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 1.2em;
+  align-items: end;
+  margin-top: 1.5em;
+  padding: 1.2em 1.4em;
+  border: 1px solid #c4c7ca;
+}
+
+.ankieta-nowoczesna__tak-nie {
+  display: flex;
+  gap: 4.5em;
+  margin: 1em 0 1.4em;
+}
+
+.ankieta-nowoczesna__tak-nie span {
+  display: flex;
+  align-items: center;
+  gap: 1em;
+  white-space: nowrap;
+}
+
+.ankieta-nowoczesna__sekcja--uwagi {
+  margin-top: .8em;
+  padding: 1.4em;
+  border: 1px solid #aeb2b6;
+  border-top: .7mm solid #565b62;
+}
+
+.ankieta-nowoczesna__stopka {
+  position: absolute;
+  right: 15mm;
+  bottom: 6mm;
+  left: 15mm;
+  display: flex;
+  justify-content: space-between;
+  padding-top: 1.2em;
+  border-top: 1px solid #d0d3d5;
+  color: #666b70;
+  font-size: .8em;
+}
+
+.ankieta-nowoczesna__stopka strong {
+  font-weight: 600;
+}
+
 @container (max-width: 650px) {
   .generator-ankiet__siatka-pol {
     grid-template-columns: 1fr;
@@ -442,7 +747,16 @@
   }
 
   .generator-ankiet__akcje-pytania {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .generator-ankiet__pytanie,
+  .generator-ankiet__pytanie > div:nth-child(2) {
+    grid-template-columns: 1fr;
+  }
+
+  .generator-ankiet__uchwyt-pytania {
+    display: none;
   }
 }
 

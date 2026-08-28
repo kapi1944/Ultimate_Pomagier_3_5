@@ -1,0 +1,21 @@
+.edytor-blokow__warstwa { position: absolute; inset: 0; user-select: none; }
+.edytor-blokow__ramka { position: absolute; border: 1px solid transparent; cursor: move; touch-action: none; box-sizing: border-box; }
+.edytor-blokow__ramka:hover { border-color: rgba(37, 99, 235, .45); }
+.edytor-blokow__ramka--zaznaczona { border: 1.5px solid #2563eb; box-shadow: 0 0 0 1px #fff; }
+.edytor-blokow__ramka--zablokowana { cursor: not-allowed; }
+.edytor-blokow__uchwyt { position: absolute; right: -4px; bottom: -4px; width: 9px; height: 9px; border: 1px solid #fff; background: #2563eb; cursor: nwse-resize; }
+.edytor-blokow__prowadnica { position: absolute; z-index: 4000; pointer-events: none; background: #f43f5e; }
+.edytor-blokow__prowadnica--pionowa { top: 0; bottom: 0; width: .2mm; }
+.edytor-blokow__prowadnica--pozioma { left: 0; right: 0; height: .2mm; }
+.edytor-blokow__panel { display: grid; gap: .75rem; }
+.edytor-blokow__panel h3 { margin: 0; }
+.edytor-blokow__panel label { display: grid; gap: .25rem; font-size: .82rem; }
+.edytor-blokow__panel input, .edytor-blokow__panel select, .edytor-blokow__panel textarea { width: 100%; box-sizing: border-box; }
+.edytor-blokow__pasek-akcji { display: flex; flex-wrap: wrap; gap: .45rem; }
+.edytor-blokow__przelacznik, .edytor-blokow__przelaczniki label { display: flex !important; align-items: center; gap: .4rem; }
+.edytor-blokow__przelacznik input, .edytor-blokow__przelaczniki input { width: auto; }
+.edytor-blokow__wlasciwosci { display: grid; gap: .7rem; }
+.edytor-blokow__siatka-liczb { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .55rem; }
+.edytor-blokow__przelaczniki { display: flex; flex-wrap: wrap; gap: .65rem; }
+.edytor-blokow__pole-pliku { display: none; }
+@media print { .edytor-blokow__ramka, .edytor-blokow__prowadnica { display: none !important; } }
