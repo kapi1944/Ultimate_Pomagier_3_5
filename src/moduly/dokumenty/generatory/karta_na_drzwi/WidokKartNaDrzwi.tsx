@@ -1,62 +1,15 @@
-import ProstyGeneratorDokumentu from '../../wspolne/ProstyGeneratorDokumentu'
-
-const tekstPrzykladowy = `Tytuł szkolenia: Skuteczna komunikacja w zespole
-Data: 2026-07-15
-Miejsce: Sala szkoleniowa A
-Ekspert merytoryczny: Jan Nowak
-Opiekun szkolenia: Anna Kowalska
-Telefon opiekuna: +48 501 234 567
-Marka: SEMPER
-QR: stały obraz do wymiany`
-
-function pobierzWartosc(daneWejsciowe: string, etykieta: string) {
-  const wiersz = daneWejsciowe
-    .split('\n')
-    .find((linia) => linia.toLowerCase().startsWith(`${etykieta.toLowerCase()}:`))
-
-  return wiersz?.split(':').slice(1).join(':').trim() || ''
-}
-
-function generujDokument(daneWejsciowe: string) {
-  const tytulSzkolenia = pobierzWartosc(daneWejsciowe, 'Tytuł szkolenia') || 'Tytuł szkolenia'
-  const data = pobierzWartosc(daneWejsciowe, 'Data') || 'Data'
-  const miejsce = pobierzWartosc(daneWejsciowe, 'Miejsce') || 'Miejsce'
-  const ekspert = pobierzWartosc(daneWejsciowe, 'Ekspert merytoryczny') || 'Ekspert merytoryczny'
-  const opiekun = pobierzWartosc(daneWejsciowe, 'Opiekun szkolenia') || 'Opiekun szkolenia'
-  const telefon = pobierzWartosc(daneWejsciowe, 'Telefon opiekuna') || 'Telefon opiekuna'
-  const marka = pobierzWartosc(daneWejsciowe, 'Marka') || 'SEMPER'
-
-  return `${marka}
-
-==============================================
-${tytulSzkolenia}
-==============================================
-
-Data: ${data}
-Miejsce: ${miejsce}
-
-Ekspert merytoryczny:
-${ekspert}
-
-Kontakt do opiekuna szkolenia:
-${opiekun}
-${telefon}
-
-QR / grafika dekoracyjna:
-do podmiany w szablonie`
-}
-
-export default function WidokKartNaDrzwi() {
-  return (
-    <ProstyGeneratorDokumentu
-      tytul="Karta na drzwi"
-      opis="Generator karty na drzwi dla szkolenia zamkniętego."
-      etykietaDanychWejsciowych="Dane szkolenia"
-      tekstPrzykladowy={tekstPrzykladowy}
-      kluczSzkicu="ultimate-pomagier.karta-na-drzwi.szkic"
-      typDokumentu="KARTA_NA_DRZWI"
-      generatorId="karta_na_drzwi"
-      generujDokument={generujDokument}
-    />
-  )
-}
+import { useCallback,useEffect,useRef,useState } from 'react'
+import { useKontekstUzytkownika } from '../../../../aplikacja/logowanie/useKontekstUzytkownika'
+import AkcjeEksportuPdf from '../../../../wspolne/dokumenty/AkcjeEksportuPdf'
+import { PanelEdycjiSwobodnychBlokow } from '../../../../wspolne/dokumenty/EdytorSwobodnychBlokow'
+import { zbudujNazweEksportowanegoDokumentu } from '../../../../wspolne/dokumenty/nazwyDokumentow'
+import { zapiszDokumentRoboczyGeneratora } from '../../../../wspolne/dokumenty/zapisDokumentuGeneratora'
+import { pobierzMapeZasobowObrazowDokumentu,zapiszZasobObrazuDokumentu } from '../../../../wspolne/dokumenty/zasobyObrazowDokumentu'
+import UkladGeneratoraDokumentu,{ObszarZPanelemGeneratora,PanelBocznyGeneratora,PanelGeneratoraDokumentu,PasekAkcjiGeneratora,PrzyciskPaneluGeneratora,UkladFormularzaIPodgladu} from '../../wspolne/UkladGeneratoraDokumentu'
+import StatusZapisuDokumentu from '../../wspolne/StatusZapisuDokumentu'
+import { useOchronaNiezapisanegoDokumentu,useStanDokumentu } from '../../wspolne/useStanDokumentu'
+import RendererKartyNaDrzwi from './RendererKartyNaDrzwi'
+import { deserializujDaneKartyNaDrzwi,pobierzDaneKartyNaDrzwi,serializujDaneKartyNaDrzwi,utworzBlokiSzablonuKartyNaDrzwi,utworzDomyslneDaneKartyNaDrzwi,type DaneKartyNaDrzwi } from './modelKartyNaDrzwi'
+import './widokKartNaDrzwi.css'
+const kluczSzkicu='ultimate-pomagier.karta-na-drzwi.szkic';const kluczId=`${kluczSzkicu}.dokumentId`
+export default function WidokKartNaDrzwi(){const {zalogowanyUzytkownik}=useKontekstUzytkownika();const [dane,ustawDane]=useState(()=>deserializujDaneKartyNaDrzwi(localStorage.getItem(kluczSzkicu)));const [idDokumentu,ustawId]=useState<string|null>(()=>localStorage.getItem(kluczId));const [zaznaczony,ustawZaznaczony]=useState<string|null>(null);const [tryb,ustawTryb]=useState(false);const [zasoby,ustawZasoby]=useState(()=>pobierzMapeZasobowObrazowDokumentu());const [komunikat,ustawKomunikat]=useState<string|null>(null);const podglad=useRef<HTMLElement>(null);const zapisz=useCallback((wartosc:DaneKartyNaDrzwi)=>{const dokument=zapiszDokumentRoboczyGeneratora({id:idDokumentu,typ:'KARTA_NA_DRZWI',generatorId:'karta_na_drzwi',tytul:`Karta na drzwi — ${pobierzDaneKartyNaDrzwi(wartosc.daneWejsciowe).tytulSzkolenia}`,daneDokumentu:{tekst:serializujDaneKartyNaDrzwi(wartosc),kartaNaDrzwi:wartosc},ustawieniaDokumentu:{orientacja:wartosc.orientacja,blokiSwobodne:wartosc.blokiSwobodne},autorId:zalogowanyUzytkownik?.id,wlascicielId:zalogowanyUzytkownik?.id});if(!dokument)throw new Error('Nie udało się zapisać Karty na drzwi.');ustawId(dokument.id);localStorage.setItem(kluczId,dokument.id)},[idDokumentu,zalogowanyUzytkownik?.id]);const stan=useStanDokumentu({dane,zapiszAutomatycznie:zapisz});useEffect(()=>localStorage.setItem(kluczSzkicu,serializujDaneKartyNaDrzwi(dane)),[dane]);useOchronaNiezapisanegoDokumentu(stan.czyNiezapisaneZmiany,()=>{void stan.zapiszTeraz()});const nazwa={typDokumentu:'KARTA_NA_DRZWI' as const,...pobierzDaneKartyNaDrzwi(dane.daneWejsciowe),dataUtworzenia:new Date()};async function dodajObraz(plik:File){const klucz=await zapiszZasobObrazuDokumentu(plik);ustawZasoby(pobierzMapeZasobowObrazowDokumentu());return klucz}const akcje=<PasekAkcjiGeneratora><PrzyciskPaneluGeneratora>Edytuj układ</PrzyciskPaneluGeneratora><StatusZapisuDokumentu stan={stan.stanZapisu}/><button type="button" onClick={()=>void stan.zapiszTeraz().then(ok=>ustawKomunikat(ok?'Kartę zapisano w rejestrze dokumentów.':'Nie udało się zapisać Karty.'))}>Zapisz kartę</button><AkcjeEksportuPdf daneNazwyEksportu={nazwa} nazwaPliku={zbudujNazweEksportowanegoDokumentu(nazwa)} obszarDokumentu={podglad}/><button type="button" onClick={()=>{const nowa=utworzDomyslneDaneKartyNaDrzwi();ustawDane(nowa);ustawId(null);localStorage.removeItem(kluczId);stan.oznaczJakoZapisany(nowa)}}>Nowa karta</button></PasekAkcjiGeneratora>;return <ObszarZPanelemGeneratora idPanelu="panel-karty-na-drzwi" kluczPrzypiecia="ultimate-pomagier.panel-generatora.karta_na_drzwi.przypiety" kluczWysuwania="ultimate-pomagier.panel-generatora.karta_na_drzwi.wysuwanie" tytulPanelu="Edytor układu Karty"><UkladGeneratoraDokumentu tytul="Karta na drzwi" opis="Karta szkoleniowa z edytowalnym układem." akcje={akcje} komunikat={komunikat}><PanelBocznyGeneratora><PanelEdycjiSwobodnychBlokow bloki={dane.blokiSwobodne} blokiSzablonu={utworzBlokiSzablonuKartyNaDrzwi(dane.orientacja)} zaznaczonyBlokId={zaznaczony} trybEdycjiSzablonu={tryb} onZmienTrybEdycjiSzablonu={ustawTryb} onZmienBloki={blokiSwobodne=>ustawDane(obecne=>({...obecne,blokiSwobodne}))} onDodajObraz={dodajObraz} liczbaStron={1}/></PanelBocznyGeneratora><UkladFormularzaIPodgladu><PanelGeneratoraDokumentu tytul="Dane i orientacja" wariant="edycja"><label>Orientacja<select value={dane.orientacja} onChange={e=>ustawDane(o=>({...o,orientacja:e.target.value==='pionowa'?'pionowa':'pozioma'}))}><option value="pozioma">Pozioma</option><option value="pionowa">Pionowa</option></select></label><label>Dane szkolenia<textarea value={dane.daneWejsciowe} onChange={e=>ustawDane(o=>({...o,daneWejsciowe:e.target.value}))}/></label></PanelGeneratoraDokumentu><PanelGeneratoraDokumentu ref={podglad} tytul="Podgląd Karty" wariant="podglad"><RendererKartyNaDrzwi dane={dane} zasobyObrazow={zasoby} zaznaczonyBlokId={zaznaczony} trybEdycjiSzablonu={tryb} onZaznaczBlok={ustawZaznaczony} onZmienBlok={blok=>ustawDane(o=>({...o,blokiSwobodne:o.blokiSwobodne.map(x=>x.id===blok.id?blok:x)}))}/></PanelGeneratoraDokumentu></UkladFormularzaIPodgladu></UkladGeneratoraDokumentu></ObszarZPanelemGeneratora>}
