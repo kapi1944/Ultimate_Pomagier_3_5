@@ -1,0 +1,280 @@
+.generator-list-obecnosci {
+  container-type: inline-size;
+}
+
+.generator-list-obecnosci__formularz,
+.generator-list-obecnosci__zawartosc-sekcji,
+.generator-list-obecnosci__daty {
+  display: grid;
+  gap: 12px;
+}
+
+.generator-list-obecnosci__sekcja {
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--ui-tekst-drugi) 24%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--ui-pole) 45%, transparent);
+}
+
+.generator-list-obecnosci__sekcja > summary {
+  padding: 12px 14px;
+  color: var(--ui-tekst);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.generator-list-obecnosci__sekcja[open] > summary {
+  border-bottom: 1px solid color-mix(in srgb, var(--ui-tekst-drugi) 20%, transparent);
+}
+
+.generator-list-obecnosci__zawartosc-sekcji {
+  padding: 0 14px 14px;
+}
+
+.generator-list-obecnosci__siatka-pol {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.generator-list-obecnosci__siatka-pol > label.generator-list-obecnosci__pole-szerokie {
+  grid-column: 1 / -1;
+}
+
+.generator-list-obecnosci__formularz label {
+  display: grid;
+  gap: 6px;
+  color: var(--ui-tekst);
+  font-weight: 600;
+}
+
+.generator-list-obecnosci__formularz input,
+.generator-list-obecnosci__formularz select,
+.generator-list-obecnosci__formularz textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.generator-list-obecnosci__tytul-dokumentu {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.generator-list-obecnosci__tytul-dokumentu input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.generator-list-obecnosci__formularz textarea {
+  resize: vertical;
+  font-family: inherit;
+}
+
+.generator-list-obecnosci__daty > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px;
+}
+
+.generator-list-obecnosci__przycisk-pomocniczy {
+  justify-self: start;
+  min-height: 32px;
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 35%, transparent);
+  border-radius: 6px;
+  padding: 5px 8px;
+  background: var(--ui-panel);
+  color: var(--ui-tekst);
+  cursor: pointer;
+  font: inherit;
+}
+
+.generator-list-obecnosci__opis {
+  margin: 0;
+  color: var(--ui-tekst-drugi);
+  line-height: 1.5;
+}
+
+.generator-list-obecnosci__podglad {
+  overflow: hidden;
+}
+
+.lista-obecnosci-a4__dokument {
+  display: grid;
+  justify-items: center;
+  gap: 24px;
+  width: 100%;
+  min-width: 0;
+}
+
+.lista-obecnosci-a4 {
+  width: min(100%, 210mm);
+  aspect-ratio: 210 / 297;
+  box-sizing: border-box;
+  padding: 4.76%;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 8px 28px rgb(15 23 42 / 16%);
+  color: #111;
+  container-type: inline-size;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: clamp(5px, 1.58cqw, 9pt);
+}
+
+.lista-obecnosci-a4,
+.lista-obecnosci-a4 * {
+  color: #111;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+.lista-obecnosci-a4__naglowek {
+  display: grid;
+  justify-items: center;
+  min-height: 42.1cqw;
+  text-align: center;
+}
+
+.lista-obecnosci-a4__logo {
+  justify-self: start;
+  width: 20%;
+  height: 8.95cqw;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.generator-list-obecnosci .lista-obecnosci-a4__naglowek h1 {
+  margin: 3.68cqw 0 1.31cqw;
+  font-size: clamp(8px, 2.63cqw, 15pt);
+  text-decoration: underline;
+}
+
+.lista-obecnosci-a4__naglowek h2 {
+  max-width: 90.5%;
+  margin: 0;
+  color: #c80000;
+  font-size: clamp(8px, 2.63cqw, 15pt);
+  line-height: 1.12;
+  overflow-wrap: anywhere;
+}
+
+.lista-obecnosci-a4__naglowek p {
+  align-self: end;
+  margin: 1.58cqw 0 4.74cqw;
+  font-size: clamp(7px, 2.1cqw, 12pt);
+}
+
+.generator-list-obecnosci .lista-obecnosci-a4__naglowek p {
+  color: #111;
+}
+
+.lista-obecnosci-a4__tabela {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: inherit;
+}
+
+.lista-obecnosci-a4__kolumna-lp {
+  width: 5.4%;
+}
+
+.lista-obecnosci-a4__kolumna-uczestnika {
+  width: 50.2%;
+}
+
+.lista-obecnosci-a4__tabela th,
+.lista-obecnosci-a4__tabela td {
+  height: 3.34cqw;
+  box-sizing: border-box;
+  border: max(1px, .105cqw) solid #c8c8c8;
+  padding: .57cqw 1.47cqw;
+  font-weight: 400;
+  line-height: 1.15;
+}
+
+.lista-obecnosci-a4__tabela th {
+  padding: .42cqw .78cqw;
+  text-align: center;
+}
+
+.lista-obecnosci-a4__tabela tbody tr:nth-child(even) {
+  background: #f0f0f0;
+}
+
+.lista-obecnosci-a4__tabela td:first-child {
+  padding-inline: .27cqw;
+  text-align: center;
+}
+
+.lista-obecnosci-a4__tabela td:nth-child(2) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@container (max-width: 650px) {
+  .generator-list-obecnosci__siatka-pol {
+    grid-template-columns: 1fr;
+  }
+
+  .generator-list-obecnosci__siatka-pol > label.generator-list-obecnosci__pole-szerokie {
+    grid-column: auto;
+  }
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+
+  body:has(.lista-obecnosci-a4) * {
+    visibility: hidden;
+  }
+
+  .generator-list-obecnosci__podglad,
+  .generator-list-obecnosci__podglad * {
+    visibility: visible;
+  }
+
+  .generator-list-obecnosci__podglad {
+    position: absolute;
+    inset: 0;
+    width: 210mm;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .generator-list-obecnosci__podglad > h2 {
+    display: none;
+  }
+
+  .lista-obecnosci-a4__dokument {
+    display: block;
+  }
+
+  .lista-obecnosci-a4 {
+    width: 210mm;
+    height: 297mm;
+    aspect-ratio: auto;
+    margin: 0;
+    box-shadow: none;
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .lista-obecnosci-a4:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .generator-list-obecnosci__sekcja {
+    scroll-behavior: auto;
+  }
+}

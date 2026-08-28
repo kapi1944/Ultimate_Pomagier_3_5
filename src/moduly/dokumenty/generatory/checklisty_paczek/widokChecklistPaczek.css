@@ -155,40 +155,46 @@
 .checklista-paczki__finalizacja { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .checklista-paczki__finalizacja h2, .checklista-paczki__finalizacja p { width: 100%; }
 
-.checklista-paczki__wydruk { width: min(100%, 210mm); box-sizing: border-box; margin: 0 auto; padding: 11mm 10mm; background: #fff; color: #111; font-family: Arial, sans-serif; font-size: 10px; line-height: 1.28; }
+.checklista-paczki__wydruk { width: min(100%, 210mm); box-sizing: border-box; margin: 0 auto; padding: 10mm 9mm; background: #fff; color: #111; font-family: Arial, sans-serif; font-size: 9.5px; line-height: 1.25; }
 .checklista-paczki .checklista-paczki__wydruk, .checklista-paczki .checklista-paczki__wydruk * { color: #111; }
 .checklista-paczki__wydruk h2, .checklista-paczki__wydruk h3, .checklista-paczki__wydruk p { margin: 0; }
-.checklista-paczki__wydruk-naglowek { display: flex; justify-content: space-between; gap: 12px; align-items: start; padding-bottom: 7px; border-bottom: 2px solid #111; }
-.checklista-paczki__wydruk-naglowek h2 { font-size: 15px; letter-spacing: .02em; }
-.checklista-paczki__wydruk-naglowek p { text-align: right; font-size: 8.5px; }
-.checklista-paczki__wydruk-dane { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin-top: 9px; border: 1px solid #222; }
-.checklista-paczki__wydruk-dane > div:first-child { border-right: 1px solid #222; }
-.checklista-paczki__wydruk-dane p { min-height: 20px; padding: 4px 5px; border-bottom: 1px solid #222; }
-.checklista-paczki__wydruk-dane p:last-child { border-bottom: 0; }
-.checklista-paczki__wydruk-logotypy { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 9px; align-items: center; margin-top: 8px; padding: 5px; border: 1px solid #222; }
-.checklista-paczki__wydruk-logotypy > div { display: flex; flex-wrap: wrap; gap: 5px; }
-.checklista-paczki__wydruk-logotypy img { max-width: 66px; max-height: 28px; object-fit: contain; }
-.checklista-paczki__wydruk table { width: 100%; margin-top: 8px; border-collapse: collapse; font-size: 8.7px; }
-.checklista-paczki__wydruk th, .checklista-paczki__wydruk td { min-height: 20px; padding: 4px; border: 1px solid #222; vertical-align: top; text-align: left; overflow-wrap: anywhere; }
-.checklista-paczki__wydruk thead tr:first-child th { background: #e9e9e9; font-size: 9px; text-transform: uppercase; }
-.checklista-paczki__wydruk thead tr:nth-child(2) th { background: #f5f5f5; }
-.checklista-paczki__wydruk th:nth-child(1), .checklista-paczki__wydruk td:nth-child(1) { width: 35%; }
-.checklista-paczki__wydruk th:nth-child(2), .checklista-paczki__wydruk td:nth-child(2) { width: 10%; text-align: center; }
-.checklista-paczki__wydruk th:nth-child(3), .checklista-paczki__wydruk td:nth-child(3) { width: 16%; }
-.checklista-paczki__wydruk th:nth-child(4), .checklista-paczki__wydruk td:nth-child(4) { width: 19%; }
-.checklista-paczki__wydruk th:nth-child(5), .checklista-paczki__wydruk td:nth-child(5) { width: 20%; }
+.checklista-paczki__wydruk-tytul { margin-bottom: 8px !important; text-align: center; font-size: 16px; font-weight: 800; }
+.checklista-paczki__wydruk-tytul span { padding: 1px 2px; background: #fff200; }
+.checklista-paczki__wydruk table { width: 100%; margin-top: 7px; table-layout: fixed; border-collapse: collapse; font-size: 8.5px; }
+.checklista-paczki__wydruk th, .checklista-paczki__wydruk td { min-height: 18px; padding: 3px 4px; border: 1px solid #111; vertical-align: middle; text-align: left; overflow-wrap: anywhere; }
+.checklista-paczki__wydruk-tabela-danych th { width: 19%; background: #f2f2f2; }
+.checklista-paczki__wydruk-tabela-danych td:nth-child(2) { width: 43%; }
+.checklista-paczki__wydruk-tabela-danych td:nth-child(4) { width: 19%; }
+.checklista-paczki__wydruk-tabela-logotypow th { width: 20%; background: #f2f2f2; text-align: center; }
+.checklista-paczki__wydruk-tabela-logotypow td { height: 26px; text-align: center; }
+.checklista-paczki__wydruk-tabela-logotypow td > div { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; }
+.checklista-paczki__wydruk-tabela-logotypow img { max-width: 66px; max-height: 25px; object-fit: contain; }
+.checklista-paczki__wydruk-tabela-materialow thead th { background: #f2f2f2; text-align: center; font-weight: 700; }
+.checklista-paczki__wydruk-tabela-materialow thead th:nth-child(1) { width: 4.5%; }
+.checklista-paczki__wydruk-tabela-materialow thead th:nth-child(2) { width: 21%; }
+.checklista-paczki__wydruk-tabela-materialow thead th:nth-child(3) { width: 7%; }
+.checklista-paczki__wydruk-tabela-materialow thead th:nth-child(4) { width: 8%; }
+.checklista-paczki__wydruk-tabela-materialow thead th:nth-child(5) { width: 39%; }
+.checklista-paczki__wydruk-tabela-materialow thead th:nth-child(6) { width: 20.5%; }
+.checklista-paczki__wydruk-ilosc { text-align: center !important; }
+.checklista-paczki__wydruk-kategoria { padding: 2px !important; text-align: center !important; }
+.checklista-paczki__wydruk-kategoria span { display: inline-block; writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; }
 .checklista-paczki__wydruk-tabela--materialy th, .checklista-paczki__wydruk-tabela--materialy td { background: #dceaf7; }
 .checklista-paczki__wydruk-tabela--teczki th, .checklista-paczki__wydruk-tabela--teczki td { background: #fff1c9; }
-.checklista-paczki__wydruk-tabela--pakiet-crm th, .checklista-paczki__wydruk-tabela--pakiet-crm td { background: var(--ui-tekst-drugi); }
+.checklista-paczki__wydruk-tabela--pakiet-crm th, .checklista-paczki__wydruk-tabela--pakiet-crm td { background: #e2efd8; }
 .checklista-paczki__wydruk-tabela--gadzety th, .checklista-paczki__wydruk-tabela--gadzety td { background: #f9e1d0; }
 .checklista-paczki__wydruk-tabela--inne th, .checklista-paczki__wydruk-tabela--inne td { background: #f7cfb2; }
-.checklista-paczki__wydruk-sklad-teczki { margin: 2px 0 0; padding-left: 14px; }
+.checklista-paczki__wydruk-pozycja-podrzedna { padding-left: 12px !important; }
+.checklista-paczki__wydruk-pozycja-podrzedna::before { content: '- '; }
+.checklista-paczki__wydruk-pozycja-kursywa { font-style: italic; }
+.checklista-paczki__wydruk-sklad-teczki { margin: 2px 0 0; padding-left: 8px; list-style: none; }
+.checklista-paczki__wydruk-sklad-teczki li::before { content: '- '; }
 .checklista-paczki__wydruk-sklad-teczki li { margin: 0; }
-.checklista-paczki__wydruk-uwagi, .checklista-paczki__wydruk-wysylka { margin-top: 8px; padding: 6px; border: 1px solid #222; }
-.checklista-paczki__wydruk-uwagi h3, .checklista-paczki__wydruk-wysylka h3 { margin-bottom: 4px; font-size: 9.5px; text-transform: uppercase; }
-.checklista-paczki__wydruk-uwagi p, .checklista-paczki__wydruk-wysylka p { padding-block: 2px; }
-.checklista-paczki__wydruk-tabela-wysylki { margin-top: 6px !important; }
-.checklista-paczki__wydruk-tabela-wysylki th, .checklista-paczki__wydruk-tabela-wysylki td { width: 25% !important; }
+.checklista-paczki__wydruk-tabela-szczegolow th { width: 24%; background: #f2f2f2; }
+.checklista-paczki__wydruk-tabela-szczegolow tr:first-child td { height: 54px; }
+.checklista-paczki__wydruk-tabela-szczegolow tr:nth-child(2) td { height: 42px; }
+.checklista-paczki__wydruk-tabela-szczegolow p { padding-block: 1px; }
+.checklista-paczki__wydruk-tabela-wysylki th, .checklista-paczki__wydruk-tabela-wysylki td { width: 25%; }
 .checklista-paczki__wydruk-tabela-wysylki th { background: #f5f5f5; }
 .checklista-paczki__wydruk-podpis-pakujacego { display: block; min-height: 14px; border-bottom: 1px solid #111; }
 
@@ -219,7 +225,7 @@
   body * { visibility: hidden; }
   #wydruk-checklisty, #wydruk-checklisty * { visibility: visible; }
   #wydruk-checklisty { position: absolute; inset: 0; width: 100%; margin: 0; padding: 0; }
-  #wydruk-checklisty .checklista-paczki__wydruk { width: 100%; margin: 0; padding: 0; font-size: 9.5px; }
-  #wydruk-checklisty table, #wydruk-checklisty section { break-inside: avoid; }
+  #wydruk-checklisty { font-size: 9.5px; }
+  #wydruk-checklisty table { break-inside: avoid; }
   #wydruk-checklisty th, #wydruk-checklisty td { min-height: 18px; }
 }

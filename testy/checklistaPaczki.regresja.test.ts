@@ -7,6 +7,7 @@ import { repozytoriumWspolnychDokumentow } from '../src/wspolne/dokumenty/rejest
 import {
   czyMoznaFinalizowacCheckliste,
   czyPozycjaJestAktywna,
+  formatujDateDoWydruku,
   formatujIloscPozycji,
   formatujTerminyZPrzerwami,
   obliczIloscAutomatyczna,
@@ -153,6 +154,11 @@ test('format terminów nie maskuje przerw', () => {
   assert.equal(formatujTerminyZPrzerwami(['2027-06-18', '2027-06-19', '2027-06-22']), '18–19.06.2027, 22.06.2027')
 })
 
+test('data wysłania ma na wydruku format zgodny ze wzorcem SEMPER', () => {
+  assert.equal(formatujDateDoWydruku('2026-08-27'), '27.08.2026')
+  assert.equal(formatujDateDoWydruku(''), '')
+})
+
 test('wybrana grupa tworzy checklistę z migawką danych szkolenia i wzorem klienta', () => {
   magazyn.clear()
   const pierwsza = utworzChecklistePaczkiZeZrodla(utworzKontekst(), 'grupa-1', daneZrodla(), 'autor-1')!
@@ -217,14 +223,20 @@ test('widok wymaga grupy, przekierowuje do edycji i drukuje tylko dane przeznacz
   const druk = widok.slice(poczatekDruku, koniecDruku)
   assert.match(druk, /id=\{id\}/)
   assert.match(widok, /<DrukChecklisty[^>]+id="wydruk-checklisty"/)
-  assert.match(druk, /Podpis Opiekuna/)
+  assert.match(druk, /Podpis opiekuna/)
   assert.match(druk, /checklista-paczki__wydruk-sklad-teczki/)
   assert.match(druk, /Program szkolenia/)
   assert.match(druk, /Notatnik/)
   assert.match(druk, /Wizytówka/)
+  assert.match(druk, /SZKOLENIE ZAMKNIĘTE - CHECKLISTA/)
+  assert.match(druk, /checklista-paczki__wydruk-tabela-materialow/)
+  assert.match(druk, /rowSpan=\{wiersze\.length\}/)
+  assert.match(druk, /Waga paczki:/)
+  assert.match(druk, /Wysokość paczki:/)
+  assert.match(druk, /formatujDateDoWydruku\(dane\.dataWyslania\)/)
   assert.match(druk, /checklista-paczki__wydruk-tabela-wysylki/)
   for (const klasaKoloru of ['materialy', 'teczki', 'pakiet-crm', 'gadzety', 'inne']) assert.match(widok, new RegExp(`checklista-paczki__wydruk-tabela--${klasaKoloru}`))
-  assert.match(druk, /Array\.from\(\{ length: 2 \}/)
+  assert.match(druk, /kategoria\.nazwa === 'Inne' \? 2 : 1/)
   assert.match(druk, /uwagiDrukowane/)
   assert.doesNotMatch(druk, /notatkiWewnetrzne/)
 })
@@ -247,5 +259,7 @@ test('formularz checklisty ma niezależnie zwijane kategorie oparte na ich stabi
   assert.match(style, /grid-template-rows: 1fr/)
   assert.match(style, /grid-template-rows: 0fr/)
   assert.match(style, /@media \(prefers-reduced-motion: reduce\)/)
-  assert.match(druk, /Array\.from\(\{ length: 2 \}/)
+  assert.match(style, /background: #fff200/)
+  assert.match(style, /writing-mode: vertical-rl/)
+  assert.match(druk, /kategoria\.nazwa === 'Inne' \? 2 : 1/)
 })

@@ -13,6 +13,7 @@ import {
   walidujProgramSzkolenia,
 } from '../src/moduly/dokumenty/generatory/programy_szkolen/modelProgramuSzkolenia.ts'
 import { pobierzProgramPoId } from '../src/moduly/dokumenty/generatory/programy_szkolen/rejestrProgramowSzkolen.ts'
+import { czyNalezyZastapicTrescEdytora } from '../src/moduly/dokumenty/generatory/programy_szkolen/komponenty/synchronizacjaEdytoraProgramu.ts'
 import { utworzNowyDokument } from '../src/wspolne/dokumenty/modelDokumentu.ts'
 import { kluczRejestruDokumentow, repozytoriumWspolnychDokumentow } from '../src/wspolne/dokumenty/rejestrDokumentow.ts'
 
@@ -53,6 +54,11 @@ function przykladowyProgram() {
     },
   })
 }
+
+test('edytor nie zastępuje własnej treści po zmianie równoważnej semantycznie', () => {
+  assert.equal(czyNalezyZastapicTrescEdytora('Dzień 1\n- Pierwszy punkt', 'Dzień 1\n- Pierwszy punkt'), false)
+  assert.equal(czyNalezyZastapicTrescEdytora('Dzień 1\n- Pierwszy punkt', 'Dzień 1\n- Zmieniony punkt'), true)
+})
 
 test('kanoniczny Program zachowuje logiczne dane po zapisie i odczycie', () => {
   magazyn.clear()

@@ -8,6 +8,7 @@ import {
   czyMoznaFinalizowacCheckliste,
   czyPozycjaJestAktywna,
   czyPozycjaZaleznaOdUczestnikow,
+  formatujDateDoWydruku,
   formatujIloscPozycji,
   formatujTerminyZPrzerwami,
   obliczIloscPodstawowa,
@@ -67,7 +68,8 @@ function zaktualizujPozycje(dane: DaneChecklistyPaczki, pozycjaId: string, aktua
 
 function formatujAdres(dane: DaneOdbiorcyChecklisty) {
   const ulica = [dane.ulica, dane.nrBudynku && ` ${dane.nrBudynku}`, dane.nrLokalu && `/${dane.nrLokalu}`].filter(Boolean).join('')
-  return [dane.nazwaFirmy, dane.imieNazwisko, ulica, [dane.kodPocztowy, dane.miasto].filter(Boolean).join(' '), dane.kraj].filter(Boolean).join(', ')
+  const adres = [dane.nazwaFirmy, dane.imieNazwisko, ulica, [dane.kodPocztowy, dane.miasto].filter(Boolean).join(' ')].filter(Boolean)
+  return adres.length ? [...adres, dane.kraj].filter(Boolean).join(', ') : ''
 }
 
 function pobierzNazweUzytkownika(id: string | null | undefined) {
@@ -174,17 +176,54 @@ function DrukChecklisty({ dane, id, nazwaOpiekuna, nazwaWysylacza }: { dane: Dan
   const uczestnicy = migawka?.liczbaUczestnikow ?? 0
   const dni = liczbaDni(dane)
   const kategorie = [...dane.kategorie].sort((pierwsza, druga) => pierwsza.kolejnosc - druga.kolejnosc)
-  const podpisPakujacego = dane.osobaPakujaca || nazwaWysylacza
+  const podpisPakujacego = dane.osobaPakujaca || (dane.wysylaczId ? nazwaWysylacza : '')
+  const odbiorcaPaczki = [dane.daneOdbiorcy.imieNazwisko, dane.daneOdbiorcy.nazwaFirmy].filter(Boolean).join(', ')
+  const dataIMiejsce = [formatujTerminyZPrzerwami(migawka?.terminy ?? []), migawka?.miejsce].filter(Boolean).join(' ')
+  const uwagiZeSzczegolow = migawka?.uwagiZeSzczegolow.length ? migawka.uwagiZeSzczegolow : [
+    { etykieta: 'Materiały szkoleniowe', tresc: '' },
+    { etykieta: 'Certyfikaty', tresc: '' },
+    { etykieta: 'Lista obecności', tresc: '' },
+    { etykieta: 'Materiały dodatkowe', tresc: '' },
+    { etykieta: 'Ankiety', tresc: '' },
+  ]
+
   return <section aria-label="Podgląd wydruku Checklisty paczki" className="checklista-paczki__wydruk" id={id}>
-    <header className="checklista-paczki__wydruk-naglowek"><div><p>SZKOLENIE ZAMKNIĘTE – CHECKLISTA</p><h2>{migawka?.tytulSzkolenia || 'Brak wskazanego szkolenia'}</h2></div><strong>{dane.identyfikator}</strong></header>
-    <section className="checklista-paczki__wydruk-dane"><div><p><strong>Klient:</strong> {dane.klient || 'brak'}</p><p><strong>Trener / trenerzy:</strong> {migawka?.trenerzy.join(', ') || 'brak'}</p><p><strong>Data i miejsce:</strong> {formatujTerminyZPrzerwami(migawka?.terminy ?? []) || 'brak'} · {migawka?.miejsce || 'brak'}</p></div><div><p><strong>Liczba osób:</strong> {uczestnicy}</p><p><strong>Grupa:</strong> {migawka?.nazwaGrupy || 'brak'}</p><p><strong>Opiekun:</strong> {nazwaOpiekuna}</p></div></section>
-    <section className="checklista-paczki__wydruk-logotypy"><strong>Logotypy:</strong>{migawka?.logotypy.length ? <div>{migawka.logotypy.map((logo) => logo.podglad ? <img alt={logo.nazwa} key={logo.nazwa} src={logo.podglad} /> : <span key={logo.nazwa}>{logo.nazwa}</span>)}</div> : <span>brak</span>}<strong>Finansowanie:</strong><span>{migawka?.finansowanie || 'brak'}</span></section>
-    {kategorie.map((kategoria) => {
+    <h2 className="checklista-paczki__wydruk-tytul"><span>SZKOLENIE ZAMKNIĘTE - CHECKLISTA</span></h2>
+    <table className="checklista-paczki__wydruk-tabela-danych"><tbody>
+      <tr><th>Nazwa szkolenia:</th><td>{migawka?.tytulSzkolenia || 'brak'}</td><th>Liczba osób:</th><td>{uczestnicy}</td></tr>
+      <tr><th>Klient:</th><td>{dane.klient || 'brak'}</td><th>Trener:</th><td>{migawka?.trenerzy.join(', ') || 'brak'}</td></tr>
+      <tr><th>Data i miejsce:</th><td>{dataIMiejsce || 'brak'}</td><th>Opiekun:</th><td>{nazwaOpiekuna}</td></tr>
+    </tbody></table>
+    <table className="checklista-paczki__wydruk-tabela-logotypow"><tbody>
+      <tr><th>Logotypy</th><td>{migawka?.logotypy.length ? <div>{migawka.logotypy.map((logo) => logo.podglad ? <img alt={logo.nazwa} key={logo.nazwa} src={logo.podglad} /> : <span key={logo.nazwa}>{logo.nazwa}</span>)}</div> : 'brak'}</td></tr>
+      <tr><th>Informacja o finansowaniu</th><td>{migawka?.finansowanie || 'brak'}</td></tr>
+    </tbody></table>
+    <table className="checklista-paczki__wydruk-tabela-materialow">
+      <thead><tr><th aria-label="Kategoria" /><th>Materiały szkoleniowe</th><th>Ilość</th><th>Wzór klienta</th><th>Uwagi dodatkowe</th><th>Podpis opiekuna</th></tr></thead>
+      {kategorie.map((kategoria) => {
       const pozycje = dane.pozycje.filter((pozycja) => pozycja.kategoriaId === kategoria.id && czyPozycjaJestAktywna(pozycja)).sort((pierwsza, druga) => pierwsza.kolejnosc - druga.kolejnosc)
-      return <table className={pobierzKlaseKoloruKategoriiWydruku(kategoria.nazwa)} key={kategoria.id}><thead><tr><th colSpan={5}>{kategoria.nazwa}</th></tr><tr><th>Materiał</th><th>Ilość</th><th>Wzór klienta</th><th>Uwagi dodatkowe</th><th>Podpis Opiekuna</th></tr></thead><tbody>{pozycje.map((pozycja) => { const czyTeczki = kategoria.nazwa === 'Teczki' && pozycja.nazwa === 'Teczki'; return <tr key={pozycja.id}><td>{czyTeczki ? <><span>Teczki</span><ul className="checklista-paczki__wydruk-sklad-teczki"><li>Program szkolenia</li><li>Notatnik</li><li>Wizytówka</li></ul></> : <>{pozycja.nazwa}{pozycja.czyOnline ? ' (online)' : ''}</>}</td><td>{formatujIloscPozycji(pozycja, uczestnicy, dni)}</td><td>{pozycja.wzorKlienta || 'brak'}</td><td>{czyTeczki ? '' : pozycja.uwagiDrukowane}</td><td /></tr> })}{kategoria.nazwa === 'Inne' && Array.from({ length: 2 }, (_, indeks) => <tr key={`pusty-${indeks}`}><td>&nbsp;</td><td /><td /><td /><td /></tr>)}</tbody></table>
-    })}
-    <section className="checklista-paczki__wydruk-uwagi"><h3>Uwagi ze Szczegółów</h3>{migawka?.uwagiZeSzczegolow.length ? migawka.uwagiZeSzczegolow.map((uwaga) => <p key={`${uwaga.etykieta}-${uwaga.tresc}`}><strong>{uwaga.etykieta}:</strong> {uwaga.tresc}</p>) : <p>brak</p>}</section>
-    <section className="checklista-paczki__wydruk-wysylka"><h3>Wysyłka paczki</h3><p><strong>Adres do wysyłki paczki:</strong> {formatujAdres(dane.daneOdbiorcy) || 'brak'}</p><p><strong>Odbiorca paczki:</strong> {dane.daneOdbiorcy.imieNazwisko || dane.daneOdbiorcy.nazwaFirmy || 'brak'}</p><table className="checklista-paczki__wydruk-tabela-wysylki"><tbody><tr><th>Waga paczki:</th><td>{dane.waga || '—'}</td><th>Wysokość paczki:</th><td>{dane.wysokosc || '—'}</td></tr><tr><th>Data wysłania:</th><td>{dane.dataWyslania || '—'}</td><th>Podpis pakującego:</th><td><span className="checklista-paczki__wydruk-podpis-pakujacego">{podpisPakujacego}</span></td></tr></tbody></table></section>
+      const wiersze: Array<PozycjaChecklisty | null> = pozycje.length ? pozycje : Array.from({ length: kategoria.nazwa === 'Inne' ? 2 : 1 }, () => null)
+      return <tbody className={pobierzKlaseKoloruKategoriiWydruku(kategoria.nazwa)} key={kategoria.id}>{wiersze.map((pozycja, indeks) => {
+        const czyTeczki = kategoria.nazwa === 'Teczki' && pozycja?.nazwa === 'Teczki'
+        const czyPozycjaPodrzedna = pozycja ? ['Materiały dodatkowe', 'Pre/Post-testy', 'Karta na drzwi'].includes(pozycja.nazwa) : false
+        const klasyPozycji = [czyPozycjaPodrzedna && 'checklista-paczki__wydruk-pozycja-podrzedna', pozycja?.nazwa === 'Karta na drzwi' && 'checklista-paczki__wydruk-pozycja-kursywa'].filter(Boolean).join(' ') || undefined
+        const uwagiPozycji = pozycja?.uwagiDrukowane || (pozycja?.trybPrePost === 'PRE_I_POST' ? 'PRE i POST' : pozycja?.trybPrePost === 'PRE' ? 'PRE' : pozycja?.trybPrePost === 'POST' ? 'POST' : '')
+        return <tr key={pozycja?.id ?? `${kategoria.id}-pusty-${indeks}`}>
+          {indeks === 0 && <th className="checklista-paczki__wydruk-kategoria" rowSpan={wiersze.length} scope="rowgroup"><span>{kategoria.nazwa}</span></th>}
+          <td className={klasyPozycji}>{czyTeczki ? <><strong>TECZKI</strong><ul className="checklista-paczki__wydruk-sklad-teczki"><li><strong>Program szkolenia</strong></li><li>Notatnik</li><li>Wizytówka</li></ul></> : pozycja && <>{pozycja.nazwa === 'Prezentacje' ? <strong>PREZENTACJE</strong> : pozycja.nazwa}{pozycja.czyOnline ? ' (online)' : ''}</>}</td>
+          <td className="checklista-paczki__wydruk-ilosc">{pozycja ? formatujIloscPozycji(pozycja, uczestnicy, dni) : ''}</td><td>{pozycja?.wzorKlienta}</td><td>{pozycja && !czyTeczki ? uwagiPozycji : ''}</td><td />
+        </tr>
+      })}</tbody>
+    })}</table>
+    <table className="checklista-paczki__wydruk-tabela-szczegolow"><tbody>
+      <tr><th>Uwagi ze szczegółów:</th><td>{uwagiZeSzczegolow.map((uwaga) => <p key={`${uwaga.etykieta}-${uwaga.tresc}`}><strong>{uwaga.etykieta}:</strong> {uwaga.tresc}</p>)}</td></tr>
+      <tr><th>Adres do wysyłki paczki:</th><td>{formatujAdres(dane.daneOdbiorcy) || 'brak'}</td></tr>
+      <tr><th>Odbiorca paczki:</th><td>{odbiorcaPaczki || 'brak'}</td></tr>
+    </tbody></table>
+    <table className="checklista-paczki__wydruk-tabela-wysylki"><tbody>
+      <tr><th>Waga paczki:</th><td>{dane.waga || '—'}</td><th>Wysokość paczki:</th><td>{dane.wysokosc || '—'}</td></tr>
+      <tr><th>Data wysłania:</th><td>{formatujDateDoWydruku(dane.dataWyslania) || '—'}</td><th>Podpis pakującego:</th><td><span className="checklista-paczki__wydruk-podpis-pakujacego">{podpisPakujacego}</span></td></tr>
+    </tbody></table>
   </section>
 }
 

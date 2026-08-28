@@ -4,6 +4,7 @@ import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
 import { useEffect } from 'react'
 import { konwertujHtmlNaTekstProgramu, oczyscHtmlProgramu } from './konwersjaProgramuWysiwyg'
+import { czyNalezyZastapicTrescEdytora } from './synchronizacjaEdytoraProgramu'
 
 type WlasciwosciEdytoraProgramuWysiwyg = {
   wartoscHtml: string
@@ -44,11 +45,17 @@ export function EdytorProgramuWysiwyg({
   })
 
   useEffect(() => {
-    if (!edytor || !wartoscHtml || edytor.getHTML() === wartoscHtml) {
+    if (!edytor) {
       return
     }
 
-    edytor.commands.setContent(wartoscHtml, { emitUpdate: false })
+    const oczyszczonaWartoscHtml = oczyscHtmlProgramu(wartoscHtml || '<p></p>')
+    const aktualnyTekst = konwertujHtmlNaTekstProgramu(edytor.getHTML())
+    const zewnetrznyTekst = konwertujHtmlNaTekstProgramu(oczyszczonaWartoscHtml)
+
+    if (czyNalezyZastapicTrescEdytora(aktualnyTekst, zewnetrznyTekst)) {
+      edytor.commands.setContent(oczyszczonaWartoscHtml, { emitUpdate: false })
+    }
   }, [edytor, wartoscHtml])
 
   const czyAktywny = (nazwa: string, opcje?: Record<string, unknown>) => Boolean(edytor?.isActive(nazwa, opcje))

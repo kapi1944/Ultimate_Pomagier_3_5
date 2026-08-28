@@ -288,6 +288,11 @@ export function formatujIloscPozycji(pozycja: PozycjaChecklisty, liczbaUczestnik
   return dodatki.length ? `${opisPodstawy} + ${dodatki.map((dodatek) => `${dodatek.wartosc} ${dodatek.opis}`.trim()).join(', ')}` : opisPodstawy
 }
 
+export function formatujDateDoWydruku(wartosc: string) {
+  const dopasowanie = /^(\d{4})-(\d{2})-(\d{2})$/.exec(wartosc)
+  return dopasowanie ? `${dopasowanie[3]}.${dopasowanie[2]}.${dopasowanie[1]}` : wartosc
+}
+
 export function formatujTerminyZPrzerwami(wartosci: string[]) {
   const daty = [...new Set(wartosci.filter(Boolean))]
     .map((wartosc) => new Date(`${wartosc}T00:00:00`))
