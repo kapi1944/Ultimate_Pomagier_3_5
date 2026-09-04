@@ -135,6 +135,16 @@ test('brak opcjonalnych danych daje kompletny model i poprawny adapter dokumentu
   assert.doesNotThrow(() => walidujProgramSzkolenia(program, dokument))
 })
 
+test('dotychczasowy logotyp Programu jest migrowany do wspolnego bloku bez utraty zrodla', () => {
+  const program = normalizujProgramSzkolenia({ tytulSzkolenia: 'Program z logo', logotypProgramu: 'data:image/png;base64,abc' })
+  const [logo] = program.ustawienia.blokiSwobodne ?? []
+
+  assert.equal(logo?.id, 'logotyp-programu')
+  assert.equal(logo?.rola, 'logo')
+  assert.equal(logo?.typ === 'obraz' ? logo.dane.zrodlo.rodzaj : undefined, 'adres')
+  assert.equal(utworzDokumentProgramuSzkolenia(program).blokiSwobodne?.[0]?.id, 'logotyp-programu')
+})
+
 test('podglad i eksportowy DokumentBlokowy sa pochodna aktualnego Programu', () => {
   magazyn.clear()
   const pierwszy = przykladowyProgram()

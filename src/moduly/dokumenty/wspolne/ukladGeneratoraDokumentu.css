@@ -125,7 +125,7 @@
   transition: padding-right 220ms ease;
 }
 
-.generator-z-panelem--otwarty .generator-z-panelem__tresc {
+.generator-z-panelem--przypiety .generator-z-panelem__tresc {
   padding-right: min(var(--szerokosc-panelu-generatora), calc(100cqw - 22px));
 }
 
@@ -210,7 +210,7 @@
 }
 
 @container panel-generatora (max-width: 760px) {
-  .generator-z-panelem--otwarty .generator-z-panelem__tresc {
+  .generator-z-panelem--przypiety .generator-z-panelem__tresc {
     padding-right: 0;
   }
 

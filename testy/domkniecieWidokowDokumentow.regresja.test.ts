@@ -125,7 +125,9 @@ test('generatory korzystają ze wspólnego układu paneli, paska akcji i jawnej 
   assert.match(ukladGeneratora, /@container \(max-width: 980px\)/)
   assert.match(ukladGeneratora, /container: panel-generatora \/ inline-size/)
   assert.match(ukladGeneratora, /@container panel-generatora \(max-width: 760px\)/)
-  assert.match(ukladGeneratora, /padding-right: min\(var\(--szerokosc-panelu-generatora\)/)
+  assert.match(ukladGeneratora, /generator-z-panelem--przypiety[\s\S]*padding-right: min\(var\(--szerokosc-panelu-generatora\)/)
+  assert.doesNotMatch(ukladGeneratora, /generator-z-panelem--otwarty \.generator-z-panelem__tresc[\s\S]{0,80}padding-right/)
+  assert.match(wspolnyUklad, /czyOtwarty && czyPrzypiety && 'generator-z-panelem--przypiety'/)
   assert.doesNotMatch(ukladGeneratora, /uklad-aplikacji__kolumna-glowna:has/)
   assert.match(program, /@container \(max-width: 760px\)/)
   assert.match(stylDyplomow, /@container obszar-roboczy \(max-width: 1280px\)/)
@@ -139,8 +141,8 @@ test('generatory korzystają ze wspólnego układu paneli, paska akcji i jawnej 
   assert.match(lista, /typ: 'LISTA_OBECNOSCI'/)
   assert.match(lista, /generatorId: 'listy_obecnosci'/)
   assert.match(lista, /RendererListyObecnosci/)
-  assert.match(karta, /typDokumentu="KARTA_NA_DRZWI"/)
-  assert.match(karta, /generatorId="karta_na_drzwi"/)
+  assert.match(karta, /typ:'KARTA_NA_DRZWI'/)
+  assert.match(karta, /generatorId:'karta_na_drzwi'/)
 })
 
 test('wspólna lista filtruje typ, status, tekst, datę i sortowanie bez mieszania dokumentów', () => {

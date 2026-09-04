@@ -37,6 +37,7 @@ test('wspolny model normalizuje kompletna konfiguracje tekstu i obrazu', () => {
     ['logo', 'obraz', 170, 8, 25, 14, 5],
   ])
   assert.equal(bloki[0]?.typ === 'tekst' ? bloki[0].dane.rodzinaCzcionki : undefined, 'Arial')
+  assert.deepEqual(bloki.map((blok) => blok.rola), ['pole_tekstowe', 'logo'])
 })
 
 test('przypisanie do strony oraz dynamiczne zrodla sa rozstrzygane przez wspolny model', () => {
@@ -97,11 +98,17 @@ test('geometria jest zapisana w milimetrach, ograniczana do A4 i przyciagana do 
 
 test('konfiguracja ma wersje schematu, czyta zapis legacy i duplikuje bez dzielenia tozsamosci', () => {
   const zapis = serializujKonfiguracjeSwobodnychBlokow(bloki)
-  assert.match(zapis, /"wersjaSchematu":1/)
+  assert.match(zapis, /"wersjaSchematu":2/)
   assert.deepEqual(deserializujKonfiguracjeSwobodnychBlokow(zapis), bloki)
   assert.deepEqual(deserializujKonfiguracjeSwobodnychBlokow(JSON.stringify(bloki)), bloki)
   const kopia = duplikujBlokSwobodny(bloki[0]!, 'kopia-1')
   assert.equal(kopia.id, 'kopia-1')
   assert.equal(kopia.pochodzenie, 'uzytkownik')
   assert.equal(kopia.zablokowany, false)
+  assert.equal(kopia.rola, 'element_opcjonalny_uzytkownika')
+})
+
+test('normalizacja nadaje powielonym identyfikatorom stabilne unikalne wartosci', () => {
+  const zDuplikatem = normalizujBlokiSwobodneDokumentu([bloki[0], bloki[0], { ...bloki[0], id: 'dodatkowy-naglowek-2' }])
+  assert.deepEqual(zDuplikatem.map((blok) => blok.id), ['dodatkowy-naglowek', 'dodatkowy-naglowek-2', 'dodatkowy-naglowek-2-2'])
 })

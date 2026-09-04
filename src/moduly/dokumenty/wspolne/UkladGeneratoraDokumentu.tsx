@@ -277,7 +277,13 @@ export function ObszarZPanelemGeneratora({
   return (
     <KontekstPaneluGeneratora.Provider value={kontekst}>
       <div
-        className={polaczKlasy('generator-z-panelem', czyOtwarty && 'generator-z-panelem--otwarty', className)}
+        className={polaczKlasy(
+          'generator-z-panelem',
+          czyOtwarty && 'generator-z-panelem--otwarty',
+          czyOtwarty && czyPrzypiety && 'generator-z-panelem--przypiety',
+          className,
+        )}
+        data-panel-przypiety={czyOtwarty && czyPrzypiety}
         style={styl}
       >
         <div className="generator-z-panelem__tresc">

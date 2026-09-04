@@ -2,7 +2,8 @@ import { Fragment, useMemo, type CSSProperties, type ReactNode, type RefObject }
 import type { DokumentBlokowy } from '../../../../wspolne/dokumenty/modelBlokowy'
 import ElementPomocniczyEdytora from '../../../../wspolne/dokumenty/ElementPomocniczyEdytora'
 import RendererSwobodnychBlokow from '../../../../wspolne/dokumenty/RendererSwobodnychBlokow'
-import type { KontekstSwobodnychBlokow } from '../../../../wspolne/dokumenty/modelSwobodnychBlokow'
+import { EdytowalnaWarstwaSwobodnychBlokow } from '../../../../wspolne/dokumenty/EdytorSwobodnychBlokow'
+import type { BlokSwobodnyDokumentu, KontekstSwobodnychBlokow } from '../../../../wspolne/dokumenty/modelSwobodnychBlokow'
 import type { TrybRenderowaniaDokumentu } from '../../../../wspolne/dokumenty/trybRenderowaniaDokumentu'
 import { geometriaStronyProgramu, pobierzWymiaryStronyProgramu } from './geometriaStronyProgramu'
 import type { FragmentDniaProgramu, FragmentModuluProgramu, GrupaPunktowProgramu, ModelPaginacjiProgramu, StronaProgramu } from './paginatorProgramu'
@@ -39,6 +40,10 @@ type WlasciwosciRendereraStronProgramu = WlasciwosciWygladuTrescProgramu & {
   tekstSurowy: string
   kontekstSwobodnychBlokow: KontekstSwobodnychBlokow
   trybRenderowania: TrybRenderowaniaDokumentu
+  zaznaczonyBlokId?: string | null
+  trybEdycjiSzablonu?: boolean
+  onZaznaczBlok?: (id: string | null) => void
+  onZmienBlok?: (blok: BlokSwobodnyDokumentu) => void
 }
 
 type WlasciwosciStronyFizycznej = {
@@ -62,6 +67,11 @@ type WlasciwosciStronyFizycznej = {
   kontekstSwobodnychBlokow: KontekstSwobodnychBlokow
   blokiSwobodne: DokumentBlokowy['blokiSwobodne']
   trybRenderowania: TrybRenderowaniaDokumentu
+  czyWarstwaEdycji?: boolean
+  zaznaczonyBlokId?: string | null
+  trybEdycjiSzablonu?: boolean
+  onZaznaczBlok?: (id: string | null) => void
+  onZmienBlok?: (blok: BlokSwobodnyDokumentu) => void
 }
 
 function RendererZawartosciStrony({ strona, wyglad, trybRenderowania }: { strona?: StronaProgramu; wyglad: WlasciwosciWygladuTrescProgramu; trybRenderowania: TrybRenderowaniaDokumentu }) {
@@ -99,6 +109,11 @@ function StronaFizycznaProgramu({
   kontekstSwobodnychBlokow,
   blokiSwobodne,
   trybRenderowania,
+  czyWarstwaEdycji,
+  zaznaczonyBlokId,
+  trybEdycjiSzablonu = false,
+  onZaznaczBlok,
+  onZmienBlok,
 }: WlasciwosciStronyFizycznej) {
   const profil = profileOrganizatorowProgramu[profilFirmy]
   const tresc = zawartosc ?? <RendererZawartosciStrony strona={strona} trybRenderowania={trybRenderowania} wyglad={wyglad} />
@@ -129,6 +144,7 @@ function StronaFizycznaProgramu({
         <main className="program-dotychczasowy__tresc program-kartka-a4__tresc" {...atrybutyTresci}>{tresc}</main>
         <footer className="program-kartka-a4__stopka">{stopkaOrganizatora}</footer>
         <RendererSwobodnychBlokow bloki={blokiSwobodne ?? []} kontekst={kontekstSwobodnychBlokow} numerStrony={strona?.numer ?? 1} trybRenderowania={trybRenderowania} />
+        {czyWarstwaEdycji && onZaznaczBlok && onZmienBlok && <EdytowalnaWarstwaSwobodnychBlokow bloki={blokiSwobodne ?? []} numerStrony={strona?.numer ?? 1} zaznaczonyBlokId={zaznaczonyBlokId ?? null} trybEdycjiSzablonu={trybEdycjiSzablonu} onZaznacz={onZaznaczBlok} onZmienBlok={onZmienBlok} />}
       </article>
     )
   }
@@ -153,6 +169,7 @@ function StronaFizycznaProgramu({
         {elementy.mapaPolski && profilFirmy === 'semper' && <img aria-hidden="true" className="program-semper__mapa" src={mapaPolskiSemper} alt="" />}
       </footer>
       <RendererSwobodnychBlokow bloki={blokiSwobodne ?? []} kontekst={kontekstSwobodnychBlokow} numerStrony={strona?.numer ?? 1} trybRenderowania={trybRenderowania} />
+      {czyWarstwaEdycji && onZaznaczBlok && onZmienBlok && <EdytowalnaWarstwaSwobodnychBlokow bloki={blokiSwobodne ?? []} numerStrony={strona?.numer ?? 1} zaznaczonyBlokId={zaznaczonyBlokId ?? null} trybEdycjiSzablonu={trybEdycjiSzablonu} onZaznacz={onZaznaczBlok} onZmienBlok={onZmienBlok} />}
     </article>
   )
 }
@@ -272,6 +289,10 @@ export default function RendererStronProgramu({
   tekstSurowy,
   kontekstSwobodnychBlokow,
   trybRenderowania,
+  zaznaczonyBlokId,
+  trybEdycjiSzablonu,
+  onZaznaczBlok,
+  onZmienBlok,
   ...wyglad
 }: WlasciwosciRendereraStronProgramu) {
   const model = useMemo(
@@ -305,6 +326,10 @@ export default function RendererStronProgramu({
     kontekstSwobodnychBlokow,
     blokiSwobodne: dokument.blokiSwobodne,
     trybRenderowania,
+    zaznaczonyBlokId,
+    trybEdycjiSzablonu,
+    onZaznaczBlok,
+    onZmienBlok,
   }
 
   return (
@@ -315,6 +340,7 @@ export default function RendererStronProgramu({
           <StronaFizycznaProgramu
             {...wlasciwosciStrony}
             atrybutyStrony={{ 'data-strona-dokumentu': true, 'data-testid': 'program-strona' }}
+            czyWarstwaEdycji={trybRenderowania === 'roboczy'}
             pierwszaStrona={strona.numer === 1}
             key={`strona-${strona.numer}`}
             strona={strona}

@@ -1,6 +1,6 @@
 import type { DokumentBlokowy, ProblemDokumentu } from '../../../../wspolne/dokumenty/modelBlokowy'
 import { sprawdzDokumentBlokowy } from '../../../../wspolne/dokumenty/modelBlokowy'
-import { normalizujBlokiSwobodneDokumentu, type BlokSwobodnyDokumentu } from '../../../../wspolne/dokumenty/modelSwobodnychBlokow'
+import { normalizujBlokiSwobodneDokumentu, type BlokSwobodnyDokumentu, type ZrodloObrazuBloku } from '../../../../wspolne/dokumenty/modelSwobodnychBlokow'
 import { konwertujTekstProgramuNaHtml } from './komponenty/konwersjaProgramuWysiwyg'
 import { parsujTekstProgramu, type ProgramSzkolenia } from './ParserTekstu'
 import {
@@ -61,6 +61,33 @@ export type MetadaneProgramuSzkolenia = {
 }
 
 const wzorzecHex = /^#[0-9a-f]{6}$/i
+export const ID_LOGOTYPU_PROGRAMU = 'logotyp-programu'
+
+export function utworzBlokLogotypuProgramu(zrodlo: ZrodloObrazuBloku): BlokSwobodnyDokumentu {
+  return {
+    id: ID_LOGOTYPU_PROGRAMU,
+    rola: 'logo',
+    typ: 'obraz',
+    nazwa: 'Logotyp programu',
+    pochodzenie: 'uzytkownik',
+    zablokowany: false,
+    xMm: 154,
+    yMm: 8,
+    szerokoscMm: 40,
+    wysokoscMm: 18,
+    przypisanieDoStrony: { rodzaj: 'pierwsza' },
+    widoczny: true,
+    indeksWarstwy: 30,
+    dane: { zrodlo, tekstAlternatywny: 'Logotyp programu', zachowajProporcje: true, trybDopasowania: 'contain' },
+  }
+}
+
+export function ustawZrodloLogotypuProgramu(bloki: BlokSwobodnyDokumentu[], zrodlo: ZrodloObrazuBloku) {
+  const czyIstnieje = bloki.some((blok) => blok.id === ID_LOGOTYPU_PROGRAMU)
+  return czyIstnieje
+    ? bloki.map((blok) => blok.id === ID_LOGOTYPU_PROGRAMU && blok.typ === 'obraz' ? { ...blok, widoczny: true, dane: { ...blok.dane, zrodlo } } : blok)
+    : [...bloki, utworzBlokLogotypuProgramu(zrodlo)]
+}
 
 export const domyslneUstawieniaProgramu: UstawieniaProgramuSzkolenia = {
   presetWygladu: domyslnyPresetNowegoProgramu,
@@ -116,6 +143,10 @@ export function normalizujProgramSzkolenia(zapis: unknown): ModelProgramuSzkolen
     ? ustawienia.stylePoziomowListy.filter((styl): styl is string => typeof styl === 'string')
     : []
   const czyZapisMaBlokiSwobodne = Array.isArray(ustawienia.blokiSwobodne)
+  const logotypProgramu = tekstLubDomyslny(dane.logotypProgramu)
+  const blokiSwobodne = czyZapisMaBlokiSwobodne
+    ? normalizujBlokiSwobodneDokumentu(ustawienia.blokiSwobodne)
+    : logotypProgramu ? [utworzBlokLogotypuProgramu({ rodzaj: 'adres', adres: logotypProgramu })] : undefined
 
   return {
     tytulSzkolenia: tekstLubDomyslny(dane.tytulSzkolenia),
@@ -143,9 +174,9 @@ export function normalizujProgramSzkolenia(zapis: unknown): ModelProgramuSzkolen
       formatCudzyslowu: ustawienia.formatCudzyslowu === 'dolny-gorny' ? 'dolny-gorny' : 'gorny-gorny',
       szerokoscLogotypu: liczbaLubDomyslna(ustawienia.szerokoscLogotypu, domyslneUstawieniaProgramu.szerokoscLogotypu),
       czyPogrubiacNaglowkiListyProgramu: typeof ustawienia.czyPogrubiacNaglowkiListyProgramu === 'boolean' ? ustawienia.czyPogrubiacNaglowkiListyProgramu : domyslneUstawieniaProgramu.czyPogrubiacNaglowkiListyProgramu,
-      ...(czyZapisMaBlokiSwobodne ? { blokiSwobodne: normalizujBlokiSwobodneDokumentu(ustawienia.blokiSwobodne) } : {}),
+      ...(blokiSwobodne ? { blokiSwobodne } : {}),
     },
-    logotypProgramu: tekstLubDomyslny(dane.logotypProgramu),
+    logotypProgramu,
     linkLogotypu: tekstLubDomyslny(dane.linkLogotypu),
   }
 }

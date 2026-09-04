@@ -69,4 +69,7 @@ test('swobodne bloki dokumentu pozostają widoczne w finalnym rendererze', () =>
 
   assert.equal(czyBlokWidocznyNaStronie(blok, 1), true)
   assert.match(rendererStron, /<RendererSwobodnychBlokow[^>]+trybRenderowania=\{trybRenderowania\}/)
+  assert.match(rendererStron, /<EdytowalnaWarstwaSwobodnychBlokow/)
+  assert.match(widokProgramow, /<PanelEdycjiSwobodnychBlokow/)
+  assert.match(widokProgramow, /zapiszZasobObrazuDokumentu/)
 })

@@ -7,9 +7,10 @@ export type WyrownanieTekstuBloku = 'lewo' | 'srodek' | 'prawo' | 'wyjustuj'
 export type GruboscCzcionkiBloku = 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900
 export type TrybDopasowaniaObrazu = 'contain' | 'cover'
 export type PochodzenieBlokuSwobodnego = 'szablon' | 'uzytkownik'
+export type RolaBlokuSwobodnego = 'logo' | 'pole_tekstowe' | 'element_staly_szablonu' | 'element_opcjonalny_uzytkownika'
 export type RodzinaCzcionkiBloku = 'Arial' | 'Georgia' | 'Times New Roman' | 'Verdana'
 
-export const WERSJA_SCHEMATU_SWOBODNYCH_BLOKOW = 1 as const
+export const WERSJA_SCHEMATU_SWOBODNYCH_BLOKOW = 2 as const
 export const SZEROKOSC_STRONY_A4_MM = 210
 export const WYSOKOSC_STRONY_A4_MM = 297
 export const RODZINY_CZCIONEK_BLOKU: RodzinaCzcionkiBloku[] = ['Arial', 'Georgia', 'Times New Roman', 'Verdana']
@@ -25,6 +26,7 @@ export type ZrodloObrazuBloku =
 
 type PodstawaBlokuSwobodnego = {
   id: string
+  rola: RolaBlokuSwobodnego
   xMm: number
   yMm: number
   szerokoscMm: number
@@ -107,9 +109,17 @@ function normalizujPrzypisanieDoStrony(wartosc: unknown): PrzypisanieBlokuDoStro
   return { rodzaj: 'pierwsza' }
 }
 
-function normalizujPodstaweBloku(dane: Record<string, unknown>) {
+function normalizujRoleBloku(wartosc: unknown, typ: 'tekst' | 'obraz', pochodzenie: PochodzenieBlokuSwobodnego): RolaBlokuSwobodnego {
+  if (wartosc === 'logo' || wartosc === 'pole_tekstowe' || wartosc === 'element_staly_szablonu' || wartosc === 'element_opcjonalny_uzytkownika') return wartosc
+  if (typ === 'obraz') return 'logo'
+  return pochodzenie === 'szablon' ? 'element_staly_szablonu' : 'pole_tekstowe'
+}
+
+function normalizujPodstaweBloku(dane: Record<string, unknown>, typ: 'tekst' | 'obraz') {
+  const pochodzenie = dane.pochodzenie === 'szablon' ? 'szablon' as const : 'uzytkownik' as const
   return {
     id: tekstLubDomyslny(dane.id).trim(),
+    rola: normalizujRoleBloku(dane.rola, typ, pochodzenie),
     xMm: liczbaLubDomyslna(dane.xMm, 0),
     yMm: liczbaLubDomyslna(dane.yMm, 0),
     szerokoscMm: Math.max(0, liczbaLubDomyslna(dane.szerokoscMm, 20)),
@@ -119,13 +129,13 @@ function normalizujPodstaweBloku(dane: Record<string, unknown>) {
     indeksWarstwy: Math.trunc(liczbaLubDomyslna(dane.indeksWarstwy, 0)),
     ...(typeof dane.nazwa === 'string' && dane.nazwa.trim() ? { nazwa: dane.nazwa.trim() } : {}),
     zablokowany: dane.zablokowany === true,
-    pochodzenie: dane.pochodzenie === 'szablon' ? 'szablon' as const : 'uzytkownik' as const,
+    pochodzenie,
     ...(typeof dane.idBlokuSzablonu === 'string' && dane.idBlokuSzablonu ? { idBlokuSzablonu: dane.idBlokuSzablonu } : {}),
   }
 }
 
 function normalizujBlokTekstowy(dane: Record<string, unknown>): BlokTekstowySwobodny | null {
-  const podstawa = normalizujPodstaweBloku(dane)
+  const podstawa = normalizujPodstaweBloku(dane, 'tekst')
   const ustawienia = czyObiekt(dane.dane) ? dane.dane : {}
   const zrodlo = czyObiekt(ustawienia.zrodlo) ? ustawienia.zrodlo : {}
   const grubosc = Math.trunc(liczbaLubDomyslna(ustawienia.gruboscCzcionki, 400))
@@ -161,7 +171,7 @@ function normalizujBlokTekstowy(dane: Record<string, unknown>): BlokTekstowySwob
 }
 
 function normalizujBlokObrazu(dane: Record<string, unknown>): BlokObrazuSwobodny | null {
-  const podstawa = normalizujPodstaweBloku(dane)
+  const podstawa = normalizujPodstaweBloku(dane, 'obraz')
   const ustawienia = czyObiekt(dane.dane) ? dane.dane : {}
   const zrodlo = czyObiekt(ustawienia.zrodlo) ? ustawienia.zrodlo : {}
 
@@ -185,11 +195,21 @@ export function normalizujBlokiSwobodneDokumentu(wartosc: unknown): BlokSwobodny
   const lista = czyObiekt(wartosc) && Array.isArray(wartosc.bloki) ? wartosc.bloki : wartosc
   if (!Array.isArray(lista)) return []
 
+  const wykorzystaneId = new Set<string>()
   return lista.flatMap((blok) => {
     if (!czyObiekt(blok)) return []
-    if (blok.typ === 'tekst') return normalizujBlokTekstowy(blok) ?? []
-    if (blok.typ === 'obraz') return normalizujBlokObrazu(blok) ?? []
-    return []
+    const znormalizowany = blok.typ === 'tekst'
+      ? normalizujBlokTekstowy(blok)
+      : blok.typ === 'obraz' ? normalizujBlokObrazu(blok) : null
+    if (!znormalizowany) return []
+    let unikalneId = znormalizowany.id
+    let numerWystapienia = 2
+    while (wykorzystaneId.has(unikalneId)) {
+      unikalneId = `${znormalizowany.id}-${numerWystapienia}`
+      numerWystapienia += 1
+    }
+    wykorzystaneId.add(unikalneId)
+    return [{ ...znormalizowany, id: unikalneId }]
   })
 }
 
@@ -260,6 +280,7 @@ export function duplikujBlokSwobodny(blok: BlokSwobodnyDokumentu, id: string): B
     id,
     nazwa: `${blok.nazwa ?? (blok.typ === 'tekst' ? 'Tekst' : 'Obraz')} — kopia`,
     pochodzenie: 'uzytkownik',
+    rola: 'element_opcjonalny_uzytkownika',
     idBlokuSzablonu: undefined,
     zablokowany: false,
     xMm: blok.xMm + 4,

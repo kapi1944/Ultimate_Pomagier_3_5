@@ -74,18 +74,18 @@ export function utworzDomyslneSekcjeAnkiety(czyPelna = true): SekcjaAnkiety[] {
 }
 
 function podstawaBloku(id: string, nazwa: string, xMm: number, yMm: number, szerokoscMm: number, wysokoscMm: number) {
-  return { id, nazwa, xMm, yMm, szerokoscMm, wysokoscMm, przypisanieDoStrony: { rodzaj: 'kazda' as const }, widoczny: true, indeksWarstwy: 10, pochodzenie: 'szablon' as const, zablokowany: true }
+  return { id, nazwa, rola: 'element_staly_szablonu' as const, xMm, yMm, szerokoscMm, wysokoscMm, przypisanieDoStrony: { rodzaj: 'kazda' as const }, widoczny: true, indeksWarstwy: 10, pochodzenie: 'szablon' as const, zablokowany: true }
 }
 export function utworzBlokiSzablonuAnkiety(wariant: WariantSzablonuAnkiety = 'ORYGINALNA_PELNA'): BlokSwobodnyDokumentu[] {
   if (wariant === 'NOWOCZESNA') return [
     { ...podstawaBloku('szablon-nowoczesny-tytul', 'Tytuł ankiety', 15, 10, 130, 18), typ: 'tekst', dane: { zrodlo: { rodzaj: 'statyczne', tekst: 'ANKIETA EWALUACYJNA' }, rozmiarCzcionkiPt: 16, gruboscCzcionki: 700, rodzinaCzcionki: 'Arial', wyrownanie: 'lewo', interlinia: 1.1, kolor: '#20242a', marginesWewnetrznyMm: 2 } },
-    { ...podstawaBloku('szablon-nowoczesny-logo', 'Logo organizatora', 160, 8, 35, 20), typ: 'obraz', dane: { zrodlo: { rodzaj: 'zasob_organizatora', klucz: 'logo_organizatora' }, tekstAlternatywny: 'Logo organizatora', zachowajProporcje: true, trybDopasowania: 'contain' } },
+    { ...podstawaBloku('szablon-nowoczesny-logo', 'Logo organizatora', 160, 8, 35, 20), rola: 'logo', typ: 'obraz', dane: { zrodlo: { rodzaj: 'zasob_organizatora', klucz: 'logo_organizatora' }, tekstAlternatywny: 'Logo organizatora', zachowajProporcje: true, trybDopasowania: 'contain' } },
     { ...podstawaBloku('szablon-nowoczesny-numer', 'Numer strony', 196, 11, 8, 8), typ: 'tekst', dane: { zrodlo: { rodzaj: 'pole_danych', sciezka: 'numerStrony' }, rozmiarCzcionkiPt: 8, gruboscCzcionki: 400, rodzinaCzcionki: 'Arial', wyrownanie: 'prawo', interlinia: 1, kolor: '#666666', marginesWewnetrznyMm: 1 } },
   ]
   return [1, 2].flatMap((numerStrony): BlokSwobodnyDokumentu[] => [
     { ...podstawaBloku(`szablon-numer-strony-${numerStrony}`, `Numer strony ${numerStrony}`, 10.1, 12.6, 19, 19.75), przypisanieDoStrony: { rodzaj: 'strona', numer: numerStrony }, typ: 'tekst', dane: { zrodlo: { rodzaj: 'statyczne', tekst: String(numerStrony) }, rozmiarCzcionkiPt: 11, gruboscCzcionki: 400, rodzinaCzcionki: 'Arial', wyrownanie: 'srodek', interlinia: 1, kolor: '#ffffff', marginesWewnetrznyMm: 6 } },
     { ...podstawaBloku(`szablon-tytul-${numerStrony}`, 'Tytuł ankiety', 29.1, 12.6, 118.8, 19.75), przypisanieDoStrony: { rodzaj: 'strona', numer: numerStrony }, typ: 'tekst', dane: { zrodlo: { rodzaj: 'statyczne', tekst: 'Ankieta ewaluacyjna Uczestnika szkolenia' }, rozmiarCzcionkiPt: 11.5, gruboscCzcionki: 400, rodzinaCzcionki: 'Arial', wyrownanie: 'lewo', interlinia: 1.15, kolor: '#c6534f', marginesWewnetrznyMm: 5 } },
-    { ...podstawaBloku(`szablon-logo-${numerStrony}`, 'Logo organizatora', 147.9, 12.6, 52, 19.75), przypisanieDoStrony: { rodzaj: 'strona', numer: numerStrony }, typ: 'obraz', dane: { zrodlo: { rodzaj: 'zasob_organizatora', klucz: 'logo_organizatora' }, tekstAlternatywny: 'Logo organizatora', zachowajProporcje: true, trybDopasowania: 'contain' } },
+    { ...podstawaBloku(`szablon-logo-${numerStrony}`, 'Logo organizatora', 147.9, 12.6, 52, 19.75), rola: 'logo', przypisanieDoStrony: { rodzaj: 'strona', numer: numerStrony }, typ: 'obraz', dane: { zrodlo: { rodzaj: 'zasob_organizatora', klucz: 'logo_organizatora' }, tekstAlternatywny: 'Logo organizatora', zachowajProporcje: true, trybDopasowania: 'contain' } },
   ])
 }
 

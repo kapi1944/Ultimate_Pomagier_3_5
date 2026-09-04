@@ -3,6 +3,8 @@ import { useKontekstUzytkownika } from '../../../../aplikacja/logowanie/useKonte
 import AkcjeEksportuPdf from '../../../../wspolne/dokumenty/AkcjeEksportuPdf'
 import { utworzNazwePlikuDokumentu } from '../../../../wspolne/dokumenty/nazwyDokumentow'
 import PanelKontroliJakosciDokumentu from '../../../../wspolne/dokumenty/PanelKontroliJakosciDokumentu'
+import { PanelEdycjiSwobodnychBlokow } from '../../../../wspolne/dokumenty/EdytorSwobodnychBlokow'
+import { pobierzMapeZasobowObrazowDokumentu, zapiszZasobObrazuDokumentu } from '../../../../wspolne/dokumenty/zasobyObrazowDokumentu'
 import type { TrybRenderowaniaDokumentu } from '../../../../wspolne/dokumenty/trybRenderowaniaDokumentu'
 import { ObszarZPanelemGeneratora, PanelBocznyGeneratora, PasekAkcjiGeneratora, PrzyciskPaneluGeneratora } from '../../wspolne/UkladGeneratoraDokumentu'
 import StatusZapisuDokumentu from '../../wspolne/StatusZapisuDokumentu'
@@ -54,9 +56,11 @@ import {
   czyKolorProgramuPoprawny as sprawdzHex,
   domyslneUstawieniaProgramu as domyslneUstawienia,
   domyslnyProgramSzkolenia as domyslnyZapisProgramu,
+  ID_LOGOTYPU_PROGRAMU,
   normalizujProgramSzkolenia as normalizujZapisProgramu,
   pobierzHtmlProgramuSzkolenia,
   utworzDokumentProgramuSzkolenia,
+  ustawZrodloLogotypuProgramu,
   walidujProgramSzkolenia,
   type FormatCudzyslowuProgramu as FormatCudzyslowu,
   type ModelProgramuSzkolenia as ZapisProgramuRoboczego,
@@ -1014,6 +1018,9 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
   const [trybImportu, ustawTrybImportu] = useState<TrybZastosowaniaImportuProgramu>('UZUPELNIJ')
   const [zaakceptowanePolaImportu, ustawZaakceptowanePolaImportu] = useState<PoleImportuProgramu[]>([])
   const [trybRenderowania, ustawTrybRenderowania] = useState<TrybRenderowaniaDokumentu>('roboczy')
+  const [zaznaczonyBlokId, ustawZaznaczonyBlokId] = useState<string | null>(null)
+  const [trybEdycjiSzablonu, ustawTrybEdycjiSzablonu] = useState(false)
+  const [zasobyObrazow, ustawZasobyObrazow] = useState(() => pobierzMapeZasobowObrazowDokumentu())
   const trybPrzedEksportemRef = useRef<TrybRenderowaniaDokumentu>('roboczy')
   const zapiszAutosave = useCallback((daneDoZapisu: ZapisProgramuRoboczego) => {
     zapiszAutosaveProgramu({
@@ -1075,16 +1082,16 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
   const tytulZCudzyslowem = formatujTytulSzkolenia(tytulDokumentu, ustawienia.formatCudzyslowu)
   const kolorAkcentu = pobierzKolorAkcentu(ustawienia)
   const profil = daneProfilowFirmy[ustawienia.profilFirmy]
-  const kontekstSwobodnychBlokow = useMemo(
-    () => utworzKontekstSwobodnychBlokowProgramu(daneProgramu, {
+  const kontekstSwobodnychBlokow = useMemo(() => {
+    const kontekstProgramu = utworzKontekstSwobodnychBlokowProgramu(daneProgramu, {
       nazwaOrganizatora: profil.nazwa,
       kontaktOrganizatora: profil.kontakt,
       stopkaOrganizatora: profil.stopka,
-      logotypOrganizatora: ustawienia.profilFirmy === 'semper' ? logotypSemper : undefined,
+      logotypOrganizatora: ustawienia.profilFirmy === 'semper' ? logotypSemper : '/logo-iist.png',
       mapaOrganizatora: ustawienia.profilFirmy === 'semper' ? mapaPolskiSemper : undefined,
-    }),
-    [daneProgramu, profil.kontakt, profil.nazwa, profil.stopka, ustawienia.profilFirmy],
-  )
+    })
+    return { ...kontekstProgramu, zasobyObrazow: { ...zasobyObrazow, ...kontekstProgramu.zasobyObrazow } }
+  }, [daneProgramu, profil.kontakt, profil.nazwa, profil.stopka, ustawienia.profilFirmy, zasobyObrazow])
   const presetWygladu = ustawienia.presetWygladu
   const elementyIdentyfikacji = pobierzElementyIdentyfikacjiProgramu(presetWygladu, ustawienia.elementyIdentyfikacji)
   const sugestiaPresety = useMemo(() => zasugerujPresetProgramu(dokumentProgramu), [dokumentProgramu])
@@ -1180,6 +1187,29 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
         [nazwa]: wartosc,
       },
     }))
+  }
+
+  function zmienBlokiSwobodne(blokiSwobodne: NonNullable<UstawieniaProgramu['blokiSwobodne']>) {
+    zmienUstawienie('blokiSwobodne', blokiSwobodne)
+  }
+
+  function zmienSzerokoscLogotypu(szerokoscLogotypu: number) {
+    ustawDaneProgramu((aktualne) => ({
+      ...aktualne,
+      ustawienia: {
+        ...aktualne.ustawienia,
+        szerokoscLogotypu,
+        blokiSwobodne: aktualne.ustawienia.blokiSwobodne?.map((blok) => blok.id === ID_LOGOTYPU_PROGRAMU
+          ? { ...blok, szerokoscMm: Math.max(4, Math.min(80, szerokoscLogotypu / 2)) }
+          : blok),
+      },
+    }))
+  }
+
+  async function dodajObrazDoDokumentu(plik: File) {
+    const klucz = await zapiszZasobObrazuDokumentu(plik)
+    ustawZasobyObrazow(pobierzMapeZasobowObrazowDokumentu())
+    return klucz
   }
 
   const zapiszRoboczo = useCallback((tryb: 'zapisz' | 'aktualizuj' | 'utworz_nowa') => {
@@ -1439,23 +1469,26 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
       .map((zmiana) => zmiana.pole))
   }
 
-  function importujLogotypZPliku(plik?: File) {
+  async function importujLogotypZPliku(plik?: File) {
     if (!plik) {
       return
     }
 
-    if (!plik.type.startsWith('image/')) {
-      ustawKomunikat('Wybierz plik graficzny logotypu.')
-      return
-    }
-
-    const czytnik = new FileReader()
-    czytnik.onload = () => {
-      zmienDane('logotypProgramu', String(czytnik.result ?? ''))
+    try {
+      const klucz = await dodajObrazDoDokumentu(plik)
+      const mapaZasobow = pobierzMapeZasobowObrazowDokumentu()
+      ustawDaneProgramu((aktualne) => ({
+        ...aktualne,
+        logotypProgramu: mapaZasobow[klucz] ?? aktualne.logotypProgramu,
+        ustawienia: {
+          ...aktualne.ustawienia,
+          blokiSwobodne: ustawZrodloLogotypuProgramu(aktualne.ustawienia.blokiSwobodne ?? [], { rodzaj: 'zasob_uzytkownika', klucz }),
+        },
+      }))
       ustawKomunikat(`Dodano logotyp z pliku: ${plik.name}.`)
+    } catch (blad) {
+      ustawKomunikat(blad instanceof Error ? blad.message : 'Nie udało się odczytać pliku logotypu.')
     }
-    czytnik.onerror = () => ustawKomunikat('Nie udało się odczytać pliku logotypu.')
-    czytnik.readAsDataURL(plik)
   }
 
   function zastosujLinkLogotypu() {
@@ -1465,7 +1498,14 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
       return
     }
 
-    zmienDane('logotypProgramu', link)
+    ustawDaneProgramu((aktualne) => ({
+      ...aktualne,
+      logotypProgramu: link,
+      ustawienia: {
+        ...aktualne.ustawienia,
+        blokiSwobodne: ustawZrodloLogotypuProgramu(aktualne.ustawienia.blokiSwobodne ?? [], { rodzaj: 'adres', adres: link }),
+      },
+    }))
     ustawKomunikat('Dodano logotyp z linku.')
   }
 
@@ -1553,6 +1593,16 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
         <div className="program-panel-roboczy program-szkolen__panel">
           <PanelBocznyGeneratora className="program-szkolen__sekcja program-szkolen__sekcja--ustawienia">
             <div className="program-szkolen__siatka">
+              <PanelEdycjiSwobodnychBlokow
+                bloki={ustawienia.blokiSwobodne ?? []}
+                blokiSzablonu={[]}
+                zaznaczonyBlokId={zaznaczonyBlokId}
+                trybEdycjiSzablonu={trybEdycjiSzablonu}
+                onDodajObraz={dodajObrazDoDokumentu}
+                onZmienBloki={zmienBlokiSwobodne}
+                onZmienTrybEdycjiSzablonu={ustawTrybEdycjiSzablonu}
+              />
+              <div className="program-szkolen__separator" />
               <label className="program-szkolen__etykieta">
                 <span><input checked={trybRenderowania === 'roboczy'} onChange={(zdarzenie) => ustawTrybRenderowania(zdarzenie.target.checked ? 'roboczy' : 'finalny')} type="checkbox" /> Podgląd roboczy</span>
               </label>
@@ -1839,7 +1889,7 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
                   className="program-szkolen__pole"
                   max={100}
                   min={10}
-                  onChange={(zdarzenie) => zmienUstawienie('szerokoscLogotypu', Number(zdarzenie.target.value))}
+                  onChange={(zdarzenie) => zmienSzerokoscLogotypu(Number(zdarzenie.target.value))}
                   step={5}
                   type="range"
                   value={ustawienia.szerokoscLogotypu}
@@ -1940,7 +1990,7 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
             kolorAkcentu={kolorAkcentu}
             kontaktOrganizatora={profil.kontakt}
             kontekstSwobodnychBlokow={kontekstSwobodnychBlokow}
-            logotypUzytkownika={logotypProgramu}
+            logotypUzytkownika={ustawienia.blokiSwobodne?.some((blok) => blok.id === ID_LOGOTYPU_PROGRAMU) ? undefined : logotypProgramu}
             nazwaOrganizatora={profil.nazwa}
             preset={presetWygladu}
             profilFirmy={ustawienia.profilFirmy}
@@ -1953,6 +2003,10 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
             stylePoziomowListy={ustawienia.stylePoziomowListy}
             tekstSurowy={trescProgramu}
             trybRenderowania={trybRenderowania}
+            zaznaczonyBlokId={zaznaczonyBlokId}
+            trybEdycjiSzablonu={trybEdycjiSzablonu}
+            onZaznaczBlok={ustawZaznaczonyBlokId}
+            onZmienBlok={(blok) => zmienBlokiSwobodne((ustawienia.blokiSwobodne ?? []).map((pozycja) => pozycja.id === blok.id ? blok : pozycja))}
             tytul={tytulZCudzyslowem || 'Program szkolenia'}
           />
         </section>
