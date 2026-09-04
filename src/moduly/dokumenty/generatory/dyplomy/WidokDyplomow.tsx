@@ -3,6 +3,7 @@ import type { CSSProperties, ChangeEvent } from 'react'
 import { pobierzLokalizacjeZMagazynu } from '../../../../kartoteki/lokalizacje/magazynLokalizacji'
 import type { TrybTytuluDyplomu } from '../../../../wspolne/dokumenty/typyDokumentu'
 import { zapiszDokumentRoboczyGeneratora } from '../../../../wspolne/dokumenty/zapisDokumentuGeneratora'
+import { pobierzSzczegolyDoGeneratorow, zbudujKontekstZeSzczegolow } from '../../../../wspolne/integracje/szczegolyDoDokumentow'
 import { trenerzyKartotekiStartowi } from '../../../zamkniete/szczegoly_organizacyjne/stale'
 import type { TrenerKartoteki } from '../../../zamkniete/szczegoly_organizacyjne/typy'
 import {
@@ -12,10 +13,12 @@ import {
 } from '../../wspolne/UkladGeneratoraDokumentu'
 import StatusZapisuDokumentu from '../../wspolne/StatusZapisuDokumentu'
 import { useOchronaNiezapisanegoDokumentu, useStanDokumentu } from '../../wspolne/useStanDokumentu'
+import { zbudujDaneSeryjnychDyplomow } from './modelSeryjnychDyplomow'
 import './widokDyplomow.css'
 
 type TrybSzkolenia = 'stacjonarne' | 'online'
 type MotywKoloruDyplomu = 'semper' | 'iist' | 'dowolny'
+type WariantSzablonuDyplomu = 'CRM' | 'IIST_BLUE_PASY'
 type RodzajGodzin =
   | 'dydaktycznych'
   | 'edukacyjnych'
@@ -84,6 +87,7 @@ type ZapisDyplomow = DaneNumeracji & {
   czcionkaDyplomu: string
   czyPogrubionyTyp: boolean
   motywKoloru: MotywKoloruDyplomu
+  wariantSzablonu: WariantSzablonuDyplomu
   kolorMotywu: string
   tytulSzkolenia: string
   rozmiarTytulu: number
@@ -109,6 +113,8 @@ type ZapisDyplomow = DaneNumeracji & {
   tloSzablonu: string
   drugaStronaAktywna: boolean
   trescDrugiejStrony: string
+  szczegolyOrganizacyjneId: string | null
+  grupaId: string | null
 }
 
 const kluczZapisuDyplomow = 'ultimate-pomagier.dyplomy.generator-pawla'
@@ -527,6 +533,7 @@ function utworzDomyslnyZapis(): ZapisDyplomow {
     czcionkaDyplomu: 'Calibri',
     czyPogrubionyTyp: false,
     motywKoloru: 'semper',
+    wariantSzablonu: 'CRM',
     kolorMotywu: koloryFirmoweDyplomu.semper,
     tytulSzkolenia:
       'Identyfikowanie podrobionych dokumentów jako instrument przeciwdziałania nadużyciom finansowym, w tym w FEnIKS',
@@ -555,6 +562,8 @@ function utworzDomyslnyZapis(): ZapisDyplomow {
     tloSzablonu: '',
     drugaStronaAktywna: false,
     trescDrugiejStrony: 'Cele, korzyści, program szkolenia albo efekty uczenia się.',
+    szczegolyOrganizacyjneId: null,
+    grupaId: null,
   }
 }
 
@@ -588,6 +597,9 @@ function wczytajZapisDyplomow(): ZapisDyplomow {
       uczestnicy: uczestnicyZListy,
       dodatki: Array.isArray(dane.dodatki) ? dane.dodatki : [],
       motywKoloru: mapujMotywKoloruDyplomu(dane.motywKoloru),
+      wariantSzablonu: dane.wariantSzablonu === 'IIST_BLUE_PASY' ? 'IIST_BLUE_PASY' : 'CRM',
+      szczegolyOrganizacyjneId: typeof dane.szczegolyOrganizacyjneId === 'string' ? dane.szczegolyOrganizacyjneId : null,
+      grupaId: typeof dane.grupaId === 'string' ? dane.grupaId : null,
       kolorMotywu: czyKolorHex(dane.kolorMotywu ?? '') ? String(dane.kolorMotywu) : domyslnyZapis.kolorMotywu,
       czyPogrubionyTyp: dane.czyPogrubionyTyp ?? domyslnyZapis.czyPogrubionyTyp,
       czcionkaTypu: dane.czcionkaTypu?.trim() || domyslnyZapis.czcionkaTypu,
@@ -914,6 +926,7 @@ function StronaDyplomu({ dane, uczestnik }: { dane: ZapisDyplomow; uczestnik: Uc
     dodatekGorny ? 'dyplom-kartka--z-dodatkiem-gornym' : '',
     dodatekDolny ? 'dyplom-kartka--z-dodatkiem-dolnym' : '',
     dane.czyPogrubionyTyp ? 'dyplom-kartka--typ-pogrubiony' : '',
+    dane.wariantSzablonu === 'IIST_BLUE_PASY' ? 'dyplom-kartka--iist-blue-pasy' : '',
   ]
     .filter(Boolean)
     .join(' ')
@@ -968,19 +981,26 @@ function StronaDyplomu({ dane, uczestnik }: { dane: ZapisDyplomow; uczestnik: Uc
 
         <footer className="dyplom-kartka__stopka">
           <div className="dyplom-kartka__logo-semper">
-            <img alt="SEMPER" src="/logo-semper.png" />
+            <img alt={dane.motywKoloru === 'iist' ? 'IIST' : 'SEMPER'} src={dane.motywKoloru === 'iist' ? '/logo-iist.png' : '/logo-semper.png'} />
           </div>
           <div className="dyplom-kartka__organizator">
-            Centrum Organizacji Szkoleń i Konferencji <strong>SEMPER</strong>
+            {dane.motywKoloru === 'iist' ? <>Międzynarodowy Instytut Szkoleń Specjalistycznych <strong>IIST</strong></> : <>Centrum Organizacji Szkoleń i Konferencji <strong>SEMPER</strong></>}
           </div>
           <div className="dyplom-kartka__pieczec">
             <span>Pieczęć i podpis Organizatora:</span>
-            <span>Magdalena Wolniewicz-Kesaria</span>
-            <span>Manager Działu Badań i Koordynacji Szkoleń</span>
-            <span>Centrum Organizacji Szkoleń</span>
-            <span>Konferencji SEMPER</span>
-            <span>ul. Libelta 1a/2, 61-706 Poznań</span>
-            <span>NIP 7772616176</span>
+            {dane.motywKoloru === 'iist' ? <>
+              <span>Międzynarodowy Instytut Szkoleń Specjalistycznych IIST</span>
+              <span>ul. Grottgera 16/1, 60-758 Poznań</span>
+              <span>NIP 777-315106-27</span>
+              <span>REGON 301642978</span>
+            </> : <>
+              <span>Magdalena Wolniewicz-Kesaria</span>
+              <span>Manager Działu Badań i Koordynacji Szkoleń</span>
+              <span>Centrum Organizacji Szkoleń</span>
+              <span>Konferencji SEMPER</span>
+              <span>ul. Libelta 1a/2, 61-706 Poznań</span>
+              <span>NIP 7772616176</span>
+            </>}
           </div>
           <div className="dyplom-kartka__linia-kropkowana">........................................................</div>
           <div className="dyplom-kartka__ekspert">
@@ -1006,6 +1026,8 @@ export default function WidokDyplomow() {
   const [trybPodgladuStron, ustawTrybPodgladuStron] = useState<TrybPodgladuStron>('pierwsza')
   const [ukladPodgladuStron, ustawUkladPodgladuStron] = useState<UkladPodgladuStron>('pod_soba')
   const [indeksUczestnikaPierwszejStrony, ustawIndeksUczestnikaPierwszejStrony] = useState(0)
+  const szczegolyDoGeneratora = useMemo(() => pobierzSzczegolyDoGeneratorow(), [])
+  const wybraneSzczegoly = szczegolyDoGeneratora.find((pozycja) => pozycja.id === dane.szczegolyOrganizacyjneId) ?? null
   const uczestnicyDoDruku = useMemo(
     () => dane.uczestnicy.filter((uczestnik) => uczestnik.imieNazwisko.trim()),
     [dane.uczestnicy],
@@ -1104,6 +1126,42 @@ export default function WidokDyplomow() {
     }))
   }
 
+  function wybierzSzczegoly(szczegolyOrganizacyjneId: string) {
+    ustawDane((aktualne) => ({ ...aktualne, szczegolyOrganizacyjneId: szczegolyOrganizacyjneId || null, grupaId: null }))
+  }
+
+  function zastosujGrupeSzkoleniowa(grupaId: string) {
+    if (!wybraneSzczegoly || !grupaId) {
+      zmienPole('grupaId', null)
+      return
+    }
+    const kontekst = zbudujKontekstZeSzczegolow(wybraneSzczegoly.zrodloKontekstu)
+    const daneSeryjne = zbudujDaneSeryjnychDyplomow(kontekst, grupaId)
+    if (!daneSeryjne) return
+    const nazwyUczestnikow = daneSeryjne.uczestnicy
+    const uczestnicyTekst = nazwyUczestnikow.join('\n')
+    const czyIist = daneSeryjne.organizator === 'IIST'
+    ustawDane((aktualne) => ({
+      ...aktualne,
+      szczegolyOrganizacyjneId: wybraneSzczegoly.id,
+      grupaId,
+      tytulSzkolenia: daneSeryjne.tytulSzkolenia,
+      trybSzkolenia: daneSeryjne.trybSzkolenia,
+      miejsceSzkolenia: daneSeryjne.miejsceSzkolenia,
+      trener: daneSeryjne.trener,
+      liczbaGodzin: daneSeryjne.liczbaGodzin ?? aktualne.liczbaGodzin,
+      wybraneDaty: daneSeryjne.daty,
+      miesiacKalendarza: daneSeryjne.daty[0]?.slice(0, 7) ?? aktualne.miesiacKalendarza,
+      uczestnicyTekst,
+      uczestnicy: nazwyUczestnikow.map((nazwa, indeks) => utworzUczestnika(nazwa, indeks, aktualne)),
+      motywKoloru: czyIist ? 'iist' : 'semper',
+      kolorMotywu: czyIist ? koloryFirmoweDyplomu.iist : koloryFirmoweDyplomu.semper,
+      wariantSzablonu: 'CRM',
+    }))
+    ustawIndeksUczestnikaPierwszejStrony(0)
+    ustawKomunikat(`Wczytano ${nazwyUczestnikow.length} uczestników wybranej grupy. Każdy otrzyma osobny spersonalizowany dokument.`)
+  }
+
   function przelaczDrugaStrone(czyAktywna: boolean) {
     zmienPole('drugaStronaAktywna', czyAktywna)
     ustawTrybPodgladuStron(czyAktywna ? 'obie' : 'pierwsza')
@@ -1125,6 +1183,7 @@ export default function WidokDyplomow() {
     ustawDane((aktualne) => ({
       ...aktualne,
       motywKoloru,
+      wariantSzablonu: motywKoloru === 'iist' ? aktualne.wariantSzablonu : 'CRM',
       kolorMotywu:
         motywKoloru === 'dowolny'
           ? aktualne.kolorMotywu || koloryFirmoweDyplomu.semper
@@ -1513,6 +1572,13 @@ export default function WidokDyplomow() {
           <PanelBocznyGeneratora
             className="dyplomy__panel-ustawien"
           >
+            <section className="dyplomy__sekcja dyplomy__zrodlo-szkolenia">
+              <h2>Dane szkolenia</h2>
+              <div className="dyplomy__siatka dyplomy__siatka--dwie">
+                <label className="dyplomy__pole"><span>Szczegóły organizacyjne</span><select value={dane.szczegolyOrganizacyjneId ?? ''} onChange={(zdarzenie) => wybierzSzczegoly(zdarzenie.target.value)}><option value="">Wybierz szkolenie</option>{szczegolyDoGeneratora.map((pozycja) => <option key={pozycja.id} value={pozycja.id}>{pozycja.nazwa}{pozycja.czyKopiaRobocza ? ' (kopia robocza)' : ''}</option>)}</select></label>
+                <label className="dyplomy__pole"><span>Grupa szkoleniowa</span><select disabled={!wybraneSzczegoly} value={dane.grupaId ?? ''} onChange={(zdarzenie) => zastosujGrupeSzkoleniowa(zdarzenie.target.value)}><option value="">Wybierz grupę</option>{wybraneSzczegoly?.grupy.map((grupa) => <option key={grupa.id} value={grupa.id}>{grupa.nazwa} · {grupa.liczbaUczestnikow} osób</option>)}</select></label>
+              </div>
+            </section>
             <div className="dyplomy__siatka dyplomy__siatka--trzy">
               <div className="dyplomy__pole dyplomy__pole--pelne">
                 <span>Typ widocznego tytułu</span>
@@ -1570,6 +1636,14 @@ export default function WidokDyplomow() {
                   <option value="semper">SEMPER czerwony</option>
                   <option value="iist">IIST niebieski</option>
                   <option value="dowolny">Dowolny</option>
+                </select>
+              </label>
+
+              <label className="dyplomy__pole">
+                <span>Szablon dokumentu</span>
+                <select value={dane.wariantSzablonu} onChange={(zdarzenie) => zmienPole('wariantSzablonu', zdarzenie.target.value === 'IIST_BLUE_PASY' ? 'IIST_BLUE_PASY' : 'CRM')}>
+                  <option value="CRM">Firmowy CRM</option>
+                  <option disabled={dane.motywKoloru !== 'iist'} value="IIST_BLUE_PASY">IIST blue pasy</option>
                 </select>
               </label>
 

@@ -142,6 +142,8 @@
 .checklista-paczki__dodatek { display: grid; grid-template-columns: 66px minmax(0, 1fr) auto; gap: 5px; align-items: center; }
 .checklista-paczki__dodatek input { min-height: 31px; padding: 4px 6px; }
 .checklista-paczki__nadpisanie { padding: 7px; border: 1px solid rgba(244, 174, 74, .5); border-radius: 6px; background: rgba(93, 58, 5, .25); color: #ffe4a6; font-size: .83rem; }
+.checklista-paczki__ilosc-kompletna { color: #86efac; font-weight: 700; }
+.checklista-paczki__ilosc-brak { color: #fca5a5; font-weight: 700; }
 .checklista-paczki__notatka-wewnetrzna { padding: 8px; border: 1px dashed color-mix(in srgb, var(--ui-tekst-drugi) 34%, transparent); border-radius: 6px; background: color-mix(in srgb, var(--ui-panel) 70%, transparent); }
 .checklista-paczki__akcje-wiersza { justify-content: flex-end; }
 .checklista-paczki__wiersz > .checklista-paczki__akcje-wiersza { grid-column: 1 / -1; }

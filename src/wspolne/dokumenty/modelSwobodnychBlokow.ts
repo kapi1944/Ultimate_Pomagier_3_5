@@ -245,36 +245,36 @@ function znajdzPrzyciagniecie(wartosci: number[], cele: number[], prog: number) 
   return najlepsze
 }
 
-export function ograniczBlokDoStrony(blok: BlokSwobodnyDokumentu): BlokSwobodnyDokumentu {
-  const szerokoscMm = ogranicz(blok.szerokoscMm, 4, SZEROKOSC_STRONY_A4_MM)
-  const wysokoscMm = ogranicz(blok.wysokoscMm, 4, WYSOKOSC_STRONY_A4_MM)
+export function ograniczBlokDoStrony(blok: BlokSwobodnyDokumentu, szerokoscStronyMm = SZEROKOSC_STRONY_A4_MM, wysokoscStronyMm = WYSOKOSC_STRONY_A4_MM): BlokSwobodnyDokumentu {
+  const szerokoscMm = ogranicz(blok.szerokoscMm, 4, szerokoscStronyMm)
+  const wysokoscMm = ogranicz(blok.wysokoscMm, 4, wysokoscStronyMm)
   return {
     ...blok,
     szerokoscMm,
     wysokoscMm,
-    xMm: ogranicz(blok.xMm, 0, SZEROKOSC_STRONY_A4_MM - szerokoscMm),
-    yMm: ogranicz(blok.yMm, 0, WYSOKOSC_STRONY_A4_MM - wysokoscMm),
+    xMm: ogranicz(blok.xMm, 0, szerokoscStronyMm - szerokoscMm),
+    yMm: ogranicz(blok.yMm, 0, wysokoscStronyMm - wysokoscMm),
   }
 }
 
-export function przesunBlokSwobodny(blok: BlokSwobodnyDokumentu, przesuniecieX: number, przesuniecieY: number, progPrzyciaganiaMm = 2): WynikGeometriiBloku {
-  let wynik = ograniczBlokDoStrony({ ...blok, xMm: blok.xMm + przesuniecieX, yMm: blok.yMm + przesuniecieY })
+export function przesunBlokSwobodny(blok: BlokSwobodnyDokumentu, przesuniecieX: number, przesuniecieY: number, progPrzyciaganiaMm = 2, szerokoscStronyMm = SZEROKOSC_STRONY_A4_MM, wysokoscStronyMm = WYSOKOSC_STRONY_A4_MM): WynikGeometriiBloku {
+  let wynik = ograniczBlokDoStrony({ ...blok, xMm: blok.xMm + przesuniecieX, yMm: blok.yMm + przesuniecieY }, szerokoscStronyMm, wysokoscStronyMm)
   const pionowe = [wynik.xMm, wynik.xMm + wynik.szerokoscMm / 2, wynik.xMm + wynik.szerokoscMm]
   const poziome = [wynik.yMm, wynik.yMm + wynik.wysokoscMm / 2, wynik.yMm + wynik.wysokoscMm]
-  const przyciagniecieX = znajdzPrzyciagniecie(pionowe, [0, SZEROKOSC_STRONY_A4_MM / 2, SZEROKOSC_STRONY_A4_MM], progPrzyciaganiaMm)
-  const przyciagniecieY = znajdzPrzyciagniecie(poziome, [0, WYSOKOSC_STRONY_A4_MM / 2, WYSOKOSC_STRONY_A4_MM], progPrzyciaganiaMm)
-  if (przyciagniecieX) wynik = ograniczBlokDoStrony({ ...wynik, xMm: wynik.xMm + przyciagniecieX.roznica })
-  if (przyciagniecieY) wynik = ograniczBlokDoStrony({ ...wynik, yMm: wynik.yMm + przyciagniecieY.roznica })
+  const przyciagniecieX = znajdzPrzyciagniecie(pionowe, [0, szerokoscStronyMm / 2, szerokoscStronyMm], progPrzyciaganiaMm)
+  const przyciagniecieY = znajdzPrzyciagniecie(poziome, [0, wysokoscStronyMm / 2, wysokoscStronyMm], progPrzyciaganiaMm)
+  if (przyciagniecieX) wynik = ograniczBlokDoStrony({ ...wynik, xMm: wynik.xMm + przyciagniecieX.roznica }, szerokoscStronyMm, wysokoscStronyMm)
+  if (przyciagniecieY) wynik = ograniczBlokDoStrony({ ...wynik, yMm: wynik.yMm + przyciagniecieY.roznica }, szerokoscStronyMm, wysokoscStronyMm)
   return { blok: wynik, prowadnice: { pionowa: przyciagniecieX?.cel, pozioma: przyciagniecieY?.cel } }
 }
 
-export function zmienRozmiarBlokuSwobodnego(blok: BlokSwobodnyDokumentu, szerokoscMm: number, wysokoscMm: number, zachowajProporcje = false) {
+export function zmienRozmiarBlokuSwobodnego(blok: BlokSwobodnyDokumentu, szerokoscMm: number, wysokoscMm: number, zachowajProporcje = false, szerokoscStronyMm = SZEROKOSC_STRONY_A4_MM, wysokoscStronyMm = WYSOKOSC_STRONY_A4_MM) {
   const proporcja = blok.szerokoscMm / Math.max(blok.wysokoscMm, 1)
   const wysokoscPoProporcji = zachowajProporcje ? szerokoscMm / proporcja : wysokoscMm
-  return ograniczBlokDoStrony({ ...blok, szerokoscMm, wysokoscMm: wysokoscPoProporcji })
+  return ograniczBlokDoStrony({ ...blok, szerokoscMm, wysokoscMm: wysokoscPoProporcji }, szerokoscStronyMm, wysokoscStronyMm)
 }
 
-export function duplikujBlokSwobodny(blok: BlokSwobodnyDokumentu, id: string): BlokSwobodnyDokumentu {
+export function duplikujBlokSwobodny(blok: BlokSwobodnyDokumentu, id: string, szerokoscStronyMm = SZEROKOSC_STRONY_A4_MM, wysokoscStronyMm = WYSOKOSC_STRONY_A4_MM): BlokSwobodnyDokumentu {
   return ograniczBlokDoStrony({
     ...blok,
     id,
@@ -285,7 +285,7 @@ export function duplikujBlokSwobodny(blok: BlokSwobodnyDokumentu, id: string): B
     zablokowany: false,
     xMm: blok.xMm + 4,
     yMm: blok.yMm + 4,
-  })
+  }, szerokoscStronyMm, wysokoscStronyMm)
 }
 
 export function przywrocBlokSzablonu(blok: BlokSwobodnyDokumentu, blokiSzablonu: BlokSwobodnyDokumentu[]) {

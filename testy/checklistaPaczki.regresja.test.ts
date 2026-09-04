@@ -134,6 +134,21 @@ test('statusy gotowości mają tekstowe etykiety i można przejść przez pełny
   statusy.forEach((status) => { pozycja.statusGotowosci = status; assert.equal(pozycja.statusGotowosci, status) })
 })
 
+test('ilość przygotowana wykrywa brak i pozostawia ręczną korektę', () => {
+  const dane = utworzDomyslneDaneChecklisty({ identyfikator: 'test', numerDzienny: 1 })
+  dane.daneOdbiorcy = daneZrodla().odbiorca
+  dane.pozycje.forEach((pozycja) => { pozycja.czyOpcjonalna = true })
+  const dlugopisy = pobierzPozycje(dane, 'Długopisy')
+  dlugopisy.czyOpcjonalna = false
+  dlugopisy.nadpisanieReczne = 16
+  dlugopisy.statusGotowosci = 'GOTOWE'
+  dlugopisy.iloscPrzygotowana = 15
+  assert.equal(czyMoznaFinalizowacCheckliste(dane).czyMozna, false)
+  assert.ok(czyMoznaFinalizowacCheckliste(dane).brakujacePozycje.some((pozycja) => pozycja.nazwa === 'Długopisy'))
+  dlugopisy.iloscPrzygotowana = 16
+  assert.equal(czyMoznaFinalizowacCheckliste(dane).czyMozna, true)
+})
+
 test('użytkownik może dodać kategorię i pozycję oraz zmienić kolejność', () => {
   const dane = utworzDomyslneDaneChecklisty({ identyfikator: 'test', numerDzienny: 1 })
   const kategoria = utworzNowaKategorieChecklisty(dane.kategorie, 'Materiały klienta')

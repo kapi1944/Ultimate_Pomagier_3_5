@@ -598,6 +598,19 @@
   z-index: 0;
 }
 
+.dyplom-kartka--iist-blue-pasy {
+  background:
+    linear-gradient(135deg, rgba(22, 105, 164, 0.96) 0 2.4%, transparent 2.45% 97.55%, rgba(22, 105, 164, 0.96) 97.6% 100%),
+    linear-gradient(45deg, transparent 0 95.5%, rgba(94, 178, 221, 0.78) 95.55% 97%, transparent 97.05%),
+    #ffffff;
+}
+
+.dyplom-kartka--iist-blue-pasy .dyplom-kartka__pasek--lewy,
+.dyplom-kartka--iist-blue-pasy .dyplom-kartka__pasek--prawy {
+  transform: skewX(-18deg);
+  background: linear-gradient(90deg, #1669a4, #5eb2dd);
+}
+
 .dyplom-kartka__warstwa {
   position: absolute;
   inset: 0;
@@ -1069,6 +1082,13 @@
     box-shadow: none !important;
     font-family: var(--czcionka-dyplomu, Calibri, Arial, sans-serif) !important;
     page-break-after: always;
+  }
+
+  .dyplom-kartka--iist-blue-pasy {
+    background:
+      linear-gradient(135deg, rgba(22, 105, 164, 0.96) 0 2.4%, transparent 2.45% 97.55%, rgba(22, 105, 164, 0.96) 97.6% 100%),
+      linear-gradient(45deg, transparent 0 95.5%, rgba(94, 178, 221, 0.78) 95.55% 97%, transparent 97.05%),
+      #ffffff !important;
   }
 
   .dyplom-kartka__pasek {

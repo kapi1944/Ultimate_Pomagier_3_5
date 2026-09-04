@@ -21,6 +21,8 @@ type WlasciwosciWarstwy = {
   trybEdycjiSzablonu: boolean
   onZaznacz: (id: string | null) => void
   onZmienBlok: (blok: BlokSwobodnyDokumentu) => void
+  szerokoscStronyMm?: number
+  wysokoscStronyMm?: number
 }
 
 type GestBloku = {
@@ -36,7 +38,7 @@ function czyMoznaPrzesuwac(blok: BlokSwobodnyDokumentu, trybEdycjiSzablonu: bool
   return !blok.zablokowany && (blok.pochodzenie !== 'szablon' || trybEdycjiSzablonu)
 }
 
-export function EdytowalnaWarstwaSwobodnychBlokow({ bloki, numerStrony, zaznaczonyBlokId, trybEdycjiSzablonu, onZaznacz, onZmienBlok }: WlasciwosciWarstwy) {
+export function EdytowalnaWarstwaSwobodnychBlokow({ bloki, numerStrony, zaznaczonyBlokId, trybEdycjiSzablonu, onZaznacz, onZmienBlok, szerokoscStronyMm = SZEROKOSC_STRONY_A4_MM, wysokoscStronyMm = WYSOKOSC_STRONY_A4_MM }: WlasciwosciWarstwy) {
   const [gest, ustawGest] = useState<GestBloku | null>(null)
   const [prowadnice, ustawProwadnice] = useState<ProwadniceBloku>({})
 
@@ -54,16 +56,16 @@ export function EdytowalnaWarstwaSwobodnychBlokow({ bloki, numerStrony, zaznaczo
   function aktualizujGest(zdarzenie: ZdarzenieWskaznika<HTMLElement>) {
     if (!gest) return
     zdarzenie.preventDefault()
-    const roznicaX = (zdarzenie.clientX - gest.xPoczatkowe) * SZEROKOSC_STRONY_A4_MM / gest.szerokoscStronyPx
-    const roznicaY = (zdarzenie.clientY - gest.yPoczatkowe) * WYSOKOSC_STRONY_A4_MM / gest.wysokoscStronyPx
+    const roznicaX = (zdarzenie.clientX - gest.xPoczatkowe) * szerokoscStronyMm / gest.szerokoscStronyPx
+    const roznicaY = (zdarzenie.clientY - gest.yPoczatkowe) * wysokoscStronyMm / gest.wysokoscStronyPx
     if (gest.rodzaj === 'przesuwanie') {
-      const wynik = przesunBlokSwobodny(gest.blok, roznicaX, roznicaY)
+      const wynik = przesunBlokSwobodny(gest.blok, roznicaX, roznicaY, 2, szerokoscStronyMm, wysokoscStronyMm)
       ustawProwadnice(wynik.prowadnice)
       onZmienBlok(wynik.blok)
       return
     }
     const zachowajProporcje = zdarzenie.shiftKey || (gest.blok.typ === 'obraz' && gest.blok.dane.zachowajProporcje)
-    onZmienBlok(zmienRozmiarBlokuSwobodnego(gest.blok, gest.blok.szerokoscMm + roznicaX, gest.blok.wysokoscMm + roznicaY, zachowajProporcje))
+    onZmienBlok(zmienRozmiarBlokuSwobodnego(gest.blok, gest.blok.szerokoscMm + roznicaX, gest.blok.wysokoscMm + roznicaY, zachowajProporcje, szerokoscStronyMm, wysokoscStronyMm))
   }
 
   function zakonczGest() {
@@ -80,7 +82,7 @@ export function EdytowalnaWarstwaSwobodnychBlokow({ bloki, numerStrony, zaznaczo
     const przesuniecie = przesuniecia[zdarzenie.key]
     if (!przesuniecie) return
     zdarzenie.preventDefault()
-    onZmienBlok(przesunBlokSwobodny(blok, przesuniecie[0], przesuniecie[1], 0).blok)
+    onZmienBlok(przesunBlokSwobodny(blok, przesuniecie[0], przesuniecie[1], 0, szerokoscStronyMm, wysokoscStronyMm).blok)
   }
 
   const widoczneBloki = bloki.filter((blok) => czyBlokWidocznyNaStronie(blok, numerStrony))
@@ -100,14 +102,14 @@ export function EdytowalnaWarstwaSwobodnychBlokow({ bloki, numerStrony, zaznaczo
         onPointerMove={aktualizujGest}
         onPointerUp={zakonczGest}
         role="button"
-        style={{ left: `${blok.xMm / 2.1}%`, top: `${blok.yMm / 2.97}%`, width: `${blok.szerokoscMm / 2.1}%`, height: `${blok.wysokoscMm / 2.97}%`, zIndex: blok.indeksWarstwy + 1000 }}
+        style={{ left: `${blok.xMm * 100 / szerokoscStronyMm}%`, top: `${blok.yMm * 100 / wysokoscStronyMm}%`, width: `${blok.szerokoscMm * 100 / szerokoscStronyMm}%`, height: `${blok.wysokoscMm * 100 / wysokoscStronyMm}%`, zIndex: blok.indeksWarstwy + 1000 }}
         tabIndex={0}
       >
         {zaznaczony && edytowalny && <span aria-hidden="true" className="edytor-blokow__uchwyt" onPointerDown={(zdarzenie) => rozpocznijGest(zdarzenie, blok, 'rozmiar')} onPointerMove={aktualizujGest} onPointerUp={zakonczGest} />}
       </div>
     })}
-    {prowadnice.pionowa !== undefined && <span className="edytor-blokow__prowadnica edytor-blokow__prowadnica--pionowa" style={{ left: `${prowadnice.pionowa / 2.1}%` }} />}
-    {prowadnice.pozioma !== undefined && <span className="edytor-blokow__prowadnica edytor-blokow__prowadnica--pozioma" style={{ top: `${prowadnice.pozioma / 2.97}%` }} />}
+    {prowadnice.pionowa !== undefined && <span className="edytor-blokow__prowadnica edytor-blokow__prowadnica--pionowa" style={{ left: `${prowadnice.pionowa * 100 / szerokoscStronyMm}%` }} />}
+    {prowadnice.pozioma !== undefined && <span className="edytor-blokow__prowadnica edytor-blokow__prowadnica--pozioma" style={{ top: `${prowadnice.pozioma * 100 / wysokoscStronyMm}%` }} />}
   </div>
 }
 
@@ -120,13 +122,15 @@ type WlasciwosciPanelu = {
   onZmienBloki: (bloki: BlokSwobodnyDokumentu[]) => void
   onDodajObraz?: (plik: File) => Promise<string>
   liczbaStron?: number
+  szerokoscStronyMm?: number
+  wysokoscStronyMm?: number
 }
 
 function utworzIdBloku() {
   return globalThis.crypto?.randomUUID?.() ?? `blok-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 }
 
-export function PanelEdycjiSwobodnychBlokow({ bloki, zaznaczonyBlokId, blokiSzablonu, trybEdycjiSzablonu, onZmienTrybEdycjiSzablonu, onZmienBloki, onDodajObraz, liczbaStron }: WlasciwosciPanelu) {
+export function PanelEdycjiSwobodnychBlokow({ bloki, zaznaczonyBlokId, blokiSzablonu, trybEdycjiSzablonu, onZmienTrybEdycjiSzablonu, onZmienBloki, onDodajObraz, liczbaStron, szerokoscStronyMm = SZEROKOSC_STRONY_A4_MM, wysokoscStronyMm = WYSOKOSC_STRONY_A4_MM }: WlasciwosciPanelu) {
   const blok = useMemo(() => bloki.find((pozycja) => pozycja.id === zaznaczonyBlokId) ?? null, [bloki, zaznaczonyBlokId])
   const polePlikuRef = useRef<HTMLInputElement>(null)
   const [bladObrazu, ustawBladObrazu] = useState<string | null>(null)
@@ -136,7 +140,7 @@ export function PanelEdycjiSwobodnychBlokow({ bloki, zaznaczonyBlokId, blokiSzab
   }
   const zmienLiczbe = (klucz: 'xMm' | 'yMm' | 'szerokoscMm' | 'wysokoscMm' | 'indeksWarstwy', wartosc: string) => zmienBlok((obecny) => {
     const zmieniony = { ...obecny, [klucz]: Number(wartosc) || 0 }
-    return klucz === 'indeksWarstwy' ? zmieniony : ograniczBlokDoStrony(zmieniony)
+    return klucz === 'indeksWarstwy' ? zmieniony : ograniczBlokDoStrony(zmieniony, szerokoscStronyMm, wysokoscStronyMm)
   })
 
   async function wczytajObraz(zdarzenie: ChangeEvent<HTMLInputElement>) {
@@ -179,7 +183,7 @@ export function PanelEdycjiSwobodnychBlokow({ bloki, zaznaczonyBlokId, blokiSzab
         <label>Kolor<input type="color" value={blok.dane.kolor ?? '#111827'} onChange={(zdarzenie) => zmienBlok((obecny) => obecny.typ === 'tekst' ? { ...obecny, dane: { ...obecny.dane, kolor: zdarzenie.target.value } } : obecny)} /></label>
         <div className="edytor-blokow__przelaczniki"><label><input checked={blok.dane.gruboscCzcionki >= 600} type="checkbox" onChange={(zdarzenie) => zmienBlok((obecny) => obecny.typ === 'tekst' ? { ...obecny, dane: { ...obecny.dane, gruboscCzcionki: zdarzenie.target.checked ? 700 : 400 } } : obecny)} /> Pogrubienie</label><label><input checked={blok.dane.kursywa ?? false} type="checkbox" onChange={(zdarzenie) => zmienBlok((obecny) => obecny.typ === 'tekst' ? { ...obecny, dane: { ...obecny.dane, kursywa: zdarzenie.target.checked } } : obecny)} /> Kursywa</label><label><input checked={blok.dane.podkreslenie ?? false} type="checkbox" onChange={(zdarzenie) => zmienBlok((obecny) => obecny.typ === 'tekst' ? { ...obecny, dane: { ...obecny.dane, podkreslenie: zdarzenie.target.checked } } : obecny)} /> Podkreślenie</label></div>
       </> : <><button type="button" onClick={() => zmienBlok((obecny) => obecny.typ === 'obraz' ? { ...obecny, dane: { ...obecny.dane, zrodlo: { rodzaj: 'zasob_organizatora', klucz: 'logo_organizatora' }, tekstAlternatywny: 'Logo organizatora' } } : obecny)}>Użyj logo organizatora</button><label>Dopasowanie<select value={blok.dane.trybDopasowania} onChange={(zdarzenie) => zmienBlok((obecny) => obecny.typ === 'obraz' ? { ...obecny, dane: { ...obecny.dane, trybDopasowania: zdarzenie.target.value === 'cover' ? 'cover' : 'contain' } } : obecny)}><option value="contain">Contain</option><option value="cover">Cover</option></select></label><label><input checked={blok.dane.zachowajProporcje} type="checkbox" onChange={(zdarzenie) => zmienBlok((obecny) => obecny.typ === 'obraz' ? { ...obecny, dane: { ...obecny.dane, zachowajProporcje: zdarzenie.target.checked } } : obecny)} /> Zachowaj proporcje</label></>}
-      <div className="edytor-blokow__pasek-akcji"><button type="button" onClick={() => onZmienBloki([...bloki, duplikujBlokSwobodny(blok, utworzIdBloku())])}>Duplikuj</button><button disabled={blok.pochodzenie !== 'szablon'} type="button" onClick={() => onZmienBloki(bloki.map((pozycja) => pozycja.id === blok.id ? przywrocBlokSzablonu(pozycja, blokiSzablonu) : pozycja))}>Resetuj blok</button><button disabled={blok.pochodzenie === 'szablon'} title={blok.pochodzenie === 'szablon' ? 'Element szablonu można ukryć albo zresetować.' : undefined} type="button" onClick={() => onZmienBloki(bloki.filter((pozycja) => pozycja.id !== blok.id))}>Usuń</button></div>
+      <div className="edytor-blokow__pasek-akcji"><button type="button" onClick={() => onZmienBloki([...bloki, duplikujBlokSwobodny(blok, utworzIdBloku(), szerokoscStronyMm, wysokoscStronyMm)])}>Duplikuj</button><button disabled={blok.pochodzenie !== 'szablon'} type="button" onClick={() => onZmienBloki(bloki.map((pozycja) => pozycja.id === blok.id ? przywrocBlokSzablonu(pozycja, blokiSzablonu) : pozycja))}>Resetuj blok</button><button disabled={blok.pochodzenie === 'szablon'} title={blok.pochodzenie === 'szablon' ? 'Element szablonu można ukryć albo zresetować.' : undefined} type="button" onClick={() => onZmienBloki(bloki.filter((pozycja) => pozycja.id !== blok.id))}>Usuń</button></div>
     </div>}
   </section>
 }

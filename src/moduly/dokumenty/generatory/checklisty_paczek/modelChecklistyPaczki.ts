@@ -36,6 +36,7 @@ export type PozycjaChecklisty = {
   trybPrePost: TrybPrePostTestow | null
   dodatkoweEgzemplarze: DodatkowyEgzemplarz[]
   nadpisanieReczne: number | null
+  iloscPrzygotowana: number | null
   wzorKlienta: string
   uwagiDrukowane: string
   notatkiWewnetrzne: string
@@ -194,6 +195,7 @@ export function utworzNowaPozycjeChecklisty(kategoriaId: string, nazwa: string, 
     trybPrePost: null,
     dodatkoweEgzemplarze: [],
     nadpisanieReczne: null,
+    iloscPrzygotowana: null,
     wzorKlienta: '',
     uwagiDrukowane: '',
     notatkiWewnetrzne: '',
@@ -216,6 +218,7 @@ function utworzPozycjeDomyslne(kategorie: KategoriaChecklisty[], wariantOnline: 
     trybPrePost: null,
     dodatkoweEgzemplarze: [],
     nadpisanieReczne: null,
+    iloscPrzygotowana: null,
     wzorKlienta: '',
     uwagiDrukowane: '',
     notatkiWewnetrzne: '',
@@ -391,6 +394,9 @@ export function normalizujDaneChecklisty(dane: DaneChecklistyPaczki): DaneCheckl
       wzorKlienta: pozycja.wzorKlienta ?? '',
       dodatkoweEgzemplarze: pozycja.dodatkoweEgzemplarze ?? [],
       nadpisanieReczne: pozycja.nadpisanieReczne ?? null,
+      iloscPrzygotowana: typeof pozycja.iloscPrzygotowana === 'number' && Number.isFinite(pozycja.iloscPrzygotowana)
+        ? Math.max(0, Math.round(pozycja.iloscPrzygotowana))
+        : null,
       uwagiDrukowane: pozycja.uwagiDrukowane ?? '',
       notatkiWewnetrzne: pozycja.notatkiWewnetrzne ?? '',
     })),
@@ -410,7 +416,14 @@ export function czyDaneOdbiorcySaKompletne(dane: DaneOdbiorcyChecklisty) {
 }
 
 export function czyMoznaFinalizowacCheckliste(dane: DaneChecklistyPaczki) {
-  const brakujacePozycje = dane.pozycje.filter((pozycja) => pozycja.czyWymagana && !pozycja.czyOpcjonalna && czyPozycjaJestAktywna(pozycja) && !pozycja.czyOnline && pozycja.statusGotowosci !== 'GOTOWE')
+  const liczbaUczestnikow = dane.migawkaZrodla?.liczbaUczestnikow ?? 0
+  const liczbaDni = new Set(dane.migawkaZrodla?.terminy ?? []).size
+  const brakujacePozycje = dane.pozycje.filter((pozycja) => {
+    if (!pozycja.czyWymagana || pozycja.czyOpcjonalna || !czyPozycjaJestAktywna(pozycja) || pozycja.czyOnline) return false
+    const wymaganaIlosc = pobierzIloscPozycji(pozycja, liczbaUczestnikow, liczbaDni).koncowa
+    const czyBrakujeIlosci = pozycja.iloscPrzygotowana !== null && pozycja.iloscPrzygotowana < wymaganaIlosc
+    return pozycja.statusGotowosci !== 'GOTOWE' || czyBrakujeIlosci
+  })
   return { czyMozna: !brakujacePozycje.length && czyDaneOdbiorcySaKompletne(dane.daneOdbiorcy), brakujacePozycje, czyBrakujeDanychWysylkowych: !czyDaneOdbiorcySaKompletne(dane.daneOdbiorcy) }
 }
 

@@ -13,11 +13,10 @@ function NaglowekListy({ dane }: { dane: DaneListyObecnosci }) {
   </header>
 }
 
-function TabelaListy({ dane, indeksPierwszegoWiersza, uczestnicy, czyPierwszaStrona }: {
+function TabelaListy({ dane, indeksPierwszegoWiersza, uczestnicy }: {
   dane: DaneListyObecnosci
   indeksPierwszegoWiersza: number
   uczestnicy: Array<{ id: string; imieINazwisko: string }>
-  czyPierwszaStrona: boolean
 }) {
   const daty = dane.daty.length ? dane.daty : ['Data']
   const szerokoscPodpisu = `${44.4 / daty.length}%`
@@ -28,10 +27,10 @@ function TabelaListy({ dane, indeksPierwszegoWiersza, uczestnicy, czyPierwszaStr
       <col className="lista-obecnosci-a4__kolumna-uczestnika" />
       {daty.map((data, indeks) => <col key={`${data}-${indeks}`} style={{ width: szerokoscPodpisu }} />)}
     </colgroup>
-    {czyPierwszaStrona && <thead>
+    <thead>
       <tr><th rowSpan={2} scope="col">Lp.:</th><th rowSpan={2} scope="col">Imię i nazwisko:</th><th colSpan={daty.length} scope="colgroup">Podpis uczestnika:</th></tr>
       <tr>{daty.map((data, indeks) => <th key={`${data}-${indeks}`} scope="col">{data}</th>)}</tr>
-    </thead>}
+    </thead>
     <tbody>
       {uczestnicy.map((uczestnik, indeks) => <tr key={uczestnik.id}>
         <td>{indeksPierwszegoWiersza + indeks + 1}</td>
@@ -48,7 +47,7 @@ export default function RendererListyObecnosci({ dane }: { dane: DaneListyObecno
   return <div className="lista-obecnosci-a4__dokument">
     {strony.map((uczestnicy, indeksStrony) => <section className="lista-obecnosci-a4" data-strona-dokumentu key={indeksStrony}>
       {indeksStrony === 0 && <NaglowekListy dane={dane} />}
-      <TabelaListy dane={dane} indeksPierwszegoWiersza={indeksStrony * 28} uczestnicy={uczestnicy} czyPierwszaStrona={indeksStrony === 0} />
+      <TabelaListy dane={dane} indeksPierwszegoWiersza={indeksStrony * 28} uczestnicy={uczestnicy} />
     </section>)}
   </div>
 }

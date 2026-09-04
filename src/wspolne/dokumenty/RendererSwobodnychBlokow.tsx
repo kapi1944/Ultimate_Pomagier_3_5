@@ -13,6 +13,8 @@ type WlasciwosciRendereraSwobodnychBlokow = {
   numerStrony: number
   kontekst: KontekstSwobodnychBlokow
   trybRenderowania: TrybRenderowaniaDokumentu
+  szerokoscStronyMm?: number
+  wysokoscStronyMm?: number
 }
 
 const wyrownanieCss = {
@@ -22,13 +24,13 @@ const wyrownanieCss = {
   wyjustuj: 'justify',
 } as const
 
-function pobierzStylPolozenia(blok: BlokSwobodnyDokumentu): CSSProperties {
+function pobierzStylPolozenia(blok: BlokSwobodnyDokumentu, szerokoscStronyMm: number, wysokoscStronyMm: number): CSSProperties {
   return {
     position: 'absolute',
-    left: `${blok.xMm / 2.1}%`,
-    top: `${blok.yMm / 2.97}%`,
-    width: `${blok.szerokoscMm / 2.1}%`,
-    height: `${blok.wysokoscMm / 2.97}%`,
+    left: `${blok.xMm * 100 / szerokoscStronyMm}%`,
+    top: `${blok.yMm * 100 / wysokoscStronyMm}%`,
+    width: `${blok.szerokoscMm * 100 / szerokoscStronyMm}%`,
+    height: `${blok.wysokoscMm * 100 / wysokoscStronyMm}%`,
     zIndex: blok.indeksWarstwy,
     boxSizing: 'border-box',
     overflow: 'hidden',
@@ -36,9 +38,9 @@ function pobierzStylPolozenia(blok: BlokSwobodnyDokumentu): CSSProperties {
   }
 }
 
-export default function RendererSwobodnychBlokow({ bloki, numerStrony, kontekst, trybRenderowania }: WlasciwosciRendereraSwobodnychBlokow) {
+export default function RendererSwobodnychBlokow({ bloki, numerStrony, kontekst, trybRenderowania, szerokoscStronyMm = 210, wysokoscStronyMm = 297 }: WlasciwosciRendereraSwobodnychBlokow) {
   return bloki.filter((blok) => czyBlokWidocznyNaStronie(blok, numerStrony)).map((blok) => {
-    const stylPolozenia = pobierzStylPolozenia(blok)
+    const stylPolozenia = pobierzStylPolozenia(blok, szerokoscStronyMm, wysokoscStronyMm)
 
     if (blok.typ === 'tekst') {
       return (

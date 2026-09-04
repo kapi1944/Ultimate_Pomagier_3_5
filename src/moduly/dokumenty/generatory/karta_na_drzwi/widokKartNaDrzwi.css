@@ -1,2 +1,3 @@
 .karta-na-drzwi__strona{position:relative;width:100%;margin:auto;overflow:hidden;background:#fff;color:#172033;box-shadow:0 2px 12px #0003;container-type:inline-size}.karta-na-drzwi__strona--pozioma{aspect-ratio:297/210}.karta-na-drzwi__strona--pionowa{aspect-ratio:210/297}
 .karta-na-drzwi__dane{min-height:300px}
+.karta-na-drzwi__formularz{display:grid;gap:12px}.karta-na-drzwi__formularz label{display:grid;gap:6px;font-weight:700}.karta-na-drzwi__formularz select,.karta-na-drzwi__formularz textarea{width:100%;box-sizing:border-box;min-height:44px}.karta-na-drzwi__formularz textarea{resize:vertical;font-family:inherit}@media(max-width:760px){.karta-na-drzwi__strona{min-width:0}.karta-na-drzwi__formularz{grid-template-columns:1fr}}

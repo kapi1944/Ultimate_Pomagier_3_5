@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type Dispatch, type DragEvent, type ReactNode, type SetStateAction } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type DragEvent, type ReactNode, type SetStateAction } from 'react'
 import { useKontekstUzytkownika } from '../../../../aplikacja/logowanie/useKontekstUzytkownika'
 import AkcjeEksportuPdf from '../../../../wspolne/dokumenty/AkcjeEksportuPdf'
 import { PanelEdycjiSwobodnychBlokow } from '../../../../wspolne/dokumenty/EdytorSwobodnychBlokow'
@@ -6,6 +6,7 @@ import { zbudujNazweEksportowanegoDokumentu } from '../../../../wspolne/dokument
 import { zapiszKopieUkladuSwobodnychBlokow } from '../../../../wspolne/dokumenty/szablonyDokumentow'
 import { zapiszDokumentRoboczyGeneratora } from '../../../../wspolne/dokumenty/zapisDokumentuGeneratora'
 import { pobierzMapeZasobowObrazowDokumentu, zapiszZasobObrazuDokumentu } from '../../../../wspolne/dokumenty/zasobyObrazowDokumentu'
+import { pobierzSzczegolyDoGeneratorow, zbudujKontekstZeSzczegolow, type SzczegolyDoGeneratoraDokumentu } from '../../../../wspolne/integracje/szczegolyDoDokumentow'
 import { ObszarZPanelemGeneratora, PanelBocznyGeneratora, PanelGeneratoraDokumentu, PasekAkcjiGeneratora, PrzyciskPaneluGeneratora, UkladFormularzaIPodgladu } from '../../wspolne/UkladGeneratoraDokumentu'
 import StatusZapisuDokumentu from '../../wspolne/StatusZapisuDokumentu'
 import { useOchronaNiezapisanegoDokumentu, useStanDokumentu } from '../../wspolne/useStanDokumentu'
@@ -18,6 +19,7 @@ import {
   podzielAnkieteNaStrony,
   serializujDaneAnkiety,
   utworzBlokiSzablonuAnkiety,
+  utworzDaneAnkietyZKontekstu,
   utworzDomyslneDaneAnkiety,
   zastosujPresetAnkiety,
   type DaneAnkiety,
@@ -83,11 +85,11 @@ function EdytorSekcjiAnkiety({ dane, zmienDane }: { dane: DaneAnkiety; zmienDane
   </div>
 }
 
-function FormularzAnkiety({ dane, prefiksId, ustawDane }: { dane: DaneAnkiety; prefiksId: string; ustawDane: Dispatch<SetStateAction<DaneAnkiety>> }) {
+function FormularzAnkiety({ dane, grupy, prefiksId, szczegoly, szczegolyId, ustawDane, ustawGrupeId, ustawSzczegolyId, grupaId }: { dane: DaneAnkiety; grupy: { id: string; nazwa: string }[]; prefiksId: string; szczegoly: SzczegolyDoGeneratoraDokumentu[]; szczegolyId: string; ustawDane: Dispatch<SetStateAction<DaneAnkiety>>; ustawGrupeId: (id: string) => void; ustawSzczegolyId: (id: string) => void; grupaId: string }) {
   const zmienDane: ZmienDane = (aktualizacja) => ustawDane(aktualizacja)
   const utworzKopie = () => ustawDane((obecne) => zastosujPresetAnkiety(obecne, 'WLASNA'))
   return <div className="generator-ankiet__formularz">
-    <SekcjaFormularza domyslnieOtwarta tytul="Dane szkolenia"><div className="generator-ankiet__siatka-pol"><label className="generator-ankiet__pole-szerokie" htmlFor={`${prefiksId}-tytul`}>Tytuł szkolenia<input id={`${prefiksId}-tytul`} value={dane.tytulSzkolenia} onChange={(zdarzenie) => zmienDane((obecne) => ({ ...obecne, tytulSzkolenia: zdarzenie.target.value }))} /></label><label htmlFor={`${prefiksId}-data-od`}>Data od<input id={`${prefiksId}-data-od`} type="date" value={dane.dataOd} onChange={(zdarzenie) => zmienDane((obecne) => ({ ...obecne, dataOd: zdarzenie.target.value }))} /></label><label htmlFor={`${prefiksId}-data-do`}>Data do<input id={`${prefiksId}-data-do`} type="date" value={dane.dataDo} onChange={(zdarzenie) => zmienDane((obecne) => ({ ...obecne, dataDo: zdarzenie.target.value }))} /></label><label className="generator-ankiet__pole-szerokie" htmlFor={`${prefiksId}-miejsce`}>Miejsce<input id={`${prefiksId}-miejsce`} value={dane.miejsce} onChange={(zdarzenie) => zmienDane((obecne) => ({ ...obecne, miejsce: zdarzenie.target.value }))} /></label><label className="generator-ankiet__pole-szerokie" htmlFor={`${prefiksId}-trener`}>Trener / ekspert<input id={`${prefiksId}-trener`} value={dane.trener} onChange={(zdarzenie) => zmienDane((obecne) => ({ ...obecne, trener: zdarzenie.target.value }))} /></label></div></SekcjaFormularza>
+    <SekcjaFormularza domyslnieOtwarta tytul="Dane szkolenia"><div className="generator-ankiet__siatka-pol"><label className="generator-ankiet__pole-szerokie" htmlFor={`${prefiksId}-szczegoly`}>Szczegóły organizacyjne<select id={`${prefiksId}-szczegoly`} value={szczegolyId} onChange={(zdarzenie) => ustawSzczegolyId(zdarzenie.target.value)}><option value="">Uzupełnij ręcznie</option>{szczegoly.map((pozycja) => <option key={pozycja.id} value={pozycja.id}>{pozycja.nazwa}{pozycja.czyKopiaRobocza ? ' — kopia robocza' : ''}</option>)}</select></label>{szczegolyId && <label className="generator-ankiet__pole-szerokie" htmlFor={`${prefiksId}-grupa`}>Grupa szkoleniowa<select id={`${prefiksId}-grupa`} value={grupaId} onChange={(zdarzenie) => ustawGrupeId(zdarzenie.target.value)}>{grupy.map((grupa) => <option key={grupa.id} value={grupa.id}>{grupa.nazwa}</option>)}</select></label>}<label className="generator-ankiet__pole-szerokie" htmlFor={`${prefiksId}-tytul`}>Tytuł szkolenia<input id={`${prefiksId}-tytul`} value={dane.tytulSzkolenia} onChange={(zdarzenie) => zmienDane((obecne) => ({ ...obecne, tytulSzkolenia: zdarzenie.target.value }))} /></label><label htmlFor={`${prefiksId}-data-od`}>Data od<input id={`${prefiksId}-data-od`} type="date" value={dane.dataOd} onChange={(zdarzenie) => zmienDane((obecne) => ({ ...obecne, dataOd: zdarzenie.target.value }))} /></label><label htmlFor={`${prefiksId}-data-do`}>Data do<input id={`${prefiksId}-data-do`} type="date" value={dane.dataDo} onChange={(zdarzenie) => zmienDane((obecne) => ({ ...obecne, dataDo: zdarzenie.target.value }))} /></label><label className="generator-ankiet__pole-szerokie" htmlFor={`${prefiksId}-miejsce`}>Miejsce<input id={`${prefiksId}-miejsce`} value={dane.miejsce} onChange={(zdarzenie) => zmienDane((obecne) => ({ ...obecne, miejsce: zdarzenie.target.value }))} /></label><label className="generator-ankiet__pole-szerokie" htmlFor={`${prefiksId}-trener`}>Trener / ekspert<input id={`${prefiksId}-trener`} value={dane.trener} onChange={(zdarzenie) => zmienDane((obecne) => ({ ...obecne, trener: zdarzenie.target.value }))} /></label></div></SekcjaFormularza>
     <SekcjaFormularza domyslnieOtwarta tytul="Szablon i organizator"><label htmlFor={`${prefiksId}-preset`}>Aktywny preset<select id={`${prefiksId}-preset`} value={dane.preset} onChange={(zdarzenie) => ustawDane((obecne) => zastosujPresetAnkiety(obecne, zdarzenie.target.value as PresetAnkiety))}>{Object.entries(etykietyPresetowAnkiety).map(([wartosc, etykieta]) => <option key={wartosc} value={wartosc}>{etykieta}</option>)}</select></label><p className="generator-ankiet__aktywny-preset">Aktywny: <strong>{etykietyPresetowAnkiety[dane.preset]}</strong></p><label htmlFor={`${prefiksId}-organizator`}>Organizator<select id={`${prefiksId}-organizator`} value={dane.organizator} onChange={(zdarzenie) => zmienDane((obecne) => ({ ...obecne, preset: 'WLASNA', organizator: zdarzenie.target.value === 'IIST' ? 'IIST' : 'SEMPER' }))}>{Object.entries(nazwyOrganizatorowAnkiety).map(([wartosc, etykieta]) => <option key={wartosc} value={wartosc}>{etykieta}</option>)}</select></label></SekcjaFormularza>
     <SekcjaFormularza domyslnieOtwarta tytul="Treść ankiety">{dane.preset === 'WLASNA' ? <EdytorSekcjiAnkiety dane={dane} zmienDane={zmienDane} /> : <div className="generator-ankiet__ochrona-presets"><p>Treść firmowego presetu jest chroniona przed przypadkową zmianą.</p><button className="generator-ankiet__przycisk-pomocniczy" onClick={utworzKopie} type="button">Utwórz własną kopię do edycji</button></div>}</SekcjaFormularza>
     <SekcjaFormularza tytul="Wygląd dokumentu"><p className="generator-ankiet__opis-wygladu">Logo, tytuł, numer strony i własne napisy edytujesz bezpośrednio na podglądzie po otwarciu wspólnego panelu. Geometria jest zapisywana w milimetrach i nie zależy od skali podglądu.</p></SekcjaFormularza>
@@ -102,6 +104,10 @@ export default function WidokAnkiet() {
   const [zaznaczonyBlokId, ustawZaznaczonyBlokId] = useState<string | null>(null)
   const [trybEdycjiSzablonu, ustawTrybEdycjiSzablonu] = useState(false)
   const [zasobyObrazow, ustawZasobyObrazow] = useState(() => pobierzMapeZasobowObrazowDokumentu())
+  const [szczegolyId, ustawSzczegolyId] = useState('')
+  const [grupaId, ustawGrupeId] = useState('')
+  const szczegoly = useMemo(() => pobierzSzczegolyDoGeneratorow(), [])
+  const wybraneSzczegoly = szczegoly.find((pozycja) => pozycja.id === szczegolyId)
   const obszarPodgladuRef = useRef<HTMLElement>(null)
   const liczbaStron = podzielAnkieteNaStrony(dane).length
   const zapiszDane = useCallback((zapisywaneDane: DaneAnkiety) => {
@@ -114,6 +120,15 @@ export default function WidokAnkiet() {
   useEffect(() => { localStorage.setItem(kluczSzkicu, serializujDaneAnkiety(dane)) }, [dane])
   useOchronaNiezapisanegoDokumentu(stanDokumentu.czyNiezapisaneZmiany, () => { void stanDokumentu.zapiszTeraz() })
 
+  function zastosujDaneSzkolenia(noweSzczegolyId: string, noweGrupaId?: string) {
+    ustawSzczegolyId(noweSzczegolyId)
+    const zrodlo = szczegoly.find((pozycja) => pozycja.id === noweSzczegolyId)
+    if (!zrodlo) { ustawGrupeId(''); return }
+    const wybranaGrupaId = noweGrupaId && zrodlo.grupy.some((grupa) => grupa.id === noweGrupaId) ? noweGrupaId : zrodlo.grupy[0]?.id ?? ''
+    ustawGrupeId(wybranaGrupaId)
+    ustawDane(utworzDaneAnkietyZKontekstu(zbudujKontekstZeSzczegolow(zrodlo.zrodloKontekstu), wybranaGrupaId))
+  }
+
   async function dodajObraz(plik: File) { const klucz = await zapiszZasobObrazuDokumentu(plik); ustawZasobyObrazow(pobierzMapeZasobowObrazowDokumentu()); ustawKomunikat('Obraz zapisano raz we wspólnych zasobach dokumentów.'); return klucz }
   function rozpocznijNowaAnkiete() { const nowe = utworzDomyslneDaneAnkiety(); ustawDane(nowe); ustawIdDokumentu(null); ustawZaznaczonyBlokId(null); localStorage.removeItem(kluczIdDokumentu); localStorage.setItem(kluczSzkicu, serializujDaneAnkiety(nowe)); stanDokumentu.oznaczJakoZapisany(nowe); ustawKomunikat('Przywrócono nową ankietę z pełnym presetem oryginalnym.') }
   function zapiszKopieUkladu() { const nazwa = `Ankieta ${dane.organizator} — układ ${new Date().toLocaleDateString('pl-PL')}`; const szablon = zapiszKopieUkladuSwobodnychBlokow({ nazwa, organizator: dane.organizator, autor: zalogowanyUzytkownik?.id ?? 'Użytkownik', bloki: dane.blokiSwobodne, tytulSzkolenia: dane.tytulSzkolenia }); ustawKomunikat(`Zapisano kopię układu w kartotece szablonów: ${szablon.nazwa}.`) }
@@ -122,6 +137,6 @@ export default function WidokAnkiet() {
 
   return <ObszarZPanelemGeneratora idPanelu="panel-danych-ankiety" kluczPrzypiecia="ultimate-pomagier.panel-generatora.ankiety.przypiety" kluczWysuwania="ultimate-pomagier.panel-generatora.ankiety.wysuwanie" tytulPanelu="Ustawienia układu ankiety"><section className="generator-ankiet"><div className="generator-dokumentu widok"><header className="generator-dokumentu__naglowek"><div><h1>Ankiety</h1><p>{etykietyPresetowAnkiety[dane.preset]} · {liczbaStron} {liczbaStron === 1 ? 'strona' : 'strony'} A4</p></div>{akcje}{komunikat && <div aria-live="polite" className="generator-dokumentu__komunikat">{komunikat}</div>}</header>
     <PanelBocznyGeneratora><PanelEdycjiSwobodnychBlokow bloki={dane.blokiSwobodne} blokiSzablonu={utworzBlokiSzablonuAnkiety(dane.wariantSzablonu)} liczbaStron={liczbaStron} zaznaczonyBlokId={zaznaczonyBlokId} trybEdycjiSzablonu={trybEdycjiSzablonu} onDodajObraz={dodajObraz} onZmienBloki={(blokiSwobodne) => ustawDane((obecne) => ({ ...obecne, blokiSwobodne }))} onZmienTrybEdycjiSzablonu={ustawTrybEdycjiSzablonu} /><button className="generator-ankiet__przycisk-pomocniczy" onClick={zapiszKopieUkladu} type="button">Zapisz układ jako kopię szablonu</button></PanelBocznyGeneratora>
-    <UkladFormularzaIPodgladu><PanelGeneratoraDokumentu tytul="Ustawienia ankiety" wariant="edycja"><FormularzAnkiety dane={dane} prefiksId="formularz-ankiety" ustawDane={ustawDane} /></PanelGeneratoraDokumentu><PanelGeneratoraDokumentu className="generator-ankiet__podglad" ref={obszarPodgladuRef} tytul={`Podgląd A4 — ${liczbaStron} str.`} wariant="podglad"><RendererAnkiety dane={dane} zasobyObrazow={zasobyObrazow} zaznaczonyBlokId={zaznaczonyBlokId} trybEdycjiSzablonu={trybEdycjiSzablonu} onZaznaczBlok={ustawZaznaczonyBlokId} onZmienBlok={(blok) => ustawDane((obecne) => ({ ...obecne, blokiSwobodne: obecne.blokiSwobodne.map((pozycja) => pozycja.id === blok.id ? blok : pozycja) }))} /></PanelGeneratoraDokumentu></UkladFormularzaIPodgladu>
+    <UkladFormularzaIPodgladu><PanelGeneratoraDokumentu tytul="Ustawienia ankiety" wariant="edycja"><FormularzAnkiety dane={dane} grupy={(wybraneSzczegoly?.grupy ?? []).map((grupa, indeks) => ({ id: grupa.id, nazwa: grupa.nazwa || `Grupa ${indeks + 1}` }))} prefiksId="formularz-ankiety" szczegoly={szczegoly} szczegolyId={szczegolyId} grupaId={grupaId} ustawDane={ustawDane} ustawSzczegolyId={(id) => zastosujDaneSzkolenia(id)} ustawGrupeId={(id) => zastosujDaneSzkolenia(szczegolyId, id)} /></PanelGeneratoraDokumentu><PanelGeneratoraDokumentu className="generator-ankiet__podglad" ref={obszarPodgladuRef} tytul={`Podgląd A4 — ${liczbaStron} str.`} wariant="podglad"><RendererAnkiety dane={dane} zasobyObrazow={zasobyObrazow} zaznaczonyBlokId={zaznaczonyBlokId} trybEdycjiSzablonu={trybEdycjiSzablonu} onZaznaczBlok={ustawZaznaczonyBlokId} onZmienBlok={(blok) => ustawDane((obecne) => ({ ...obecne, blokiSwobodne: obecne.blokiSwobodne.map((pozycja) => pozycja.id === blok.id ? blok : pozycja) }))} /></PanelGeneratoraDokumentu></UkladFormularzaIPodgladu>
   </div></section></ObszarZPanelemGeneratora>
 }

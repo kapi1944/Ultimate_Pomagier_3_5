@@ -198,10 +198,11 @@ export function deserializujDaneAnkiety(zapis: string | null): DaneAnkiety {
   }
 }
 export function utworzDaneAnkietyZKontekstu(kontekst: KontekstDokumentuSzkolenia, grupaId?: string | null): DaneAnkiety {
-  const dane = utworzDomyslneDaneAnkiety()
+  const organizator = normalizujOrganizatora(kontekst.organizator.marka ?? kontekst.organizator.nazwa)
+  const dane = utworzDomyslneDaneAnkiety(organizator === 'IIST' ? 'ORYGINALNA_IIST_PELNA' : 'ORYGINALNA_SEMPER_PELNA')
   const grupa = kontekst.grupy.find((pozycja) => pozycja.id === grupaId) ?? kontekst.grupy[0]
   const daty = grupa?.daty ?? []
   const lokalizacja = grupa?.lokalizacje.find((pozycja) => pozycja.nazwa || pozycja.adres)
   const trenerzy = grupa?.trenerzy.length ? grupa.trenerzy : kontekst.trenerzy
-  return { ...dane, tytulSzkolenia: kontekst.szkolenie.tytul || dane.tytulSzkolenia, dataOd: daty[0] ?? '', dataDo: daty.at(-1) ?? '', miejsce: lokalizacja?.nazwa ?? lokalizacja?.adres ?? (lokalizacja?.trybOnline ? 'Online' : ''), organizator: normalizujOrganizatora(kontekst.organizator.marka ?? kontekst.organizator.nazwa), trener: trenerzy.map((trener) => trener.imieINazwisko).join(', ') }
+  return { ...dane, tytulSzkolenia: kontekst.szkolenie.tytul || dane.tytulSzkolenia, dataOd: daty[0] ?? '', dataDo: daty.at(-1) ?? '', miejsce: lokalizacja?.nazwa ?? lokalizacja?.adres ?? (lokalizacja?.trybOnline ? 'Online' : ''), organizator, trener: trenerzy.map((trener) => trener.imieINazwisko).join(', ') }
 }
