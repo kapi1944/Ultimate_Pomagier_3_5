@@ -14,7 +14,7 @@ import StatusZapisuDokumentu from '../../wspolne/StatusZapisuDokumentu'
 import { useOchronaNiezapisanegoDokumentu, useStanDokumentu } from '../../wspolne/useStanDokumentu'
 import RendererListyObecnosci from './RendererListyObecnosci'
 import WidokListObecnosci, { FormularzListyObecnosci } from './WidokListObecnosci'
-import { utworzDaneListyObecnosciZIntegracji, type DaneListyObecnosci } from './modelListyObecnosci'
+import { utworzDaneListyObecnosciZIntegracji, utworzDomyslneDaneListyObecnosci, type DaneListyObecnosci } from './modelListyObecnosci'
 import {
   pobierzListeObecnosciPoId,
   zapiszKorektyListyObecnosci,
@@ -60,7 +60,7 @@ function EdytorListyObecnosci({ dokumentId }: { dokumentId: string }) {
   const [tytulDokumentu, ustawTytulDokumentu] = useState(() => dokument?.tytul ?? '')
   const [dane, ustawDane] = useState<DaneListyObecnosci>(() => dokument
     ? utworzDaneListyObecnosciZIntegracji(dokument.daneDokumentu.daneZrodlowe, dokument.daneDokumentu.korektyReczne)
-    : { wersjaSchematu: 1, tytulSzkolenia: '', miejsce: '', daty: [], organizator: 'SEMPER', trybListy: 'WYPELNIONA', liczbaPustychWierszy: 20, uczestnicy: [] })
+    : { ...utworzDomyslneDaneListyObecnosci(), tytulSzkolenia: '', uczestnicy: [] })
   const [komunikat, ustawKomunikat] = useState('')
   const obszarPodgladuRef = useRef<HTMLElement>(null)
   const stanFormularza = { dane, tytulDokumentu }

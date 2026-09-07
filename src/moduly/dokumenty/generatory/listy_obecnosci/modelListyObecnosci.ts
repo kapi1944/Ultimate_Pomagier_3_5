@@ -2,6 +2,7 @@ import type {
   DaneListyObecnosciZIntegracji,
   KorektyReczneListyObecnosci,
 } from '../../../../wspolne/integracje/szczegolyDoDokumentow'
+import { WERSJA_SCHEMATU_SWOBODNYCH_BLOKOW, normalizujBlokiSwobodneDokumentu, type BlokSwobodnyDokumentu } from '../../../../wspolne/dokumenty/modelSwobodnychBlokow'
 
 export type OrganizatorListyObecnosci = 'SEMPER' | 'IIST'
 export type TrybListyObecnosci = 'WYPELNIONA' | 'PUSTA'
@@ -20,6 +21,18 @@ export type DaneListyObecnosci = {
   trybListy: TrybListyObecnosci
   liczbaPustychWierszy: number
   uczestnicy: UczestnikListyObecnosci[]
+  blokiSwobodne: BlokSwobodnyDokumentu[]
+  wersjaSchematuBlokow: typeof WERSJA_SCHEMATU_SWOBODNYCH_BLOKOW
+}
+
+export function utworzBlokiSzablonuListyObecnosci(): BlokSwobodnyDokumentu[] {
+  const podstawa = (id: string, nazwa: string, xMm: number, yMm: number, szerokoscMm: number, wysokoscMm: number) => ({ id, nazwa, rola: 'element_staly_szablonu' as const, pochodzenie: 'szablon' as const, zablokowany: false, xMm, yMm, szerokoscMm, wysokoscMm, przypisanieDoStrony: { rodzaj: 'pierwsza' as const }, widoczny: true, indeksWarstwy: 8 })
+  return [
+    { ...podstawa('lista-logo', 'Logo organizatora', 10, 8, 42, 20), rola: 'logo' as const, typ: 'obraz' as const, dane: { zrodlo: { rodzaj: 'zasob_organizatora' as const, klucz: 'logo_organizatora' }, tekstAlternatywny: 'Logo organizatora', zachowajProporcje: true, trybDopasowania: 'contain' as const } },
+    { ...podstawa('lista-tytul', 'Tytuł dokumentu', 48, 22, 114, 12), typ: 'tekst' as const, dane: { zrodlo: { rodzaj: 'statyczne' as const, tekst: 'Lista obecności' }, rozmiarCzcionkiPt: 15, gruboscCzcionki: 700 as const, rodzinaCzcionki: 'Arial', wyrownanie: 'srodek' as const, interlinia: 1.1, podkreslenie: true, marginesWewnetrznyMm: 1 } },
+    { ...podstawa('lista-szkolenie', 'Tytuł szkolenia', 25, 38, 160, 14), typ: 'tekst' as const, dane: { zrodlo: { rodzaj: 'pole_danych' as const, sciezka: 'tytulSzkolenia', tekstZastepczy: 'Tytuł szkolenia' }, rozmiarCzcionkiPt: 15, gruboscCzcionki: 700 as const, rodzinaCzcionki: 'Arial', wyrownanie: 'srodek' as const, interlinia: 1.1, kolor: '#c80000', marginesWewnetrznyMm: 1 } },
+    { ...podstawa('lista-miejsce', 'Miejsce i termin', 25, 52, 160, 12), typ: 'tekst' as const, dane: { zrodlo: { rodzaj: 'pole_danych' as const, sciezka: 'miejsceITermin', tekstZastepczy: 'Miejsce i termin' }, rozmiarCzcionkiPt: 12, gruboscCzcionki: 400 as const, rodzinaCzcionki: 'Arial', wyrownanie: 'srodek' as const, interlinia: 1.1, marginesWewnetrznyMm: 1 } },
+  ]
 }
 
 const maksymalnaLiczbaDni = 5
@@ -121,6 +134,8 @@ export function utworzDomyslneDaneListyObecnosci(): DaneListyObecnosci {
       { id: 'uczestnik-2', imieINazwisko: 'Piotr Nowak' },
       { id: 'uczestnik-3', imieINazwisko: 'Maria Zielińska' },
     ],
+    blokiSwobodne: utworzBlokiSzablonuListyObecnosci(),
+    wersjaSchematuBlokow: WERSJA_SCHEMATU_SWOBODNYCH_BLOKOW,
   }
 }
 
@@ -145,6 +160,8 @@ export function deserializujDaneListyObecnosci(tekst: string | null): DaneListyO
       trybListy: normalizujTrybListy(dane.trybListy),
       liczbaPustychWierszy: normalizujLiczbePustychWierszy(dane.liczbaPustychWierszy),
       uczestnicy: normalizujUczestnikow(dane.uczestnicy),
+      blokiSwobodne: (() => { const bloki = normalizujBlokiSwobodneDokumentu(dane.blokiSwobodne); return bloki.length ? bloki : daneDomyslne.blokiSwobodne })(),
+      wersjaSchematuBlokow: WERSJA_SCHEMATU_SWOBODNYCH_BLOKOW,
     }
   } catch {
     const dataOd = odczytajPoleLegacy(tekst, 'Data od')
@@ -157,6 +174,8 @@ export function deserializujDaneListyObecnosci(tekst: string | null): DaneListyO
       organizator: normalizujOrganizatora(odczytajPoleLegacy(tekst, 'Marka') || odczytajPoleLegacy(tekst, 'Organizator')),
       trybListy: normalizujTrybListy(odczytajPoleLegacy(tekst, 'Tryb listy')),
       uczestnicy: odczytajUczestnikowLegacy(tekst),
+      blokiSwobodne: daneDomyslne.blokiSwobodne,
+      wersjaSchematuBlokow: WERSJA_SCHEMATU_SWOBODNYCH_BLOKOW,
     }
   }
 }
@@ -180,6 +199,8 @@ export function utworzDaneListyObecnosciZIntegracji(
     trybListy: uczestnicy.length ? 'WYPELNIONA' : 'PUSTA',
     liczbaPustychWierszy: Math.max(dane.liczbaUczestnikow, 20),
     uczestnicy,
+    blokiSwobodne: utworzBlokiSzablonuListyObecnosci(),
+    wersjaSchematuBlokow: WERSJA_SCHEMATU_SWOBODNYCH_BLOKOW,
   }
 }
 

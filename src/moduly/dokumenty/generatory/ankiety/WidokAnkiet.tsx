@@ -5,6 +5,7 @@ import { PanelEdycjiSwobodnychBlokow } from '../../../../wspolne/dokumenty/Edyto
 import { zbudujNazweEksportowanegoDokumentu } from '../../../../wspolne/dokumenty/nazwyDokumentow'
 import { zapiszKopieUkladuSwobodnychBlokow } from '../../../../wspolne/dokumenty/szablonyDokumentow'
 import { zapiszDokumentRoboczyGeneratora } from '../../../../wspolne/dokumenty/zapisDokumentuGeneratora'
+import { utworzUstawieniaUkladuDokumentu } from '../../../../wspolne/dokumenty/ustawieniaUkladuDokumentu'
 import { pobierzMapeZasobowObrazowDokumentu, zapiszZasobObrazuDokumentu } from '../../../../wspolne/dokumenty/zasobyObrazowDokumentu'
 import { pobierzSzczegolyDoGeneratorow, zbudujKontekstZeSzczegolow, type SzczegolyDoGeneratoraDokumentu } from '../../../../wspolne/integracje/szczegolyDoDokumentow'
 import { ObszarZPanelemGeneratora, PanelBocznyGeneratora, PanelGeneratoraDokumentu, PasekAkcjiGeneratora, PrzyciskPaneluGeneratora, UkladFormularzaIPodgladu } from '../../wspolne/UkladGeneratoraDokumentu'
@@ -112,7 +113,7 @@ export default function WidokAnkiet() {
   const liczbaStron = podzielAnkieteNaStrony(dane).length
   const zapiszDane = useCallback((zapisywaneDane: DaneAnkiety) => {
     const tekst = serializujDaneAnkiety(zapisywaneDane)
-    const dokument = zapiszDokumentRoboczyGeneratora({ id: idDokumentu, typ: 'ANKIETA', generatorId: 'ankiety', tytul: `Ankieta — ${zapisywaneDane.tytulSzkolenia || 'bez tytułu szkolenia'}`, daneDokumentu: { tekst, ankieta: zapisywaneDane }, ustawieniaDokumentu: { wariantSzablonu: zapisywaneDane.wariantSzablonu, preset: zapisywaneDane.preset }, autorId: zalogowanyUzytkownik?.id, wlascicielId: zalogowanyUzytkownik?.id })
+    const dokument = zapiszDokumentRoboczyGeneratora({ id: idDokumentu, typ: 'ANKIETA', generatorId: 'ankiety', tytul: `Ankieta — ${zapisywaneDane.tytulSzkolenia || 'bez tytułu szkolenia'}`, daneDokumentu: { tekst, ankieta: zapisywaneDane }, ustawieniaDokumentu: { wariantSzablonu: zapisywaneDane.wariantSzablonu, preset: zapisywaneDane.preset, ukladDokumentu: utworzUstawieniaUkladuDokumentu(zapisywaneDane.blokiSwobodne) }, autorId: zalogowanyUzytkownik?.id, wlascicielId: zalogowanyUzytkownik?.id })
     if (!dokument) throw new Error('Nie udało się zapisać ankiety.')
     ustawIdDokumentu(dokument.id); localStorage.setItem(kluczIdDokumentu, dokument.id)
   }, [idDokumentu, zalogowanyUzytkownik?.id])

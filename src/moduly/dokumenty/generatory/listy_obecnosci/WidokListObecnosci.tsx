@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react'
 import { useKontekstUzytkownika } from '../../../../aplikacja/logowanie/useKontekstUzytkownika'
 import AkcjeEksportuPdf from '../../../../wspolne/dokumenty/AkcjeEksportuPdf'
+import { PanelEdycjiSwobodnychBlokow } from '../../../../wspolne/dokumenty/EdytorSwobodnychBlokow'
+import { pobierzMapeZasobowObrazowDokumentu, zapiszZasobObrazuDokumentu } from '../../../../wspolne/dokumenty/zasobyObrazowDokumentu'
 import { zbudujNazweEksportowanegoDokumentu } from '../../../../wspolne/dokumenty/nazwyDokumentow'
 import { zapiszDokumentRoboczyGeneratora } from '../../../../wspolne/dokumenty/zapisDokumentuGeneratora'
+import { utworzUstawieniaUkladuDokumentu } from '../../../../wspolne/dokumenty/ustawieniaUkladuDokumentu'
 import { ObszarZPanelemGeneratora, PanelBocznyGeneratora, PanelGeneratoraDokumentu, PasekAkcjiGeneratora, PrzyciskPaneluGeneratora, UkladFormularzaIPodgladu } from '../../wspolne/UkladGeneratoraDokumentu'
 import StatusZapisuDokumentu from '../../wspolne/StatusZapisuDokumentu'
 import { useOchronaNiezapisanegoDokumentu, useStanDokumentu } from '../../wspolne/useStanDokumentu'
@@ -10,7 +13,9 @@ import RendererListyObecnosci from './RendererListyObecnosci'
 import {
   deserializujDaneListyObecnosci,
   serializujDaneListyObecnosci,
+  podzielWierszeListyObecnosci,
   utworzDomyslneDaneListyObecnosci,
+  utworzBlokiSzablonuListyObecnosci,
   type DaneListyObecnosci,
 } from './modelListyObecnosci'
 import './widokListObecnosci.css'
@@ -85,6 +90,9 @@ export default function WidokListObecnosci() {
   const [dane, ustawDane] = useState(() => deserializujDaneListyObecnosci(localStorage.getItem(kluczSzkicu)))
   const [idDokumentu, ustawIdDokumentu] = useState<string | null>(() => localStorage.getItem(kluczIdDokumentu))
   const [komunikat, ustawKomunikat] = useState<string | null>(null)
+  const [zaznaczonyBlokId, ustawZaznaczonyBlokId] = useState<string | null>(null)
+  const [trybEdycjiSzablonu, ustawTrybEdycjiSzablonu] = useState(false)
+  const [zasobyObrazow, ustawZasobyObrazow] = useState(() => pobierzMapeZasobowObrazowDokumentu())
   const obszarPodgladuRef = useRef<HTMLElement>(null)
   const zapiszDane = useCallback((zapisywaneDane: DaneListyObecnosci) => {
     const tekst = serializujDaneListyObecnosci(zapisywaneDane)
@@ -94,7 +102,7 @@ export default function WidokListObecnosci() {
       generatorId: 'listy_obecnosci',
       tytul: `Lista obecności - ${zapisywaneDane.tytulSzkolenia || 'bez tytułu szkolenia'}`,
       daneDokumentu: { tekst, listaObecnosci: zapisywaneDane },
-      ustawieniaDokumentu: { organizator: zapisywaneDane.organizator, trybListy: zapisywaneDane.trybListy },
+      ustawieniaDokumentu: { organizator: zapisywaneDane.organizator, trybListy: zapisywaneDane.trybListy, ukladDokumentu: utworzUstawieniaUkladuDokumentu(zapisywaneDane.blokiSwobodne) },
       autorId: zalogowanyUzytkownik?.id,
       wlascicielId: zalogowanyUzytkownik?.id,
     })
@@ -102,6 +110,11 @@ export default function WidokListObecnosci() {
     ustawIdDokumentu(dokument.id)
     localStorage.setItem(kluczIdDokumentu, dokument.id)
   }, [idDokumentu, zalogowanyUzytkownik?.id])
+  async function dodajObraz(plik: File) {
+    const klucz = await zapiszZasobObrazuDokumentu(plik)
+    ustawZasobyObrazow(pobierzMapeZasobowObrazowDokumentu())
+    return klucz
+  }
   const stanDokumentu = useStanDokumentu({ dane, zapiszAutomatycznie: zapiszDane })
 
   useEffect(() => { localStorage.setItem(kluczSzkicu, serializujDaneListyObecnosci(dane)) }, [dane])
@@ -126,8 +139,8 @@ export default function WidokListObecnosci() {
 
   return <ObszarZPanelemGeneratora idPanelu="panel-danych-listy-obecnosci" kluczPrzypiecia="ultimate-pomagier.panel-generatora.listy-obecnosci.przypiety" kluczWysuwania="ultimate-pomagier.panel-generatora.listy-obecnosci.wysuwanie" tytulPanelu="Ustawienia Listy obecności">
     <section className="generator-list-obecnosci"><div className="generator-dokumentu widok"><header className="generator-dokumentu__naglowek"><div><h1>Listy obecności</h1><p>Lista w oryginalnym układzie SEMPER, z automatycznym podziałem stron A4.</p></div>{akcje}{komunikat && <div aria-live="polite" className="generator-dokumentu__komunikat">{komunikat}</div>}</header>
-      <PanelBocznyGeneratora><FormularzListyObecnosci dane={dane} prefiksId="panel-listy-obecnosci" ustawDane={ustawDane} /></PanelBocznyGeneratora>
-      <UkladFormularzaIPodgladu><PanelGeneratoraDokumentu tytul="Ustawienia Listy obecności" wariant="edycja"><FormularzListyObecnosci dane={dane} prefiksId="formularz-listy-obecnosci" ustawDane={ustawDane} /></PanelGeneratoraDokumentu><PanelGeneratoraDokumentu className="generator-list-obecnosci__podglad" ref={obszarPodgladuRef} tytul="Podgląd A4" wariant="podglad"><RendererListyObecnosci dane={dane} /></PanelGeneratoraDokumentu></UkladFormularzaIPodgladu>
+      <PanelBocznyGeneratora><PanelEdycjiSwobodnychBlokow bloki={dane.blokiSwobodne} blokiSzablonu={utworzBlokiSzablonuListyObecnosci()} liczbaStron={podzielWierszeListyObecnosci(dane).length} zaznaczonyBlokId={zaznaczonyBlokId} trybEdycjiSzablonu={trybEdycjiSzablonu} onDodajObraz={dodajObraz} onZmienBloki={(blokiSwobodne) => ustawDane((obecne) => ({ ...obecne, blokiSwobodne }))} onZmienTrybEdycjiSzablonu={ustawTrybEdycjiSzablonu} /></PanelBocznyGeneratora>
+      <UkladFormularzaIPodgladu><PanelGeneratoraDokumentu tytul="Ustawienia Listy obecności" wariant="edycja"><FormularzListyObecnosci dane={dane} prefiksId="formularz-listy-obecnosci" ustawDane={ustawDane} /></PanelGeneratoraDokumentu><PanelGeneratoraDokumentu className="generator-list-obecnosci__podglad" ref={obszarPodgladuRef} tytul="Podgląd A4" wariant="podglad"><RendererListyObecnosci dane={dane} zasobyObrazow={zasobyObrazow} zaznaczonyBlokId={zaznaczonyBlokId} trybEdycjiSzablonu={trybEdycjiSzablonu} onZaznaczBlok={ustawZaznaczonyBlokId} onZmienBlok={(blok) => ustawDane((obecne) => ({ ...obecne, blokiSwobodne: obecne.blokiSwobodne.map((pozycja) => pozycja.id === blok.id ? blok : pozycja) }))} /></PanelGeneratoraDokumentu></UkladFormularzaIPodgladu>
     </div></section>
   </ObszarZPanelemGeneratora>
 }

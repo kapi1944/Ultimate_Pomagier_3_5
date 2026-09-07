@@ -8,6 +8,7 @@ import {
   type SzczegolyDoGeneratoraDokumentu,
 } from '../../../../wspolne/integracje/szczegolyDoDokumentow/index.ts'
 import type { RolaUzytkownika } from '../../../../kartoteki/uzytkownicy/typyUzytkownikow'
+import { utworzUstawieniaUkladuDokumentu } from '../../../../wspolne/dokumenty/ustawieniaUkladuDokumentu'
 import {
   normalizujDaneChecklisty,
   type DaneChecklistyPaczki,
@@ -22,7 +23,7 @@ import {
   utworzDomyslneDaneChecklisty,
 } from './modelChecklistyPaczki'
 
-export type DokumentChecklistyPaczki = Dokument<DaneChecklistyPaczki, Record<string, never>>
+export type DokumentChecklistyPaczki = Dokument<DaneChecklistyPaczki, Record<string, unknown>>
 
 export type DaneZrodlaChecklisty = {
   opiekunId: string
@@ -136,7 +137,7 @@ export function utworzChecklistePaczkiZeZrodla(kontekst: KontekstDokumentuSzkole
     tytul: pobierzTytul(migawka),
     generatorId: 'checklisty_paczek',
     daneDokumentu: dane,
-    ustawieniaDokumentu: {},
+    ustawieniaDokumentu: { ukladDokumentu: utworzUstawieniaUkladuDokumentu(dane.blokiSwobodne) },
     szkolenieId: kontekst.szkolenie.id,
     klientId: kontekst.klient.id,
     autorId: uzytkownikId,
@@ -149,14 +150,14 @@ export function utworzRecznaChecklistePaczki(uzytkownikId: string | null) {
   const numerDzienny = pobierzKolejnyNumerDziennyDokumentu(repozytoriumWspolnychDokumentow.pobierzWszystkie(), 'CHECKLISTA_PACZKI')
   const identyfikator = utworzIdentyfikatorDokumentu('CHECKLISTA_PACZKI', numerDzienny, 1)
   const dane = utworzDomyslneDaneChecklisty({ identyfikator, numerDzienny, uzytkownikId })
-  return repozytoriumWspolnychDokumentow.utworz(utworzNowyDokument({ typ: 'CHECKLISTA_PACZKI', tytul: 'Checklista paczki — ręczna', generatorId: 'checklisty_paczek', daneDokumentu: dane, ustawieniaDokumentu: {}, autorId: uzytkownikId, wlascicielId: uzytkownikId })) as DokumentChecklistyPaczki
+  return repozytoriumWspolnychDokumentow.utworz(utworzNowyDokument({ typ: 'CHECKLISTA_PACZKI', tytul: 'Checklista paczki — ręczna', generatorId: 'checklisty_paczek', daneDokumentu: dane, ustawieniaDokumentu: { ukladDokumentu: utworzUstawieniaUkladuDokumentu(dane.blokiSwobodne) }, autorId: uzytkownikId, wlascicielId: uzytkownikId })) as DokumentChecklistyPaczki
 }
 
 export function zapiszChecklistePaczki(id: string, dane: DaneChecklistyPaczki, uzytkownikId: string | null, opis = 'Zapisano zmiany checklisty.') {
   const dokument = pobierzChecklistePaczki(id)
   if (!dokument || dokument.status === 'ZARCHIWIZOWANY') return null
   const zaktualizowane = dodajWpisHistorii(normalizujDaneChecklisty(dane), 'EDYCJA', uzytkownikId, opis)
-  return repozytoriumWspolnychDokumentow.aktualizuj(id, { daneDokumentu: zaktualizowane, status: pobierzStatusWspolny(zaktualizowane.statusChecklisty), tytul: pobierzTytul(zaktualizowane.migawkaZrodla) }) as DokumentChecklistyPaczki | null
+  return repozytoriumWspolnychDokumentow.aktualizuj(id, { daneDokumentu: zaktualizowane, ustawieniaDokumentu: { ukladDokumentu: utworzUstawieniaUkladuDokumentu(zaktualizowane.blokiSwobodne) }, status: pobierzStatusWspolny(zaktualizowane.statusChecklisty), tytul: pobierzTytul(zaktualizowane.migawkaZrodla) }) as DokumentChecklistyPaczki | null
 }
 
 export function ustawStatusChecklisty(id: string, statusChecklisty: StatusChecklistyPaczki, uzytkownikId: string | null, opis: string) {
@@ -223,7 +224,7 @@ export function duplikujChecklistePaczki(id: string, docelowaMigawka: MigawkaZro
   const dane = utworzDomyslneDaneChecklisty({ identyfikator, numerDzienny, migawka: docelowaMigawka, uzytkownikId })
   dane.kategorie = zrodlo.daneDokumentu.kategorie.map((kategoria) => ({ ...kategoria }))
   dane.pozycje = zrodlo.daneDokumentu.pozycje.map((pozycja: PozycjaChecklisty) => ({ ...pozycja, statusGotowosci: 'NIEGOTOWE', nadpisanieReczne: null, dodatkoweEgzemplarze: pozycja.dodatkoweEgzemplarze.map((dodatek) => ({ ...dodatek })) }))
-  return repozytoriumWspolnychDokumentow.utworz(utworzNowyDokument({ typ: 'CHECKLISTA_PACZKI', tytul: pobierzTytul(docelowaMigawka), generatorId: 'checklisty_paczek', daneDokumentu: dane, ustawieniaDokumentu: {}, autorId: uzytkownikId, wlascicielId: docelowaMigawka.opiekunId, integralnosc: { idZrodlowychSzczegolow: docelowaMigawka.szczegolyOrganizacyjneId, znacznikDanychZrodlowych: docelowaMigawka.odciskDanych } })) as DokumentChecklistyPaczki
+  return repozytoriumWspolnychDokumentow.utworz(utworzNowyDokument({ typ: 'CHECKLISTA_PACZKI', tytul: pobierzTytul(docelowaMigawka), generatorId: 'checklisty_paczek', daneDokumentu: dane, ustawieniaDokumentu: { ukladDokumentu: utworzUstawieniaUkladuDokumentu(dane.blokiSwobodne) }, autorId: uzytkownikId, wlascicielId: docelowaMigawka.opiekunId, integralnosc: { idZrodlowychSzczegolow: docelowaMigawka.szczegolyOrganizacyjneId, znacznikDanychZrodlowych: docelowaMigawka.odciskDanych } })) as DokumentChecklistyPaczki
 }
 
 export type { TypZalacznikaChecklisty }

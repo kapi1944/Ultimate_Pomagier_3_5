@@ -110,6 +110,7 @@
 }
 
 .lista-obecnosci-a4 {
+  position: relative;
   width: min(100%, 210mm);
   aspect-ratio: 210 / 297;
   box-sizing: border-box;

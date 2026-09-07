@@ -35,6 +35,7 @@ function pobierzStylPolozenia(blok: BlokSwobodnyDokumentu, szerokoscStronyMm: nu
     boxSizing: 'border-box',
     overflow: 'hidden',
     pointerEvents: 'none',
+    ...(blok.ramka ? { border: `${blok.ramka.szerokoscPx}px ${blok.ramka.styl} ${blok.ramka.kolor}` } : {}),
   }
 }
 

@@ -3,6 +3,9 @@ import { useKontekstUzytkownika } from '../../../../aplikacja/logowanie/useKonte
 import { pobierzUzytkownika } from '../../../../kartoteki/uzytkownicy/magazynUzytkownikow'
 import { pobierzNazweWyswietlanaUzytkownika } from '../../../../kartoteki/uzytkownicy/typyUzytkownikow'
 import AkcjeEksportuPdf from '../../../../wspolne/dokumenty/AkcjeEksportuPdf'
+import { EdytowalnaWarstwaSwobodnychBlokow, PanelEdycjiSwobodnychBlokow } from '../../../../wspolne/dokumenty/EdytorSwobodnychBlokow'
+import RendererSwobodnychBlokow from '../../../../wspolne/dokumenty/RendererSwobodnychBlokow'
+import { pobierzMapeZasobowObrazowDokumentu, zapiszZasobObrazuDokumentu } from '../../../../wspolne/dokumenty/zasobyObrazowDokumentu'
 import { zbudujNazweEksportowanegoDokumentu } from '../../../../wspolne/dokumenty/nazwyDokumentow'
 import { zbudujKontekstZeSzczegolow } from '../../../../wspolne/integracje/szczegolyDoDokumentow'
 import {
@@ -19,6 +22,7 @@ import {
   przeniesPozycjeWObrebieKategorii,
   utworzNowaKategorieChecklisty,
   utworzNowaPozycjeChecklisty,
+  utworzBlokiSzablonuChecklistyPaczki,
   type DaneChecklistyPaczki,
   type DaneOdbiorcyChecklisty,
   type PozycjaChecklisty,
@@ -178,7 +182,8 @@ function pobierzKlaseKoloruKategoriiWydruku(nazwaKategorii: string) {
   return klasy[nazwaKategorii] ?? ''
 }
 
-function DrukChecklisty({ dane, id, nazwaOpiekuna, nazwaWysylacza }: { dane: DaneChecklistyPaczki; id?: string; nazwaOpiekuna: string; nazwaWysylacza: string }) {
+function DrukChecklisty({ dane, id, nazwaOpiekuna, nazwaWysylacza, zasobyObrazow, zaznaczonyBlokId, trybEdycjiSzablonu, onZaznaczBlok, onZmienBlok }: { dane: DaneChecklistyPaczki; id?: string; nazwaOpiekuna: string; nazwaWysylacza: string; zasobyObrazow?: Record<string, string | undefined>; zaznaczonyBlokId?: string | null; trybEdycjiSzablonu?: boolean; onZaznaczBlok?: (id: string | null) => void; onZmienBlok?: (blok: DaneChecklistyPaczki['blokiSwobodne'][number]) => void }) {
+  const tytulChecklisty = 'SZKOLENIE ZAMKNIĘTE - CHECKLISTA'
   const migawka = dane.migawkaZrodla
   const uczestnicy = migawka?.liczbaUczestnikow ?? 0
   const dni = liczbaDni(dane)
@@ -195,7 +200,7 @@ function DrukChecklisty({ dane, id, nazwaOpiekuna, nazwaWysylacza }: { dane: Dan
   ]
 
   return <section aria-label="Podgląd wydruku Checklisty paczki" className="checklista-paczki__wydruk" id={id}>
-    <h2 className="checklista-paczki__wydruk-tytul"><span>SZKOLENIE ZAMKNIĘTE - CHECKLISTA</span></h2>
+    <div aria-label={tytulChecklisty} className="checklista-paczki__wydruk-naglowek"><RendererSwobodnychBlokow bloki={dane.blokiSwobodne} numerStrony={1} kontekst={{ dane: { ...dane }, zasobyObrazow: { logo_organizatora: '/logo-semper.png', ...zasobyObrazow } }} trybRenderowania="roboczy" />{onZaznaczBlok && onZmienBlok && <EdytowalnaWarstwaSwobodnychBlokow bloki={dane.blokiSwobodne} numerStrony={1} zaznaczonyBlokId={zaznaczonyBlokId ?? null} trybEdycjiSzablonu={trybEdycjiSzablonu ?? false} onZaznacz={onZaznaczBlok} onZmienBlok={onZmienBlok} />}</div>
     <table className="checklista-paczki__wydruk-tabela-danych"><tbody>
       <tr><th>Nazwa szkolenia:</th><td>{migawka?.tytulSzkolenia || 'brak'}</td><th>Liczba osób:</th><td>{uczestnicy}</td></tr>
       <tr><th>Klient:</th><td>{dane.klient || 'brak'}</td><th>Trener:</th><td>{migawka?.trenerzy.join(', ') || 'brak'}</td></tr>
@@ -245,6 +250,9 @@ export default function WidokChecklistPaczek({ dokumentIdZTrasy }: WlasciwosciWi
   const [zwinieteKategorieIds, ustawZwinieteKategorieIds] = useState<Set<string>>(() => new Set())
   const [komunikat, ustawKomunikat] = useState('')
   const [podgladChecklistyId, ustawPodgladChecklistyId] = useState<string | null>(null)
+  const [zaznaczonyBlokId, ustawZaznaczonyBlokId] = useState<string | null>(null)
+  const [trybEdycjiSzablonu, ustawTrybEdycjiSzablonu] = useState(false)
+  const [zasobyObrazow, ustawZasobyObrazow] = useState(() => pobierzMapeZasobowObrazowDokumentu())
   const obszarPodgladuRef = useRef<HTMLElement>(null)
   const dokument = dokumentIdZTrasy ? pobierzChecklistePaczki(dokumentIdZTrasy) : null
   const stanDokumentu = useStanDokumentu({
@@ -255,6 +263,12 @@ export default function WidokChecklistPaczek({ dokumentIdZTrasy }: WlasciwosciWi
   const szczegoly = pobierzSzczegolyDoChecklisty()
   const wybraneSzczegoly = szczegoly.find((pozycja) => pozycja.id === wybraneSzczegolyId)
   const aktorId = zalogowanyUzytkownik?.id ?? null
+
+  async function dodajObraz(plik: File) {
+    const klucz = await zapiszZasobObrazuDokumentu(plik)
+    ustawZasobyObrazow(pobierzMapeZasobowObrazowDokumentu())
+    return klucz
+  }
 
   function odswiez(tekst: string) {
     const zapisanyDokument = dokument ? pobierzChecklistePaczki(dokument.id) : null
@@ -369,7 +383,7 @@ export default function WidokChecklistPaczek({ dokumentIdZTrasy }: WlasciwosciWi
   }
 
   return <ObszarZPanelemGeneratora idPanelu="panel-podgladu-checklisty-paczki" kluczPrzypiecia="ultimate-pomagier.panel-generatora.checklisty-paczek.przypiety" kluczWysuwania="ultimate-pomagier.panel-generatora.checklisty-paczek.wysuwanie" szerokoscPanelu="680px" tytulPanelu="Podgląd wydruku"><section className="widok checklista-paczki">
-    <header className="checklista-paczki__naglowek"><div><h1>Checklista paczki</h1><p>{dane.identyfikator} · <strong>{dane.statusChecklisty}</strong></p></div><PasekAkcjiGeneratora className="checklista-paczki__akcje-glowne"><StatusZapisuDokumentu stan={stanDokumentu.stanZapisu} /><button disabled={czyZablokowana} type="button" onClick={() => zapisz({ ...dane, statusChecklisty: 'KOPIA_ROBOCZA' }, 'Zapisano kopię roboczą.')}>Zapisz kopię roboczą</button><PrzyciskPaneluGeneratora>Podgląd wydruku</PrzyciskPaneluGeneratora><AkcjeEksportuPdf czyMoznaEksportowac={() => !czyZablokowana && finalizacja.czyMozna} daneNazwyEksportu={daneNazwyEksportu} nazwaPliku={zbudujNazweEksportowanegoDokumentu(daneNazwyEksportu)} obszarDokumentu={obszarPodgladuRef} pobierzBladEksportu={pobierzBladEksportu} przygotujEksport={przygotujEksportChecklisty} /></PasekAkcjiGeneratora>{komunikat && <p aria-live="polite" className="checklista-paczki__komunikat">{komunikat}</p>}</header>
+    <header className="checklista-paczki__naglowek"><div><h1>Checklista paczki</h1><p><strong>{dane.statusChecklisty}</strong></p></div><PasekAkcjiGeneratora className="checklista-paczki__akcje-glowne"><StatusZapisuDokumentu stan={stanDokumentu.stanZapisu} /><button disabled={czyZablokowana} type="button" onClick={() => zapisz({ ...dane, statusChecklisty: 'KOPIA_ROBOCZA' }, 'Zapisano kopię roboczą.')}>Zapisz kopię roboczą</button><PrzyciskPaneluGeneratora>Podgląd wydruku</PrzyciskPaneluGeneratora><AkcjeEksportuPdf czyMoznaEksportowac={() => !czyZablokowana && finalizacja.czyMozna} daneNazwyEksportu={daneNazwyEksportu} nazwaPliku={zbudujNazweEksportowanegoDokumentu(daneNazwyEksportu)} obszarDokumentu={obszarPodgladuRef} pobierzBladEksportu={pobierzBladEksportu} przygotujEksport={przygotujEksportChecklisty} /></PasekAkcjiGeneratora>{komunikat && <p aria-live="polite" className="checklista-paczki__komunikat">{komunikat}</p>}</header>
     {dane.czyDaneZrodloweNowsze && <p role="alert" className="checklista-paczki__ostrzezenie">Dane źródłowe zmieniły się po ostatnim wydruku.</p>}
     <UkladFormularzaIPodgladu><PanelGeneratoraDokumentu className="checklista-paczki__formularz" wariant="edycja">
       <section className="checklista-paczki__karta"><h2>Dane szkolenia</h2><div className="checklista-paczki__dane-szkolenia"><p><strong>Nazwa szkolenia:</strong> {migawka?.tytulSzkolenia || 'brak'}</p><p><strong>Grupa:</strong> {migawka?.nazwaGrupy || 'brak'}</p><p><strong>Klient:</strong> <input disabled={czyZablokowana} value={dane.klient} onChange={(zdarzenie) => zapisz({ ...dane, klient: zdarzenie.target.value, czyKlientNadpisany: zdarzenie.target.value !== (migawka?.klient ?? '') })} /></p>{dane.czyKlientNadpisany && <small>Zmieniono ręcznie</small>}<p><strong>Liczba uczestników:</strong> {uczestnicy}</p><p><strong>Trener / trenerzy:</strong> {migawka?.trenerzy.join(', ') || 'brak'}</p><p><strong>Data / terminy:</strong> {formatujTerminyZPrzerwami(migawka?.terminy ?? []) || 'brak'}</p><p><strong>Miejsce:</strong> {migawka?.miejsce || 'brak'}</p><p><strong>Opiekun:</strong> {nazwaOpiekuna}</p><label><input checked={dane.pilna} disabled={czyZablokowana} type="checkbox" onChange={(zdarzenie) => zapisz({ ...dane, pilna: zdarzenie.target.checked })} /> Pilna</label><label>Wysyłacz<select disabled={czyZablokowana} value={dane.wysylaczId ?? ''} onChange={(zdarzenie) => zapisz({ ...dane, wysylaczId: zdarzenie.target.value || null })}><option value="">Nieprzypisany</option>{aktywniUzytkownicy.filter((uzytkownik) => uzytkownik.odznaki.includes('WYSYLACZ')).map((uzytkownik) => <option key={uzytkownik.id} value={uzytkownik.id}>{pobierzNazweWyswietlanaUzytkownika(uzytkownik)}</option>)}</select></label></div></section>
@@ -383,6 +397,6 @@ export default function WidokChecklistPaczek({ dokumentIdZTrasy }: WlasciwosciWi
       <section className="checklista-paczki__karta"><h2>Uwagi ze Szczegółów</h2>{migawka?.uwagiZeSzczegolow.length ? <div className="checklista-paczki__uwagi-zrodlowe">{migawka.uwagiZeSzczegolow.map((uwaga) => <p key={`${uwaga.etykieta}-${uwaga.tresc}`}><strong>{uwaga.etykieta}:</strong> {uwaga.tresc}</p>)}</div> : <p>Brak dostępnych uwag źródłowych.</p>}</section>
       <section className="checklista-paczki__karta"><h2>Wysyłka paczki</h2><div className="checklista-paczki__siatka-wysylki"><label>Odbiorca paczki<input disabled={czyZablokowana} value={dane.daneOdbiorcy.imieNazwisko} onChange={(zdarzenie) => zapisz({ ...dane, daneOdbiorcy: { ...dane.daneOdbiorcy, imieNazwisko: zdarzenie.target.value } })} /></label><label>Nazwa firmy<input disabled={czyZablokowana} value={dane.daneOdbiorcy.nazwaFirmy} onChange={(zdarzenie) => zapisz({ ...dane, daneOdbiorcy: { ...dane.daneOdbiorcy, nazwaFirmy: zdarzenie.target.value } })} /></label><fieldset><legend>Adres do wysyłki paczki</legend><label>Ulica<input disabled={czyZablokowana} value={dane.daneOdbiorcy.ulica} onChange={(zdarzenie) => zapisz({ ...dane, daneOdbiorcy: { ...dane.daneOdbiorcy, ulica: zdarzenie.target.value } })} /></label><label>Nr budynku<input disabled={czyZablokowana} value={dane.daneOdbiorcy.nrBudynku} onChange={(zdarzenie) => zapisz({ ...dane, daneOdbiorcy: { ...dane.daneOdbiorcy, nrBudynku: zdarzenie.target.value } })} /></label><label>Nr lokalu<input disabled={czyZablokowana} value={dane.daneOdbiorcy.nrLokalu} onChange={(zdarzenie) => zapisz({ ...dane, daneOdbiorcy: { ...dane.daneOdbiorcy, nrLokalu: zdarzenie.target.value } })} /></label><label>Kod pocztowy<input disabled={czyZablokowana} value={dane.daneOdbiorcy.kodPocztowy} onChange={(zdarzenie) => zapisz({ ...dane, daneOdbiorcy: { ...dane.daneOdbiorcy, kodPocztowy: zdarzenie.target.value } })} /></label><label>Miasto<input disabled={czyZablokowana} value={dane.daneOdbiorcy.miasto} onChange={(zdarzenie) => zapisz({ ...dane, daneOdbiorcy: { ...dane.daneOdbiorcy, miasto: zdarzenie.target.value } })} /></label><label>Kraj<input disabled={czyZablokowana} value={dane.daneOdbiorcy.kraj} onChange={(zdarzenie) => zapisz({ ...dane, daneOdbiorcy: { ...dane.daneOdbiorcy, kraj: zdarzenie.target.value } })} /></label></fieldset><label>Waga paczki<input disabled={czyZablokowana} placeholder="opcjonalnie" value={dane.waga} onChange={(zdarzenie) => zapisz({ ...dane, waga: zdarzenie.target.value }, 'Zmieniono wagę paczki.')} /></label><label>Wysokość paczki<input disabled={czyZablokowana} placeholder="opcjonalnie" value={dane.wysokosc} onChange={(zdarzenie) => zapisz({ ...dane, wysokosc: zdarzenie.target.value }, 'Zmieniono wysokość paczki.')} /></label><label>Data wysłania<input disabled={czyZablokowana} type="date" value={dane.dataWyslania} onChange={(zdarzenie) => zapisz({ ...dane, dataWyslania: zdarzenie.target.value }, 'Zmieniono datę wysłania.')} /></label><label>Osoba pakująca / Wysyłacz<input disabled={czyZablokowana} value={dane.osobaPakujaca} onChange={(zdarzenie) => zapisz({ ...dane, osobaPakujaca: zdarzenie.target.value })} /></label><label>Skan podpisanej checklisty<input accept=".pdf,.jpg,.jpeg,.png" disabled={czyZablokowana} type="file" onChange={(zdarzenie) => void dodajPlik(zdarzenie, 'SKAN_PODPISANEJ_CHECKLISTY')} /></label></div>{dane.zalaczniki.map((zalacznik) => <p className="checklista-paczki__zalacznik" key={zalacznik.id}>{zalacznik.nazwa} — {zalacznik.typ}</p>)}</section>
       <section className="checklista-paczki__karta checklista-paczki__finalizacja"><h2>Gotowość</h2><p>{finalizacja.czyMozna ? 'Wymagane pozycje i dane wysyłkowe są kompletne.' : `Braki: ${finalizacja.brakujacePozycje.length} pozycji${finalizacja.czyBrakujeDanychWysylkowych ? ', dane wysyłkowe' : ''}.`}</p><button disabled={czyZablokowana || !finalizacja.czyMozna} type="button" onClick={() => { if (ustawStatusChecklisty(dokument.id, 'GOTOWA_DO_WYDRUKU', aktorId, 'Oznaczono checklistę jako gotową do wydruku.')) odswiez('Checklista jest gotowa do wydruku.') }}>Gotowa do wydruku</button><button disabled={czyZablokowana} type="button" onClick={() => { if (ustawStatusChecklisty(dokument.id, 'ZARCHIWIZOWANA', aktorId, 'Zarchiwizowano checklistę.') ) odswiez('Zarchiwizowano checklistę.') }}>Archiwizuj</button>{czyZablokowana && (zalogowanyUzytkownik?.rola === 'ADMINISTRATOR' || zalogowanyUzytkownik?.rola === 'ARCHITEKT') && <button type="button" onClick={() => { if (otworzPonownieCheckliste(dokument.id, zalogowanyUzytkownik.rola, aktorId)) odswiez('Ponownie otwarto checklistę.') }}>Otwórz ponownie</button>}</section>
-    </PanelGeneratoraDokumentu><PanelGeneratoraDokumentu className="checklista-paczki__podglad-glowny" ref={obszarPodgladuRef} wariant="podglad"><DrukChecklisty dane={dane} id="wydruk-checklisty" nazwaOpiekuna={nazwaOpiekuna} nazwaWysylacza={nazwaWysylacza} /></PanelGeneratoraDokumentu></UkladFormularzaIPodgladu><PanelBocznyGeneratora className="checklista-paczki__panel-podgladu"><DrukChecklisty dane={dane} nazwaOpiekuna={nazwaOpiekuna} nazwaWysylacza={nazwaWysylacza} /></PanelBocznyGeneratora>
+    </PanelGeneratoraDokumentu><PanelGeneratoraDokumentu className="checklista-paczki__podglad-glowny" ref={obszarPodgladuRef} wariant="podglad"><DrukChecklisty dane={dane} id="wydruk-checklisty" nazwaOpiekuna={nazwaOpiekuna} nazwaWysylacza={nazwaWysylacza} zasobyObrazow={zasobyObrazow} zaznaczonyBlokId={zaznaczonyBlokId} trybEdycjiSzablonu={trybEdycjiSzablonu} onZaznaczBlok={ustawZaznaczonyBlokId} onZmienBlok={(blok) => zapisz({ ...dane, blokiSwobodne: dane.blokiSwobodne.map((pozycja) => pozycja.id === blok.id ? blok : pozycja) }, 'Zmieniono układ checklisty paczki.')} /></PanelGeneratoraDokumentu></UkladFormularzaIPodgladu><PanelBocznyGeneratora className="checklista-paczki__panel-podgladu"><PanelEdycjiSwobodnychBlokow bloki={dane.blokiSwobodne} blokiSzablonu={utworzBlokiSzablonuChecklistyPaczki()} liczbaStron={1} zaznaczonyBlokId={zaznaczonyBlokId} trybEdycjiSzablonu={trybEdycjiSzablonu} onDodajObraz={dodajObraz} onZmienBloki={(blokiSwobodne) => zapisz({ ...dane, blokiSwobodne }, 'Zmieniono układ checklisty paczki.')} onZmienTrybEdycjiSzablonu={ustawTrybEdycjiSzablonu} /></PanelBocznyGeneratora>
   </section></ObszarZPanelemGeneratora>
 }

@@ -5,6 +5,7 @@ import { PanelEdycjiSwobodnychBlokow } from '../../../../wspolne/dokumenty/Edyto
 import { zbudujNazweEksportowanegoDokumentu } from '../../../../wspolne/dokumenty/nazwyDokumentow'
 import { pobierzMapeZasobowObrazowDokumentu, zapiszZasobObrazuDokumentu } from '../../../../wspolne/dokumenty/zasobyObrazowDokumentu'
 import { zapiszDokumentRoboczyGeneratora } from '../../../../wspolne/dokumenty/zapisDokumentuGeneratora'
+import { utworzUstawieniaUkladuDokumentu } from '../../../../wspolne/dokumenty/ustawieniaUkladuDokumentu'
 import { pobierzSzczegolyDoGeneratorow, zbudujKontekstZeSzczegolow } from '../../../../wspolne/integracje/szczegolyDoDokumentow'
 import { pobierzNazweOpiekuna } from '../../../zamkniete/szczegoly_organizacyjne/uzytkownicySzczegolow'
 import UkladGeneratoraDokumentu, { ObszarZPanelemGeneratora, PanelBocznyGeneratora, PanelGeneratoraDokumentu, PasekAkcjiGeneratora, PrzyciskPaneluGeneratora, UkladFormularzaIPodgladu } from '../../wspolne/UkladGeneratoraDokumentu'
@@ -36,7 +37,7 @@ export default function WidokKartNaDrzwi() {
       generatorId: 'karta_na_drzwi',
       tytul: `Karta na drzwi — ${pobierzDaneKartyNaDrzwi(wartosc.daneWejsciowe).tytulSzkolenia}`,
       daneDokumentu: { tekst: serializujDaneKartyNaDrzwi(wartosc), kartaNaDrzwi: wartosc },
-      ustawieniaDokumentu: { orientacja: wartosc.orientacja, blokiSwobodne: wartosc.blokiSwobodne, szczegolyOrganizacyjneId: wartosc.szczegolyOrganizacyjneId, grupaId: wartosc.grupaId },
+      ustawieniaDokumentu: { orientacja: wartosc.orientacja, ukladDokumentu: utworzUstawieniaUkladuDokumentu(wartosc.blokiSwobodne), szczegolyOrganizacyjneId: wartosc.szczegolyOrganizacyjneId, grupaId: wartosc.grupaId },
       autorId: zalogowanyUzytkownik?.id,
       wlascicielId: zalogowanyUzytkownik?.id,
     })

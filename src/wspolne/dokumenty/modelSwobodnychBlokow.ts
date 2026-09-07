@@ -9,6 +9,7 @@ export type TrybDopasowaniaObrazu = 'contain' | 'cover'
 export type PochodzenieBlokuSwobodnego = 'szablon' | 'uzytkownik'
 export type RolaBlokuSwobodnego = 'logo' | 'pole_tekstowe' | 'element_staly_szablonu' | 'element_opcjonalny_uzytkownika'
 export type RodzinaCzcionkiBloku = 'Arial' | 'Georgia' | 'Times New Roman' | 'Verdana'
+export type RamkaBloku = { kolor: string; szerokoscPx: number; styl: 'ciagla' | 'kreskowana' | 'kropkowana' }
 
 export const WERSJA_SCHEMATU_SWOBODNYCH_BLOKOW = 2 as const
 export const SZEROKOSC_STRONY_A4_MM = 210
@@ -38,6 +39,7 @@ type PodstawaBlokuSwobodnego = {
   zablokowany?: boolean
   pochodzenie?: PochodzenieBlokuSwobodnego
   idBlokuSzablonu?: string
+  ramka?: RamkaBloku
 }
 
 export type BlokTekstowySwobodny = PodstawaBlokuSwobodnego & {
@@ -117,6 +119,7 @@ function normalizujRoleBloku(wartosc: unknown, typ: 'tekst' | 'obraz', pochodzen
 
 function normalizujPodstaweBloku(dane: Record<string, unknown>, typ: 'tekst' | 'obraz') {
   const pochodzenie = dane.pochodzenie === 'szablon' ? 'szablon' as const : 'uzytkownik' as const
+  const ramka = czyObiekt(dane.ramka) ? dane.ramka : null
   return {
     id: tekstLubDomyslny(dane.id).trim(),
     rola: normalizujRoleBloku(dane.rola, typ, pochodzenie),
@@ -131,6 +134,7 @@ function normalizujPodstaweBloku(dane: Record<string, unknown>, typ: 'tekst' | '
     zablokowany: dane.zablokowany === true,
     pochodzenie,
     ...(typeof dane.idBlokuSzablonu === 'string' && dane.idBlokuSzablonu ? { idBlokuSzablonu: dane.idBlokuSzablonu } : {}),
+    ...(ramka && typeof ramka.kolor === 'string' ? { ramka: { kolor: ramka.kolor, szerokoscPx: Math.min(8, Math.max(1, liczbaLubDomyslna(ramka.szerokoscPx, 1))), styl: ramka.styl === 'kreskowana' || ramka.styl === 'kropkowana' ? ramka.styl : 'ciagla' } as RamkaBloku } : {}),
   }
 }
 

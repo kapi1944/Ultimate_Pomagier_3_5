@@ -1,3 +1,5 @@
+import { WERSJA_SCHEMATU_SWOBODNYCH_BLOKOW, normalizujBlokiSwobodneDokumentu, type BlokSwobodnyDokumentu } from '../../../../wspolne/dokumenty/modelSwobodnychBlokow'
+
 export type StatusGotowosciPozycji = 'NIEGOTOWE' | 'W_TOKU_LUB_PROBLEM' | 'CZESCIOWO_GOTOWE' | 'GOTOWE'
 export type StatusChecklistyPaczki = 'KOPIA_ROBOCZA' | 'GOTOWA_DO_WYDRUKU' | 'WYDRUKOWANA' | 'KOMPLETNA' | 'ZARCHIWIZOWANA'
 export type TypRegulyIlosci = 'STALA' | 'UCZESTNICY' | 'UCZESTNICY_RAZY_MNOZNIK' | 'UCZESTNICY_PLUS_DODATEK' | 'NA_KAZDY_DZIEN' | 'RECZNA' | 'WYLACZONA'
@@ -152,6 +154,16 @@ export type DaneChecklistyPaczki = {
   zalaczniki: ZalacznikChecklisty[]
   historia: WpisAudytuChecklisty[]
   prosbyOWeryfikacje: ProsbaOWeryfikacje[]
+  blokiSwobodne: BlokSwobodnyDokumentu[]
+  wersjaSchematuBlokow: typeof WERSJA_SCHEMATU_SWOBODNYCH_BLOKOW
+}
+
+export function utworzBlokiSzablonuChecklistyPaczki(): BlokSwobodnyDokumentu[] {
+  const podstawa = (id: string, nazwa: string, xMm: number, yMm: number, szerokoscMm: number, wysokoscMm: number) => ({ id, nazwa, rola: 'element_staly_szablonu' as const, pochodzenie: 'szablon' as const, zablokowany: false, xMm, yMm, szerokoscMm, wysokoscMm, przypisanieDoStrony: { rodzaj: 'pierwsza' as const }, widoczny: true, indeksWarstwy: 8 })
+  return [
+    { ...podstawa('checklista-tytul', 'Tytuł checklisty', 38, 4, 130, 10), typ: 'tekst' as const, dane: { zrodlo: { rodzaj: 'statyczne' as const, tekst: 'SZKOLENIE ZAMKNIĘTE - CHECKLISTA' }, rozmiarCzcionkiPt: 14, gruboscCzcionki: 700 as const, rodzinaCzcionki: 'Arial', wyrownanie: 'srodek' as const, interlinia: 1.1, kolor: '#172033', marginesWewnetrznyMm: 1 } },
+    { ...podstawa('checklista-logo', 'Logo organizatora', 172, 3, 28, 12), rola: 'logo' as const, typ: 'obraz' as const, dane: { zrodlo: { rodzaj: 'adres' as const, adres: '/logo-semper.png' }, tekstAlternatywny: 'Logo organizatora', zachowajProporcje: true, trybDopasowania: 'contain' as const } },
+  ]
 }
 
 const nazwyKategoriiDomyslnych = ['Materiały', 'Teczki', 'Pakiet CRM', 'Gadżety', 'Inne']
@@ -375,6 +387,8 @@ export function utworzDomyslneDaneChecklisty(opcje: { identyfikator: string; num
     zalaczniki: [],
     historia: [{ id: utworzId('audyt'), typ: 'UTWORZENIE', data: teraz, uzytkownikId: opcje.uzytkownikId ?? null, opis: 'Utworzono checklistę paczki.' }],
     prosbyOWeryfikacje: [],
+    blokiSwobodne: utworzBlokiSzablonuChecklistyPaczki(),
+    wersjaSchematuBlokow: WERSJA_SCHEMATU_SWOBODNYCH_BLOKOW,
   }
 }
 
@@ -385,6 +399,7 @@ export function normalizujDaneChecklisty(dane: DaneChecklistyPaczki): DaneCheckl
     uwagiZeSzczegolow: dane.migawkaZrodla.uwagiZeSzczegolow ?? [],
     logotypy: dane.migawkaZrodla.logotypy ?? [],
   } : null
+  const bloki = normalizujBlokiSwobodneDokumentu(dane.blokiSwobodne)
   return {
     ...dane,
     migawkaZrodla: migawka,
@@ -408,6 +423,8 @@ export function normalizujDaneChecklisty(dane: DaneChecklistyPaczki): DaneCheckl
     numerPrzesylki: dane.numerPrzesylki ?? '',
     waga: dane.waga ?? '',
     wysokosc: dane.wysokosc ?? '',
+    blokiSwobodne: bloki.length ? bloki : utworzBlokiSzablonuChecklistyPaczki(),
+    wersjaSchematuBlokow: WERSJA_SCHEMATU_SWOBODNYCH_BLOKOW,
   }
 }
 
