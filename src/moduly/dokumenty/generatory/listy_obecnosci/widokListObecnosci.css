@@ -345,3 +345,9 @@
     scroll-behavior: auto;
   }
 }
+.lista-obecnosci-a4__naglowek { min-height: 32cqw; }
+.lista-obecnosci-a4__tabela thead { display: table-header-group; }
+.lista-obecnosci-a4__tabela tr { break-inside: avoid; }
+.lista-obecnosci-a4__tabela th, .lista-obecnosci-a4__tabela td { overflow-wrap: anywhere; }
+.lista-obecnosci-a4__naglowek-kontynuacji { overflow-wrap: anywhere; }
+.generator-list-obecnosci__formularz button, .generator-list-obecnosci__formularz select { min-height: 44px; }

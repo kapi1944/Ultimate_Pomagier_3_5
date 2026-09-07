@@ -1,3 +1,4 @@
+import type { DaneListyObecnosci } from './modelListyObecnosci'
 import {
   adapterListyObecnosci,
   type DaneDokumentuZIntegracji,
@@ -8,7 +9,7 @@ import {
 import { utworzNowyDokument, type Dokument } from '../../../../wspolne/dokumenty/modelDokumentu'
 import { repozytoriumWspolnychDokumentow } from '../../../../wspolne/dokumenty/rejestrDokumentow'
 
-export type DaneListyObecnosciDokumentu = DaneDokumentuZIntegracji<DaneListyObecnosciZIntegracji, KorektyReczneListyObecnosci>
+export type DaneListyObecnosciDokumentu = DaneDokumentuZIntegracji<DaneListyObecnosciZIntegracji, KorektyReczneListyObecnosci> & { listaObecnosci?: DaneListyObecnosci }
 
 export type MetadaneListyObecnosci = {
   szczegolyOrganizacyjneId: string
@@ -126,6 +127,7 @@ export function zapiszKorektyListyObecnosci(
   id: string,
   tytul: string,
   korektyReczne: KorektyReczneListyObecnosci,
+  listaObecnosci?: DaneListyObecnosci,
 ): DokumentListyObecnosci | null {
   const dokument = pobierzListeObecnosciPoId(id)
 
@@ -138,6 +140,7 @@ export function zapiszKorektyListyObecnosci(
     daneDokumentu: {
       ...dokument.daneDokumentu,
       korektyReczne,
+      ...(listaObecnosci ? { listaObecnosci } : {}),
     },
     ustawieniaDokumentu: dokument.metadaneGeneratora,
     integralnosc: { ...dokument.integralnosc, reczneNadpisania: korektyReczne },

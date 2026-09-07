@@ -2,7 +2,7 @@ import { WERSJA_SCHEMATU_SWOBODNYCH_BLOKOW, normalizujBlokiSwobodneDokumentu, ty
 import type { KontekstDokumentuSzkolenia } from '../../../../wspolne/integracje/szczegolyDoDokumentow'
 
 export type WariantSzablonuAnkiety = 'ORYGINALNA_PELNA' | 'ORYGINALNA_SKROCONA' | 'NOWOCZESNA'
-export type PresetAnkiety = 'ORYGINALNA_SEMPER_PELNA' | 'ORYGINALNA_IIST_PELNA' | 'ORYGINALNA_SKROCONA' | 'NOWOCZESNA_SEMPER' | 'NOWOCZESNA_IIST' | 'WLASNA'
+export type PresetAnkiety = 'ORYGINALNA_SEMPER_PELNA' | 'ORYGINALNA_IIST_PELNA' | 'ORYGINALNA_SKROCONA' | 'ORYGINALNA_IIST_SKROCONA' | 'NOWOCZESNA_SEMPER' | 'NOWOCZESNA_IIST' | 'WLASNA'
 export type OrganizatorAnkiety = 'SEMPER' | 'IIST'
 export type TypPytaniaAnkiety = 'OCENA_4' | 'SKALA' | 'JEDNOKROTNY_WYBOR' | 'OTWARTE' | 'NAGLOWEK_SEKCJI' | 'TEKST_INFORMACYJNY' | 'TAK_NIE_NIE_DOTYCZY' | 'JEDNA_LINIA' | 'POLE_TEKSTOWE'
 
@@ -25,6 +25,9 @@ export type PytanieAnkiety = {
 export type SekcjaAnkiety = { id: string; nazwa: string; opis?: string; widoczna: boolean; pytania: PytanieAnkiety[] }
 export type DaneAnkiety = {
   wersjaSchematu: 3
+  szczegolyId?: string
+  grupaId?: string
+  nazwaGrupy?: string
   tytulSzkolenia: string
   dataOd: string
   dataDo: string
@@ -47,7 +50,7 @@ export const etykietyWariantowAnkiety: Record<WariantSzablonuAnkiety, string> = 
   ORYGINALNA_PELNA: 'Oryginalna — pełna', ORYGINALNA_SKROCONA: 'Oryginalna — skrócona', NOWOCZESNA: 'Nowoczesna',
 }
 export const etykietyPresetowAnkiety: Record<PresetAnkiety, string> = {
-  ORYGINALNA_SEMPER_PELNA: 'Oryginalna SEMPER — pełna', ORYGINALNA_IIST_PELNA: 'Oryginalna IIST — pełna', ORYGINALNA_SKROCONA: 'Oryginalna — skrócona', NOWOCZESNA_SEMPER: 'Nowoczesna SEMPER', NOWOCZESNA_IIST: 'Nowoczesna IIST', WLASNA: 'Własna',
+  ORYGINALNA_SEMPER_PELNA: 'Oryginalna SEMPER — pełna', ORYGINALNA_IIST_PELNA: 'Oryginalna IIST — pełna', ORYGINALNA_SKROCONA: 'Oryginalna SEMPER — skrócona', ORYGINALNA_IIST_SKROCONA: 'Oryginalna IIST — skrócona (wzorzec)', NOWOCZESNA_SEMPER: 'Nowoczesna SEMPER', NOWOCZESNA_IIST: 'Nowoczesna IIST', WLASNA: 'Własna',
 }
 export const etykietyTypowPytanAnkiety: Record<TypPytaniaAnkiety, string> = {
   OCENA_4: 'Oryginalna skala 4-stopniowa', SKALA: 'Pytanie ze skalą', JEDNOKROTNY_WYBOR: 'Jednokrotny wybór', OTWARTE: 'Pytanie otwarte', NAGLOWEK_SEKCJI: 'Nagłówek sekcji', TEKST_INFORMACYJNY: 'Tekst informacyjny', TAK_NIE_NIE_DOTYCZY: 'TAK / NIE / NIE DOTYCZY', JEDNA_LINIA: 'Pojedyncza linia tekstu', POLE_TEKSTOWE: 'Większe pole tekstowe',
@@ -56,7 +59,7 @@ export const etykietyTypowPytanAnkiety: Record<TypPytaniaAnkiety, string> = {
 const domyslneEtykietySkali = ['bardzo dobrze', 'dobrze', 'do udoskonalenia', 'źle']
 
 export function utworzDomyslnaSkaleAnkiety(liczbaStopni = 4): KonfiguracjaSkaliAnkiety {
-  const liczba = Math.min(Math.max(Math.round(liczbaStopni), 2), 10)
+  const liczba = Number.isFinite(liczbaStopni) ? Math.min(Math.max(Math.round(liczbaStopni), 2), 10) : 4
   return {
     liczbaStopni: liczba,
     etykiety: liczba === 4 ? [...domyslneEtykietySkali] : Array.from({ length: liczba }, (_, indeks) => String(liczba - indeks)),
@@ -105,7 +108,7 @@ export function utworzDomyslneSekcjeAnkiety(czyPelna = true): SekcjaAnkiety[] {
     { id: 'ocena-trenerow', nazwa: 'B. Ocena trenerów', opis: 'Prosimy ocenić pracę osoby prowadzącej.', widoczna: true, pytania: ocenaTrenerow.map(klonujPytanie) },
     { id: 'ocena-organizacji', nazwa: 'C. Ocena organizacji szkolenia', widoczna: true, pytania: ocenaOrganizacji.map(klonujPytanie) },
     { id: 'pytania-otwarte', nazwa: 'Pytania otwarte', widoczna: true, pytania: otwarte.map(klonujPytanie) },
-    { id: 'email', nazwa: 'Kontakt e-mail', opis: 'Podanie adresu e-mail umożliwi otrzymywanie informacji o szkoleniach i rabatach.', widoczna: true, pytania: [{ id: 'email-1', typ: 'JEDNA_LINIA', tekst: 'e-mail (czytelnie)' }] },
+    { id: 'email', nazwa: 'Kontakt e-mail', opis: 'Prosimy o wskazanie adresu e-mail, dzięki któremu będziemy mogli powiadomić Pana/Panią o interesujących Pana/Panią szkoleniach i dostępnych rabatach:', widoczna: true, pytania: [{ id: 'email-1', typ: 'JEDNA_LINIA', tekst: 'e-mail (czytelnie)' }] },
     { id: 'uwagi', nazwa: 'Uwagi, sugestie', widoczna: czyPelna, pytania: [
       { id: 'uwagi-1', typ: 'POLE_TEKSTOWE', tekst: 'Uwagi, sugestie*' },
       { id: 'uwagi-2', typ: 'TAK_NIE_NIE_DOTYCZY', tekst: 'Czy ewentualne uwagi, sugestie zgłosił/a Pan/i Organizatorowi podczas szkolenia?' },
@@ -133,6 +136,7 @@ export function utworzBlokiSzablonuAnkiety(wariant: WariantSzablonuAnkiety = 'OR
 
 function konfiguracjaPresetu(preset: PresetAnkiety) {
   if (preset === 'ORYGINALNA_IIST_PELNA') return { organizator: 'IIST' as const, wariant: 'ORYGINALNA_PELNA' as const, pelna: true }
+  if (preset === 'ORYGINALNA_IIST_SKROCONA') return { organizator: 'IIST' as const, wariant: 'ORYGINALNA_SKROCONA' as const, pelna: false }
   if (preset === 'ORYGINALNA_SKROCONA') return { organizator: 'SEMPER' as const, wariant: 'ORYGINALNA_SKROCONA' as const, pelna: false }
   if (preset === 'NOWOCZESNA_SEMPER') return { organizator: 'SEMPER' as const, wariant: 'NOWOCZESNA' as const, pelna: true }
   if (preset === 'NOWOCZESNA_IIST') return { organizator: 'IIST' as const, wariant: 'NOWOCZESNA' as const, pelna: true }
@@ -141,14 +145,14 @@ function konfiguracjaPresetu(preset: PresetAnkiety) {
 
 export function utworzDomyslneDaneAnkiety(preset: PresetAnkiety = 'ORYGINALNA_SEMPER_PELNA'): DaneAnkiety {
   const konfiguracja = konfiguracjaPresetu(preset)
-  return { wersjaSchematu: 3, tytulSzkolenia: 'Skuteczna komunikacja w zespole', dataOd: '', dataDo: '', miejsce: '', organizator: konfiguracja.organizator, trener: '', preset, wariantSzablonu: konfiguracja.wariant, sekcje: utworzDomyslneSekcjeAnkiety(konfiguracja.pelna), blokiSwobodne: utworzBlokiSzablonuAnkiety(konfiguracja.wariant), wersjaSchematuBlokow: WERSJA_SCHEMATU_SWOBODNYCH_BLOKOW }
+  return { wersjaSchematu: 3, tytulSzkolenia: '', dataOd: '', dataDo: '', miejsce: '', organizator: konfiguracja.organizator, trener: '', preset, wariantSzablonu: konfiguracja.wariant, sekcje: utworzDomyslneSekcjeAnkiety(konfiguracja.pelna), blokiSwobodne: utworzBlokiSzablonuAnkiety(konfiguracja.wariant), wersjaSchematuBlokow: WERSJA_SCHEMATU_SWOBODNYCH_BLOKOW }
 }
 
 export function zastosujPresetAnkiety(dane: DaneAnkiety, preset: PresetAnkiety): DaneAnkiety {
   if (preset === 'WLASNA') return { ...dane, preset: 'WLASNA', sekcje: klonujSekcje(dane.sekcje) }
   const domyslne = utworzDomyslneDaneAnkiety(preset)
-  if (dane.preset === 'WLASNA') {
-    return { ...dane, preset, organizator: domyslne.organizator, wariantSzablonu: domyslne.wariantSzablonu, sekcje: klonujSekcje(dane.sekcje), blokiSwobodne: domyslne.blokiSwobodne }
+  if (!czyOryginalnaTrescAnkiety(dane)) {
+    return { ...dane, preset: 'WLASNA', organizator: domyslne.organizator, wariantSzablonu: domyslne.wariantSzablonu, sekcje: klonujSekcje(dane.sekcje), blokiSwobodne: domyslne.blokiSwobodne }
   }
   return { ...dane, preset, organizator: domyslne.organizator, wariantSzablonu: domyslne.wariantSzablonu, sekcje: domyslne.sekcje, blokiSwobodne: domyslne.blokiSwobodne }
 }
@@ -160,7 +164,16 @@ export function formatujZakresDatAnkiety(dataOd: string, dataDo: string) {
   return `${dataOd} do ${dataDo}`
 }
 
+export function czyOryginalnaTrescAnkiety(dane: DaneAnkiety) {
+  return dane.preset !== 'WLASNA' && JSON.stringify(dane.sekcje) === JSON.stringify(utworzDomyslneSekcjeAnkiety(dane.wariantSzablonu !== 'ORYGINALNA_SKROCONA'))
+}
+
 function kosztPytania(pytanie: PytanieAnkiety) {
+  const dlugosc = Math.max(0, Math.ceil(pytanie.tekst.length / (czyPytanieSkalowane(pytanie) ? 48 : 100)) - 1) * 0.7
+  return kosztPolaOdpowiedzi(pytanie) + dlugosc + (pytanie.opcje?.reduce((suma, opcja) => suma + Math.ceil(opcja.length / 70), 0) ?? 0) * 0.5
+}
+
+function kosztPolaOdpowiedzi(pytanie: PytanieAnkiety) {
   if (pytanie.typ === 'NAGLOWEK_SEKCJI' || pytanie.typ === 'TEKST_INFORMACYJNY') return 1.25
   if (pytanie.typ === 'POLE_TEKSTOWE' || pytanie.typ === 'OTWARTE') return 5
   if (pytanie.typ === 'TAK_NIE_NIE_DOTYCZY' || pytanie.typ === 'JEDNA_LINIA' || pytanie.typ === 'JEDNOKROTNY_WYBOR') return 3
@@ -169,7 +182,7 @@ function kosztPytania(pytanie: PytanieAnkiety) {
 
 export function podzielAnkieteNaStrony(dane: DaneAnkiety): StronaAnkiety[] {
   const widoczne = dane.sekcje.filter((sekcja) => sekcja.widoczna && sekcja.pytania.length)
-  if (dane.wariantSzablonu !== 'NOWOCZESNA' && dane.preset !== 'WLASNA') return [
+  if (dane.wariantSzablonu !== 'NOWOCZESNA' && czyOryginalnaTrescAnkiety(dane)) return [
     { numer: 1, sekcje: widoczne.filter((sekcja) => ['ocena-ogolna', 'ocena-trenerow', 'ocena-organizacji'].includes(sekcja.id)) },
     { numer: 2, sekcje: widoczne.filter((sekcja) => !['ocena-ogolna', 'ocena-trenerow', 'ocena-organizacji'].includes(sekcja.id)) },
   ].filter((strona) => strona.sekcje.length)
@@ -177,11 +190,12 @@ export function podzielAnkieteNaStrony(dane: DaneAnkiety): StronaAnkiety[] {
   let kosztStrony = 0
   for (const sekcja of widoczne) {
     let fragment: SekcjaAnkiety = { ...sekcja, pytania: [] }
-    for (const pytanie of sekcja.pytania) {
+    for (const [indeks, pytanie] of sekcja.pytania.entries()) {
       const limit = strony.length === 1 ? 24 : 38
       const koszt = kosztPytania(pytanie)
       const kosztNaglowka = fragment.pytania.length ? 0 : 2
-      if (kosztStrony + kosztNaglowka + koszt > limit && strony.at(-1)!.sekcje.length) {
+      const rezerwaNaglowka = pytanie.typ === 'NAGLOWEK_SEKCJI' && sekcja.pytania[indeks + 1] ? kosztPytania(sekcja.pytania[indeks + 1]) : 0
+      if (kosztStrony + kosztNaglowka + koszt + rezerwaNaglowka > limit && strony.at(-1)!.sekcje.length) {
         strony.push({ numer: strony.length + 1, sekcje: [] })
         kosztStrony = 0
         fragment = { ...sekcja, id: `${sekcja.id}-kontynuacja-${strony.length}`, nazwa: `${sekcja.nazwa} — ciąg dalszy`, pytania: [] }
@@ -231,7 +245,7 @@ function normalizujSekcje(wartosc: unknown, legacy: Record<string, unknown>, czy
       })
       return [{ id: tekst(sekcja, 'id', `sekcja-${indeks}`), nazwa: tekst(sekcja, 'nazwa', `Sekcja ${indeks + 1}`), ...(typeof sekcja.opis === 'string' && sekcja.opis ? { opis: sekcja.opis } : {}), widoczna: sekcja.widoczna !== false, pytania }]
     })
-    if (sekcje.length) return sekcje
+    return sekcje
   }
   const sekcje = utworzDomyslneSekcjeAnkiety(czyPelna)
   const oceniane = Array.isArray(legacy.pytaniaOceniane) ? legacy.pytaniaOceniane : []
@@ -260,7 +274,7 @@ export function deserializujDaneAnkiety(zapis: string | null): DaneAnkiety {
     const wariantSzablonu = normalizujWariant(rekord.wariantSzablonu)
     const preset = normalizujPreset(rekord.preset, wariantSzablonu, organizator)
     const bloki = normalizujBlokiSwobodneDokumentu(rekord.blokiSwobodne)
-    return { wersjaSchematu: 3, tytulSzkolenia: tekst(rekord, 'tytulSzkolenia', domyslne.tytulSzkolenia), dataOd: tekst(rekord, 'dataOd'), dataDo: tekst(rekord, 'dataDo'), miejsce: tekst(rekord, 'miejsce'), organizator, trener: tekst(rekord, 'trener'), preset, wariantSzablonu, sekcje: normalizujSekcje(rekord.sekcje, rekord, wariantSzablonu !== 'ORYGINALNA_SKROCONA'), blokiSwobodne: bloki.length ? bloki : utworzBlokiSzablonuAnkiety(wariantSzablonu), wersjaSchematuBlokow: WERSJA_SCHEMATU_SWOBODNYCH_BLOKOW }
+    return { wersjaSchematu: 3, szczegolyId: tekst(rekord, 'szczegolyId'), grupaId: tekst(rekord, 'grupaId'), nazwaGrupy: tekst(rekord, 'nazwaGrupy'), tytulSzkolenia: tekst(rekord, 'tytulSzkolenia', domyslne.tytulSzkolenia), dataOd: tekst(rekord, 'dataOd'), dataDo: tekst(rekord, 'dataDo'), miejsce: tekst(rekord, 'miejsce'), organizator, trener: tekst(rekord, 'trener'), preset, wariantSzablonu, sekcje: normalizujSekcje(rekord.sekcje, rekord, wariantSzablonu !== 'ORYGINALNA_SKROCONA'), blokiSwobodne: Array.isArray(rekord.blokiSwobodne) ? bloki : utworzBlokiSzablonuAnkiety(wariantSzablonu), wersjaSchematuBlokow: WERSJA_SCHEMATU_SWOBODNYCH_BLOKOW }
   } catch {
     return { ...domyslne, organizator: normalizujOrganizatora(odczytajPoleLegacy(zapis, 'Marka')), tytulSzkolenia: odczytajPoleLegacy(zapis, 'Tytuł szkolenia') || domyslne.tytulSzkolenia }
   }
@@ -271,7 +285,7 @@ export function utworzDaneAnkietyZKontekstu(kontekst: KontekstDokumentuSzkolenia
   const dane = utworzDomyslneDaneAnkiety(organizator === 'IIST' ? 'ORYGINALNA_IIST_PELNA' : 'ORYGINALNA_SEMPER_PELNA')
   const grupa = kontekst.grupy.find((pozycja) => pozycja.id === grupaId) ?? kontekst.grupy[0]
   const daty = grupa?.daty ?? []
-  const lokalizacja = grupa?.lokalizacje.find((pozycja) => pozycja.nazwa || pozycja.adres)
+  const lokalizacja = grupa?.lokalizacje.find((pozycja) => pozycja.nazwa || pozycja.adres || pozycja.trybOnline)
   const trenerzy = grupa?.trenerzy.length ? grupa.trenerzy : kontekst.trenerzy
-  return { ...dane, tytulSzkolenia: kontekst.szkolenie.tytul || dane.tytulSzkolenia, dataOd: daty[0] ?? '', dataDo: daty.at(-1) ?? '', miejsce: lokalizacja?.nazwa ?? lokalizacja?.adres ?? (lokalizacja?.trybOnline ? 'Online' : ''), organizator, trener: trenerzy.map((trener) => trener.imieINazwisko).join(', ') }
+  return { ...dane, szczegolyId: kontekst.zrodlo.szczegolyOrganizacyjneId, grupaId: grupa?.id, nazwaGrupy: grupa?.nazwa, tytulSzkolenia: kontekst.szkolenie.tytul || dane.tytulSzkolenia, dataOd: daty[0] ?? '', dataDo: daty.at(-1) ?? '', miejsce: lokalizacja?.nazwa ?? lokalizacja?.adres ?? (lokalizacja?.trybOnline ? 'Online' : ''), organizator, trener: trenerzy.map((trener) => trener.imieINazwisko).join(', ') }
 }

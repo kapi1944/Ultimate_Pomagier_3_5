@@ -14,7 +14,7 @@ import StatusZapisuDokumentu from '../../wspolne/StatusZapisuDokumentu'
 import { useOchronaNiezapisanegoDokumentu, useStanDokumentu } from '../../wspolne/useStanDokumentu'
 import RendererListyObecnosci from './RendererListyObecnosci'
 import WidokListObecnosci, { FormularzListyObecnosci } from './WidokListObecnosci'
-import { utworzDaneListyObecnosciZIntegracji, utworzDomyslneDaneListyObecnosci, type DaneListyObecnosci } from './modelListyObecnosci'
+import { deserializujDaneListyObecnosci, pobierzBladEksportuListy, utworzDaneListyObecnosciZIntegracji, utworzDomyslneDaneListyObecnosci, type DaneListyObecnosci } from './modelListyObecnosci'
 import {
   pobierzListeObecnosciPoId,
   zapiszKorektyListyObecnosci,
@@ -28,11 +28,11 @@ type WlasciwosciWidokuListyObecnosciZDokumentu = {
 function utworzKorekteUczestnikow(dokument: DokumentListyObecnosci, dane: DaneListyObecnosci): KorektyReczneListyObecnosci['uczestnicy'] {
   const zrodlowiUczestnicy = dokument.daneDokumentu.daneZrodlowe.uczestnicy
 
-  return dane.uczestnicy.map((uczestnik, indeks) => {
+  return dane.uczestnicy.map((uczestnik) => {
     const [imie = '', ...resztaNazwiska] = uczestnik.imieINazwisko.trim().split(/\s+/)
-    const poprzedni = zrodlowiUczestnicy.find((pozycja) => pozycja.id === uczestnik.id) ?? zrodlowiUczestnicy[indeks]
+    const poprzedni = zrodlowiUczestnicy.find((pozycja) => pozycja.id === uczestnik.id)
     return {
-      id: poprzedni?.id ?? null,
+      id: uczestnik.id,
       imie,
       nazwisko: resztaNazwiska.join(' '),
       nazwaPelna: uczestnik.imieINazwisko.trim(),
@@ -59,7 +59,7 @@ function EdytorListyObecnosci({ dokumentId }: { dokumentId: string }) {
   const [dokument, ustawDokument] = useState<DokumentListyObecnosci | null>(() => pobierzListeObecnosciPoId(dokumentId))
   const [tytulDokumentu, ustawTytulDokumentu] = useState(() => dokument?.tytul ?? '')
   const [dane, ustawDane] = useState<DaneListyObecnosci>(() => dokument
-    ? utworzDaneListyObecnosciZIntegracji(dokument.daneDokumentu.daneZrodlowe, dokument.daneDokumentu.korektyReczne)
+    ? dokument.daneDokumentu.listaObecnosci ? deserializujDaneListyObecnosci(JSON.stringify(dokument.daneDokumentu.listaObecnosci)) : utworzDaneListyObecnosciZIntegracji(dokument.daneDokumentu.daneZrodlowe, dokument.daneDokumentu.korektyReczne)
     : { ...utworzDomyslneDaneListyObecnosci(), tytulSzkolenia: '', uczestnicy: [] })
   const [komunikat, ustawKomunikat] = useState('')
   const obszarPodgladuRef = useRef<HTMLElement>(null)
@@ -90,7 +90,7 @@ function EdytorListyObecnosci({ dokumentId }: { dokumentId: string }) {
       }]
     }
 
-    const zaktualizowany = zapiszKorektyListyObecnosci(dokument.id, tytulDokumentu, korektyDoZapisu)
+    const zaktualizowany = zapiszKorektyListyObecnosci(dokument.id, tytulDokumentu, korektyDoZapisu, dane)
     if (!zaktualizowany) {
       stanDokumentu.oznaczBladZapisu()
       ustawKomunikat('Nie udało się zapisać Listy obecności.')
@@ -107,14 +107,14 @@ function EdytorListyObecnosci({ dokumentId }: { dokumentId: string }) {
   if (!dokument) return <section className="widok"><p>Nie odnaleziono Listy obecności.</p></section>
 
   const daneNazwyEksportu = { typDokumentu: 'LISTA_OBECNOSCI' as const, organizator: dane.organizator, terminy: dane.daty, miejsce: dane.miejsce, czyOnline: dane.miejsce.trim().toLocaleLowerCase('pl') === 'online', tytulSzkolenia: dane.tytulSzkolenia, wersja: dokument.wersja }
-  const akcje = <PasekAkcjiGeneratora><StatusZapisuDokumentu stan={stanDokumentu.stanZapisu} /><PrzyciskPaneluGeneratora>Edytuj dane</PrzyciskPaneluGeneratora><button type="button" onClick={zapiszDokument}>Zapisz</button><AkcjeEksportuPdf daneNazwyEksportu={daneNazwyEksportu} nazwaPliku={zbudujNazweEksportowanegoDokumentu(daneNazwyEksportu)} obszarDokumentu={obszarPodgladuRef} /></PasekAkcjiGeneratora>
+  const akcje = <PasekAkcjiGeneratora><StatusZapisuDokumentu stan={stanDokumentu.stanZapisu} /><PrzyciskPaneluGeneratora>Edytuj dane</PrzyciskPaneluGeneratora><button type="button" onClick={zapiszDokument}>Zapisz</button><AkcjeEksportuPdf czyMoznaEksportowac={() => !pobierzBladEksportuListy(dane)} pobierzBladEksportu={() => pobierzBladEksportuListy(dane)} daneNazwyEksportu={daneNazwyEksportu} nazwaPliku={zbudujNazweEksportowanegoDokumentu(daneNazwyEksportu)} obszarDokumentu={obszarPodgladuRef} /></PasekAkcjiGeneratora>
 
   return <ObszarZPanelemGeneratora idPanelu="panel-edycji-listy-obecnosci" kluczPrzypiecia="ultimate-pomagier.panel-generatora.listy-obecnosci.przypiety" kluczWysuwania="ultimate-pomagier.panel-generatora.listy-obecnosci.wysuwanie" tytulPanelu="Edycja Listy obecności">
     <UkladGeneratoraDokumentu akcje={akcje} className="generator-list-obecnosci" komunikat={komunikat} opis="Dokument roboczy utworzony ze Szczegółów organizacyjnych." tytul="Lista obecności">
       <PanelBocznyGeneratora><FormularzEdycjiListy dane={dane} prefiksId="panel-edycji-listy" tytulDokumentu={tytulDokumentu} ustawDane={ustawDane} ustawTytulDokumentu={ustawTytulDokumentu} /></PanelBocznyGeneratora>
       <UkladFormularzaIPodgladu>
         <PanelGeneratoraDokumentu tytul="Edycja" wariant="edycja"><FormularzEdycjiListy dane={dane} prefiksId="formularz-edycji-listy" tytulDokumentu={tytulDokumentu} ustawDane={ustawDane} ustawTytulDokumentu={ustawTytulDokumentu} /></PanelGeneratoraDokumentu>
-        <PanelGeneratoraDokumentu className="generator-list-obecnosci__podglad" ref={obszarPodgladuRef} tytul="Podgląd A4" wariant="podglad"><RendererListyObecnosci dane={dane} /><small>Źródło: Szczegóły {dokument.metadaneGeneratora.szczegolyOrganizacyjneId}, odcisk {dokument.metadaneGeneratora.odciskDanych}</small></PanelGeneratoraDokumentu>
+        <PanelGeneratoraDokumentu className="generator-list-obecnosci__podglad" ref={obszarPodgladuRef} tytul="Podgląd A4" wariant="podglad"><RendererListyObecnosci dane={dane} /></PanelGeneratoraDokumentu>
       </UkladFormularzaIPodgladu>
     </UkladGeneratoraDokumentu>
   </ObszarZPanelemGeneratora>

@@ -864,3 +864,24 @@
     scroll-behavior: auto;
   }
 }
+.ankieta-a4__pytanie-otwarte, .ankieta-a4__uwagi, .ankieta-a4 tr, .ankieta-nowoczesna__sekcja--ocena tr {
+  break-inside: avoid;
+  overflow-wrap: anywhere;
+}
+.ankieta-a4 th, .ankieta-a4 td, .ankieta-a4 p { overflow-wrap: anywhere; }
+.ankieta-a4 header, .ankieta__naglowek-wstawiony { break-after: avoid; }
+.ankieta-a4--oryginalna .ankieta-a4__pytania-otwarte > header { display: none; }
+.ankieta-a4--oryginalna sup { display: none; }
+.ankieta-a4__sekcja-email { margin: 1em 0 2em auto; width: 70%; min-height: 11em; border: 1px solid #111; padding: 1em; box-sizing: border-box; }
+.ankieta-a4--wlasna .ankieta-a4__pytania-otwarte { gap: 1em; }
+.ankieta-a4--wlasna .ankieta-a4__pytania-otwarte > header h2 { margin: 1em 0 .4em; font-size: 1.2em; }
+.generator-ankiet__karta-sekcji > header { flex-wrap: wrap; }
+.generator-ankiet__formularz button, .generator-ankiet__formularz select { min-height: 44px; }
+.generator-ankiet__pytanie > label { grid-column: 2; }
+@container (max-width: 650px) {
+  .generator-ankiet__pytanie { grid-template-columns: 1fr; }
+  .generator-ankiet__pytanie > div:nth-child(2) { grid-template-columns: 1fr; }
+  .generator-ankiet__pytanie > label { grid-column: 1; }
+  .generator-ankiet__uchwyt-pytania { display: none; }
+  .generator-ankiet__akcje-pytania { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

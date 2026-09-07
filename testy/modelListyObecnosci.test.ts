@@ -15,7 +15,7 @@ import type { DaneListyObecnosciZIntegracji } from '../src/wspolne/integracje/sz
 const domyslne = utworzDomyslneDaneListyObecnosci()
 assert.equal(domyslne.organizator, 'SEMPER')
 assert.equal(domyslne.trybListy, 'WYPELNIONA')
-assert.equal(domyslne.uczestnicy.length, 3)
+assert.equal(domyslne.uczestnicy.length, 0)
 
 const poPonownymOdczycie = deserializujDaneListyObecnosci(serializujDaneListyObecnosci({
   ...domyslne,

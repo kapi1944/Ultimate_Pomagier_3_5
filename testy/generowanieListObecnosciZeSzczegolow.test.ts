@@ -1,3 +1,4 @@
+import { utworzDomyslneDaneListyObecnosci } from '../src/moduly/dokumenty/generatory/listy_obecnosci/modelListyObecnosci.ts'
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
@@ -162,4 +163,13 @@ test('zapis korekt recznych zachowuje dane zrodlowe i powiazanie ze Szczegolami'
   assert.equal(zaktualizowany?.daneDokumentu.daneZrodlowe.tytulSzkolenia, 'Bezpieczna praca')
   assert.equal(zaktualizowany?.daneDokumentu.korektyReczne.tytulSzkolenia, 'Ręczna nazwa')
   assert.equal(zaktualizowany?.daneDokumentu.powiazanieZeZrodlem.szczegolyOrganizacyjneId, 'szczegoly-1')
+})
+
+
+test('zapis i ponowne otwarcie zachowują konfigurację operacyjną Listy', () => {
+  wyczyscRepozytorium()
+  const wynik = utworzListeObecnosciZeSzczegolow(utworzKontekst(), 'grupa-a')
+  const dane = { ...utworzDomyslneDaneListyObecnosci(), trybListy: 'PUSTA' as const, liczbaPustychWierszy: 15, wariantWielodniowy: 'OSOBNE_STRONY' as const, czyPokazacPodpisTrenera: true, czyPokazacPodpisOrganizatora: true }
+  zapiszKorektyListyObecnosci(wynik.dokument!.id, 'Lista', {}, dane)
+  assert.deepEqual(pobierzListeObecnosciPoId(wynik.dokument!.id)?.daneDokumentu.listaObecnosci, dane)
 })

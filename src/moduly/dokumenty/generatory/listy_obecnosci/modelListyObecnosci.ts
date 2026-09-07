@@ -15,6 +15,9 @@ export type UczestnikListyObecnosci = {
 
 export type DaneListyObecnosci = {
   wersjaSchematu: 2
+  szczegolyId?: string
+  grupaId?: string
+  trener?: string
   tytulSzkolenia: string
   miejsce: string
   daty: string[]
@@ -97,7 +100,7 @@ function normalizujKolumny(wartosc: unknown): KolumnaListyObecnosci[] {
   if (!Array.isArray(wartosc)) return [...domyslneKolumny]
   const dozwolone: KolumnaListyObecnosci[] = ['LP', 'IMIE_I_NAZWISKO', 'FIRMA', 'PODPIS']
   const kolumny = wartosc.filter((kolumna): kolumna is KolumnaListyObecnosci => typeof kolumna === 'string' && dozwolone.includes(kolumna as KolumnaListyObecnosci))
-  return kolumny.length ? [...new Set(kolumny)] : [...domyslneKolumny]
+  return kolumny.length ? dozwolone.filter((kolumna) => kolumny.includes(kolumna)) : [...domyslneKolumny]
 }
 
 function normalizujUczestnikow(wartosc: unknown) {
@@ -145,13 +148,13 @@ function pobierzMiejsce(dane: DaneListyObecnosciZIntegracji) {
 export function utworzDomyslneDaneListyObecnosci(): DaneListyObecnosci {
   return {
     wersjaSchematu: 2,
-    tytulSzkolenia: 'Skuteczna komunikacja w zespole',
+    tytulSzkolenia: '',
     miejsce: '',
     daty: [],
     organizator: 'SEMPER',
     trybListy: 'WYPELNIONA',
     liczbaPustychWierszy: 20,
-    uczestnicy: [{ id: 'uczestnik-1', imieINazwisko: 'Anna Kowalska' }, { id: 'uczestnik-2', imieINazwisko: 'Piotr Nowak' }, { id: 'uczestnik-3', imieINazwisko: 'Maria Zielińska' }],
+    uczestnicy: [],
     kolumny: [...domyslneKolumny],
     wariantWielodniowy: 'KOLUMNY_PODPISOW',
     czyPokazacPodpisTrenera: false,
@@ -175,6 +178,9 @@ export function deserializujDaneListyObecnosci(tekst: string | null): DaneListyO
     const bloki = normalizujBlokiSwobodneDokumentu(dane.blokiSwobodne)
     return {
       wersjaSchematu: 2,
+      szczegolyId: pobierzTekst(dane, 'szczegolyId'),
+      grupaId: pobierzTekst(dane, 'grupaId'),
+      trener: pobierzTekst(dane, 'trener'),
       tytulSzkolenia: pobierzTekst(dane, 'tytulSzkolenia', daneDomyslne.tytulSzkolenia),
       miejsce: pobierzTekst(dane, 'miejsce'),
       daty,
@@ -186,7 +192,7 @@ export function deserializujDaneListyObecnosci(tekst: string | null): DaneListyO
       wariantWielodniowy: normalizujWariantWielodniowy(dane.wariantWielodniowy, daty),
       czyPokazacPodpisTrenera: dane.czyPokazacPodpisTrenera === true,
       czyPokazacPodpisOrganizatora: dane.czyPokazacPodpisOrganizatora === true,
-      blokiSwobodne: bloki.length ? bloki : daneDomyslne.blokiSwobodne,
+      blokiSwobodne: Array.isArray(dane.blokiSwobodne) ? bloki : daneDomyslne.blokiSwobodne,
       wersjaSchematuBlokow: WERSJA_SCHEMATU_SWOBODNYCH_BLOKOW,
     }
   } catch {
@@ -201,14 +207,14 @@ export function utworzDaneListyObecnosciZIntegracji(daneZrodlowe: DaneListyObecn
   const dane = { ...daneZrodlowe, ...korektyReczne }
   const uczestnicy = dane.uczestnicy.map((uczestnik, indeks) => ({ id: uczestnik.id ?? `uczestnik-${indeks + 1}`, imieINazwisko: uczestnik.nazwaPelna }))
   const daty = normalizujDaty(dane.daty)
-  return { wersjaSchematu: 2, tytulSzkolenia: dane.tytulSzkolenia, miejsce: pobierzMiejsce(dane), daty, organizator: normalizujOrganizatora(dane.organizator.marka ?? dane.organizator.nazwa), trybListy: uczestnicy.length ? 'WYPELNIONA' : 'PUSTA', liczbaPustychWierszy: Math.max(dane.liczbaUczestnikow, 20), uczestnicy, kolumny: [...domyslneKolumny], wariantWielodniowy: zaproponujWariantWielodniowyListyObecnosci(daty), czyPokazacPodpisTrenera: false, czyPokazacPodpisOrganizatora: false, blokiSwobodne: utworzBlokiSzablonuListyObecnosci(), wersjaSchematuBlokow: WERSJA_SCHEMATU_SWOBODNYCH_BLOKOW }
+  return { wersjaSchematu: 2, trener: dane.trenerzy.map((trener) => trener.imieINazwisko).join(', '), szczegolyId: dane.daneZrodlowe.szczegolyOrganizacyjneId, tytulSzkolenia: dane.tytulSzkolenia, miejsce: pobierzMiejsce(dane), daty, organizator: normalizujOrganizatora(dane.organizator.marka ?? dane.organizator.nazwa), trybListy: 'WYPELNIONA', liczbaPustychWierszy: Math.max(dane.liczbaUczestnikow, 20), uczestnicy, kolumny: [...domyslneKolumny], wariantWielodniowy: zaproponujWariantWielodniowyListyObecnosci(daty), czyPokazacPodpisTrenera: false, czyPokazacPodpisOrganizatora: false, blokiSwobodne: utworzBlokiSzablonuListyObecnosci(), wersjaSchematuBlokow: WERSJA_SCHEMATU_SWOBODNYCH_BLOKOW }
 }
 
 export function pobierzLiczbeWierszyNaStronieListyObecnosci(dane: DaneListyObecnosci) {
   return dane.czyPokazacPodpisTrenera || dane.czyPokazacPodpisOrganizatora ? 24 : 28
 }
 
-export function pobierzWierszeListyObecnosci(dane: DaneListyObecnosci) {
+export function pobierzWierszeListyObecnosci(dane: DaneListyObecnosci): UczestnikListyObecnosci[] {
   return dane.trybListy === 'PUSTA'
     ? Array.from({ length: dane.liczbaPustychWierszy }, (_, indeks) => ({ id: `pusty-${indeks + 1}`, imieINazwisko: '' }))
     : dane.uczestnicy
@@ -217,15 +223,30 @@ export function pobierzWierszeListyObecnosci(dane: DaneListyObecnosci) {
 export function podzielWierszeListyObecnosci(dane: DaneListyObecnosci, liczbaWierszyNaStronie = 28) {
   const wiersze = pobierzWierszeListyObecnosci(dane)
   const strony: UczestnikListyObecnosci[][] = []
-  for (let indeks = 0; indeks < wiersze.length; indeks += liczbaWierszyNaStronie) strony.push(wiersze.slice(indeks, indeks + liczbaWierszyNaStronie))
+  const limit = Math.max(1, Math.floor(liczbaWierszyNaStronie))
+  let koszt = 0
+  for (const uczestnik of wiersze) {
+    const szerokoscTekstu = dane.kolumny.includes('FIRMA') ? 23 : 48
+    const kosztWiersza = Math.max(1, Math.ceil(uczestnik.imieINazwisko.length / szerokoscTekstu), dane.kolumny.includes('FIRMA') ? Math.ceil((uczestnik.firma?.length ?? 0) / 23) : 1)
+    if (!strony.length || (koszt + kosztWiersza > limit && strony.at(-1)!.length)) { strony.push([]); koszt = 0 }
+    strony.at(-1)!.push(uczestnik)
+    koszt += kosztWiersza
+  }
   return strony.length ? strony : [[]]
 }
 
 export function podzielListeObecnosciNaStrony(dane: DaneListyObecnosci) {
   const liczbaWierszy = pobierzLiczbeWierszyNaStronieListyObecnosci(dane)
   const strony = podzielWierszeListyObecnosci(dane, liczbaWierszy)
-  if (dane.wariantWielodniowy === 'KOLUMNY_PODPISOW' || dane.daty.length < 2) return strony.map((uczestnicy, indeks) => ({ uczestnicy, indeksPierwszegoWiersza: indeks * liczbaWierszy, dataPodpisu: null }))
-  return dane.daty.flatMap((data) => strony.map((uczestnicy, indeks) => ({ uczestnicy, indeksPierwszegoWiersza: indeks * liczbaWierszy, dataPodpisu: data })))
+  const grupyDat = dane.wariantWielodniowy === 'OSOBNE_STRONY' ? dane.daty.map((data) => [data]) : Array.from({ length: Math.ceil(dane.daty.length / 3) }, (_, indeks) => dane.daty.slice(indeks * 3, indeks * 3 + 3))
+  return (grupyDat.length ? grupyDat : [[]]).flatMap((datyPodpisow) => {
+    let indeksPierwszegoWiersza = 0
+    return strony.map((uczestnicy) => {
+      const strona = { uczestnicy, indeksPierwszegoWiersza, datyPodpisow, dataPodpisu: dane.wariantWielodniowy === 'OSOBNE_STRONY' ? datyPodpisow[0] ?? null : null }
+      indeksPierwszegoWiersza += uczestnicy.length
+      return strona
+    })
+  })
 }
 
 export function porownajUczestnikowListyObecnosci(obecni: UczestnikListyObecnosci[], zrodlowi: UczestnikListyObecnosci[]): RozniceUczestnikowListyObecnosci {
@@ -243,4 +264,12 @@ export function porownajUczestnikowListyObecnosci(obecni: UczestnikListyObecnosc
 export function zastosujSynchronizacjeUczestnikow(dane: DaneListyObecnosci, zrodlowi: UczestnikListyObecnosci[]): DaneListyObecnosci {
   const reczni = dane.uczestnicy.filter((uczestnik) => uczestnik.czyReczny)
   return { ...dane, trybListy: 'WYPELNIONA', uczestnicy: [...zrodlowi.map((uczestnik) => ({ ...uczestnik, czyReczny: false })), ...reczni] }
+}
+
+export function pobierzBladEksportuListy(dane: DaneListyObecnosci): string | null {
+  if (!dane.kolumny.length) return 'Wybierz co najmniej jedną kolumnę.'
+  if (dane.trybListy === 'PUSTA') return Number.isInteger(dane.liczbaPustychWierszy) && dane.liczbaPustychWierszy >= 1 && dane.liczbaPustychWierszy <= 200 ? null : 'Wybierz od 1 do 200 pustych wierszy.'
+  if (!dane.uczestnicy.length) return 'Dodaj uczestników albo wybierz tryb „Pusta lista do ręcznego wypełnienia”.'
+  if (dane.uczestnicy.some((uczestnik) => !uczestnik.imieINazwisko.trim())) return 'Uzupełnij imiona i nazwiska uczestników.'
+  return null
 }
