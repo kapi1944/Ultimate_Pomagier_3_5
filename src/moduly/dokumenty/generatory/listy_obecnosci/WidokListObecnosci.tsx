@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react'
 import { useKontekstUzytkownika } from '../../../../aplikacja/logowanie/useKontekstUzytkownika'
 import AkcjeEksportuPdf from '../../../../wspolne/dokumenty/AkcjeEksportuPdf'
-import { utworzNazwePlikuDokumentu } from '../../../../wspolne/dokumenty/nazwyDokumentow'
+import { zbudujNazweEksportowanegoDokumentu } from '../../../../wspolne/dokumenty/nazwyDokumentow'
 import { zapiszDokumentRoboczyGeneratora } from '../../../../wspolne/dokumenty/zapisDokumentuGeneratora'
 import { ObszarZPanelemGeneratora, PanelBocznyGeneratora, PanelGeneratoraDokumentu, PasekAkcjiGeneratora, PrzyciskPaneluGeneratora, UkladFormularzaIPodgladu } from '../../wspolne/UkladGeneratoraDokumentu'
 import StatusZapisuDokumentu from '../../wspolne/StatusZapisuDokumentu'
@@ -121,7 +121,8 @@ export default function WidokListObecnosci() {
     ustawKomunikat('Przywrócono nową Listę obecności.')
   }
 
-  const akcje = <PasekAkcjiGeneratora><PrzyciskPaneluGeneratora>Edytuj listę</PrzyciskPaneluGeneratora><StatusZapisuDokumentu stan={stanDokumentu.stanZapisu} /><button onClick={() => void zapiszWRejestrze()} type="button">Zapisz listę</button><AkcjeEksportuPdf nazwaPliku={utworzNazwePlikuDokumentu('LISTA_OBECNOSCI', dane.tytulSzkolenia || 'szkolenie')} obszarDokumentu={obszarPodgladuRef} /><button onClick={rozpocznijNowaListe} type="button">Nowa lista</button></PasekAkcjiGeneratora>
+  const daneNazwyEksportu = { typDokumentu: 'LISTA_OBECNOSCI' as const, organizator: dane.organizator, terminy: dane.daty, miejsce: dane.miejsce, czyOnline: dane.miejsce.trim().toLocaleLowerCase('pl') === 'online', tytulSzkolenia: dane.tytulSzkolenia }
+  const akcje = <PasekAkcjiGeneratora><PrzyciskPaneluGeneratora>Edytuj listę</PrzyciskPaneluGeneratora><StatusZapisuDokumentu stan={stanDokumentu.stanZapisu} /><button onClick={() => void zapiszWRejestrze()} type="button">Zapisz listę</button><AkcjeEksportuPdf daneNazwyEksportu={daneNazwyEksportu} nazwaPliku={zbudujNazweEksportowanegoDokumentu(daneNazwyEksportu)} obszarDokumentu={obszarPodgladuRef} /><button onClick={rozpocznijNowaListe} type="button">Nowa lista</button></PasekAkcjiGeneratora>
 
   return <ObszarZPanelemGeneratora idPanelu="panel-danych-listy-obecnosci" kluczPrzypiecia="ultimate-pomagier.panel-generatora.listy-obecnosci.przypiety" kluczWysuwania="ultimate-pomagier.panel-generatora.listy-obecnosci.wysuwanie" tytulPanelu="Ustawienia Listy obecności">
     <section className="generator-list-obecnosci"><div className="generator-dokumentu widok"><header className="generator-dokumentu__naglowek"><div><h1>Listy obecności</h1><p>Lista w oryginalnym układzie SEMPER, z automatycznym podziałem stron A4.</p></div>{akcje}{komunikat && <div aria-live="polite" className="generator-dokumentu__komunikat">{komunikat}</div>}</header>

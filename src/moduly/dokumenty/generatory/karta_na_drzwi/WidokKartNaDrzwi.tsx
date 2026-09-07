@@ -94,11 +94,12 @@ export default function WidokKartNaDrzwi() {
     <PrzyciskPaneluGeneratora>Edytuj układ</PrzyciskPaneluGeneratora>
     <StatusZapisuDokumentu stan={stanDokumentu.stanZapisu} />
     <button type="button" onClick={() => void stanDokumentu.zapiszTeraz().then((wynik) => ustawKomunikat(wynik ? 'Kartę zapisano w rejestrze dokumentów.' : 'Nie udało się zapisać Karty.'))}>Zapisz kartę</button>
-    <AkcjeEksportuPdf daneNazwyEksportu={daneNazwyEksportu} nazwaPliku={zbudujNazweEksportowanegoDokumentu(daneNazwyEksportu)} obszarDokumentu={obszarPodgladuRef} />
+    <AkcjeEksportuPdf daneNazwyEksportu={daneNazwyEksportu} nazwaPliku={zbudujNazweEksportowanegoDokumentu(daneNazwyEksportu)} obszarDokumentu={obszarPodgladuRef} orientacja={dane.orientacja} />
     <button type="button" onClick={rozpocznijNowaKarte}>Nowa karta</button>
   </PasekAkcjiGeneratora>
 
   return <ObszarZPanelemGeneratora idPanelu="panel-karty-na-drzwi" kluczPrzypiecia="ultimate-pomagier.panel-generatora.karta_na_drzwi.przypiety" kluczWysuwania="ultimate-pomagier.panel-generatora.karta_na_drzwi.wysuwanie" tytulPanelu="Edytor układu Karty">
+    <style data-pomin-w-eksporcie>{`@media print { @page { size: A4 ${dane.orientacja === 'pozioma' ? 'landscape' : 'portrait'}; margin: 0; } body:has(.karta-na-drzwi__strona) * { visibility: hidden; } .karta-na-drzwi__strona, .karta-na-drzwi__strona * { visibility: visible; } .karta-na-drzwi__strona { position: absolute; inset: 0; width: ${dane.orientacja === 'pozioma' ? '297mm' : '210mm'}; height: ${dane.orientacja === 'pozioma' ? '210mm' : '297mm'}; margin: 0; box-shadow: none; } }`}</style>
     <UkladGeneratoraDokumentu tytul="Karta na drzwi" opis="Wybierz Szczegóły i grupę, aby automatycznie przygotować osobną Kartę." akcje={akcje} komunikat={komunikat}>
       <PanelBocznyGeneratora><PanelEdycjiSwobodnychBlokow bloki={dane.blokiSwobodne} blokiSzablonu={utworzBlokiSzablonuKartyNaDrzwi(dane.orientacja)} zaznaczonyBlokId={zaznaczonyBlokId} trybEdycjiSzablonu={trybEdycjiSzablonu} onZmienTrybEdycjiSzablonu={ustawTrybEdycjiSzablonu} onZmienBloki={(blokiSwobodne) => ustawDane((obecne) => ({ ...obecne, blokiSwobodne }))} onDodajObraz={dodajObraz} liczbaStron={1} szerokoscStronyMm={dane.orientacja === 'pozioma' ? 297 : 210} wysokoscStronyMm={dane.orientacja === 'pozioma' ? 210 : 297} /></PanelBocznyGeneratora>
       <UkladFormularzaIPodgladu>

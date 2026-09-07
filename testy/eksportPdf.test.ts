@@ -1,6 +1,6 @@
 ﻿import assert from 'node:assert/strict'
 import test from 'node:test'
-import { czyMoznaRozpoczacEksport, pobierzPodzialStronA4, pobierzStronyDokumentu, utworzNazwePlikuPdf } from '../src/wspolne/dokumenty/eksportPdf.ts'
+import { czyMoznaRozpoczacEksport, pobierzPodzialStronA4, pobierzStronyDokumentu, pobierzWymiaryStronyPdf, utworzNazwePlikuPdf } from '../src/wspolne/dokumenty/eksportPdf.ts'
 import { formatujTerminyDoNazwy, sanityzujSegmentNazwy, zbudujNazweBazowaEksportowanegoDokumentu, zbudujNazweEksportowanegoDokumentu } from '../src/wspolne/dokumenty/nazwyDokumentow.ts'
 import { geometriaStronyProgramu, pobierzWymiaryStronyProgramu } from '../src/moduly/dokumenty/generatory/programy_szkolen/geometriaStronyProgramu.ts'
 
@@ -24,11 +24,22 @@ test('terminy ciągłe i rozłączne mają wspólną deterministyczną semantyk�
 })
 
 test('brak segmentów nie tworzy separatorów, wartości technicznych ani blokady eksportu', () => {
-  assert.equal(zbudujNazweEksportowanegoDokumentu({ typDokumentu: 'LISTA_OBECNOSCI', terminy: ['2026-09-14'], tytulSzkolenia: 'Cyberbezpieczeństwo', czyOnline: true }), '2026.09.14_online_Cyberbezpieczenstwo_Lista_obecnosci_(v1).pdf')
-  assert.equal(zbudujNazweEksportowanegoDokumentu({ typDokumentu: 'DYPLOM', dataUtworzenia: '2026-08-27T12:00:00.000Z', nazwaUzytkownika: 'Rozliczenie projektu' }), '2026.08.27_Rozliczenie_projektu_Dyplom_(v1).pdf')
+  assert.equal(zbudujNazweEksportowanegoDokumentu({ typDokumentu: 'LISTA_OBECNOSCI', terminy: ['2026-09-14'], tytulSzkolenia: 'Cyberbezpieczeństwo', czyOnline: true }), '2026.09.14_online_Cyberbezpieczenstwo_Lista_obecnosci.pdf')
+  assert.equal(zbudujNazweEksportowanegoDokumentu({ typDokumentu: 'DYPLOM', dataUtworzenia: '2026-08-27T12:00:00.000Z', nazwaUzytkownika: 'Rozliczenie projektu' }), '2026.08.27_Rozliczenie_projektu_Dyplom.pdf')
   const nazwa = zbudujNazweEksportowanegoDokumentu({ typDokumentu: 'ANKIETA', organizator: 'undefined', klient: 'null', miejsce: 'brak', tytulSzkolenia: 'Zażółć: <>?' })
-  assert.equal(nazwa, 'Zazolc_Ankieta_(v1).pdf')
+  assert.equal(nazwa, 'Zazolc_Ankieta.pdf')
   assert.ok(!nazwa.includes('__'))
+})
+
+test('nazwa dyplomu uwzględnia grupę i uczestnika bez technicznych wartości', () => {
+  const wspolneDane = { typDokumentu: 'DYPLOM' as const, organizator: 'SEMPER', terminy: ['2026-09-14'], tytulSzkolenia: 'Szkolenie / test', grupa: 'Grupa A', wersja: 3 }
+  assert.equal(zbudujNazweEksportowanegoDokumentu({ ...wspolneDane, uczestnik: 'Anna Kowalska' }), 'SEMPER_2026.09.14_Szkolenie_test_Grupa_A_Anna_Kowalska_Dyplom_(v3).pdf')
+  assert.equal(zbudujNazweEksportowanegoDokumentu({ ...wspolneDane, grupa: null, uczestnik: 'Anna Kowalska' }), 'SEMPER_2026.09.14_Szkolenie_test_Anna_Kowalska_Dyplom_(v3).pdf')
+})
+
+test('wymiary PDF zachowują orientację A4', () => {
+  assert.deepEqual(pobierzWymiaryStronyPdf('pionowa'), { szerokoscMm: 210, wysokoscMm: 297, orientacjaJsPdf: 'portrait' })
+  assert.deepEqual(pobierzWymiaryStronyPdf('pozioma'), { szerokoscMm: 297, wysokoscMm: 210, orientacjaJsPdf: 'landscape' })
 })
 
 test('podzial A4 tworzy przewidywalne strony dla krótkiego i długiego podglądu', () => {

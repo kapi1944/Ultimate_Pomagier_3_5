@@ -8,7 +8,7 @@ const wartosciPuste = new Set(['brak', 'nieznany', 'undefined', 'null', 'bez org
 
 export type DaneKlientaDoNazwyEksportu = { skrot?: string | null; nazwaSkrocona?: string | null; nazwa?: string | null }
 export type DaneNazwyEksportowanegoDokumentu = {
-  typDokumentu: TypDokumentu; organizator?: string | null; terminy?: string[] | null; klient?: DaneKlientaDoNazwyEksportu | string | null; miejsce?: string | null; czyOnline?: boolean; tytulSzkolenia?: string | null; nazwaUzytkownika?: string | null; dataUtworzenia?: string | Date | null; wersja?: number | null; rozszerzenie?: string
+  typDokumentu: TypDokumentu; organizator?: string | null; terminy?: string[] | null; klient?: DaneKlientaDoNazwyEksportu | string | null; miejsce?: string | null; grupa?: string | null; uczestnik?: string | null; czyOnline?: boolean; tytulSzkolenia?: string | null; nazwaUzytkownika?: string | null; dataUtworzenia?: string | Date | null; wersja?: number | null; rozszerzenie?: string
 }
 
 export function oczyscNazwePliku(nazwa: string) { return Array.from(nazwa).filter((znak) => znak.charCodeAt(0) >= 32).join('').replace(znakiNiedozwoloneWNazwiePliku, ' ').replace(/\s+/g, ' ').trim().replace(/[. ]+$/g, '') || 'Dokument' }
@@ -34,11 +34,18 @@ export function pobierzZnormalizowanaNazweTypuDokumentu(typ: TypDokumentu) { ret
 export function czyNazwaWymagaOpisuUzytkownika(dane: DaneNazwyEksportowanegoDokumentu) { return !sanityzujSegmentNazwy(dane.tytulSzkolenia) && !sanityzujSegmentNazwy(dane.nazwaUzytkownika) }
 export function zbudujNazweBazowaEksportowanegoDokumentu(dane: DaneNazwyEksportowanegoDokumentu) {
   const maTytul = Boolean(sanityzujSegmentNazwy(dane.tytulSzkolenia))
-  const segmenty = maTytul ? [pobierzNazweOrganizatora(dane.organizator), formatujTerminyDoNazwy(dane.terminy), pobierzNazweKlienta(dane.klient), dane.czyOnline ? 'online' : dane.miejsce, dane.tytulSzkolenia] : [pobierzDateUtworzenia(dane.dataUtworzenia), dane.nazwaUzytkownika]
+  const segmenty = maTytul
+    ? [pobierzNazweOrganizatora(dane.organizator), formatujTerminyDoNazwy(dane.terminy), pobierzNazweKlienta(dane.klient), dane.czyOnline ? 'online' : dane.miejsce, dane.tytulSzkolenia, dane.grupa, dane.uczestnik]
+    : [pobierzDateUtworzenia(dane.dataUtworzenia), dane.nazwaUzytkownika, dane.uczestnik]
   const rodzajDokumentu = sanityzujSegmentNazwy(pobierzZnormalizowanaNazweTypuDokumentu(dane.typDokumentu), 48).replace(/-/g, '_')
   return segmenty.map((segment, indeks) => sanityzujSegmentNazwy(segment, indeks === segmenty.length - 1 ? 80 : 48)).filter(Boolean).concat(rodzajDokumentu).join('_')
 }
-export function zbudujNazweEksportowanegoDokumentu(dane: DaneNazwyEksportowanegoDokumentu) { const wersja = Number.isInteger(dane.wersja) && (dane.wersja ?? 0) > 0 ? dane.wersja! : 1; const rozszerzenie = (dane.rozszerzenie ?? 'pdf').replace(/[^a-z0-9]/gi, '').toLocaleLowerCase() || 'pdf'; return `${zbudujNazweBazowaEksportowanegoDokumentu(dane)}_(v${wersja}).${rozszerzenie}` }
+export function zbudujNazweEksportowanegoDokumentu(dane: DaneNazwyEksportowanegoDokumentu) {
+  const wersja = Number.isInteger(dane.wersja) && (dane.wersja ?? 0) > 0 ? dane.wersja : null
+  const rozszerzenie = (dane.rozszerzenie ?? 'pdf').replace(/[^a-z0-9]/gi, '').toLocaleLowerCase() || 'pdf'
+  const sufiksWersji = wersja === null ? '' : `_(v${wersja})`
+  return `${zbudujNazweBazowaEksportowanegoDokumentu(dane)}${sufiksWersji}.${rozszerzenie}`
+}
 // Zachowana sygnatura dla starszych generatorow; korzysta z tego samego buildera.
 export function utworzNazwePlikuDokumentu(typ: TypDokumentu, tytul?: string, rozszerzenie = 'pdf') { return zbudujNazweEksportowanegoDokumentu({ typDokumentu: typ, tytulSzkolenia: tytul, rozszerzenie }) }
 function formatujDate(data: Date) { return [data.getFullYear(), String(data.getMonth() + 1).padStart(2, '0'), String(data.getDate()).padStart(2, '0')].join('-') }

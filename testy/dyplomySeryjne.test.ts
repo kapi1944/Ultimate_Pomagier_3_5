@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { zbudujDaneSeryjnychDyplomow } from '../src/moduly/dokumenty/generatory/dyplomy/modelSeryjnychDyplomow.ts'
+import { zbudujNazweEksportowanegoDokumentu } from '../src/wspolne/dokumenty/nazwyDokumentow.ts'
 import type { KontekstDokumentuSzkolenia } from '../src/wspolne/integracje/szczegolyDoDokumentow/index.ts'
 
 const kontekst: KontekstDokumentuSzkolenia = {
@@ -21,5 +22,8 @@ assert.equal(dane.trener, 'Jan Nowak')
 assert.deepEqual(dane.daty, ['2026-10-01', '2026-10-02'])
 assert.deepEqual(dane.uczestnicy, ['Anna Kowalska', 'Piotr Nowak'])
 assert.equal(zbudujDaneSeryjnychDyplomow(kontekst, 'brak'), null)
+const wspolneDaneNazwy = { typDokumentu: 'DYPLOM' as const, organizator: dane.organizator, terminy: dane.daty, tytulSzkolenia: dane.tytulSzkolenia, grupa: 'Grupa A' }
+assert.equal(zbudujNazweEksportowanegoDokumentu({ ...wspolneDaneNazwy, uczestnik: dane.uczestnicy[0] }), 'IIST_2026.10.01-02_Prawo_zamowien_Grupa_A_Anna_Kowalska_Dyplom.pdf')
+assert.equal(zbudujNazweEksportowanegoDokumentu(wspolneDaneNazwy), 'IIST_2026.10.01-02_Prawo_zamowien_Grupa_A_Dyplom.pdf')
 
 console.log('OK: wspólny szablon dyplomu otrzymuje seryjne dane uczestników')

@@ -567,7 +567,18 @@
 }
 
 .dyplomy__druk {
-  display: none;
+  position: absolute;
+  top: 0;
+  left: -100000px;
+  display: block;
+  width: 210mm;
+}
+
+.dyplomy__druk .dyplom-kartka {
+  width: 210mm;
+  height: 297mm;
+  max-width: none;
+  box-shadow: none;
 }
 
 .dyplom-kartka {
@@ -1066,6 +1077,10 @@
   }
 
   .dyplomy__druk {
+    position: static;
+    top: auto;
+    left: auto;
+    width: auto;
     display: block !important;
   }
 

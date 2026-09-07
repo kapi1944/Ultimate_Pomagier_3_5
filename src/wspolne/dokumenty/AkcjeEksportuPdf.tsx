@@ -11,11 +11,15 @@ type WlasciwosciAkcjiEksportuPdf = {
   czyMoznaEksportowac?: () => boolean
   className?: string
   classNamePrzycisku?: string
+  etykietaPrzyciskuPdf?: string
+  pokazPrzyciskDruku?: boolean
+  orientacja?: 'pionowa' | 'pozioma'
+  pobierzBladEksportu?: () => string | null
   przygotujEksport?: () => void | Promise<void>
   zakonczEksport?: () => void
 }
 
-export default function AkcjeEksportuPdf({ obszarDokumentu, nazwaPliku, daneNazwyEksportu, czyMoznaEksportowac = () => true, className, classNamePrzycisku = 'akcje-eksportu-pdf__przycisk', przygotujEksport, zakonczEksport }: WlasciwosciAkcjiEksportuPdf) {
+export default function AkcjeEksportuPdf({ obszarDokumentu, nazwaPliku, daneNazwyEksportu, czyMoznaEksportowac = () => true, className, classNamePrzycisku = 'akcje-eksportu-pdf__przycisk', etykietaPrzyciskuPdf = 'Pobierz PDF', pokazPrzyciskDruku = true, orientacja = 'pionowa', pobierzBladEksportu, przygotujEksport, zakonczEksport }: WlasciwosciAkcjiEksportuPdf) {
   const [czyGenerowanie, ustawCzyGenerowanie] = useState(false)
   const [blad, ustawBlad] = useState<string | null>(null)
   const [nazwaUzytkownika, ustawNazweUzytkownika] = useState('')
@@ -23,8 +27,14 @@ export default function AkcjeEksportuPdf({ obszarDokumentu, nazwaPliku, daneNazw
   const daneZNazwaUzytkownika = daneNazwyEksportu ? { ...daneNazwyEksportu, nazwaUzytkownika } : undefined
   const nazwaDoEksportu = daneZNazwaUzytkownika ? zbudujNazweEksportowanegoDokumentu(daneZNazwaUzytkownika) : nazwaPliku ?? 'Dokument.pdf'
 
+  function sprawdzGotowoscEksportu() {
+    if (czyMoznaEksportowac()) return true
+    ustawBlad(pobierzBladEksportu?.() ?? 'Dokument nie jest gotowy do eksportu. Uzupełnij wymagane dane.')
+    return false
+  }
+
   async function pobierzPdf() {
-    if (!czyMoznaRozpoczacEksport(czyGenerowanie) || !czyMoznaEksportowac()) return
+    if (!czyMoznaRozpoczacEksport(czyGenerowanie) || !sprawdzGotowoscEksportu()) return
     if (daneNazwyEksportu && czyNazwaWymagaOpisuUzytkownika(daneZNazwaUzytkownika!)) {
       ustawCzyPytacONazwe(true)
       return
@@ -39,18 +49,18 @@ export default function AkcjeEksportuPdf({ obszarDokumentu, nazwaPliku, daneNazw
     try {
       await wykonajEksportPoPrzygotowaniu({
         przygotuj: przygotujEksport,
-        wykonaj: () => pobierzPdfDokumentu({ obszarDokumentu: obszarDokumentu.current!, nazwaPliku: nazwaDoEksportu, format: 'a4' }),
+        wykonaj: () => pobierzPdfDokumentu({ obszarDokumentu: obszarDokumentu.current!, nazwaPliku: nazwaDoEksportu, format: 'a4', orientacja }),
         zakoncz: zakonczEksport,
       })
     } catch {
-      ustawBlad('Nie udalo sie utworzyc pliku PDF. Sprawdz obrazy w podgladzie i sprobuj ponownie.')
+      ustawBlad('Nie udało się utworzyć pliku PDF. Sprawdź obrazy w podglądzie i spróbuj ponownie.')
     } finally {
       ustawCzyGenerowanie(false)
     }
   }
 
   async function drukuj() {
-    if (!czyMoznaRozpoczacEksport(czyGenerowanie) || !czyMoznaEksportowac()) return
+    if (!czyMoznaRozpoczacEksport(czyGenerowanie) || !sprawdzGotowoscEksportu()) return
     ustawBlad(null)
     try {
       await wykonajEksportPoPrzygotowaniu({ przygotuj: przygotujEksport, wykonaj: drukujDokument, zakoncz: zakonczEksport })
@@ -61,9 +71,9 @@ export default function AkcjeEksportuPdf({ obszarDokumentu, nazwaPliku, daneNazw
 
   return <div className={`akcje-eksportu-pdf ${className ?? ''}`} data-pomin-w-eksporcie>
     <button className={classNamePrzycisku} disabled={czyGenerowanie} onClick={pobierzPdf} type="button">
-      {czyGenerowanie ? 'Generowanie PDF...' : 'Pobierz PDF'}
+      {czyGenerowanie ? 'Generowanie PDF...' : etykietaPrzyciskuPdf}
     </button>
-    <button className={classNamePrzycisku} disabled={czyGenerowanie} onClick={drukuj} type="button">Drukuj</button>
+    {pokazPrzyciskDruku && <button className={classNamePrzycisku} disabled={czyGenerowanie} onClick={drukuj} type="button">Drukuj</button>}
     {czyPytacONazwe && <div className="akcje-eksportu-pdf__nazwa" role="dialog" aria-label="Nazwa eksportowanego pliku">
       <label>Krótka nazwa pliku<input autoFocus onChange={(zdarzenie) => ustawNazweUzytkownika(zdarzenie.target.value)} placeholder="Np. Rozliczenie projektu" value={nazwaUzytkownika} /></label>
       <small>Proponowana nazwa: {nazwaDoEksportu}</small>

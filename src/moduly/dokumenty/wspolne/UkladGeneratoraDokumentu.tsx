@@ -115,7 +115,7 @@ export const PanelGeneratoraDokumentu = forwardRef<HTMLElement, WlasciwosciPanel
         className={polaczKlasy('generator-dokumentu__panel', `generator-dokumentu__panel--${wariant}`, className)}
         ref={ref}
       >
-        {tytul && <h2>{tytul}</h2>}
+        {tytul && <h2 data-pomin-w-eksporcie>{tytul}</h2>}
         {children}
       </section>
     )

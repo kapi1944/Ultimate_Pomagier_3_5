@@ -1,7 +1,8 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import type { CSSProperties, ChangeEvent } from 'react'
 import { pobierzLokalizacjeZMagazynu } from '../../../../kartoteki/lokalizacje/magazynLokalizacji'
 import type { TrybTytuluDyplomu } from '../../../../wspolne/dokumenty/typyDokumentu'
+import AkcjeEksportuPdf from '../../../../wspolne/dokumenty/AkcjeEksportuPdf'
 import { zapiszDokumentRoboczyGeneratora } from '../../../../wspolne/dokumenty/zapisDokumentuGeneratora'
 import { pobierzSzczegolyDoGeneratorow, zbudujKontekstZeSzczegolow } from '../../../../wspolne/integracje/szczegolyDoDokumentow'
 import { trenerzyKartotekiStartowi } from '../../../zamkniete/szczegoly_organizacyjne/stale'
@@ -900,7 +901,7 @@ function RenderujDodatek({ dodatek, polozenie }: { dodatek?: DodatekDyplomu; pol
 
 function StronaDrugaDyplomu({ dane, uczestnik }: { dane: ZapisDyplomow; uczestnik: UczestnikDyplomu }) {
   return (
-    <article className="dyplom-kartka dyplom-kartka--druga" style={pobierzStylMotywuDyplomu(dane)}>
+    <article className="dyplom-kartka dyplom-kartka--druga" data-strona-dokumentu style={pobierzStylMotywuDyplomu(dane)}>
       <div className="dyplom-kartka__warstwa">
         <header className="dyplom-kartka__naglowek-drugiej">
           <span>{pobierzTekstTytulu(dane.trybTytulu)}</span>
@@ -934,6 +935,7 @@ function StronaDyplomu({ dane, uczestnik }: { dane: ZapisDyplomow; uczestnik: Uc
   return (
     <article
       className={klasyKartki}
+      data-strona-dokumentu
       style={pobierzStylMotywuDyplomu(dane, {
         czyDodatekGorny: Boolean(dodatekGorny),
         czyDodatekDolny: Boolean(dodatekDolny),
@@ -1026,6 +1028,8 @@ export default function WidokDyplomow() {
   const [trybPodgladuStron, ustawTrybPodgladuStron] = useState<TrybPodgladuStron>('pierwsza')
   const [ukladPodgladuStron, ustawUkladPodgladuStron] = useState<UkladPodgladuStron>('pod_soba')
   const [indeksUczestnikaPierwszejStrony, ustawIndeksUczestnikaPierwszejStrony] = useState(0)
+  const obszarPodgladuWybranegoRef = useRef<HTMLElement>(null)
+  const obszarEksportuSeryjnegoRef = useRef<HTMLDivElement>(null)
   const szczegolyDoGeneratora = useMemo(() => pobierzSzczegolyDoGeneratorow(), [])
   const wybraneSzczegoly = szczegolyDoGeneratora.find((pozycja) => pozycja.id === dane.szczegolyOrganizacyjneId) ?? null
   const uczestnicyDoDruku = useMemo(
@@ -1035,10 +1039,21 @@ export default function WidokDyplomow() {
   const indeksPierwszejStrony = uczestnicyDoDruku.length
     ? Math.min(indeksUczestnikaPierwszejStrony, uczestnicyDoDruku.length - 1)
     : 0
-  const uczestnicyDrugiejStrony = uczestnicyDoDruku.filter((uczestnik) => uczestnik.drugaStrona)
-  const uczestnikDrugiejStrony = uczestnicyDrugiejStrony[0] ?? uczestnicyDoDruku[0] ?? utworzUczestnika('', 0, dane)
-  const uczestnikPierwszejStrony = uczestnicyDoDruku[indeksPierwszejStrony] ?? uczestnikDrugiejStrony
+  const uczestnikPierwszejStrony = uczestnicyDoDruku[indeksPierwszejStrony] ?? utworzUczestnika('', 0, dane)
+  const uczestnikDrugiejStrony = uczestnikPierwszejStrony
+  const czyDrugaStronaDostepna = dane.drugaStronaAktywna && dane.czyPokazacDrugaStrone && Boolean(uczestnikPierwszejStrony.drugaStrona)
   const problemy = useMemo(() => sprawdzDane(dane), [dane])
+  const grupaDoNazwy = wybraneSzczegoly?.grupy.find((grupa) => grupa.id === dane.grupaId)?.nazwa
+  const daneNazwyDyplomu = {
+    typDokumentu: 'DYPLOM' as const,
+    organizator: dane.motywKoloru === 'iist' ? 'IIST' : 'SEMPER',
+    terminy: dane.wybraneDaty,
+    miejsce: dane.trybSzkolenia === 'online' ? 'online' : dane.miejsceSzkolenia,
+    czyOnline: dane.trybSzkolenia === 'online',
+    tytulSzkolenia: dane.tytulSzkolenia,
+    grupa: grupaDoNazwy,
+  }
+  const pobierzBladEksportuDyplomu = () => problemy.length ? `Przed eksportem uzupełnij: ${problemy.join(', ')}.` : null
   const checklistaDanych = [
     { etykieta: 'Uczestnik', uzupelnione: uczestnicyDoDruku.length > 0 },
     { etykieta: 'Tytuł szkolenia', uzupelnione: Boolean(dane.tytulSzkolenia.trim()) },
@@ -1068,7 +1083,6 @@ export default function WidokDyplomow() {
     () => wybierzPodpowiedziTrenerow(trenerzyDoWyboru, dane.trener),
     [dane.trener, trenerzyDoWyboru],
   )
-  const czyDrugaStronaDostepna = dane.drugaStronaAktywna && dane.czyPokazacDrugaStrone && uczestnicyDrugiejStrony.length > 0
   const czyKontrolaPodgladuDostepna = czyDrugaStronaDostepna || uczestnicyDoDruku.length > 1
   const skutecznyTrybPodgladuStron = czyDrugaStronaDostepna ? trybPodgladuStron : 'pierwsza'
   const czyPokazacPierwszaStrone =
@@ -1522,16 +1536,6 @@ export default function WidokDyplomow() {
     )
   }
 
-  function drukujDyplomy() {
-    if (problemy.length) {
-      ustawKomunikat(`Przed drukiem popraw: ${problemy.join(', ')}.`)
-      return
-    }
-
-    ustawKomunikat('Otwieram drukowanie. W oknie systemowym możesz wybrać zapis jako PDF.')
-    window.print()
-  }
-
   return (
     <ObszarZPanelemGeneratora
       idPanelu="panel-ustawien-dyplomu"
@@ -1551,9 +1555,15 @@ export default function WidokDyplomow() {
           <PrzyciskPaneluGeneratora className="dyplomy__przycisk">
             Ustawienia dyplomu
           </PrzyciskPaneluGeneratora>
-          <button className="dyplomy__przycisk dyplomy__przycisk--glowny" onClick={drukujDyplomy} type="button">
-            Drukuj / PDF
-          </button>
+          <AkcjeEksportuPdf
+            classNamePrzycisku="dyplomy__przycisk dyplomy__przycisk--glowny"
+            czyMoznaEksportowac={() => !problemy.length}
+            daneNazwyEksportu={daneNazwyDyplomu}
+            etykietaPrzyciskuPdf="Pobierz PDF seryjny"
+            obszarDokumentu={obszarEksportuSeryjnegoRef}
+            pobierzBladEksportu={pobierzBladEksportuDyplomu}
+            pokazPrzyciskDruku
+          />
           <button className="dyplomy__przycisk" onClick={zapiszRoboczo} type="button">
             Zapisz roboczo
           </button>
@@ -2307,14 +2317,25 @@ export default function WidokDyplomow() {
                 ? ' dyplomy__podglad-kartki--obok'
                 : ' dyplomy__podglad-kartki--pod-soba'
             }`}
+            ref={obszarPodgladuWybranegoRef}
           >
             {czyPokazacPierwszaStrone && <StronaDyplomu dane={dane} uczestnik={uczestnikPierwszejStrony} />}
             {czyPokazacDrugaStrone && <StronaDrugaDyplomu dane={dane} uczestnik={uczestnikDrugiejStrony} />}
           </section>
+          <AkcjeEksportuPdf
+            className="dyplomy__eksport-wybranego"
+            classNamePrzycisku="dyplomy__przycisk"
+            czyMoznaEksportowac={() => !problemy.length && Boolean(uczestnikPierwszejStrony.imieNazwisko.trim())}
+            daneNazwyEksportu={{ ...daneNazwyDyplomu, uczestnik: uczestnikPierwszejStrony.imieNazwisko }}
+            etykietaPrzyciskuPdf="Pobierz wybrany PDF"
+            obszarDokumentu={obszarPodgladuWybranegoRef}
+            pobierzBladEksportu={pobierzBladEksportuDyplomu}
+            pokazPrzyciskDruku={false}
+          />
         </aside>
       </div>
 
-      <div className="dyplomy__druk" aria-hidden="true">
+      <div className="dyplomy__druk" aria-hidden="true" ref={obszarEksportuSeryjnegoRef}>
         {uczestnicyDoDruku.map((uczestnik) => (
           <div key={uczestnik.id}>
             <StronaDyplomu dane={dane} uczestnik={uczestnik} />

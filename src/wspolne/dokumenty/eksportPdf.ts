@@ -6,6 +6,7 @@ export type UstawieniaEksportuPdf = {
   obszarDokumentu: HTMLElement
   nazwaPliku: string
   format?: 'a4'
+  orientacja?: 'pionowa' | 'pozioma'
   marginesMm?: number
 }
 
@@ -18,9 +19,10 @@ export function utworzNazwePlikuPdf(nazwa: string) {
   return `${bezRozszerzenia}.pdf`
 }
 
-export function pobierzPodzialStronA4(wysokoscObrazuPx: number, szerokoscObrazuPx: number, marginesMm = 12) {
-  const wysokoscDrukuMm = 297 - marginesMm * 2
-  const szerokoscDrukuMm = 210 - marginesMm * 2
+export function pobierzPodzialStronA4(wysokoscObrazuPx: number, szerokoscObrazuPx: number, marginesMm = 12, orientacja: 'pionowa' | 'pozioma' = 'pionowa') {
+  const wymiaryStrony = pobierzWymiaryStronyPdf(orientacja)
+  const wysokoscDrukuMm = wymiaryStrony.wysokoscMm - marginesMm * 2
+  const szerokoscDrukuMm = wymiaryStrony.szerokoscMm - marginesMm * 2
   const wysokoscStronyPx = Math.max(1, Math.floor(wysokoscDrukuMm * (szerokoscObrazuPx / szerokoscDrukuMm)))
   const strony: Array<{ poczatek: number; wysokosc: number }> = []
 
@@ -35,9 +37,16 @@ export function pobierzStronyDokumentu(obszarDokumentu: HTMLElement) {
   return Array.from(obszarDokumentu.querySelectorAll<HTMLElement>('[data-strona-dokumentu]'))
 }
 
-export async function pobierzPdfDokumentu({ obszarDokumentu, nazwaPliku, marginesMm = 12 }: UstawieniaEksportuPdf) {
+export function pobierzWymiaryStronyPdf(orientacja: 'pionowa' | 'pozioma' = 'pionowa') {
+  return orientacja === 'pozioma'
+    ? { szerokoscMm: 297, wysokoscMm: 210, orientacjaJsPdf: 'landscape' as const }
+    : { szerokoscMm: 210, wysokoscMm: 297, orientacjaJsPdf: 'portrait' as const }
+}
+
+export async function pobierzPdfDokumentu({ obszarDokumentu, nazwaPliku, orientacja = 'pionowa', marginesMm = 12 }: UstawieniaEksportuPdf) {
   const stronyDokumentu = pobierzStronyDokumentu(obszarDokumentu)
-  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true })
+  const wymiaryStrony = pobierzWymiaryStronyPdf(orientacja)
+  const pdf = new jsPDF({ orientation: wymiaryStrony.orientacjaJsPdf, unit: 'mm', format: 'a4', compress: true })
 
   if (stronyDokumentu.length) {
     for (const [indeks, stronaDokumentu] of stronyDokumentu.entries()) {
@@ -45,10 +54,11 @@ export async function pobierzPdfDokumentu({ obszarDokumentu, nazwaPliku, margine
         backgroundColor: '#ffffff',
         scale: 2,
         useCORS: true,
+        ignoreElements: (element) => element.hasAttribute('data-pomin-w-eksporcie'),
       })
 
-      if (indeks > 0) pdf.addPage('a4', 'portrait')
-      pdf.addImage(kanwaStrony.toDataURL('image/png'), 'PNG', 0, 0, 210, 297, undefined, 'FAST')
+      if (indeks > 0) pdf.addPage('a4', wymiaryStrony.orientacjaJsPdf)
+      pdf.addImage(kanwaStrony.toDataURL('image/png'), 'PNG', 0, 0, wymiaryStrony.szerokoscMm, wymiaryStrony.wysokoscMm, undefined, 'FAST')
     }
 
     pdf.save(utworzNazwePlikuPdf(nazwaPliku))
@@ -61,11 +71,11 @@ export async function pobierzPdfDokumentu({ obszarDokumentu, nazwaPliku, margine
     useCORS: true,
     ignoreElements: (element) => element.hasAttribute('data-pomin-w-eksporcie'),
   })
-  const szerokoscDrukuMm = 210 - marginesMm * 2
-  const strony = pobierzPodzialStronA4(kanwa.height, kanwa.width, marginesMm)
+  const szerokoscDrukuMm = wymiaryStrony.szerokoscMm - marginesMm * 2
+  const strony = pobierzPodzialStronA4(kanwa.height, kanwa.width, marginesMm, orientacja)
 
   strony.forEach((strona, indeks) => {
-    if (indeks > 0) pdf.addPage('a4', 'portrait')
+    if (indeks > 0) pdf.addPage('a4', wymiaryStrony.orientacjaJsPdf)
     const fragment = document.createElement('canvas')
     fragment.width = kanwa.width
     fragment.height = strona.wysokosc
