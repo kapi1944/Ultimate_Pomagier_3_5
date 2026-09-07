@@ -336,6 +336,7 @@ test('magazyn chroni edycję i zachowuje historyczne metadane zadania', () => {
     'PRACOWNIK',
     {
       tytul: 'Nowy tytuł',
+      opis: 'Kontekst zadania',
       data: '2026-07-24',
       godzina: '12:30',
       priorytet: 'ASAP',
@@ -356,8 +357,29 @@ test('magazyn chroni edycję i zachowuje historyczne metadane zadania', () => {
   assert.equal(zaktualizowane.zadaniobiorcaId, 'ewa')
   assert.equal(zaktualizowane.wlascicielId, 'ewa')
   assert.equal(zaktualizowane.odlozonoDo, '2026-07-24')
+  assert.equal(zaktualizowane.opis, 'Kontekst zadania')
   assert.equal(pobierzStanPulpitu().zadaniaReczne.length, 1)
   assert.deepEqual(zaktualizowane.miniatura, oryginalne.miniatura)
+
+  const bezOdlozenia = edytujZadanieRecznePrzezZadaniodawce(
+    oryginalne.id,
+    'jan',
+    'PRACOWNIK',
+    {
+      tytul: zaktualizowane.tytul,
+      opis: zaktualizowane.opis,
+      data: zaktualizowane.data,
+      godzina: zaktualizowane.godzina,
+      priorytet: zaktualizowane.priorytet,
+      zadaniobiorcaId: zaktualizowane.zadaniobiorcaId,
+      przypomnienia: zaktualizowane.przypomnienia,
+      powiazaneSzkolenieId: zaktualizowane.powiazaneSzkolenieId,
+      odlozonoDo: undefined,
+    },
+  )
+
+  assert.ok(bezOdlozenia)
+  assert.equal(bezOdlozenia.odlozonoDo, undefined)
 
   zapiszZadanieReczne({
     ...zaktualizowane,
@@ -423,6 +445,7 @@ test('istniejące zadanie jest ładowane do wspólnego formularza edycji ze wszy
   }
   const edytowane = zadanie({
     tytul: 'Przygotuj dokumenty',
+    opis: '',
     data: '2026-07-25',
     godzina: '11:45',
     rodzajTerminu: 'KONKRETNA_GODZINA',
@@ -438,6 +461,7 @@ test('istniejące zadanie jest ładowane do wspólnego formularza edycji ze wszy
 
   assert.deepEqual(formularz, {
     tytul: 'Przygotuj dokumenty',
+    opis: '',
     data: '2026-07-25',
     godzina: '11:45',
     rodzajTerminu: 'KONKRETNA_GODZINA',
@@ -445,6 +469,7 @@ test('istniejące zadanie jest ładowane do wspólnego formularza edycji ze wszy
     zadaniodawcaId: 'jan',
     zadaniobiorcaId: 'anna',
     szkolenieId: 'szkolenie-1',
+    odlozonoDo: undefined,
     przypomnienia: [{ id: 'p1', wartosc: 15, jednostka: 'MINUTY' }],
     miniatura,
   })
@@ -477,6 +502,10 @@ test('widok zapisuje moment wykonania i pokazuje brak czasu tylko dla starych da
   assert.match(widok, /Zapisz zmiany/)
   assert.match(widok, /Odłóż o dzień/)
   assert.match(widok, /zapiszSzybkaEdycjeTerminu/)
+  assert.match(widok, /pulpit-opis-zadania/)
+  assert.match(widok, /Masz niezapisane zmiany/)
+  assert.match(widok, /Przejdź do Szczegółów szkolenia/)
+  assert.match(widok, /Otwórz Dokumenty/)
 })
 
 test('Pulpit używa jednego szerokiego formularza create edit pod osią czasu', () => {

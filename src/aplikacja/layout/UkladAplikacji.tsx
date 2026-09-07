@@ -175,13 +175,14 @@ function renderujWidok(
   wybierzProfil: (uzytkownikId: string) => void,
   ustawCzyProfilMaNiezapisaneZmiany: (czyMaNiezapisaneZmiany: boolean) => void,
   otworzRekordPulpitu: () => void,
+  otworzDokumentyPulpitu: () => void,
   otworzPaczkePulpitu: () => void,
 ): ReactNode {
   switch (widok) {
     case 'profil_uzytkownika':
       return <WidokProfiluUzytkownika key={uzytkownikIdProfilu ?? 'wlasny'} ustawCzyMaNiezapisaneZmiany={ustawCzyProfilMaNiezapisaneZmiany} uzytkownikId={uzytkownikIdProfilu} wybierzProfil={wybierzProfil} />
     case 'pulpit':
-      return <WidokPulpitu otworzPaczke={otworzPaczkePulpitu} otworzRekordZrodlowy={otworzRekordPulpitu} />
+      return <WidokPulpitu otworzDokumenty={otworzDokumentyPulpitu} otworzPaczke={otworzPaczkePulpitu} otworzRekordZrodlowy={otworzRekordPulpitu} />
     case 'szkolenia-zamkniete':
       return <WidokSzkolenZamknietych />
     case 'generator-szczegolow':
@@ -480,7 +481,7 @@ export default function UkladAplikacji() {
       <MenuBoczne aktywnyWidok={aktywnyWidok} poZmianieStanuMenu={zglosStanMenu} ustawAktywnyWidok={ustawWidok} />
       <div className="uklad-aplikacji__kolumna-glowna">
         <NaglowekAplikacji otworzProfil={() => otworzProfil()} wyloguj={obsluzWylogowanie} />
-        <main className="uklad-aplikacji__obszar-roboczy">{renderujWidok(aktywnyWidok, zmienZakladkeKartotek, ustawWidok, wersjaProgramu, otworzDokument, uzytkownikIdProfilu, (uzytkownikId) => otworzProfil(uzytkownikId), ustawCzyProfilMaNiezapisaneZmiany, () => ustawWidok('zamkniete_szczegoly_organizacyjne_lista'), () => ustawWidok('checklisty_paczek'))}</main>
+        <main className="uklad-aplikacji__obszar-roboczy">{renderujWidok(aktywnyWidok, zmienZakladkeKartotek, ustawWidok, wersjaProgramu, otworzDokument, uzytkownikIdProfilu, (uzytkownikId) => otworzProfil(uzytkownikId), ustawCzyProfilMaNiezapisaneZmiany, () => ustawWidok('zamkniete_szczegoly_organizacyjne_lista'), () => ustawWidok('dokumenty_wszystkie'), () => ustawWidok('checklisty_paczek'))}</main>
       </div>
       {(widokDoPotwierdzenia || czyWylogowanieDoPotwierdzenia) && (
         <section className="program-panel-roboczy program-szkolen__komunikat" role="dialog" aria-modal="true" aria-label="Niezapisane zmiany">

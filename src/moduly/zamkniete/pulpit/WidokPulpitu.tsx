@@ -22,6 +22,7 @@ type FiltrPulpitu = 'WSZYSTKIE' | 'DO_ZROBIENIA' | 'PILNE' | 'PACZKI' | 'BLOKADY
 
 type WlasciwosciPulpitu = {
   otworzRekordZrodlowy?: (idSzkolenia?: string) => void
+  otworzDokumenty?: () => void
   otworzPaczke?: (idPaczki: string) => void
 }
 
@@ -104,6 +105,7 @@ function pustyFormularz(
 
   return {
     tytul: '',
+    opis: '',
     data,
     godzina: ustawienia.zadania.domyslnaGodzina,
     rodzajTerminu: 'KONKRETNA_GODZINA',
@@ -132,6 +134,11 @@ function formatujMoment(dataIso: string) {
 function pobierzNazweOsoby(uzytkownicy: Uzytkownik[], uzytkownikId: string) {
   const uzytkownik = uzytkownicy.find((osoba) => osoba.id === uzytkownikId)
   return uzytkownik ? pobierzNazweUzytkownika(uzytkownik) || pobierzNazweWyswietlanaUzytkownika(uzytkownik) : 'Nieustalony użytkownik'
+}
+
+function pobierzNazweSzkolenia(szkolenia: Array<{ id: string; nazwa: string }>, szkolenieId?: string) {
+  if (!szkolenieId) return 'Brak powiązania'
+  return szkolenia.find((szkolenie) => szkolenie.id === szkolenieId)?.nazwa ?? 'Szkolenie niedostępne'
 }
 
 function etykietaPriorytetu(priorytet: ZadaniePulpitu['priorytet']) {
@@ -186,11 +193,12 @@ function pobierzZadaniaAutomatyczne() {
   )
 }
 
-function KartaZadania({ zadanie, teraz, zakresDniaPracy, uzytkownicy, otworz, wykonaj, zmienGodzine, odloz }: {
+function KartaZadania({ zadanie, teraz, zakresDniaPracy, uzytkownicy, nazwaSzkolenia, otworz, wykonaj, zmienGodzine, odloz }: {
   zadanie: ZadaniePulpitu
   teraz: Date
   zakresDniaPracy: ZakresDniaPracy
   uzytkownicy: Uzytkownik[]
+  nazwaSzkolenia?: string
   otworz: () => void
   wykonaj?: () => void
   zmienGodzine?: (godzina: string) => void
@@ -202,7 +210,8 @@ function KartaZadania({ zadanie, teraz, zakresDniaPracy, uzytkownicy, otworz, wy
     <button className="pulpit-zadanie__tresc" onClick={otworz} type="button">
       <span className="pulpit-zadanie__etykieta">{zadanie.czyAutomatyczne ? 'Automatyczne' : 'Ręczne'} &middot; {zadanie.typZadania}</span>
       <strong>{zadanie.tytul}</strong>
-      {zadanie.opis && <span>{zadanie.opis}</span>}
+      {zadanie.opis && <span className="pulpit-zadanie__opis">{zadanie.opis}</span>}
+      {zadanie.powiazaneSzkolenieId && <small>Szkolenie: {nazwaSzkolenia ?? 'Szkolenie niedostępne'}</small>}
       <small>Zadaniodawca: {pobierzNazweOsoby(uzytkownicy, zadanie.zadaniodawcaId)}</small>
       <small>Zadaniobiorca: {pobierzNazweOsoby(uzytkownicy, zadanie.zadaniobiorcaId)}</small>
     </button>
@@ -294,7 +303,7 @@ function MarkerDeadline({ zadanie, zakresDniaPracy, uzytkownicy, otworz }: { zad
   </div>
 }
 
-function FormularzZadaniaPulpitu({ formularz, ustawFormularz, uzytkownicy, szkolenia, czyWyborZadaniodawcy, tryb, blad, zapisz, anuluj, usun, wykonaj }: {
+function FormularzZadaniaPulpitu({ formularz, ustawFormularz, uzytkownicy, szkolenia, czyWyborZadaniodawcy, tryb, blad, czyNiezapisaneZmiany, zapisz, anuluj, usun, wykonaj }: {
   formularz: FormularzZadania
   ustawFormularz: Dispatch<SetStateAction<FormularzZadania>>
   uzytkownicy: Uzytkownik[]
@@ -302,6 +311,7 @@ function FormularzZadaniaPulpitu({ formularz, ustawFormularz, uzytkownicy, szkol
   czyWyborZadaniodawcy: boolean
   tryb: TrybFormularzaZadania
   blad: string
+  czyNiezapisaneZmiany?: boolean
   zapisz: () => void
   anuluj?: () => void
   usun?: () => void
@@ -398,6 +408,7 @@ function FormularzZadaniaPulpitu({ formularz, ustawFormularz, uzytkownicy, szkol
 
   return <form className="pulpit-formularz-zadania" onPaste={obsluzWklejenie} onSubmit={(zdarzenie) => { zdarzenie.preventDefault(); zapisz() }}>
     <label className="pulpit-formularz-zadania__nazwa" htmlFor="pulpit-nazwa-zadania">Nazwa zadania<input id="pulpit-nazwa-zadania" onChange={(zdarzenie) => ustawFormularz({ ...formularz, tytul: zdarzenie.target.value })} placeholder="Np. wysłać dokumenty" value={formularz.tytul} /></label>
+    <label className="pulpit-formularz-zadania__opis" htmlFor="pulpit-opis-zadania">Opis<textarea id="pulpit-opis-zadania" onChange={(zdarzenie) => ustawFormularz({ ...formularz, opis: zdarzenie.target.value })} placeholder="Opcjonalny kontekst zadania" rows={3} value={formularz.opis} /></label>
     <label htmlFor="pulpit-termin-zadania">Termin wykonania<input id="pulpit-termin-zadania" onChange={(zdarzenie) => ustawFormularz({ ...formularz, data: zdarzenie.target.value })} type="date" value={formularz.data} /></label>
     <label htmlFor="pulpit-rodzaj-terminu-zadania">Termin<select id="pulpit-rodzaj-terminu-zadania" onChange={(zdarzenie) => ustawFormularz({ ...formularz, rodzajTerminu: zdarzenie.target.value as FormularzZadania['rodzajTerminu'], godzina: zdarzenie.target.value === 'KONKRETNA_GODZINA' ? formularz.godzina : '' })} value={formularz.rodzajTerminu}><option value="KONKRETNA_GODZINA">Konkretna godzina</option><option value="DO_KONCA_DNIA">Do końca dnia</option><option value="BRAK_GODZINY">Bez przypisanej godziny</option></select></label>
     {formularz.rodzajTerminu === 'KONKRETNA_GODZINA' && <label htmlFor="pulpit-godzina-zadania">Godzina wykonania<input id="pulpit-godzina-zadania" onChange={(zdarzenie) => ustawFormularz({ ...formularz, godzina: zdarzenie.target.value })} type="time" value={formularz.godzina} /></label>}
@@ -407,6 +418,7 @@ function FormularzZadaniaPulpitu({ formularz, ustawFormularz, uzytkownicy, szkol
       : tryb === 'edit' && <label htmlFor="pulpit-zadaniodawca">Zadaniodawca<input disabled id="pulpit-zadaniodawca" value={pobierzNazweOsoby(uzytkownicy, formularz.zadaniodawcaId)} /></label>}
     <label htmlFor="pulpit-zadaniobiorca">Zadaniobiorca<select id="pulpit-zadaniobiorca" onChange={(zdarzenie) => ustawFormularz({ ...formularz, zadaniobiorcaId: zdarzenie.target.value })} value={formularz.zadaniobiorcaId}><option value="">Ja &mdash; {pobierzNazweOsoby(uzytkownicy, formularz.zadaniodawcaId)}</option>{uzytkownicy.filter((uzytkownik) => uzytkownik.id !== formularz.zadaniodawcaId).map((uzytkownik) => <option key={uzytkownik.id} value={uzytkownik.id}>{pobierzNazweUzytkownika(uzytkownik)}</option>)}</select></label>
     <label htmlFor="pulpit-powiazanie-zadania">Powiązanie<select id="pulpit-powiazanie-zadania" onChange={(zdarzenie) => ustawFormularz({ ...formularz, szkolenieId: zdarzenie.target.value })} value={formularz.szkolenieId}><option value="">Bez powiązania</option>{szkolenia.map((szczegoly) => <option key={szczegoly.id} value={szczegoly.id}>{szczegoly.nazwa}</option>)}</select></label>
+    {formularz.odlozonoDo && <div className="pulpit-formularz-zadania__odlozenie"><label htmlFor="pulpit-odlozenie-zadania">Odłożone do<input id="pulpit-odlozenie-zadania" onChange={(zdarzenie) => ustawFormularz({ ...formularz, odlozonoDo: zdarzenie.target.value || undefined })} type="date" value={formularz.odlozonoDo} /></label><button onClick={() => ustawFormularz({ ...formularz, odlozonoDo: undefined })} type="button">Usuń odłożenie</button></div>}
     <div
       aria-busy={czyPrzetwarzanieMiniatury}
       className={'pulpit-formularz-zadania__miniatura' + (czyPrzeciaganieMiniatury ? ' pulpit-formularz-zadania__miniatura--przeciaganie' : '')}
@@ -467,6 +479,7 @@ function FormularzZadaniaPulpitu({ formularz, ustawFormularz, uzytkownicy, szkol
       <button onClick={dodajPrzypomnienie} type="button">+ Dodaj przypomnienie</button>
     </fieldset>
     {blad && <p className="pulpit-formularz-zadania__blad" role="alert">{blad}</p>}
+    {czyNiezapisaneZmiany && <p className="pulpit-formularz-zadania__niezapisane" role="status">Masz niezapisane zmiany.</p>}
     {tryb === 'edit'
       ? <div className="pulpit-formularz-zadania__akcje">
           <div className="pulpit-formularz-zadania__akcje-domenowe">
@@ -513,7 +526,7 @@ function FormularzZakupu({ formularz, ustawFormularz, blad, zapisz, anuluj }: { 
     <div className="pulpit-modal__akcje"><button onClick={anuluj} type="button">Anuluj</button><button className="pulpit-przycisk-glowny" type="submit">{'Zg\u{142}o\u{15b}'}</button></div>
   </form>
 }
-export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: WlasciwosciPulpitu) {
+export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, otworzPaczke }: WlasciwosciPulpitu) {
   const { zalogowanyUzytkownik, aktywniUzytkownicy } = useKontekstUzytkownika()
   const [teraz, ustawTeraz] = useState(() => new Date())
   const [data, ustawDate] = useState(() => dataTekstowa(new Date()))
@@ -594,6 +607,7 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
       zalogowanyUzytkownik.rola,
       {
         tytul: zadanie.tytul,
+        opis: zadanie.opis,
         data,
         godzina,
         rodzajTerminu: zadanie.rodzajTerminu ?? (godzina ? 'KONKRETNA_GODZINA' : undefined),
@@ -706,6 +720,7 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
       zalogowanyUzytkownik.rola,
       {
         tytul: formularzZadania.tytul.trim(),
+        opis: formularzZadania.opis.trim() || undefined,
         data: formularzZadania.data,
         godzina: pobierzGodzineZapisu(formularzZadania),
         rodzajTerminu: pobierzRodzajTerminuZapisu(formularzZadania),
@@ -714,6 +729,7 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
         przypomnienia: formularzZadania.przypomnienia.map((przypomnienie) => ({ ...przypomnienie })),
         miniatura: formularzZadania.miniatura,
         powiazaneSzkolenieId: formularzZadania.szkolenieId || undefined,
+        odlozonoDo: formularzZadania.odlozonoDo,
       },
     )
 
@@ -763,6 +779,7 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
     zmienZadanie({
       id: utworzIdZadania(),
       tytul: formularzZadania.tytul.trim(),
+      opis: formularzZadania.opis.trim() || undefined,
       data: formularzZadania.data,
       godzina: pobierzGodzineZapisu(formularzZadania),
       rodzajTerminu: pobierzRodzajTerminuZapisu(formularzZadania),
@@ -776,6 +793,7 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
       przypomnienia: formularzZadania.przypomnienia,
       miniatura: formularzZadania.miniatura,
       powiazaneSzkolenieId: formularzZadania.szkolenieId || undefined,
+      odlozonoDo: formularzZadania.odlozonoDo,
       czyAutomatyczne: false,
       czyTerminKrytyczny: false,
     })
@@ -841,6 +859,11 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
     wybraneZadanie
     && !wybraneZadanie.czyAutomatyczne
     && wybraneZadanie.zadaniodawcaId === zalogowanyUzytkownik?.id
+  )
+  const czyFormularzMaNiezapisaneZmiany = Boolean(
+    trybFormularzaZadania === 'edit'
+    && wybraneZadanie
+    && JSON.stringify(formularzZadania) !== JSON.stringify(formularzZZadania(wybraneZadanie))
   )
 
   return <section className="widok pulpit" aria-label="Pulpit bieżącej pracy">
@@ -970,6 +993,7 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
             anuluj={trybFormularzaZadania === 'edit' ? anulujEdycjeZadania : undefined}
             blad={bladFormularzaZadania}
             czyWyborZadaniodawcy={trybFormularzaZadania === 'create' && czyWyborZadaniodawcy}
+            czyNiezapisaneZmiany={czyFormularzMaNiezapisaneZmiany}
             formularz={formularzZadania}
             key={trybFormularzaZadania + '-' + (edytowaneZadanieId ?? 'nowe')}
             szkolenia={szkoleniaDostepne}
@@ -988,10 +1012,10 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
             zalogowanyUzytkownik?.id,
             zalogowanyUzytkownik?.rola,
           )
-          return <KartaZadania key={zadanie.id} zadanie={zadanie} teraz={teraz} zakresDniaPracy={zakresDniaPracy} uzytkownicy={uzytkownicy} otworz={() => otworzZadanie(zadanie)} wykonaj={zadanie.czyAutomatyczne || !czyWykonawca ? undefined : () => oznaczWykonane(zadanie)} zmienGodzine={!czyMoznaEdytowacTermin ? undefined : (godzina) => zmienGodzine(zadanie, godzina)} odloz={zadanie.czyTerminKrytyczny || !czyMoznaEdytowacTermin ? undefined : (nowaData) => odlozZadanie(zadanie, nowaData)} />
+          return <KartaZadania key={zadanie.id} nazwaSzkolenia={pobierzNazweSzkolenia(szkoleniaDostepne, zadanie.powiazaneSzkolenieId)} zadanie={zadanie} teraz={teraz} zakresDniaPracy={zakresDniaPracy} uzytkownicy={uzytkownicy} otworz={() => otworzZadanie(zadanie)} wykonaj={zadanie.czyAutomatyczne || !czyWykonawca ? undefined : () => oznaczWykonane(zadanie)} zmienGodzine={!czyMoznaEdytowacTermin ? undefined : (godzina) => zmienGodzine(zadanie, godzina)} odloz={zadanie.czyTerminKrytyczny || !czyMoznaEdytowacTermin ? undefined : (nowaData) => odlozZadanie(zadanie, nowaData)} />
         })}</div> : <p className="pulpit-pusty">Brak zadań bez przypisanej godziny.</p>}
       </div>
-      {zadaniaWykonane.length > 0 && <details className="pulpit-wykonane"><summary>Wykonane ({zadaniaWykonane.length})</summary>{zadaniaWykonane.map((zadanie) => <KartaZadania key={zadanie.id} zadanie={zadanie} teraz={teraz} zakresDniaPracy={zakresDniaPracy} uzytkownicy={uzytkownicy} otworz={() => otworzZadanie(zadanie)} />)}</details>}
+      {zadaniaWykonane.length > 0 && <details className="pulpit-wykonane"><summary>Wykonane ({zadaniaWykonane.length})</summary>{zadaniaWykonane.map((zadanie) => <KartaZadania key={zadanie.id} nazwaSzkolenia={pobierzNazweSzkolenia(szkoleniaDostepne, zadanie.powiazaneSzkolenieId)} zadanie={zadanie} teraz={teraz} zakresDniaPracy={zakresDniaPracy} uzytkownicy={uzytkownicy} otworz={() => otworzZadanie(zadanie)} />)}</details>}
     </section>}
 
     {pokazPaczki && <section className="pulpit-sekcja" aria-labelledby="nadchodzace-paczki">
@@ -1037,7 +1061,8 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
         <div><dt>Zadaniobiorca</dt><dd>{pobierzNazweOsoby(uzytkownicy, wybraneZadanie.zadaniobiorcaId)}</dd></div>
         <div><dt>Przypomnienia</dt><dd>{wybraneZadanie.przypomnienia.length ? wybraneZadanie.przypomnienia.map(etykietaPrzypomnienia).join(', ') : 'Brak'}</dd></div>
         <div><dt>Źródło</dt><dd>{wybraneZadanie.czyAutomatyczne ? 'Automatyczna reguła szkolenia' : 'Ręczne zadanie'}</dd></div>
-        <div><dt>Powiązane szkolenie</dt><dd>{wybraneZadanie.powiazaneSzkolenieId || 'Brak'}</dd></div>
+        <div><dt>Powiązane szkolenie</dt><dd>{pobierzNazweSzkolenia(szkoleniaDostepne, wybraneZadanie.powiazaneSzkolenieId)}</dd></div>
+        <div><dt>Odłożone do</dt><dd>{wybraneZadanie.odlozonoDo ? formatujDate(wybraneZadanie.odlozonoDo) : 'Nie'}</dd></div>
         {wybraneZadanie.status === 'WYKONANE' && <div><dt>Wykonano</dt><dd>{wybraneZadanie.wykonano ? formatujMoment(wybraneZadanie.wykonano) : 'Brak danych o czasie wykonania'}</dd></div>}
       </dl>
 
@@ -1051,7 +1076,10 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzPaczke }: Wla
       </div>}
 
       {czyMoznaUsunacWybrane && <button className="pulpit-przycisk-niebezpieczny" onClick={() => { usunZadanieReczne(wybraneZadanie.id); ustawWybraneZadanie(null); anulujEdycjeZadania(); odswiezStan() }} type="button">Usuń zadanie</button>}
-      {wybraneZadanie.powiazaneSzkolenieId && <button className="pulpit-przycisk-glowny" onClick={() => otworzRekordZrodlowy?.(wybraneZadanie.powiazaneSzkolenieId)} type="button">Przejdź do rekordu źródłowego</button>}
+      {wybraneZadanie.powiazaneSzkolenieId && <div className="pulpit-drawer__akcje">
+        {otworzRekordZrodlowy && <button onClick={() => otworzRekordZrodlowy(wybraneZadanie.powiazaneSzkolenieId)} type="button">Przejdź do Szczegółów szkolenia</button>}
+        {otworzDokumenty && <button className="pulpit-przycisk-glowny" onClick={otworzDokumenty} type="button">Otwórz Dokumenty</button>}
+      </div>}
     </aside>}
 
     {paczkaDoPotwierdzenia && <section aria-label="Potwierdzenie wysyłki" aria-modal="true" className="pulpit-modal" role="dialog"><div>

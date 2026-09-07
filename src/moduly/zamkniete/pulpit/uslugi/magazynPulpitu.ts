@@ -102,6 +102,7 @@ export function normalizujZadaniePulpitu(wartosc: unknown): ZadaniePulpitu | nul
     ...(dane as unknown as ZadaniePulpitu),
     id,
     tytul,
+    opis: tekst(dane.opis) || undefined,
     data,
     godzina: rodzajTerminu === 'DO_KONCA_DNIA' ? undefined : godzina,
     rodzajTerminu,
@@ -115,6 +116,7 @@ export function normalizujZadaniePulpitu(wartosc: unknown): ZadaniePulpitu | nul
     zadaniobiorcaId,
     przypomnienia,
     miniatura: normalizujMiniatureZadania(dane.miniatura) ?? undefined,
+    odlozonoDo: tekst(dane.odlozonoDo) || undefined,
     czyAutomatyczne: dane.czyAutomatyczne === true,
     czyTerminKrytyczny: dane.czyTerminKrytyczny === true,
   }
@@ -170,6 +172,7 @@ export function zapiszZadanieReczne(zadanie: ZadaniePulpitu) {
 export type EdytowalnePolaZadania = Pick<
   ZadaniePulpitu,
   'tytul'
+  | 'opis'
   | 'data'
   | 'godzina'
   | 'rodzajTerminu'
@@ -206,6 +209,7 @@ export function edytujZadanieRecznePrzezZadaniodawce(
   const zaktualizowane: ZadaniePulpitu = {
     ...obecne,
     tytul: zmiany.tytul,
+    opis: zmiany.opis?.trim() || undefined,
     data: zmiany.data,
     godzina: zmiany.godzina,
     rodzajTerminu: zmiany.rodzajTerminu,
@@ -215,7 +219,7 @@ export function edytujZadanieRecznePrzezZadaniodawce(
     przypomnienia: zmiany.przypomnienia,
     miniatura: Object.prototype.hasOwnProperty.call(zmiany, 'miniatura') ? zmiany.miniatura : obecne.miniatura,
     powiazaneSzkolenieId: zmiany.powiazaneSzkolenieId,
-    odlozonoDo: zmiany.odlozonoDo ?? obecne.odlozonoDo,
+    odlozonoDo: Object.prototype.hasOwnProperty.call(zmiany, 'odlozonoDo') ? zmiany.odlozonoDo : obecne.odlozonoDo,
   }
 
   const zapisano = zapiszStanPulpitu({
