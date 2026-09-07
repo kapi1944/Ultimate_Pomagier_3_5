@@ -1,88 +1,42 @@
-import { useCallback, useEffect, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react'
 import { useKontekstUzytkownika } from '../../../../aplikacja/logowanie/useKontekstUzytkownika'
 import AkcjeEksportuPdf from '../../../../wspolne/dokumenty/AkcjeEksportuPdf'
 import { PanelEdycjiSwobodnychBlokow } from '../../../../wspolne/dokumenty/EdytorSwobodnychBlokow'
 import { pobierzMapeZasobowObrazowDokumentu, zapiszZasobObrazuDokumentu } from '../../../../wspolne/dokumenty/zasobyObrazowDokumentu'
 import { zbudujNazweEksportowanegoDokumentu } from '../../../../wspolne/dokumenty/nazwyDokumentow'
+import { zapiszKopieUkladuSwobodnychBlokow } from '../../../../wspolne/dokumenty/szablonyDokumentow'
 import { zapiszDokumentRoboczyGeneratora } from '../../../../wspolne/dokumenty/zapisDokumentuGeneratora'
 import { utworzUstawieniaUkladuDokumentu } from '../../../../wspolne/dokumenty/ustawieniaUkladuDokumentu'
+import { adapterListyObecnosci, pobierzSzczegolyDoGeneratorow, zbudujKontekstZeSzczegolow, type SzczegolyDoGeneratoraDokumentu } from '../../../../wspolne/integracje/szczegolyDoDokumentow'
 import { ObszarZPanelemGeneratora, PanelBocznyGeneratora, PanelGeneratoraDokumentu, PasekAkcjiGeneratora, PrzyciskPaneluGeneratora, UkladFormularzaIPodgladu } from '../../wspolne/UkladGeneratoraDokumentu'
 import StatusZapisuDokumentu from '../../wspolne/StatusZapisuDokumentu'
 import { useOchronaNiezapisanegoDokumentu, useStanDokumentu } from '../../wspolne/useStanDokumentu'
 import RendererListyObecnosci from './RendererListyObecnosci'
-import {
-  deserializujDaneListyObecnosci,
-  serializujDaneListyObecnosci,
-  podzielWierszeListyObecnosci,
-  utworzDomyslneDaneListyObecnosci,
-  utworzBlokiSzablonuListyObecnosci,
-  type DaneListyObecnosci,
-} from './modelListyObecnosci'
+import { deserializujDaneListyObecnosci, etykietyKolumnListyObecnosci, etykietyWariantowWielodniowych, podzielListeObecnosciNaStrony, porownajUczestnikowListyObecnosci, serializujDaneListyObecnosci, zastosujSynchronizacjeUczestnikow, zaproponujWariantWielodniowyListyObecnosci, utworzBlokiSzablonuListyObecnosci, utworzDaneListyObecnosciZIntegracji, utworzDomyslneDaneListyObecnosci, type DaneListyObecnosci, type KolumnaListyObecnosci, type UczestnikListyObecnosci } from './modelListyObecnosci'
 import './widokListObecnosci.css'
 
 const kluczSzkicu = 'ultimate-pomagier.listy-obecnosci.szkic'
 const kluczIdDokumentu = `${kluczSzkicu}.dokumentId`
 
 function utworzIdUczestnika() {
-  return typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-    ? `uczestnik-${crypto.randomUUID()}`
-    : `uczestnik-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  return typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? `uczestnik-${crypto.randomUUID()}` : `uczestnik-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 }
 
 function SekcjaFormularza({ children, domyslnieOtwarta = false, tytul }: { children: ReactNode; domyslnieOtwarta?: boolean; tytul: string }) {
   return <details className="generator-list-obecnosci__sekcja" open={domyslnieOtwarta}><summary>{tytul}</summary><div className="generator-list-obecnosci__zawartosc-sekcji">{children}</div></details>
 }
 
-export function FormularzListyObecnosci({
-  czyPokazacOrganizatora = true,
-  czyPokazacTryb = true,
-  dane,
-  prefiksId,
-  ustawDane,
-}: {
-  czyPokazacOrganizatora?: boolean
-  czyPokazacTryb?: boolean
-  dane: DaneListyObecnosci
-  prefiksId: string
-  ustawDane: Dispatch<SetStateAction<DaneListyObecnosci>>
-}) {
-  function ustawDaty(daty: string[]) {
-    ustawDane((obecne) => ({ ...obecne, daty: daty.slice(0, 5) }))
-  }
+function UczestnicyListy({ dane, ustawDane, uczestnicyZrodlowi = [] }: { dane: DaneListyObecnosci; ustawDane: Dispatch<SetStateAction<DaneListyObecnosci>>; uczestnicyZrodlowi?: UczestnikListyObecnosci[] }) {
+  const [czyPokazacRoznice, ustawCzyPokazacRoznice] = useState(false)
+  const roznice = porownajUczestnikowListyObecnosci(dane.uczestnicy, uczestnicyZrodlowi)
+  const zmienUczestnika = (id: string, aktualizacja: (uczestnik: UczestnikListyObecnosci) => UczestnikListyObecnosci) => ustawDane((obecne) => ({ ...obecne, uczestnicy: obecne.uczestnicy.map((uczestnik) => uczestnik.id === id ? aktualizacja(uczestnik) : uczestnik) }))
+  return <><label htmlFor="tryb-listy-obecnosci">Tryb listy<select id="tryb-listy-obecnosci" value={dane.trybListy} onChange={(zdarzenie) => ustawDane((obecne) => ({ ...obecne, trybListy: zdarzenie.target.value === 'PUSTA' ? 'PUSTA' : 'WYPELNIONA' }))}><option value="WYPELNIONA">Z nazwiskami uczestników</option><option value="PUSTA">Pusta lista do ręcznego wypełnienia</option></select></label>{dane.trybListy === 'PUSTA' ? <><div className="generator-list-obecnosci__szybkie-wiersze">{[10, 15, 20].map((liczba) => <button key={liczba} onClick={() => ustawDane((obecne) => ({ ...obecne, liczbaPustychWierszy: liczba }))} type="button">{liczba} wierszy</button>)}</div><label>Liczba pustych wierszy<input max="200" min="1" type="number" value={dane.liczbaPustychWierszy} onChange={(zdarzenie) => ustawDane((obecne) => ({ ...obecne, liczbaPustychWierszy: Math.min(Math.max(Number(zdarzenie.target.value) || 1, 1), 200) }))} /></label><p className="generator-list-obecnosci__opis">To świadomie wybrana pusta lista; może zostać zapisana i wyeksportowana.</p></> : <><div className="generator-list-obecnosci__uczestnicy">{dane.uczestnicy.map((uczestnik, indeks) => <div className="generator-list-obecnosci__uczestnik" key={uczestnik.id}><label>Imię i nazwisko<input value={uczestnik.imieINazwisko} onChange={(zdarzenie) => zmienUczestnika(uczestnik.id, (obecny) => ({ ...obecny, imieINazwisko: zdarzenie.target.value }))} /></label><label>Firma opcjonalnie<input value={uczestnik.firma ?? ''} onChange={(zdarzenie) => zmienUczestnika(uczestnik.id, (obecny) => ({ ...obecny, firma: zdarzenie.target.value }))} /></label><button aria-label={`Usuń uczestnika ${indeks + 1}`} onClick={() => ustawDane((obecne) => ({ ...obecne, uczestnicy: obecne.uczestnicy.filter((pozycja) => pozycja.id !== uczestnik.id) }))} type="button">Usuń</button></div>)}</div><button className="generator-list-obecnosci__przycisk-pomocniczy" onClick={() => ustawDane((obecne) => ({ ...obecne, uczestnicy: [...obecne.uczestnicy, { id: utworzIdUczestnika(), imieINazwisko: '', czyReczny: true }] }))} type="button">Dodaj osobę tylko do tej listy</button>{uczestnicyZrodlowi.length > 0 && <div className="generator-list-obecnosci__synchronizacja"><button className="generator-list-obecnosci__przycisk-pomocniczy" onClick={() => ustawCzyPokazacRoznice(true)} type="button">Pokaż różnice ze szkoleniem</button>{czyPokazacRoznice && <><p>Nowi: {roznice.nowi.length} · usunięci: {roznice.usunieci.length} · zmienieni: {roznice.zmienieni.length}</p><button className="generator-list-obecnosci__przycisk-pomocniczy" onClick={() => { ustawDane((obecne) => zastosujSynchronizacjeUczestnikow(obecne, uczestnicyZrodlowi)); ustawCzyPokazacRoznice(false) }} type="button">Zatwierdź synchronizację</button></>}</div>}</>}</>
+}
 
-  function ustawTekstUczestnikow(tekst: string) {
-    const nazwy = tekst.split(/\r?\n/)
-    ustawDane((obecne) => ({
-      ...obecne,
-      uczestnicy: nazwy.map((imieINazwisko, indeks) => ({
-        id: obecne.uczestnicy[indeks]?.id ?? utworzIdUczestnika(),
-        imieINazwisko,
-      })).filter((uczestnik) => uczestnik.imieINazwisko.trim()),
-    }))
-  }
-
-  return <div className="generator-list-obecnosci__formularz">
-    <SekcjaFormularza domyslnieOtwarta tytul="Dane szkolenia"><div className="generator-list-obecnosci__siatka-pol">
-      <label className="generator-list-obecnosci__pole-szerokie" htmlFor={`${prefiksId}-tytul`}>Tytuł szkolenia<input id={`${prefiksId}-tytul`} value={dane.tytulSzkolenia} onChange={(zdarzenie) => ustawDane((obecne) => ({ ...obecne, tytulSzkolenia: zdarzenie.target.value }))} /></label>
-      <label className="generator-list-obecnosci__pole-szerokie" htmlFor={`${prefiksId}-miejsce`}>Miejsce<input id={`${prefiksId}-miejsce`} value={dane.miejsce} onChange={(zdarzenie) => ustawDane((obecne) => ({ ...obecne, miejsce: zdarzenie.target.value }))} /></label>
-      {czyPokazacOrganizatora && <label htmlFor={`${prefiksId}-organizator`}>Organizator<select id={`${prefiksId}-organizator`} value={dane.organizator} onChange={(zdarzenie) => ustawDane((obecne) => ({ ...obecne, organizator: zdarzenie.target.value === 'IIST' ? 'IIST' : 'SEMPER' }))}><option value="SEMPER">SEMPER</option><option value="IIST">IIST</option></select></label>}
-    </div></SekcjaFormularza>
-    <SekcjaFormularza domyslnieOtwarta tytul="Dni szkolenia">
-      <div className="generator-list-obecnosci__daty">{dane.daty.map((data, indeks) => <div key={indeks}>
-        <label htmlFor={`${prefiksId}-data-${indeks}`}>Dzień {indeks + 1}<input id={`${prefiksId}-data-${indeks}`} type="date" value={data} onChange={(zdarzenie) => ustawDaty(dane.daty.map((obecna, pozycja) => pozycja === indeks ? zdarzenie.target.value : obecna))} /></label>
-        <button aria-label={`Usuń dzień ${indeks + 1}`} onClick={() => ustawDaty(dane.daty.filter((_, pozycja) => pozycja !== indeks))} type="button">Usuń</button>
-      </div>)}</div>
-      {dane.daty.length < 5 && <button className="generator-list-obecnosci__przycisk-pomocniczy" onClick={() => ustawDaty([...dane.daty, ''])} type="button">Dodaj dzień szkolenia</button>}
-      {!dane.daty.length && <p className="generator-list-obecnosci__opis">Dodaj co najmniej jeden dzień, aby nagłówek kolumny podpisu zawierał datę.</p>}
-    </SekcjaFormularza>
-    <SekcjaFormularza domyslnieOtwarta tytul="Uczestnicy">
-      {czyPokazacTryb && <label htmlFor={`${prefiksId}-tryb`}>Tryb listy<select id={`${prefiksId}-tryb`} value={dane.trybListy} onChange={(zdarzenie) => ustawDane((obecne) => ({ ...obecne, trybListy: zdarzenie.target.value === 'PUSTA' ? 'PUSTA' : 'WYPELNIONA' }))}><option value="WYPELNIONA">Z nazwiskami uczestników</option><option value="PUSTA">Pusta lista do ręcznego wypełnienia</option></select></label>}
-      {dane.trybListy === 'PUSTA' && czyPokazacTryb
-        ? <label htmlFor={`${prefiksId}-liczba-wierszy`}>Liczba pustych wierszy<input id={`${prefiksId}-liczba-wierszy`} max="200" min="1" type="number" value={dane.liczbaPustychWierszy} onChange={(zdarzenie) => ustawDane((obecne) => ({ ...obecne, liczbaPustychWierszy: Math.min(Math.max(Number(zdarzenie.target.value) || 1, 1), 200) }))} /></label>
-        : <label htmlFor={`${prefiksId}-uczestnicy`}>Uczestnicy - jedna osoba w wierszu<textarea id={`${prefiksId}-uczestnicy`} rows={12} value={dane.uczestnicy.map((uczestnik) => uczestnik.imieINazwisko).join('\n')} onChange={(zdarzenie) => ustawTekstUczestnikow(zdarzenie.target.value)} /></label>}
-    </SekcjaFormularza>
-    <SekcjaFormularza tytul="Wygląd dokumentu"><p className="generator-list-obecnosci__opis">Układ A4, logo, nagłówek, kolor tytułu, tabela i podział po 28 uczestników na stronę odpowiadają oryginalnej liście SEMPER. Kolejne strony kontynuują numerację tabeli.</p></SekcjaFormularza>
-  </div>
+export function FormularzListyObecnosci({ czyPokazacOrganizatora = true, czyPokazacTryb = true, dane, prefiksId, ustawDane, szczegoly = [], szczegolyId = '', grupaId = '', ustawSzczegolyId, ustawGrupeId, uczestnicyZrodlowi = [] }: { czyPokazacOrganizatora?: boolean; czyPokazacTryb?: boolean; dane: DaneListyObecnosci; prefiksId: string; ustawDane: Dispatch<SetStateAction<DaneListyObecnosci>>; szczegoly?: SzczegolyDoGeneratoraDokumentu[]; szczegolyId?: string; grupaId?: string; ustawSzczegolyId?: (id: string) => void; ustawGrupeId?: (id: string) => void; uczestnicyZrodlowi?: UczestnikListyObecnosci[] }) {
+  function ustawDaty(daty: string[]) { ustawDane((obecne) => ({ ...obecne, daty: daty.slice(0, 31) })) }
+  function przelaczKolumne(kolumna: KolumnaListyObecnosci) { ustawDane((obecne) => ({ ...obecne, kolumny: obecne.kolumny.includes(kolumna) ? obecne.kolumny.filter((pozycja) => pozycja !== kolumna) : [...obecne.kolumny, kolumna] })) }
+  return <div className="generator-list-obecnosci__formularz"><SekcjaFormularza domyslnieOtwarta tytul="Dane szkolenia"><div className="generator-list-obecnosci__siatka-pol">{ustawSzczegolyId && <label className="generator-list-obecnosci__pole-szerokie">Szczegóły organizacyjne<select value={szczegolyId} onChange={(zdarzenie) => ustawSzczegolyId(zdarzenie.target.value)}><option value="">Uzupełnij ręcznie</option>{szczegoly.map((pozycja) => <option key={pozycja.id} value={pozycja.id}>{pozycja.nazwa}</option>)}</select></label>}{ustawGrupeId && szczegolyId && <label className="generator-list-obecnosci__pole-szerokie">Grupa szkoleniowa<select value={grupaId} onChange={(zdarzenie) => ustawGrupeId(zdarzenie.target.value)}>{(szczegoly.find((pozycja) => pozycja.id === szczegolyId)?.grupy ?? []).map((grupa, indeks) => <option key={grupa.id} value={grupa.id}>{grupa.nazwa || `Grupa ${indeks + 1}`}</option>)}</select></label>}<label className="generator-list-obecnosci__pole-szerokie" htmlFor={`${prefiksId}-tytul`}>Tytuł szkolenia<input id={`${prefiksId}-tytul`} value={dane.tytulSzkolenia} onChange={(zdarzenie) => ustawDane((obecne) => ({ ...obecne, tytulSzkolenia: zdarzenie.target.value }))} /></label><label className="generator-list-obecnosci__pole-szerokie" htmlFor={`${prefiksId}-miejsce`}>Miejsce / tryb<input id={`${prefiksId}-miejsce`} value={dane.miejsce} onChange={(zdarzenie) => ustawDane((obecne) => ({ ...obecne, miejsce: zdarzenie.target.value }))} /></label>{czyPokazacOrganizatora && <label>Organizator<select value={dane.organizator} onChange={(zdarzenie) => ustawDane((obecne) => ({ ...obecne, organizator: zdarzenie.target.value === 'IIST' ? 'IIST' : 'SEMPER' }))}><option value="SEMPER">SEMPER</option><option value="IIST">IIST</option></select></label>}</div><p className="generator-list-obecnosci__opis">Lokalne nadpisania nie zmieniają danych szkolenia.</p></SekcjaFormularza><SekcjaFormularza domyslnieOtwarta tytul="Uczestnicy">{czyPokazacTryb ? <UczestnicyListy dane={dane} ustawDane={ustawDane} uczestnicyZrodlowi={uczestnicyZrodlowi} /> : <UczestnicyListy dane={dane} ustawDane={ustawDane} uczestnicyZrodlowi={uczestnicyZrodlowi} />}</SekcjaFormularza><SekcjaFormularza domyslnieOtwarta tytul="Kolumny / dni"><div className="generator-list-obecnosci__daty">{dane.daty.map((data, indeks) => <div key={indeks}><label>Dzień {indeks + 1}<input type="date" value={data} onChange={(zdarzenie) => ustawDaty(dane.daty.map((obecna, pozycja) => pozycja === indeks ? zdarzenie.target.value : obecna))} /></label><button aria-label={`Usuń dzień ${indeks + 1}`} onClick={() => ustawDaty(dane.daty.filter((_, pozycja) => pozycja !== indeks))} type="button">Usuń</button></div>)}</div><button className="generator-list-obecnosci__przycisk-pomocniczy" onClick={() => ustawDaty([...dane.daty, ''])} type="button">Dodaj dzień szkolenia</button><label>Wariant wielodniowy<select value={dane.wariantWielodniowy} onChange={(zdarzenie) => ustawDane((obecne) => ({ ...obecne, wariantWielodniowy: zdarzenie.target.value === 'OSOBNE_STRONY' ? 'OSOBNE_STRONY' : 'KOLUMNY_PODPISOW' }))}>{Object.entries(etykietyWariantowWielodniowych).map(([wartosc, etykieta]) => <option key={wartosc} value={wartosc}>{etykieta}</option>)}</select></label><button className="generator-list-obecnosci__przycisk-pomocniczy" onClick={() => ustawDane((obecne) => ({ ...obecne, wariantWielodniowy: zaproponujWariantWielodniowyListyObecnosci(obecne.daty) }))} type="button">Zastosuj sugerowany wariant</button><fieldset className="generator-list-obecnosci__kolumny"><legend>Widoczne kolumny</legend>{(Object.keys(etykietyKolumnListyObecnosci) as KolumnaListyObecnosci[]).map((kolumna) => <label key={kolumna}><input checked={dane.kolumny.includes(kolumna)} type="checkbox" onChange={() => przelaczKolumne(kolumna)} /> {etykietyKolumnListyObecnosci[kolumna]}</label>)}</fieldset><div className="generator-list-obecnosci__podpisy-przelaczniki"><label><input checked={dane.czyPokazacPodpisTrenera} type="checkbox" onChange={(zdarzenie) => ustawDane((obecne) => ({ ...obecne, czyPokazacPodpisTrenera: zdarzenie.target.checked }))} /> Podpis trenera</label><label><input checked={dane.czyPokazacPodpisOrganizatora} type="checkbox" onChange={(zdarzenie) => ustawDane((obecne) => ({ ...obecne, czyPokazacPodpisOrganizatora: zdarzenie.target.checked }))} /> Podpis organizatora</label></div></SekcjaFormularza><SekcjaFormularza tytul="Układ dokumentu"><p className="generator-list-obecnosci__opis">Logo i dodatkowe informacje modyfikujesz w panelu układu. Tabela, nagłówki oraz pola podpisów pozostają kontrolowane przez renderer.</p></SekcjaFormularza><SekcjaFormularza tytul="Eksport"><p className="generator-list-obecnosci__opis">Podgląd, PDF i druk wykorzystują te same strony A4 oraz powtarzane nagłówki tabeli.</p></SekcjaFormularza></div>
 }
 
 export default function WidokListObecnosci() {
@@ -93,54 +47,29 @@ export default function WidokListObecnosci() {
   const [zaznaczonyBlokId, ustawZaznaczonyBlokId] = useState<string | null>(null)
   const [trybEdycjiSzablonu, ustawTrybEdycjiSzablonu] = useState(false)
   const [zasobyObrazow, ustawZasobyObrazow] = useState(() => pobierzMapeZasobowObrazowDokumentu())
+  const [szczegolyId, ustawSzczegolyId] = useState('')
+  const [grupaId, ustawGrupeId] = useState('')
+  const szczegoly = useMemo(() => pobierzSzczegolyDoGeneratorow(), [])
+  const wybraneSzczegoly = szczegoly.find((pozycja) => pozycja.id === szczegolyId)
+  const daneZrodlowe = useMemo(() => { if (!wybraneSzczegoly || !grupaId) return null; return adapterListyObecnosci(zbudujKontekstZeSzczegolow(wybraneSzczegoly.zrodloKontekstu), grupaId) }, [grupaId, wybraneSzczegoly])
+  const uczestnicyZrodlowi = daneZrodlowe?.daneZrodlowe.uczestnicy.map((uczestnik, indeks) => ({ id: uczestnik.id ?? `uczestnik-${indeks + 1}`, imieINazwisko: uczestnik.nazwaPelna })) ?? []
   const obszarPodgladuRef = useRef<HTMLElement>(null)
   const zapiszDane = useCallback((zapisywaneDane: DaneListyObecnosci) => {
     const tekst = serializujDaneListyObecnosci(zapisywaneDane)
-    const dokument = zapiszDokumentRoboczyGeneratora({
-      id: idDokumentu,
-      typ: 'LISTA_OBECNOSCI',
-      generatorId: 'listy_obecnosci',
-      tytul: `Lista obecności - ${zapisywaneDane.tytulSzkolenia || 'bez tytułu szkolenia'}`,
-      daneDokumentu: { tekst, listaObecnosci: zapisywaneDane },
-      ustawieniaDokumentu: { organizator: zapisywaneDane.organizator, trybListy: zapisywaneDane.trybListy, ukladDokumentu: utworzUstawieniaUkladuDokumentu(zapisywaneDane.blokiSwobodne) },
-      autorId: zalogowanyUzytkownik?.id,
-      wlascicielId: zalogowanyUzytkownik?.id,
-    })
+    const dokument = zapiszDokumentRoboczyGeneratora({ id: idDokumentu, typ: 'LISTA_OBECNOSCI', generatorId: 'listy_obecnosci', tytul: `Lista obecności - ${zapisywaneDane.tytulSzkolenia || 'bez tytułu szkolenia'}`, daneDokumentu: { tekst, listaObecnosci: zapisywaneDane }, ustawieniaDokumentu: { organizator: zapisywaneDane.organizator, trybListy: zapisywaneDane.trybListy, wariantWielodniowy: zapisywaneDane.wariantWielodniowy, ukladDokumentu: utworzUstawieniaUkladuDokumentu(zapisywaneDane.blokiSwobodne) }, autorId: zalogowanyUzytkownik?.id, wlascicielId: zalogowanyUzytkownik?.id })
     if (!dokument) throw new Error('Nie udało się zapisać Listy obecności.')
     ustawIdDokumentu(dokument.id)
     localStorage.setItem(kluczIdDokumentu, dokument.id)
   }, [idDokumentu, zalogowanyUzytkownik?.id])
-  async function dodajObraz(plik: File) {
-    const klucz = await zapiszZasobObrazuDokumentu(plik)
-    ustawZasobyObrazow(pobierzMapeZasobowObrazowDokumentu())
-    return klucz
-  }
   const stanDokumentu = useStanDokumentu({ dane, zapiszAutomatycznie: zapiszDane })
-
   useEffect(() => { localStorage.setItem(kluczSzkicu, serializujDaneListyObecnosci(dane)) }, [dane])
   useOchronaNiezapisanegoDokumentu(stanDokumentu.czyNiezapisaneZmiany, () => { void stanDokumentu.zapiszTeraz() })
-
-  async function zapiszWRejestrze() {
-    ustawKomunikat(await stanDokumentu.zapiszTeraz() ? 'Listę obecności zapisano w rejestrze dokumentów.' : 'Nie udało się zapisać Listy obecności w rejestrze.')
-  }
-
-  function rozpocznijNowaListe() {
-    const daneDomyslne = utworzDomyslneDaneListyObecnosci()
-    ustawDane(daneDomyslne)
-    ustawIdDokumentu(null)
-    localStorage.removeItem(kluczIdDokumentu)
-    localStorage.setItem(kluczSzkicu, serializujDaneListyObecnosci(daneDomyslne))
-    stanDokumentu.oznaczJakoZapisany(daneDomyslne)
-    ustawKomunikat('Przywrócono nową Listę obecności.')
-  }
-
+  function zastosujDaneSzkolenia(noweSzczegolyId: string, noweGrupaId?: string) { ustawSzczegolyId(noweSzczegolyId); const zrodlo = szczegoly.find((pozycja) => pozycja.id === noweSzczegolyId); if (!zrodlo) { ustawGrupeId(''); return }; const wybranaGrupaId = noweGrupaId && zrodlo.grupy.some((grupa) => grupa.id === noweGrupaId) ? noweGrupaId : zrodlo.grupy[0]?.id ?? ''; ustawGrupeId(wybranaGrupaId); const daneZIntegracji = adapterListyObecnosci(zbudujKontekstZeSzczegolow(zrodlo.zrodloKontekstu), wybranaGrupaId); if (daneZIntegracji) ustawDane(utworzDaneListyObecnosciZIntegracji(daneZIntegracji.daneZrodlowe, {})) }
+  async function dodajObraz(plik: File) { const klucz = await zapiszZasobObrazuDokumentu(plik); ustawZasobyObrazow(pobierzMapeZasobowObrazowDokumentu()); return klucz }
+  function rozpocznijNowaListe() { const nowe = utworzDomyslneDaneListyObecnosci(); ustawDane(nowe); ustawIdDokumentu(null); localStorage.removeItem(kluczIdDokumentu); localStorage.setItem(kluczSzkicu, serializujDaneListyObecnosci(nowe)); stanDokumentu.oznaczJakoZapisany(nowe); ustawKomunikat('Przywrócono nową Listę obecności.') }
+  function zapiszKopieUkladu() { const nazwa = `Lista obecności ${dane.organizator} — układ ${new Date().toLocaleDateString('pl-PL')}`; const szablon = zapiszKopieUkladuSwobodnychBlokow({ nazwa, typDokumentu: 'Lista obecności', organizator: dane.organizator, autor: zalogowanyUzytkownik?.id ?? 'Użytkownik', bloki: dane.blokiSwobodne, tytulSzkolenia: dane.tytulSzkolenia }); ustawKomunikat(`Zapisano nowy szablon układu: ${szablon.nazwa}.`) }
   const daneNazwyEksportu = { typDokumentu: 'LISTA_OBECNOSCI' as const, organizator: dane.organizator, terminy: dane.daty, miejsce: dane.miejsce, czyOnline: dane.miejsce.trim().toLocaleLowerCase('pl') === 'online', tytulSzkolenia: dane.tytulSzkolenia }
-  const akcje = <PasekAkcjiGeneratora><PrzyciskPaneluGeneratora>Edytuj listę</PrzyciskPaneluGeneratora><StatusZapisuDokumentu stan={stanDokumentu.stanZapisu} /><button onClick={() => void zapiszWRejestrze()} type="button">Zapisz listę</button><AkcjeEksportuPdf daneNazwyEksportu={daneNazwyEksportu} nazwaPliku={zbudujNazweEksportowanegoDokumentu(daneNazwyEksportu)} obszarDokumentu={obszarPodgladuRef} /><button onClick={rozpocznijNowaListe} type="button">Nowa lista</button></PasekAkcjiGeneratora>
-
-  return <ObszarZPanelemGeneratora idPanelu="panel-danych-listy-obecnosci" kluczPrzypiecia="ultimate-pomagier.panel-generatora.listy-obecnosci.przypiety" kluczWysuwania="ultimate-pomagier.panel-generatora.listy-obecnosci.wysuwanie" tytulPanelu="Ustawienia Listy obecności">
-    <section className="generator-list-obecnosci"><div className="generator-dokumentu widok"><header className="generator-dokumentu__naglowek"><div><h1>Listy obecności</h1><p>Lista w oryginalnym układzie SEMPER, z automatycznym podziałem stron A4.</p></div>{akcje}{komunikat && <div aria-live="polite" className="generator-dokumentu__komunikat">{komunikat}</div>}</header>
-      <PanelBocznyGeneratora><PanelEdycjiSwobodnychBlokow bloki={dane.blokiSwobodne} blokiSzablonu={utworzBlokiSzablonuListyObecnosci()} liczbaStron={podzielWierszeListyObecnosci(dane).length} zaznaczonyBlokId={zaznaczonyBlokId} trybEdycjiSzablonu={trybEdycjiSzablonu} onDodajObraz={dodajObraz} onZmienBloki={(blokiSwobodne) => ustawDane((obecne) => ({ ...obecne, blokiSwobodne }))} onZmienTrybEdycjiSzablonu={ustawTrybEdycjiSzablonu} /></PanelBocznyGeneratora>
-      <UkladFormularzaIPodgladu><PanelGeneratoraDokumentu tytul="Ustawienia Listy obecności" wariant="edycja"><FormularzListyObecnosci dane={dane} prefiksId="formularz-listy-obecnosci" ustawDane={ustawDane} /></PanelGeneratoraDokumentu><PanelGeneratoraDokumentu className="generator-list-obecnosci__podglad" ref={obszarPodgladuRef} tytul="Podgląd A4" wariant="podglad"><RendererListyObecnosci dane={dane} zasobyObrazow={zasobyObrazow} zaznaczonyBlokId={zaznaczonyBlokId} trybEdycjiSzablonu={trybEdycjiSzablonu} onZaznaczBlok={ustawZaznaczonyBlokId} onZmienBlok={(blok) => ustawDane((obecne) => ({ ...obecne, blokiSwobodne: obecne.blokiSwobodne.map((pozycja) => pozycja.id === blok.id ? blok : pozycja) }))} /></PanelGeneratoraDokumentu></UkladFormularzaIPodgladu>
-    </div></section>
-  </ObszarZPanelemGeneratora>
+  const akcje = <PasekAkcjiGeneratora><PrzyciskPaneluGeneratora>Edytuj układ</PrzyciskPaneluGeneratora><StatusZapisuDokumentu stan={stanDokumentu.stanZapisu} /><button onClick={() => void stanDokumentu.zapiszTeraz().then((wynik) => ustawKomunikat(wynik ? 'Listę obecności zapisano w rejestrze dokumentów.' : 'Nie udało się zapisać Listy obecności.'))} type="button">Zapisz listę</button><AkcjeEksportuPdf daneNazwyEksportu={daneNazwyEksportu} nazwaPliku={zbudujNazweEksportowanegoDokumentu(daneNazwyEksportu)} obszarDokumentu={obszarPodgladuRef} /><button onClick={rozpocznijNowaListe} type="button">Nowa lista</button></PasekAkcjiGeneratora>
+  const liczbaStron = podzielListeObecnosciNaStrony(dane).length
+  return <ObszarZPanelemGeneratora idPanelu="panel-danych-listy-obecnosci" kluczPrzypiecia="ultimate-pomagier.panel-generatora.listy-obecnosci.przypiety" kluczWysuwania="ultimate-pomagier.panel-generatora.listy-obecnosci.wysuwanie" tytulPanelu="Ustawienia Listy obecności"><section className="generator-list-obecnosci"><div className="generator-dokumentu widok"><header className="generator-dokumentu__naglowek"><div><h1>Listy obecności</h1><p>Oryginalny układ SEMPER · {liczbaStron} {liczbaStron === 1 ? 'strona' : 'strony'} A4</p></div>{akcje}{komunikat && <div aria-live="polite" className="generator-dokumentu__komunikat">{komunikat}</div>}</header><PanelBocznyGeneratora><PanelEdycjiSwobodnychBlokow bloki={dane.blokiSwobodne} blokiSzablonu={utworzBlokiSzablonuListyObecnosci()} liczbaStron={liczbaStron} zaznaczonyBlokId={zaznaczonyBlokId} trybEdycjiSzablonu={trybEdycjiSzablonu} onDodajObraz={dodajObraz} onZmienBloki={(blokiSwobodne) => ustawDane((obecne) => ({ ...obecne, blokiSwobodne }))} onZmienTrybEdycjiSzablonu={ustawTrybEdycjiSzablonu} /><button className="generator-list-obecnosci__przycisk-pomocniczy" onClick={zapiszKopieUkladu} type="button">Zapisz jako nowy szablon</button></PanelBocznyGeneratora><UkladFormularzaIPodgladu><PanelGeneratoraDokumentu tytul="Ustawienia Listy obecności" wariant="edycja"><FormularzListyObecnosci dane={dane} grupaId={grupaId} prefiksId="formularz-listy-obecnosci" szczegoly={szczegoly} szczegolyId={szczegolyId} uczestnicyZrodlowi={uczestnicyZrodlowi} ustawDane={ustawDane} ustawGrupeId={(id) => zastosujDaneSzkolenia(szczegolyId, id)} ustawSzczegolyId={(id) => zastosujDaneSzkolenia(id)} /></PanelGeneratoraDokumentu><PanelGeneratoraDokumentu className="generator-list-obecnosci__podglad" ref={obszarPodgladuRef} tytul={`Podgląd A4 — ${liczbaStron} str.`} wariant="podglad"><RendererListyObecnosci dane={dane} zasobyObrazow={zasobyObrazow} zaznaczonyBlokId={zaznaczonyBlokId} trybEdycjiSzablonu={trybEdycjiSzablonu} onZaznaczBlok={ustawZaznaczonyBlokId} onZmienBlok={(blok) => ustawDane((obecne) => ({ ...obecne, blokiSwobodne: obecne.blokiSwobodne.map((pozycja) => pozycja.id === blok.id ? blok : pozycja) }))} /></PanelGeneratoraDokumentu></UkladFormularzaIPodgladu></div></section></ObszarZPanelemGeneratora>
 }

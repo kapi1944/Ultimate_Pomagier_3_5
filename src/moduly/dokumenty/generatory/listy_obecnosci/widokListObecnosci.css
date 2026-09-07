@@ -79,6 +79,46 @@
   gap: 8px;
 }
 
+.generator-list-obecnosci__uczestnicy,
+.generator-list-obecnosci__synchronizacja,
+.generator-list-obecnosci__kolumny,
+.generator-list-obecnosci__podpisy-przelaczniki {
+  display: grid;
+  gap: 8px;
+}
+
+.generator-list-obecnosci__uczestnik {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px;
+}
+
+.generator-list-obecnosci__szybkie-wiersze,
+.generator-list-obecnosci__podpisy-przelaczniki {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.generator-list-obecnosci__kolumny {
+  margin: 0;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--ui-tekst-drugi) 24%, transparent);
+}
+
+.generator-list-obecnosci__kolumny label,
+.generator-list-obecnosci__podpisy-przelaczniki label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.generator-list-obecnosci__kolumny input,
+.generator-list-obecnosci__podpisy-przelaczniki input {
+  width: auto;
+}
+
 .generator-list-obecnosci__przycisk-pomocniczy {
   justify-self: start;
   min-height: 32px;
@@ -211,9 +251,31 @@
 }
 
 .lista-obecnosci-a4__tabela td:nth-child(2) {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+}
+
+.lista-obecnosci-a4__naglowek-kontynuacji {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 14cqw;
+  align-items: end;
+  padding-bottom: 1.8cqw;
+  font-size: 1.25em;
+}
+
+.lista-obecnosci-a4__podpisy {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12%;
+  margin-top: 7cqw;
+}
+
+.lista-obecnosci-a4__podpisy span {
+  width: 28%;
+  padding-top: 2.5cqw;
+  border-top: 1px solid #666;
+  text-align: center;
 }
 
 @container (max-width: 650px) {
@@ -223,6 +285,10 @@
 
   .generator-list-obecnosci__siatka-pol > label.generator-list-obecnosci__pole-szerokie {
     grid-column: auto;
+  }
+
+  .generator-list-obecnosci__uczestnik {
+    grid-template-columns: 1fr;
   }
 }
 

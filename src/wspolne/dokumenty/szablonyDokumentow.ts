@@ -25,6 +25,7 @@ export type {
 
 export function zapiszKopieUkladuSwobodnychBlokow(dane: {
   nazwa: string
+  typDokumentu?: 'Ankieta' | 'Lista obecności'
   organizator: 'SEMPER' | 'IIST' | 'klient'
   autor: string
   bloki: BlokSwobodnyDokumentu[]
@@ -36,7 +37,7 @@ export function zapiszKopieUkladuSwobodnychBlokow(dane: {
   const szablon: SzablonRoboczyReplikatora = {
     id: `uklad-blokow-${Date.now()}`,
     nazwa: dane.nazwa,
-    typDokumentu: 'Ankieta',
+    typDokumentu: dane.typDokumentu ?? 'Ankieta',
     pewnoscTypuDokumentu: 1,
     organizator: dane.organizator,
     status: 'Roboczy',

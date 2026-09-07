@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import {
   deserializujDaneAnkiety,
   formatujZakresDatAnkiety,
+  pobierzSkalePytania,
   podzielAnkieteNaStrony,
   serializujDaneAnkiety,
   utworzDaneAnkietyZKontekstu,
@@ -11,7 +12,7 @@ import {
 import type { KontekstDokumentuSzkolenia } from '../src/wspolne/integracje/szczegolyDoDokumentow/index.ts'
 
 const pelna = utworzDomyslneDaneAnkiety()
-assert.equal(pelna.wersjaSchematu, 2)
+assert.equal(pelna.wersjaSchematu, 3)
 assert.equal(pelna.preset, 'ORYGINALNA_SEMPER_PELNA')
 assert.equal(pelna.sekcje.length, 6)
 assert.equal(pelna.sekcje.flatMap((sekcja) => sekcja.pytania).filter((pytanie) => pytanie.typ === 'OCENA_4').length, 9)
@@ -30,6 +31,9 @@ assert.equal(nowoczesna.blokiSwobodne.length, 3)
 assert.equal(podzielAnkieteNaStrony(nowoczesna).length, 2)
 
 const wlasna = zastosujPresetAnkiety(nowoczesna, 'WLASNA')
+const zZachowanaTrescia = zastosujPresetAnkiety({ ...wlasna, sekcje: [{ ...wlasna.sekcje[0], pytania: [{ id: 'skala-10', typ: 'SKALA', tekst: 'Długie pytanie ze skalą', wymagane: true, skala: { liczbaStopni: 10, etykiety: Array.from({ length: 10 }, (_, indeks) => String(indeks + 1)), opisLewy: 'bardzo źle', opisPrawy: 'bardzo dobrze' } }] }] }, 'ORYGINALNA_IIST_PELNA')
+assert.equal(zZachowanaTrescia.sekcje[0]?.pytania[0]?.tekst, 'Długie pytanie ze skalą')
+assert.equal(pobierzSkalePytania(zZachowanaTrescia.sekcje[0]?.pytania[0]!).liczbaStopni, 10)
 const rozbudowana = {
   ...wlasna,
   sekcje: [...wlasna.sekcje, { id: 'duza-sekcja', nazwa: 'Dodatkowe pytania', widoczna: true, pytania: Array.from({ length: 12 }, (_, indeks) => ({ id: `duze-${indeks}`, typ: 'POLE_TEKSTOWE' as const, tekst: `Pytanie ${indeks + 1}` })) }],

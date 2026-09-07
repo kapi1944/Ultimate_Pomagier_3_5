@@ -1,8 +1,12 @@
 import assert from 'node:assert/strict'
 import {
   deserializujDaneListyObecnosci,
+  podzielListeObecnosciNaStrony,
   podzielWierszeListyObecnosci,
+  porownajUczestnikowListyObecnosci,
   serializujDaneListyObecnosci,
+  zastosujSynchronizacjeUczestnikow,
+  zaproponujWariantWielodniowyListyObecnosci,
   utworzDaneListyObecnosciZIntegracji,
   utworzDomyslneDaneListyObecnosci,
 } from '../src/moduly/dokumenty/generatory/listy_obecnosci/modelListyObecnosci.ts'
@@ -61,5 +65,14 @@ assert.deepEqual(podzielWierszeListyObecnosci(zIntegracji).map((strona) => stron
 
 const pusta = { ...domyslne, trybListy: 'PUSTA' as const, liczbaPustychWierszy: 57 }
 assert.deepEqual(podzielWierszeListyObecnosci(pusta).map((strona) => strona.length), [28, 28, 1])
+
+assert.equal(zaproponujWariantWielodniowyListyObecnosci(['2026-09-01', '2026-09-02']), 'KOLUMNY_PODPISOW')
+assert.equal(zaproponujWariantWielodniowyListyObecnosci(['1', '2', '3', '4']), 'OSOBNE_STRONY')
+const wielodniowa = { ...domyslne, daty: ['2026-09-01', '2026-09-02', '2026-09-03', '2026-09-04'], wariantWielodniowy: 'OSOBNE_STRONY' as const, uczestnicy: Array.from({ length: 29 }, (_, indeks) => ({ id: `osoba-${indeks}`, imieINazwisko: `Osoba ${indeks}` })) }
+assert.equal(podzielListeObecnosciNaStrony(wielodniowa).length, 8)
+const roznice = porownajUczestnikowListyObecnosci([{ id: 'a', imieINazwisko: 'Anna' }, { id: 'reczny', imieINazwisko: 'Ręczny', czyReczny: true }], [{ id: 'a', imieINazwisko: 'Anna Nowak' }, { id: 'b', imieINazwisko: 'Bartek' }])
+assert.equal(roznice.nowi.length, 1)
+assert.equal(roznice.zmienieni.length, 1)
+assert.equal(zastosujSynchronizacjeUczestnikow({ ...domyslne, uczestnicy: [{ id: 'reczny', imieINazwisko: 'Ręczny', czyReczny: true }] }, [{ id: 'a', imieINazwisko: 'Anna' }]).uczestnicy.length, 2)
 
 console.log('OK: model, migracja i paginacja List obecności')
