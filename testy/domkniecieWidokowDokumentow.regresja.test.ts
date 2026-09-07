@@ -141,8 +141,8 @@ test('generatory korzystają ze wspólnego układu paneli, paska akcji i jawnej 
   assert.match(lista, /typ: 'LISTA_OBECNOSCI'/)
   assert.match(lista, /generatorId: 'listy_obecnosci'/)
   assert.match(lista, /RendererListyObecnosci/)
-  assert.match(karta, /typ:'KARTA_NA_DRZWI'/)
-  assert.match(karta, /generatorId:'karta_na_drzwi'/)
+  assert.match(karta, /typ:\s*'KARTA_NA_DRZWI'/)
+  assert.match(karta, /generatorId:\s*'karta_na_drzwi'/)
 })
 
 test('wspólna lista filtruje typ, status, tekst, datę i sortowanie bez mieszania dokumentów', () => {
