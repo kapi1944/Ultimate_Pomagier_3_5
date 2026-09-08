@@ -11,6 +11,7 @@ import {
   ObszarZPanelemGeneratora,
   PanelBocznyGeneratora,
   PrzyciskPaneluGeneratora,
+  UkladFormularzaIPodgladu,
 } from '../../wspolne/UkladGeneratoraDokumentu'
 import StatusZapisuDokumentu from '../../wspolne/StatusZapisuDokumentu'
 import { useOchronaNiezapisanegoDokumentu, useStanDokumentu } from '../../wspolne/useStanDokumentu'
@@ -1577,7 +1578,7 @@ export default function WidokDyplomow() {
         {komunikat}
       </div>
 
-      <div className="dyplomy__uklad">
+      <UkladFormularzaIPodgladu className="dyplomy__uklad">
         <div className="dyplomy__panel-pracy">
           <PanelBocznyGeneratora
             className="dyplomy__panel-ustawien"
@@ -2333,7 +2334,7 @@ export default function WidokDyplomow() {
             pokazPrzyciskDruku={false}
           />
         </aside>
-      </div>
+      </UkladFormularzaIPodgladu>
 
       <div className="dyplomy__druk" aria-hidden="true" ref={obszarEksportuSeryjnegoRef}>
         {uczestnicyDoDruku.map((uczestnik) => (

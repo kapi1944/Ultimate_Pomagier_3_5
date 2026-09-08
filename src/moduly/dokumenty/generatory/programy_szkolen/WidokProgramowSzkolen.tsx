@@ -6,7 +6,7 @@ import PanelKontroliJakosciDokumentu from '../../../../wspolne/dokumenty/PanelKo
 import { PanelEdycjiSwobodnychBlokow } from '../../../../wspolne/dokumenty/EdytorSwobodnychBlokow'
 import { pobierzMapeZasobowObrazowDokumentu, zapiszZasobObrazuDokumentu } from '../../../../wspolne/dokumenty/zasobyObrazowDokumentu'
 import type { TrybRenderowaniaDokumentu } from '../../../../wspolne/dokumenty/trybRenderowaniaDokumentu'
-import { ObszarZPanelemGeneratora, PanelBocznyGeneratora, PasekAkcjiGeneratora, PrzyciskPaneluGeneratora } from '../../wspolne/UkladGeneratoraDokumentu'
+import { ObszarZPanelemGeneratora, PanelBocznyGeneratora, PasekAkcjiGeneratora, PrzyciskPaneluGeneratora, UkladFormularzaIPodgladu } from '../../wspolne/UkladGeneratoraDokumentu'
 import StatusZapisuDokumentu from '../../wspolne/StatusZapisuDokumentu'
 import { useOchronaNiezapisanegoDokumentu, useStanDokumentu } from '../../wspolne/useStanDokumentu'
 import {
@@ -163,11 +163,7 @@ const styleProgramuSzkolenia = `
 }
 
 .program-szkolen__uklad {
-  display: grid;
-  grid-template-columns: minmax(420px, 1fr) minmax(0, 800px);
   justify-content: stretch;
-  gap: 20px;
-  align-items: start;
   min-width: 0;
 }
 
@@ -841,16 +837,9 @@ const styleProgramuSzkolenia = `
   visibility: hidden;
   pointer-events: none;
 }
-@container (max-width: 1860px) {
+@container (max-width: 980px) {
   .program-szkolen__uklad {
-    grid-template-columns: minmax(420px, 1fr) minmax(0, 800px);
-  }
-
-}
-
-@container (max-width: 760px) {
-  .program-szkolen__uklad {
-    grid-template-columns: 1fr;
+    min-width: 0;
   }
 
   .program-szkolen__sekcja--import,
@@ -1589,7 +1578,7 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
         </section>
       )}
 
-      <div className="program-szkolen__uklad">
+      <UkladFormularzaIPodgladu className="program-szkolen__uklad">
         <div className="program-panel-roboczy program-szkolen__panel">
           <PanelBocznyGeneratora className="program-szkolen__sekcja program-szkolen__sekcja--ustawienia">
             <div className="program-szkolen__siatka">
@@ -2010,7 +1999,7 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
             tytul={tytulZCudzyslowem || 'Program szkolenia'}
           />
         </section>
-      </div>
+      </UkladFormularzaIPodgladu>
     </section>
     </ObszarZPanelemGeneratora>
   )

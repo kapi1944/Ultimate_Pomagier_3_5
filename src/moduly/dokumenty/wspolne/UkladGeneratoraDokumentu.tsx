@@ -1,4 +1,5 @@
-import { createContext, forwardRef, useCallback, useContext, useEffect, useMemo, useState, type CSSProperties, type PropsWithChildren, type ReactNode } from 'react'
+import { createContext, forwardRef, useCallback, useContext, useEffect, useMemo, useReducer, type CSSProperties, type PropsWithChildren, type ReactNode } from 'react'
+import { zredukujStanPaneluGeneratora } from './stanPaneluGeneratora'
 import './ukladGeneratoraDokumentu.css'
 
 type WlasciwosciUkladuGeneratoraDokumentu = PropsWithChildren<{
@@ -127,9 +128,15 @@ function usePanelUstawienGeneratora({
   kluczWysuwania,
   czyOtwartyPoczatkowo = false,
 }: OpcjePaneluUstawienGeneratora = {}) {
-  const [czyPrzypiety, ustawCzyPrzypiety] = useState(() => pobierzUstawienieLogicznePanelu(kluczPrzypiecia, false))
-  const [czyWysuwanieWlaczone, ustawCzyWysuwanieWlaczone] = useState(() => pobierzUstawienieLogicznePanelu(kluczWysuwania, true))
-  const [czyOtwarty, ustawCzyOtwarty] = useState(() => czyOtwartyPoczatkowo || czyPrzypiety)
+  const [stan, wykonajAkcje] = useReducer(zredukujStanPaneluGeneratora, undefined, () => {
+    const czyPrzypiety = pobierzUstawienieLogicznePanelu(kluczPrzypiecia, false)
+    return {
+      czyPrzypiety,
+      czyWysuwanieWlaczone: pobierzUstawienieLogicznePanelu(kluczWysuwania, true),
+      czyOtwarty: czyOtwartyPoczatkowo || czyPrzypiety,
+    }
+  })
+  const { czyOtwarty, czyPrzypiety, czyWysuwanieWlaczone } = stan
 
   useEffect(() => {
     if (!kluczPrzypiecia) {
@@ -155,28 +162,19 @@ function usePanelUstawienGeneratora({
     }
   }, [czyWysuwanieWlaczone, kluczWysuwania])
 
-  const otworz = useCallback(() => ustawCzyOtwarty(true), [])
-  const zamknij = useCallback(() => {
-    ustawCzyPrzypiety(false)
-    ustawCzyOtwarty(false)
-  }, [])
-  const przelacz = useCallback(() => ustawCzyOtwarty((czyPanelJestOtwarty) => !czyPanelJestOtwarty), [])
-  const przelaczPrzypiecie = useCallback(() => {
-    const czyPrzypiac = !czyPrzypiety
-    ustawCzyPrzypiety(czyPrzypiac)
-    ustawCzyOtwarty(czyPrzypiac)
-  }, [czyPrzypiety])
-  const przelaczWysuwanie = useCallback(() => ustawCzyWysuwanieWlaczone((czyWlaczone) => !czyWlaczone), [])
+  const otworz = useCallback(() => wykonajAkcje('OTWORZ'), [])
+  const zamknij = useCallback(() => wykonajAkcje('ZAMKNIJ'), [])
+  const przelacz = useCallback(() => wykonajAkcje('PRZELACZ'), [])
+  const przelaczPrzypiecie = useCallback(() => wykonajAkcje('PRZELACZ_PRZYPIECIE'), [])
+  const przelaczWysuwanie = useCallback(() => wykonajAkcje('PRZELACZ_WYSUWANIE'), [])
   const otworzZKrawedzi = useCallback(() => {
     if (czyWysuwanieWlaczone) {
       otworz()
     }
   }, [czyWysuwanieWlaczone, otworz])
   const schowajJesliOdpiety = useCallback(() => {
-    if (!czyPrzypiety) {
-      ustawCzyOtwarty(false)
-    }
-  }, [czyPrzypiety])
+    wykonajAkcje('SCHOWAJ_JESLI_ODPIETY')
+  }, [])
 
   return {
     czyOtwarty,
@@ -213,6 +211,7 @@ export function PanelUstawienGeneratoraDokumentu({
       aria-label={tytul}
       className={polaczKlasy('generator-panel-ustawien', czyOtwarty && 'generator-panel-ustawien--otwarty', className)}
       id={id}
+      inert={!czyOtwarty}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >

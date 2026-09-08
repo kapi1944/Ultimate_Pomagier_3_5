@@ -81,11 +81,7 @@
 }
 
 .dyplomy__uklad {
-  display: grid;
   min-width: 0;
-  grid-template-columns: minmax(500px, 1fr) minmax(360px, 680px);
-  gap: 20px;
-  align-items: start;
 }
 
 .dyplomy__panel-pracy,
@@ -1005,11 +1001,7 @@
   white-space: pre-wrap;
 }
 
-@container obszar-roboczy (max-width: 1280px) {
-  .dyplomy__uklad {
-    grid-template-columns: 1fr;
-  }
-
+@container panel-generatora (max-width: 980px) {
   .dyplomy__podglad {
     position: static;
   }
@@ -1024,10 +1016,6 @@
   .dyplomy__widocznosc-podgladu,
   .dyplomy__logotypy {
     grid-template-columns: 1fr;
-  }
-
-  .dyplomy__uklad {
-    min-width: 0;
   }
 
   .dyplomy__pole--przycisk {
