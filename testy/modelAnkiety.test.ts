@@ -33,7 +33,9 @@ assert.equal(podzielAnkieteNaStrony(nowoczesna).length, 2)
 const wlasna = zastosujPresetAnkiety(nowoczesna, 'WLASNA')
 const zZachowanaTrescia = zastosujPresetAnkiety({ ...wlasna, sekcje: [{ ...wlasna.sekcje[0], pytania: [{ id: 'skala-10', typ: 'SKALA', tekst: 'Długie pytanie ze skalą', wymagane: true, skala: { liczbaStopni: 10, etykiety: Array.from({ length: 10 }, (_, indeks) => String(indeks + 1)), opisLewy: 'bardzo źle', opisPrawy: 'bardzo dobrze' } }] }] }, 'ORYGINALNA_IIST_PELNA')
 assert.equal(zZachowanaTrescia.sekcje[0]?.pytania[0]?.tekst, 'Długie pytanie ze skalą')
-assert.equal(pobierzSkalePytania(zZachowanaTrescia.sekcje[0]?.pytania[0]!).liczbaStopni, 10)
+const pytanieZeSkala = zZachowanaTrescia.sekcje[0]?.pytania[0]
+assert.ok(pytanieZeSkala)
+assert.equal(pobierzSkalePytania(pytanieZeSkala).liczbaStopni, 10)
 const rozbudowana = {
   ...wlasna,
   sekcje: [...wlasna.sekcje, { id: 'duza-sekcja', nazwa: 'Dodatkowe pytania', widoczna: true, pytania: Array.from({ length: 12 }, (_, indeks) => ({ id: `duze-${indeks}`, typ: 'POLE_TEKSTOWE' as const, tekst: `Pytanie ${indeks + 1}` })) }],

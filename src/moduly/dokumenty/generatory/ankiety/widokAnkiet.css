@@ -822,8 +822,8 @@
     visibility: hidden;
   }
 
-  .generator-ankiet__podglad,
-  .generator-ankiet__podglad * {
+  body:has(.ankieta-a4) .generator-ankiet__podglad,
+  body:has(.ankieta-a4) .generator-ankiet__podglad * {
     visibility: visible;
   }
 

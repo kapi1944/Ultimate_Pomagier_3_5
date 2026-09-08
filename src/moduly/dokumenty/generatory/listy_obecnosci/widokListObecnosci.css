@@ -302,8 +302,8 @@
     visibility: hidden;
   }
 
-  .generator-list-obecnosci__podglad,
-  .generator-list-obecnosci__podglad * {
+  body:has(.lista-obecnosci-a4) .generator-list-obecnosci__podglad,
+  body:has(.lista-obecnosci-a4) .generator-list-obecnosci__podglad * {
     visibility: visible;
   }
 
