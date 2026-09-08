@@ -218,12 +218,12 @@ export function utworzNowaKategorieChecklisty(kategorie: KategoriaChecklisty[], 
   return { id: utworzId('kategoria'), nazwa: nazwaPoPrzycieciu, kolejnosc: Math.max(-1, ...kategorie.map((kategoria) => kategoria.kolejnosc)) + 1 }
 }
 
-export function utworzNowaPozycjeChecklisty(kategoriaId: string, nazwa: string, pozycje: PozycjaChecklisty[]): PozycjaChecklisty | null {
+export function utworzNowaPozycjeChecklisty(kategoriaId: string, nazwa: string, pozycje: PozycjaChecklisty[], paczkaId = 'paczka-glowna'): PozycjaChecklisty | null {
   const nazwaPoPrzycieciu = nazwa.trim()
   if (!kategoriaId || !nazwaPoPrzycieciu) return null
   return {
     id: utworzId('pozycja'),
-    paczkaId: 'paczka-glowna',
+    paczkaId,
     kategoriaId,
     nazwa: nazwaPoPrzycieciu,
     kolejnosc: Math.max(-1, ...pozycje.filter((pozycja) => pozycja.kategoriaId === kategoriaId).map((pozycja) => pozycja.kolejnosc)) + 1,
@@ -504,7 +504,7 @@ export function utworzNowaPaczkeChecklisty(paczki: PaczkaChecklisty[], nazwa?: s
 export function duplikujPaczkeChecklisty(dane: DaneChecklistyPaczki, paczkaId: string): DaneChecklistyPaczki {
   const zrodlo = dane.paczki.find((paczka) => paczka.id === paczkaId)
   if (!zrodlo) return dane
-  const paczka = { ...utworzNowaPaczkeChecklisty(dane.paczki, `${zrodlo.nazwa} — kopia`), parametryLogistyczne: { ...zrodlo.parametryLogistyczne, numerPrzesylki: '', dataWyslania: '' } }
+  const paczka = utworzNowaPaczkeChecklisty(dane.paczki, `${zrodlo.nazwa} — kopia`)
   const pozycje = dane.pozycje.filter((pozycja) => pozycja.paczkaId === paczkaId).map((pozycja) => ({ ...pozycja, id: utworzId('pozycja'), paczkaId: paczka.id, statusGotowosci: 'NIEGOTOWE' as const, iloscPrzygotowana: null, dodatkoweEgzemplarze: pozycja.dodatkoweEgzemplarze.map((dodatek) => ({ ...dodatek })), regulaIlosci: { ...pozycja.regulaIlosci } }))
   return { ...dane, paczki: [...dane.paczki, paczka], pozycje: [...dane.pozycje, ...pozycje] }
 }
@@ -526,7 +526,7 @@ export function utworzSzablonChecklistyPaczki(dane: DaneChecklistyPaczki, nazwa:
     id: utworzId('szablon-checklisty'),
     nazwa: nazwaPoPrzycieciu,
     utworzono: new Date().toISOString(),
-    paczki: dane.paczki.map((paczka) => ({ ...paczka, statusOperacyjny: 'ROBOCZA', parametryLogistyczne: { ...paczka.parametryLogistyczne, numerPrzesylki: '', dataWyslania: '' } })),
+    paczki: dane.paczki.map((paczka) => ({ ...paczka, statusOperacyjny: 'ROBOCZA', parametryLogistyczne: utworzParametryLogistycznePaczki() })),
     kategorie: dane.kategorie.map((kategoria) => ({ ...kategoria })),
     pozycje: dane.pozycje.map((pozycja) => ({ paczkaId: pozycja.paczkaId, kategoriaId: pozycja.kategoriaId, nazwa: pozycja.nazwa, kolejnosc: pozycja.kolejnosc, czyWymagana: pozycja.czyWymagana, czyOpcjonalna: pozycja.czyOpcjonalna, czyNieDotyczy: pozycja.czyNieDotyczy, czyOnline: pozycja.czyOnline, regulaIlosci: { ...pozycja.regulaIlosci }, trybPrePost: pozycja.trybPrePost, dodatkoweEgzemplarze: pozycja.dodatkoweEgzemplarze.map((dodatek) => ({ ...dodatek })), nadpisanieReczne: pozycja.nadpisanieReczne, wzorKlienta: pozycja.wzorKlienta, uwagiDrukowane: pozycja.uwagiDrukowane, notatkiWewnetrzne: pozycja.notatkiWewnetrzne })),
   }
@@ -537,7 +537,7 @@ export function zastosujSzablonChecklistyPaczki(dane: DaneChecklistyPaczki, szab
   const mapowanieKategorii = new Map(szablon.kategorie.map((kategoria) => [kategoria.id, utworzId('kategoria')]))
   return {
     ...dane,
-    paczki: szablon.paczki.map((paczka) => ({ ...paczka, id: mapowaniePaczek.get(paczka.id)!, statusOperacyjny: 'ROBOCZA', parametryLogistyczne: { ...paczka.parametryLogistyczne, numerPrzesylki: '', dataWyslania: '' } })),
+    paczki: szablon.paczki.map((paczka) => ({ ...paczka, id: mapowaniePaczek.get(paczka.id)!, statusOperacyjny: 'ROBOCZA', parametryLogistyczne: utworzParametryLogistycznePaczki() })),
     kategorie: szablon.kategorie.map((kategoria) => ({ ...kategoria, id: mapowanieKategorii.get(kategoria.id)! })),
     pozycje: szablon.pozycje.map((pozycja) => ({ ...pozycja, id: utworzId('pozycja'), paczkaId: mapowaniePaczek.get(pozycja.paczkaId) ?? mapowaniePaczek.values().next().value!, kategoriaId: mapowanieKategorii.get(pozycja.kategoriaId) ?? mapowanieKategorii.values().next().value!, statusGotowosci: 'NIEGOTOWE' as const, iloscPrzygotowana: null, dodatkoweEgzemplarze: pozycja.dodatkoweEgzemplarze.map((dodatek) => ({ ...dodatek })), regulaIlosci: { ...pozycja.regulaIlosci } })),
   }

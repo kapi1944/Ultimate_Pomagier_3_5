@@ -312,3 +312,17 @@ test.skip('historyczny kontrakt poprzedniego formularza checklisty', () => {
   assert.match(style, /writing-mode: vertical-rl/)
   assert.match(druk, /kategoria\.nazwa === 'Inne' \? 2 : 1/)
 })
+
+test('widok checklisty zachowuje workflow źródła, panel układu i operację wielu paczek', () => {
+  const widok = readFileSync(new URL('../src/moduly/dokumenty/generatory/checklisty_paczek/WidokChecklistPaczek.tsx', import.meta.url), 'utf8')
+  assert.match(widok, /pobierzSzczegolyDoChecklisty/)
+  assert.match(widok, /utworzChecklistePaczkiZeZrodla/)
+  assert.match(widok, /Istniejące checklisty/)
+  assert.match(widok, /PanelBocznyGeneratora/)
+  assert.match(widok, /PanelEdycjiSwobodnychBlokow/)
+  assert.match(widok, /duplikujPaczkeChecklisty/)
+  assert.match(widok, /utworzNowaPozycjeChecklisty\([^)]*paczka\.id/)
+  assert.match(widok, /dodajZalacznikChecklisty/)
+  assert.match(widok, /ustawStatusChecklisty/)
+  assert.match(widok, /otworzPonownieCheckliste/)
+})
