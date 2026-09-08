@@ -11,109 +11,45 @@ import { pobierzNazweOpiekuna } from '../../../zamkniete/szczegoly_organizacyjne
 import UkladGeneratoraDokumentu, { ObszarZPanelemGeneratora, PanelBocznyGeneratora, PanelGeneratoraDokumentu, PasekAkcjiGeneratora, PrzyciskPaneluGeneratora, UkladFormularzaIPodgladu } from '../../wspolne/UkladGeneratoraDokumentu'
 import StatusZapisuDokumentu from '../../wspolne/StatusZapisuDokumentu'
 import { useOchronaNiezapisanegoDokumentu, useStanDokumentu } from '../../wspolne/useStanDokumentu'
-import { deserializujDaneKartyNaDrzwi, pobierzDaneKartyNaDrzwi, serializujDaneKartyNaDrzwi, utworzBlokiSzablonuKartyNaDrzwi, utworzDaneKartyNaDrzwiZKontekstu, utworzDomyslneDaneKartyNaDrzwi, type DaneKartyNaDrzwi, type OrientacjaKartyNaDrzwi } from './modelKartyNaDrzwi'
+import { deserializujDaneKartyNaDrzwi, przywrocPoleKartyZeZrodla, serializujDaneKartyNaDrzwi, utworzDomyslneDaneKartyNaDrzwi, utworzKarteNaDrzwi, utworzKartyZGrupISal, utworzUstawieniaBazowegoSzablonu, uporzadkujKarty, zduplikujKarteNaDrzwi, zmienPoleKartyLokalnie, type DaneKartyNaDrzwi, type KluczPolaKartyNaDrzwi, type UstawieniaSzablonuKartyNaDrzwi, type WlasnySzablonKartyNaDrzwi } from './modelKartyNaDrzwi'
 import RendererKartyNaDrzwi from './RendererKartyNaDrzwi'
 import './widokKartNaDrzwi.css'
 
-const kluczSzkicu = 'ultimate-pomagier.karta-na-drzwi.szkic'
-const kluczId = 'ultimate-pomagier.karta-na-drzwi.dokumentId'
+const kluczSzkicu = 'ultimate-pomagier.karta-na-drzwi.szkic'; const kluczId = 'ultimate-pomagier.karta-na-drzwi.dokumentId'; const kluczSzablonow = 'ultimate-pomagier.karta-na-drzwi.szablony'
+const pola: Array<[KluczPolaKartyNaDrzwi, string, 'input' | 'textarea']> = [['tytulSzkolenia', 'Tytuł szkolenia', 'input'], ['termin', 'Termin', 'input'], ['godziny', 'Godziny', 'input'], ['sala', 'Sala', 'input'], ['miejsce', 'Lokalizacja', 'input'], ['grupa', 'Grupa', 'input'], ['trener', 'Trener', 'input'], ['organizator', 'Organizator', 'input'], ['dodatkowyTekst', 'Dodatkowy tekst', 'textarea']]
+function pobierzSzablonyWlasne(): WlasnySzablonKartyNaDrzwi[] { try { const dane = JSON.parse(localStorage.getItem(kluczSzablonow) ?? '[]'); return Array.isArray(dane) ? dane as WlasnySzablonKartyNaDrzwi[] : [] } catch { return [] } }
+function zapiszSzablonyWlasne(szablony: WlasnySzablonKartyNaDrzwi[]) { localStorage.setItem(kluczSzablonow, JSON.stringify(szablony)) }
+function kopiaUstawien(ustawienia: UstawieniaSzablonuKartyNaDrzwi): UstawieniaSzablonuKartyNaDrzwi { return JSON.parse(JSON.stringify(ustawienia)) as UstawieniaSzablonuKartyNaDrzwi }
+function RenderujZestawEksportu({ dane, zasobyObrazow }: { dane: DaneKartyNaDrzwi; zasobyObrazow: Record<string, string | undefined> }) {
+  const ustawienia = dane.ustawieniaSzablonu
+  if (ustawienia.format === 'a4' || !ustawienia.kilkaKartNaArkuszuA4) return <>{dane.karty.map((karta) => <RendererKartyNaDrzwi karta={karta} ustawieniaSzablonu={ustawienia} zasobyObrazow={zasobyObrazow} key={karta.id} />)}</>
+  const liczbaKolumn = ustawienia.format === 'a5' ? 2 : 2; const liczbaNaStronie = ustawienia.format === 'a5' ? 2 : 4; const strony = Array.from({ length: Math.ceil(dane.karty.length / liczbaNaStronie) }, (_, indeks) => dane.karty.slice(indeks * liczbaNaStronie, (indeks + 1) * liczbaNaStronie))
+  return <>{strony.map((karty, indeks) => <section className={`karta-na-drzwi__arkusz karta-na-drzwi__arkusz--${ustawienia.orientacja}`} data-strona-dokumentu key={indeks}><div className="karta-na-drzwi__siatka-arkusza" style={{ gridTemplateColumns: `repeat(${liczbaKolumn}, minmax(0, 1fr))` }}>{karty.map((karta) => <RendererKartyNaDrzwi czyStronaDokumentu={false} karta={karta} ustawieniaSzablonu={ustawienia} zasobyObrazow={zasobyObrazow} key={karta.id} />)}</div></section>)}</>
+}
 
 export default function WidokKartNaDrzwi() {
-  const { zalogowanyUzytkownik } = useKontekstUzytkownika()
-  const [dane, ustawDane] = useState(() => deserializujDaneKartyNaDrzwi(localStorage.getItem(kluczSzkicu)))
-  const [idDokumentu, ustawIdDokumentu] = useState<string | null>(() => localStorage.getItem(kluczId))
-  const [zaznaczonyBlokId, ustawZaznaczonyBlokId] = useState<string | null>(null)
-  const [trybEdycjiSzablonu, ustawTrybEdycjiSzablonu] = useState(false)
-  const [zasobyObrazow, ustawZasobyObrazow] = useState(() => pobierzMapeZasobowObrazowDokumentu())
-  const [komunikat, ustawKomunikat] = useState<string | null>(null)
-  const obszarPodgladuRef = useRef<HTMLElement>(null)
-  const szczegoly = useMemo(() => pobierzSzczegolyDoGeneratorow(), [])
-  const wybraneSzczegoly = szczegoly.find((pozycja) => pozycja.id === dane.szczegolyOrganizacyjneId) ?? null
-
-  const zapiszDane = useCallback((wartosc: DaneKartyNaDrzwi) => {
-    const dokument = zapiszDokumentRoboczyGeneratora({
-      id: idDokumentu,
-      typ: 'KARTA_NA_DRZWI',
-      generatorId: 'karta_na_drzwi',
-      tytul: `Karta na drzwi — ${pobierzDaneKartyNaDrzwi(wartosc.daneWejsciowe).tytulSzkolenia}`,
-      daneDokumentu: { tekst: serializujDaneKartyNaDrzwi(wartosc), kartaNaDrzwi: wartosc },
-      ustawieniaDokumentu: { orientacja: wartosc.orientacja, ukladDokumentu: utworzUstawieniaUkladuDokumentu(wartosc.blokiSwobodne), szczegolyOrganizacyjneId: wartosc.szczegolyOrganizacyjneId, grupaId: wartosc.grupaId },
-      autorId: zalogowanyUzytkownik?.id,
-      wlascicielId: zalogowanyUzytkownik?.id,
-    })
-    if (!dokument) throw new Error('Nie udało się zapisać Karty na drzwi.')
-    ustawIdDokumentu(dokument.id)
-    localStorage.setItem(kluczId, dokument.id)
-  }, [idDokumentu, zalogowanyUzytkownik?.id])
-
-  const stanDokumentu = useStanDokumentu({ dane, zapiszAutomatycznie: zapiszDane })
-  useEffect(() => localStorage.setItem(kluczSzkicu, serializujDaneKartyNaDrzwi(dane)), [dane])
-  useOchronaNiezapisanegoDokumentu(stanDokumentu.czyNiezapisaneZmiany, () => { void stanDokumentu.zapiszTeraz() })
-
-  const daneNazwyEksportu = { typDokumentu: 'KARTA_NA_DRZWI' as const, ...pobierzDaneKartyNaDrzwi(dane.daneWejsciowe), dataUtworzenia: new Date() }
-
-  async function dodajObraz(plik: File) {
-    const klucz = await zapiszZasobObrazuDokumentu(plik)
-    ustawZasobyObrazow(pobierzMapeZasobowObrazowDokumentu())
-    return klucz
-  }
-
-  function wybierzSzczegoly(szczegolyId: string) {
-    ustawIdDokumentu(null)
-    localStorage.removeItem(kluczId)
-    ustawDane((obecne) => ({ ...obecne, szczegolyOrganizacyjneId: szczegolyId || null, grupaId: null }))
-  }
-
-  function wybierzGrupe(grupaId: string) {
-    if (!wybraneSzczegoly || !grupaId) {
-      ustawDane((obecne) => ({ ...obecne, grupaId: null }))
-      return
-    }
-    const kontekst = zbudujKontekstZeSzczegolow(wybraneSzczegoly.zrodloKontekstu)
-    const automatyczneDane = utworzDaneKartyNaDrzwiZKontekstu(kontekst, grupaId, pobierzNazweOpiekuna(wybraneSzczegoly.opiekunId))
-    if (!automatyczneDane) return
-    ustawIdDokumentu(null)
-    localStorage.removeItem(kluczId)
-    ustawDane(automatyczneDane)
-    ustawKomunikat('Utworzono osobną Kartę dla wybranej grupy. Dane możesz ręcznie skorygować.')
-  }
-
-  function zmienOrientacje(orientacja: OrientacjaKartyNaDrzwi) {
-    ustawDane((obecne) => ({ ...obecne, orientacja, blokiSwobodne: utworzBlokiSzablonuKartyNaDrzwi(orientacja) }))
-  }
-
-  function rozpocznijNowaKarte() {
-    const nowa = utworzDomyslneDaneKartyNaDrzwi()
-    ustawDane(nowa)
-    ustawIdDokumentu(null)
-    ustawZaznaczonyBlokId(null)
-    localStorage.removeItem(kluczId)
-    stanDokumentu.oznaczJakoZapisany(nowa)
-  }
-
-  const akcje = <PasekAkcjiGeneratora>
-    <PrzyciskPaneluGeneratora>Edytuj układ</PrzyciskPaneluGeneratora>
-    <StatusZapisuDokumentu stan={stanDokumentu.stanZapisu} />
-    <button type="button" onClick={() => void stanDokumentu.zapiszTeraz().then((wynik) => ustawKomunikat(wynik ? 'Kartę zapisano w rejestrze dokumentów.' : 'Nie udało się zapisać Karty.'))}>Zapisz kartę</button>
-    <AkcjeEksportuPdf daneNazwyEksportu={daneNazwyEksportu} nazwaPliku={zbudujNazweEksportowanegoDokumentu(daneNazwyEksportu)} obszarDokumentu={obszarPodgladuRef} orientacja={dane.orientacja} />
-    <button type="button" onClick={rozpocznijNowaKarte}>Nowa karta</button>
-  </PasekAkcjiGeneratora>
-
-  return <ObszarZPanelemGeneratora idPanelu="panel-karty-na-drzwi" kluczPrzypiecia="ultimate-pomagier.panel-generatora.karta_na_drzwi.przypiety" kluczWysuwania="ultimate-pomagier.panel-generatora.karta_na_drzwi.wysuwanie" tytulPanelu="Edytor układu Karty">
-    <style data-pomin-w-eksporcie>{`@media print { @page { size: A4 ${dane.orientacja === 'pozioma' ? 'landscape' : 'portrait'}; margin: 0; } body:has(.karta-na-drzwi__strona) * { visibility: hidden; } .karta-na-drzwi__strona, .karta-na-drzwi__strona * { visibility: visible; } .karta-na-drzwi__strona { position: absolute; inset: 0; width: ${dane.orientacja === 'pozioma' ? '297mm' : '210mm'}; height: ${dane.orientacja === 'pozioma' ? '210mm' : '297mm'}; margin: 0; box-shadow: none; } }`}</style>
-    <UkladGeneratoraDokumentu tytul="Karta na drzwi" opis="Wybierz Szczegóły i grupę, aby automatycznie przygotować osobną Kartę." akcje={akcje} komunikat={komunikat}>
-      <PanelBocznyGeneratora><PanelEdycjiSwobodnychBlokow bloki={dane.blokiSwobodne} blokiSzablonu={utworzBlokiSzablonuKartyNaDrzwi(dane.orientacja)} zaznaczonyBlokId={zaznaczonyBlokId} trybEdycjiSzablonu={trybEdycjiSzablonu} onZmienTrybEdycjiSzablonu={ustawTrybEdycjiSzablonu} onZmienBloki={(blokiSwobodne) => ustawDane((obecne) => ({ ...obecne, blokiSwobodne }))} onDodajObraz={dodajObraz} liczbaStron={1} szerokoscStronyMm={dane.orientacja === 'pozioma' ? 297 : 210} wysokoscStronyMm={dane.orientacja === 'pozioma' ? 210 : 297} /></PanelBocznyGeneratora>
-      <UkladFormularzaIPodgladu>
-        <PanelGeneratoraDokumentu tytul="Dane i orientacja" wariant="edycja">
-          <div className="karta-na-drzwi__formularz">
-            <label>Szczegóły organizacyjne<select value={dane.szczegolyOrganizacyjneId ?? ''} onChange={(zdarzenie) => wybierzSzczegoly(zdarzenie.target.value)}><option value="">Wybierz szkolenie</option>{szczegoly.map((pozycja) => <option key={pozycja.id} value={pozycja.id}>{pozycja.nazwa}{pozycja.czyKopiaRobocza ? ' (kopia robocza)' : ''}</option>)}</select></label>
-            <label>Grupa szkoleniowa<select disabled={!wybraneSzczegoly} value={dane.grupaId ?? ''} onChange={(zdarzenie) => wybierzGrupe(zdarzenie.target.value)}><option value="">Wybierz grupę</option>{wybraneSzczegoly?.grupy.map((grupa) => <option key={grupa.id} value={grupa.id}>{grupa.nazwa}</option>)}</select></label>
-            <label>Orientacja<select value={dane.orientacja} onChange={(zdarzenie) => zmienOrientacje(zdarzenie.target.value === 'pionowa' ? 'pionowa' : 'pozioma')}><option value="pozioma">Pozioma</option><option value="pionowa">Pionowa</option></select></label>
-            <label>Dane szkolenia<textarea rows={11} value={dane.daneWejsciowe} onChange={(zdarzenie) => ustawDane((obecne) => ({ ...obecne, daneWejsciowe: zdarzenie.target.value }))} /></label>
-          </div>
-        </PanelGeneratoraDokumentu>
-        <PanelGeneratoraDokumentu ref={obszarPodgladuRef} tytul="Podgląd Karty" wariant="podglad"><RendererKartyNaDrzwi dane={dane} zasobyObrazow={zasobyObrazow} zaznaczonyBlokId={zaznaczonyBlokId} trybEdycjiSzablonu={trybEdycjiSzablonu} onZaznaczBlok={ustawZaznaczonyBlokId} onZmienBlok={(blok) => ustawDane((obecne) => ({ ...obecne, blokiSwobodne: obecne.blokiSwobodne.map((pozycja) => pozycja.id === blok.id ? blok : pozycja) }))} /></PanelGeneratoraDokumentu>
-      </UkladFormularzaIPodgladu>
-    </UkladGeneratoraDokumentu>
-  </ObszarZPanelemGeneratora>
+  const { zalogowanyUzytkownik } = useKontekstUzytkownika(); const [dane, ustawDane] = useState(() => deserializujDaneKartyNaDrzwi(localStorage.getItem(kluczSzkicu))); const [idDokumentu, ustawIdDokumentu] = useState<string | null>(() => localStorage.getItem(kluczId)); const [zaznaczonyBlokId, ustawZaznaczonyBlokId] = useState<string | null>(null); const [trybEdycjiSzablonu, ustawTrybEdycjiSzablonu] = useState(false); const [zasobyObrazow, ustawZasobyObrazow] = useState(() => pobierzMapeZasobowObrazowDokumentu()); const [komunikat, ustawKomunikat] = useState<string | null>(null); const [szablonyWlasne, ustawSzablonyWlasne] = useState(pobierzSzablonyWlasne); const obszarPodgladuRef = useRef<HTMLDivElement>(null); const obszarEksportuRef = useRef<HTMLDivElement>(null)
+  const szczegoly = useMemo(() => pobierzSzczegolyDoGeneratorow(), []); const wybraneSzczegoly = szczegoly.find((pozycja) => pozycja.id === dane.zestaw.szczegolyOrganizacyjneId) ?? null; const karta = dane.karty.find((pozycja) => pozycja.id === dane.zestaw.kartaZaznaczonaId) ?? dane.karty[0]
+  const zapiszDane = useCallback((wartosc: DaneKartyNaDrzwi) => { const dokument = zapiszDokumentRoboczyGeneratora({ id: idDokumentu, typ: 'KARTA_NA_DRZWI', generatorId: 'karta_na_drzwi', tytul: `Karty na drzwi — ${wartosc.karty[0]?.tytulSzkolenia ?? 'zestaw'}`, daneDokumentu: { tekst: serializujDaneKartyNaDrzwi(wartosc), kartaNaDrzwi: wartosc }, ustawieniaDokumentu: { orientacja: wartosc.ustawieniaSzablonu.orientacja, ukladDokumentu: utworzUstawieniaUkladuDokumentu(wartosc.ustawieniaSzablonu.blokiSwobodne), szczegolyOrganizacyjneId: wartosc.zestaw.szczegolyOrganizacyjneId }, autorId: zalogowanyUzytkownik?.id, wlascicielId: zalogowanyUzytkownik?.id }); if (!dokument) throw new Error('Nie udało się zapisać Kart na drzwi.'); ustawIdDokumentu(dokument.id); localStorage.setItem(kluczId, dokument.id) }, [idDokumentu, zalogowanyUzytkownik?.id])
+  const stanDokumentu = useStanDokumentu({ dane, zapiszAutomatycznie: zapiszDane }); useEffect(() => localStorage.setItem(kluczSzkicu, serializujDaneKartyNaDrzwi(dane)), [dane]); useOchronaNiezapisanegoDokumentu(stanDokumentu.czyNiezapisaneZmiany, () => { void stanDokumentu.zapiszTeraz() })
+  const daneNazwyEksportu = { typDokumentu: 'KARTA_NA_DRZWI' as const, tytulSzkolenia: karta?.tytulSzkolenia ?? 'Karty na drzwi', dataUtworzenia: new Date() }
+  const zmienKarte = (id: string, zmiana: (obecna: typeof karta) => typeof karta) => ustawDane((obecne) => ({ ...obecne, karty: obecne.karty.map((pozycja) => pozycja.id === id ? zmiana(pozycja) : pozycja) }))
+  const ustawSzablon = (ustawieniaSzablonu: UstawieniaSzablonuKartyNaDrzwi) => ustawDane((obecne) => ({ ...obecne, ustawieniaSzablonu }))
+  async function dodajObraz(plik: File) { const klucz = await zapiszZasobObrazuDokumentu(plik); ustawZasobyObrazow(pobierzMapeZasobowObrazowDokumentu()); return klucz }
+  function wybierzSzczegoly(id: string) { ustawDane((obecne) => ({ ...obecne, zestaw: { ...obecne.zestaw, szczegolyOrganizacyjneId: id || null } })) }
+  function utworzZGrup() { if (!wybraneSzczegoly) return; const kontekst = zbudujKontekstZeSzczegolow(wybraneSzczegoly.zrodloKontekstu); const karty = utworzKartyZGrupISal(kontekst, pobierzNazweOpiekuna(wybraneSzczegoly.opiekunId)); if (!karty.length) { ustawKomunikat('Nie znaleziono grup ani sal do utworzenia kart.'); return }; ustawDane((obecne) => ({ ...obecne, zestaw: { ...obecne.zestaw, szczegolyOrganizacyjneId: kontekst.zrodlo.szczegolyOrganizacyjneId, kartaZaznaczonaId: karty[0].id, nazwaZestawu: `Karty — ${karty[0].tytulSzkolenia}` }, karty })); ustawKomunikat(`Utworzono ${karty.length} kart(y) z grup i sal.`) }
+  function dodajKarte() { const nowa = utworzKarteNaDrzwi({ kolejnosc: dane.karty.length + 1, szczegolyOrganizacyjneId: dane.zestaw.szczegolyOrganizacyjneId }); ustawDane((obecne) => ({ ...obecne, karty: [...obecne.karty, nowa], zestaw: { ...obecne.zestaw, kartaZaznaczonaId: nowa.id } })) }
+  function duplikujKarte() { if (!karta) return; const nowa = zduplikujKarteNaDrzwi(karta); ustawDane((obecne) => ({ ...obecne, karty: uporzadkujKarty([...obecne.karty.slice(0, karta.kolejnosc), nowa, ...obecne.karty.slice(karta.kolejnosc)]), zestaw: { ...obecne.zestaw, kartaZaznaczonaId: nowa.id } })) }
+  function usunKarte() { if (!karta || dane.karty.length === 1) { ustawKomunikat('Zestaw musi zawierać co najmniej jedną kartę.'); return }; ustawDane((obecne) => { const karty = uporzadkujKarty(obecne.karty.filter((pozycja) => pozycja.id !== karta.id)); return { ...obecne, karty, zestaw: { ...obecne.zestaw, kartaZaznaczonaId: karty[Math.max(0, karta.kolejnosc - 2)].id } } }) }
+  function przesunKarte(kierunek: -1 | 1) { if (!karta) return; ustawDane((obecne) => { const indeks = obecne.karty.findIndex((pozycja) => pozycja.id === karta.id); const cel = indeks + kierunek; if (cel < 0 || cel >= obecne.karty.length) return obecne; const karty = [...obecne.karty]; [karty[indeks], karty[cel]] = [karty[cel], karty[indeks]]; return { ...obecne, karty: uporzadkujKarty(karty) } }) }
+  function zastosujBazowySzablon(wariant: 'oryginalny' | 'nowoczesny') { ustawSzablon(utworzUstawieniaBazowegoSzablonu(wariant, dane.ustawieniaSzablonu.orientacja)) }
+  function zapiszJakoSzablon() { const nazwa = window.prompt('Nazwa nowego szablonu Karty na drzwi'); if (!nazwa?.trim()) return; const szablon: WlasnySzablonKartyNaDrzwi = { ...kopiaUstawien(dane.ustawieniaSzablonu), id: `wlasny-${Date.now()}`, nazwa: nazwa.trim(), wariant: 'wlasny' }; const wszystkie = [...szablonyWlasne, szablon]; zapiszSzablonyWlasne(wszystkie); ustawSzablonyWlasne(wszystkie); ustawKomunikat(`Zapisano własny szablon „${szablon.nazwa}”.`) }
+  function rozpocznijNowyZestaw() { const nowy = utworzDomyslneDaneKartyNaDrzwi(); ustawDane(nowy); ustawIdDokumentu(null); localStorage.removeItem(kluczId); stanDokumentu.oznaczJakoZapisany(nowy) }
+  const akcje = <PasekAkcjiGeneratora><PrzyciskPaneluGeneratora>Edytuj układ</PrzyciskPaneluGeneratora><StatusZapisuDokumentu stan={stanDokumentu.stanZapisu} /><button type="button" onClick={() => void stanDokumentu.zapiszTeraz().then((wynik) => ustawKomunikat(wynik ? 'Zestaw zapisano w rejestrze dokumentów.' : 'Nie udało się zapisać zestawu.'))}>Zapisz zestaw</button><AkcjeEksportuPdf daneNazwyEksportu={daneNazwyEksportu} nazwaPliku={zbudujNazweEksportowanegoDokumentu(daneNazwyEksportu)} obszarDokumentu={obszarPodgladuRef} orientacja={dane.ustawieniaSzablonu.orientacja} etykietaPrzyciskuPdf="PDF wybranej karty" pokazPrzyciskDruku={false} /><AkcjeEksportuPdf daneNazwyEksportu={daneNazwyEksportu} nazwaPliku={zbudujNazweEksportowanegoDokumentu(daneNazwyEksportu)} obszarDokumentu={obszarEksportuRef} orientacja={dane.ustawieniaSzablonu.orientacja} etykietaPrzyciskuPdf="Pobierz PDF zestawu" /><button type="button" onClick={rozpocznijNowyZestaw}>Nowy zestaw</button></PasekAkcjiGeneratora>
+  if (!karta) return null
+  return <ObszarZPanelemGeneratora idPanelu="panel-karty-na-drzwi" kluczPrzypiecia="ultimate-pomagier.panel-generatora.karta_na_drzwi.przypiety" kluczWysuwania="ultimate-pomagier.panel-generatora.karta_na_drzwi.wysuwanie" tytulPanelu="Edytuj układ Karty"><UkladGeneratoraDokumentu tytul="Karty na drzwi" opis="Twórz zestawy kart, zachowując lokalne korekty względem Szczegółów organizacyjnych." akcje={akcje} komunikat={komunikat}>
+    <PanelBocznyGeneratora><div className="karta-na-drzwi__panel-ukladu"><label>Szablon<select value={dane.ustawieniaSzablonu.id} onChange={(zdarzenie) => { const id = zdarzenie.target.value; if (id === 'bazowy-oryginalny') zastosujBazowySzablon('oryginalny'); else if (id === 'bazowy-nowoczesny') zastosujBazowySzablon('nowoczesny'); else { const szablon = szablonyWlasne.find((pozycja) => pozycja.id === id); if (szablon) ustawSzablon(kopiaUstawien(szablon)) } }}><option value="bazowy-oryginalny">Oryginalny</option><option value="bazowy-nowoczesny">Nowoczesny</option>{szablonyWlasne.map((szablon) => <option key={szablon.id} value={szablon.id}>{szablon.nazwa}</option>)}</select></label><button type="button" onClick={zapiszJakoSzablon}>Zapisz jako nowy szablon</button><label>Format<select value={dane.ustawieniaSzablonu.format} onChange={(zdarzenie) => ustawSzablon({ ...dane.ustawieniaSzablonu, format: zdarzenie.target.value === 'a5' || zdarzenie.target.value === 'a6' ? zdarzenie.target.value : 'a4' })}><option value="a4">A4</option><option value="a5">A5</option><option value="a6">A6</option></select></label><label>Orientacja<select value={dane.ustawieniaSzablonu.orientacja} onChange={(zdarzenie) => ustawSzablon({ ...dane.ustawieniaSzablonu, orientacja: zdarzenie.target.value === 'pionowa' ? 'pionowa' : 'pozioma' })}><option value="pozioma">Pozioma</option><option value="pionowa">Pionowa</option></select></label>{dane.ustawieniaSzablonu.format !== 'a4' && <label><input checked={dane.ustawieniaSzablonu.kilkaKartNaArkuszuA4} onChange={(zdarzenie) => ustawSzablon({ ...dane.ustawieniaSzablonu, kilkaKartNaArkuszuA4: zdarzenie.target.checked })} type="checkbox" /> Kilka kart na arkuszu A4</label>}<fieldset><legend>Widoczność pól</legend>{Object.entries(dane.ustawieniaSzablonu.widocznoscPol).map(([pole, widoczny]) => <label key={pole}><input checked={widoczny} onChange={(zdarzenie) => ustawSzablon({ ...dane.ustawieniaSzablonu, widocznoscPol: { ...dane.ustawieniaSzablonu.widocznoscPol, [pole]: zdarzenie.target.checked } })} type="checkbox" /> {pola.find(([klucz]) => klucz === pole)?.[1] ?? pole}</label>)}</fieldset><PanelEdycjiSwobodnychBlokow bloki={dane.ustawieniaSzablonu.blokiSwobodne} blokiSzablonu={utworzUstawieniaBazowegoSzablonu(dane.ustawieniaSzablonu.wariant === 'nowoczesny' ? 'nowoczesny' : 'oryginalny', dane.ustawieniaSzablonu.orientacja).blokiSwobodne} zaznaczonyBlokId={zaznaczonyBlokId} trybEdycjiSzablonu={trybEdycjiSzablonu} onZmienTrybEdycjiSzablonu={ustawTrybEdycjiSzablonu} onZmienBloki={(blokiSwobodne) => ustawSzablon({ ...dane.ustawieniaSzablonu, blokiSwobodne })} onDodajObraz={dodajObraz} liczbaStron={1} szerokoscStronyMm={dane.ustawieniaSzablonu.orientacja === 'pozioma' ? 297 : 210} wysokoscStronyMm={dane.ustawieniaSzablonu.orientacja === 'pozioma' ? 210 : 297} /></div></PanelBocznyGeneratora>
+    <UkladFormularzaIPodgladu><PanelGeneratoraDokumentu tytul="Zestaw i karta" wariant="edycja"><div className="karta-na-drzwi__formularz"><label>Szczegóły organizacyjne<select value={dane.zestaw.szczegolyOrganizacyjneId ?? ''} onChange={(zdarzenie) => wybierzSzczegoly(zdarzenie.target.value)}><option value="">Wybierz szkolenie</option>{szczegoly.map((pozycja) => <option key={pozycja.id} value={pozycja.id}>{pozycja.nazwa}{pozycja.czyKopiaRobocza ? ' (kopia robocza)' : ''}</option>)}</select></label>{wybraneSzczegoly && <button type="button" onClick={utworzZGrup}>Utwórz karty z grup i sal</button>}<div className="karta-na-drzwi__akcje-kart"><button type="button" onClick={dodajKarte}>Dodaj kartę</button><button type="button" onClick={duplikujKarte}>Duplikuj</button><button type="button" onClick={usunKarte}>Usuń</button><button type="button" onClick={() => przesunKarte(-1)}>↑</button><button type="button" onClick={() => przesunKarte(1)}>↓</button></div><div className="karta-na-drzwi__lista">{dane.karty.map((pozycja) => <button className={pozycja.id === karta.id ? 'karta-na-drzwi__pozycja karta-na-drzwi__pozycja--aktywna' : 'karta-na-drzwi__pozycja'} key={pozycja.id} onClick={() => ustawDane((obecne) => ({ ...obecne, zestaw: { ...obecne.zestaw, kartaZaznaczonaId: pozycja.id } }))} type="button"><strong>{pozycja.kolejnosc}. {pozycja.tytulSzkolenia}</strong><span>{[pozycja.sala, pozycja.grupa].filter(Boolean).join(' · ') || 'Bez sali i grupy'}</span></button>)}</div><div className="karta-na-drzwi__pola">{pola.map(([pole, etykieta, rodzaj]) => <label key={pole}>{etykieta}{rodzaj === 'textarea' ? <textarea rows={3} value={karta[pole]} onChange={(zdarzenie) => zmienKarte(karta.id, (obecna) => zmienPoleKartyLokalnie(obecna, pole, zdarzenie.target.value))} /> : <input value={karta[pole]} onChange={(zdarzenie) => zmienKarte(karta.id, (obecna) => zmienPoleKartyLokalnie(obecna, pole, zdarzenie.target.value))} />}{karta.nadpisaniaLokalne[pole] && <small className="karta-na-drzwi__nadpisanie">Lokalnie zmienione</small>}{karta.zrodlaPol[pole] !== undefined && karta.zrodlaPol[pole] !== null && karta.nadpisaniaLokalne[pole] && <button type="button" onClick={() => zmienKarte(karta.id, (obecna) => przywrocPoleKartyZeZrodla(obecna, pole))}>Przywróć ze szkolenia</button>}</label>)}</div></div></PanelGeneratoraDokumentu>
+      <PanelGeneratoraDokumentu tytul="Podgląd zestawu" wariant="podglad"><div className="karta-na-drzwi__podglad-wybranej" ref={obszarPodgladuRef}><RendererKartyNaDrzwi karta={karta} ustawieniaSzablonu={dane.ustawieniaSzablonu} zasobyObrazow={zasobyObrazow} zaznaczonyBlokId={zaznaczonyBlokId} trybEdycjiSzablonu={trybEdycjiSzablonu} edytowalny onZaznaczBlok={ustawZaznaczonyBlokId} onZmienBlok={(blok) => ustawSzablon({ ...dane.ustawieniaSzablonu, blokiSwobodne: dane.ustawieniaSzablonu.blokiSwobodne.map((pozycja) => pozycja.id === blok.id ? blok : pozycja) })} /></div><div className="karta-na-drzwi__eksport-zestawu" ref={obszarEksportuRef}><RenderujZestawEksportu dane={dane} zasobyObrazow={zasobyObrazow} /></div></PanelGeneratoraDokumentu></UkladFormularzaIPodgladu>
+  </UkladGeneratoraDokumentu></ObszarZPanelemGeneratora>
 }

@@ -2,17 +2,19 @@ import { WERSJA_SCHEMATU_SWOBODNYCH_BLOKOW, normalizujBlokiSwobodneDokumentu, ty
 import type { KontekstDokumentuSzkolenia } from '../../../../wspolne/integracje/szczegolyDoDokumentow'
 
 export type OrientacjaKartyNaDrzwi = 'pozioma' | 'pionowa'
+export type FormatKartyNaDrzwi = 'a4' | 'a5' | 'a6'
+export type WariantSzablonuKartyNaDrzwi = 'oryginalny' | 'nowoczesny' | 'wlasny'
+export type KluczPolaKartyNaDrzwi = 'tytulSzkolenia' | 'termin' | 'godziny' | 'miejsce' | 'sala' | 'grupa' | 'trener' | 'organizator' | 'dodatkowyTekst'
+export type WidocznoscPolKartyNaDrzwi = Record<Exclude<KluczPolaKartyNaDrzwi, 'tytulSzkolenia'>, boolean>
 
-export type DaneKartyNaDrzwi = {
-  wersjaSchematu: 2
-  daneWejsciowe: string
-  orientacja: OrientacjaKartyNaDrzwi
-  blokiSwobodne: BlokSwobodnyDokumentu[]
-  wersjaSchematuBlokow: number
-  szczegolyOrganizacyjneId: string | null
-  grupaId: string | null
+export type KartaNaDrzwi = Record<KluczPolaKartyNaDrzwi, string> & {
+  id: string; kolejnosc: number; zrodlaPol: Partial<Record<KluczPolaKartyNaDrzwi, string | null>>; nadpisaniaLokalne: Partial<Record<KluczPolaKartyNaDrzwi, boolean>>; grupaId: string | null; szczegolyOrganizacyjneId: string | null
 }
+export type UstawieniaSzablonuKartyNaDrzwi = { id: string; nazwa: string; wariant: WariantSzablonuKartyNaDrzwi; format: FormatKartyNaDrzwi; orientacja: OrientacjaKartyNaDrzwi; widocznoscPol: WidocznoscPolKartyNaDrzwi; blokiSwobodne: BlokSwobodnyDokumentu[]; wersjaSchematuBlokow: number; kilkaKartNaArkuszuA4: boolean }
+export type DaneKartyNaDrzwi = { wersjaSchematu: 3; zestaw: { szczegolyOrganizacyjneId: string | null; nazwaZestawu: string; kartaZaznaczonaId: string | null }; karty: KartaNaDrzwi[]; ustawieniaSzablonu: UstawieniaSzablonuKartyNaDrzwi }
+export type WlasnySzablonKartyNaDrzwi = Omit<UstawieniaSzablonuKartyNaDrzwi, 'wariant'> & { wariant: 'wlasny' }
 
+const domyslnaWidocznosc: WidocznoscPolKartyNaDrzwi = { termin: true, godziny: true, miejsce: true, sala: true, grupa: true, trener: true, organizator: true, dodatkowyTekst: true }
 export const tekstPrzykladowyKartyNaDrzwi = `Tytuł szkolenia: Skuteczna komunikacja w zespole
 Data: 2026-07-15
 Miejsce: Sala szkoleniowa A
@@ -23,106 +25,48 @@ Organizator: SEMPER
 Marka: SEMPER
 Dodatkowy tekst: Zapraszamy uczestników szkolenia`
 
-function blokTekstu(id: string, nazwa: string, sciezka: string, xMm: number, yMm: number, szerokoscMm: number, wysokoscMm: number, rozmiarCzcionkiPt: number): BlokSwobodnyDokumentu {
-  return {
-    id,
-    nazwa,
-    rola: 'element_staly_szablonu',
-    typ: 'tekst',
-    pochodzenie: 'szablon',
-    zablokowany: false,
-    xMm,
-    yMm,
-    szerokoscMm,
-    wysokoscMm,
-    przypisanieDoStrony: { rodzaj: 'pierwsza' },
-    widoczny: true,
-    indeksWarstwy: 2,
-    dane: { zrodlo: { rodzaj: 'pole_danych', sciezka, tekstZastepczy: nazwa }, rozmiarCzcionkiPt, gruboscCzcionki: 700, rodzinaCzcionki: 'Arial', wyrownanie: 'srodek', interlinia: 1.15, kolor: '#172033', marginesWewnetrznyMm: 1 },
-  }
-}
+function utworzId(przedrostek: string) { return globalThis.crypto?.randomUUID?.() ?? `${przedrostek}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}` }
+function klonuj<T>(wartosc: T): T { return JSON.parse(JSON.stringify(wartosc)) as T }
+function blokTekstu(id: string, nazwa: string, sciezka: string, xMm: number, yMm: number, szerokoscMm: number, wysokoscMm: number, rozmiarCzcionkiPt: number): BlokSwobodnyDokumentu { return { id, nazwa, rola: 'element_staly_szablonu', typ: 'tekst', pochodzenie: 'szablon', zablokowany: false, xMm, yMm, szerokoscMm, wysokoscMm, przypisanieDoStrony: { rodzaj: 'pierwsza' }, widoczny: true, indeksWarstwy: 2, dane: { zrodlo: { rodzaj: 'pole_danych', sciezka, tekstZastepczy: nazwa }, rozmiarCzcionkiPt, gruboscCzcionki: 700, rodzinaCzcionki: 'Arial', wyrownanie: 'srodek', interlinia: 1.15, kolor: '#172033', marginesWewnetrznyMm: 1 } } }
 
-export function utworzBlokiSzablonuKartyNaDrzwi(orientacja: OrientacjaKartyNaDrzwi): BlokSwobodnyDokumentu[] {
-  const pozioma = orientacja === 'pozioma'
-  const szerokosc = pozioma ? 297 : 210
+export function utworzBlokiSzablonuKartyNaDrzwi(orientacja: OrientacjaKartyNaDrzwi, wariant: WariantSzablonuKartyNaDrzwi = 'oryginalny'): BlokSwobodnyDokumentu[] {
+  const pozioma = orientacja === 'pozioma'; const szerokosc = pozioma ? 297 : 210; const nowoczesny = wariant === 'nowoczesny'
   return [
-    { id: 'logo', nazwa: 'Logo', rola: 'logo', typ: 'obraz', pochodzenie: 'szablon', zablokowany: false, xMm: szerokosc - 48, yMm: 12, szerokoscMm: 34, wysokoscMm: 20, przypisanieDoStrony: { rodzaj: 'pierwsza' }, widoczny: true, indeksWarstwy: 3, dane: { zrodlo: { rodzaj: 'zasob_organizatora', klucz: 'logo_organizatora' }, tekstAlternatywny: 'Logo organizatora', zachowajProporcje: true, trybDopasowania: 'contain' } },
-    blokTekstu('tytul', 'Tytuł szkolenia', 'tytulSzkolenia', 16, pozioma ? 55 : 65, szerokosc - 32, pozioma ? 28 : 32, pozioma ? 24 : 21),
-    blokTekstu('termin', 'Termin', 'termin', 16, pozioma ? 94 : 112, szerokosc - 32, 14, 13),
-    blokTekstu('miejsce', 'Miejsce / sala', 'miejsce', 16, pozioma ? 116 : 137, szerokosc - 32, 14, 13),
-    blokTekstu('dodatkowy-tekst', 'Dodatkowy tekst', 'dodatkowyTekst', 16, pozioma ? 150 : 178, szerokosc - 32, pozioma ? 25 : 34, 11),
-    blokTekstu('organizator', 'Organizator', 'organizator', 16, pozioma ? 190 : 258, szerokosc - 32, 10, 9),
+    { id: 'logo', nazwa: 'Logo', rola: 'logo', typ: 'obraz', pochodzenie: 'szablon', zablokowany: false, xMm: szerokosc - (nowoczesny ? 42 : 48), yMm: nowoczesny ? 14 : 12, szerokoscMm: nowoczesny ? 28 : 34, wysokoscMm: 20, przypisanieDoStrony: { rodzaj: 'pierwsza' }, widoczny: true, indeksWarstwy: 3, dane: { zrodlo: { rodzaj: 'zasob_organizatora', klucz: 'logo_organizatora' }, tekstAlternatywny: 'Logo organizatora', zachowajProporcje: true, trybDopasowania: 'contain' } },
+    blokTekstu('tytul', 'Tytuł szkolenia', 'tytulSzkolenia', 16, nowoczesny ? (pozioma ? 48 : 58) : (pozioma ? 55 : 65), szerokosc - 32, nowoczesny ? (pozioma ? 38 : 44) : (pozioma ? 28 : 32), nowoczesny ? (pozioma ? 28 : 24) : (pozioma ? 24 : 21)),
+    blokTekstu('sala-lokalizacja', 'Sala / lokalizacja', 'salaLokalizacja', 16, nowoczesny ? (pozioma ? 98 : 118) : (pozioma ? 116 : 137), szerokosc - 32, nowoczesny ? 18 : 14, nowoczesny ? 17 : 13),
+    blokTekstu('termin', 'Termin i godziny', 'terminGodziny', 16, nowoczesny ? (pozioma ? 124 : 148) : (pozioma ? 94 : 112), szerokosc - 32, 14, nowoczesny ? 14 : 13),
+    blokTekstu('grupa', 'Grupa', 'grupa', 16, nowoczesny ? (pozioma ? 150 : 175) : (pozioma ? 150 : 178), szerokosc - 32, 13, 12),
+    blokTekstu('trener', 'Trener', 'trener', 16, nowoczesny ? (pozioma ? 169 : 198) : (pozioma ? 169 : 215), szerokosc - 32, 13, 11),
+    blokTekstu('dodatkowy-tekst', 'Dodatkowy tekst', 'dodatkowyTekst', 16, nowoczesny ? (pozioma ? 186 : 224) : (pozioma ? 150 : 178), szerokosc - 32, nowoczesny ? 22 : (pozioma ? 25 : 34), 11),
+    blokTekstu('organizator', 'Organizator', 'organizator', 16, pozioma ? 196 : 268, szerokosc - 32, 10, 9),
   ]
 }
+export function utworzUstawieniaBazowegoSzablonu(wariant: Exclude<WariantSzablonuKartyNaDrzwi, 'wlasny'> = 'oryginalny', orientacja: OrientacjaKartyNaDrzwi = 'pozioma'): UstawieniaSzablonuKartyNaDrzwi { return { id: `bazowy-${wariant}`, nazwa: wariant === 'oryginalny' ? 'Oryginalny' : 'Nowoczesny', wariant, format: 'a4', orientacja, widocznoscPol: { ...domyslnaWidocznosc }, blokiSwobodne: utworzBlokiSzablonuKartyNaDrzwi(orientacja, wariant), wersjaSchematuBlokow: WERSJA_SCHEMATU_SWOBODNYCH_BLOKOW, kilkaKartNaArkuszuA4: false } }
+export function utworzKarteNaDrzwi(wartosci: Partial<KartaNaDrzwi> = {}): KartaNaDrzwi { return { id: wartosci.id ?? utworzId('karta'), kolejnosc: wartosci.kolejnosc ?? 1, tytulSzkolenia: wartosci.tytulSzkolenia ?? 'Tytuł szkolenia', termin: wartosci.termin ?? '', godziny: wartosci.godziny ?? '', miejsce: wartosci.miejsce ?? '', sala: wartosci.sala ?? '', grupa: wartosci.grupa ?? '', trener: wartosci.trener ?? '', organizator: wartosci.organizator ?? 'SEMPER', dodatkowyTekst: wartosci.dodatkowyTekst ?? '', zrodlaPol: { ...wartosci.zrodlaPol }, nadpisaniaLokalne: { ...wartosci.nadpisaniaLokalne }, grupaId: wartosci.grupaId ?? null, szczegolyOrganizacyjneId: wartosci.szczegolyOrganizacyjneId ?? null } }
+export function uporzadkujKarty(karty: KartaNaDrzwi[]) { return karty.map((karta, indeks) => ({ ...karta, kolejnosc: indeks + 1 })) }
+export function utworzDomyslneDaneKartyNaDrzwi(): DaneKartyNaDrzwi { const karta = utworzKarteNaDrzwi({ ...pobierzDaneKartyNaDrzwi(tekstPrzykladowyKartyNaDrzwi), kolejnosc: 1 }); return { wersjaSchematu: 3, zestaw: { szczegolyOrganizacyjneId: null, nazwaZestawu: 'Karty na drzwi', kartaZaznaczonaId: karta.id }, karty: [karta], ustawieniaSzablonu: utworzUstawieniaBazowegoSzablonu() } }
 
-export function utworzDomyslneDaneKartyNaDrzwi(): DaneKartyNaDrzwi {
-  const orientacja = 'pozioma' as const
-  return { wersjaSchematu: 2, daneWejsciowe: tekstPrzykladowyKartyNaDrzwi, orientacja, blokiSwobodne: utworzBlokiSzablonuKartyNaDrzwi(orientacja), wersjaSchematuBlokow: WERSJA_SCHEMATU_SWOBODNYCH_BLOKOW, szczegolyOrganizacyjneId: null, grupaId: null }
+function utworzKarteZKontekstu(kontekst: KontekstDokumentuSzkolenia, grupaId: string, opiekun = '', indeksLokalizacji = 0): KartaNaDrzwi | null {
+  const grupa = kontekst.grupy.find((pozycja) => pozycja.id === grupaId); if (!grupa) return null
+  const lokalizacja = grupa.lokalizacje[indeksLokalizacji] ?? grupa.lokalizacje.find((pozycja) => pozycja.nazwa || pozycja.sala || pozycja.adres || pozycja.trybOnline)
+  const miejsce = lokalizacja?.trybOnline ? 'Online' : [lokalizacja?.nazwa, lokalizacja?.adres].filter(Boolean).join(', '); const sala = lokalizacja?.sala ?? ''
+  const trener = (grupa.trenerzy.length ? grupa.trenerzy : kontekst.trenerzy).map((pozycja) => pozycja.imieINazwisko).join(', '); const termin = lokalizacja?.data ?? grupa.daty.join(', '); const godziny = grupa.liczbaGodzin === null ? '' : `${grupa.liczbaGodzin} godz.`; const organizator = kontekst.organizator.marka || kontekst.organizator.nazwa || 'SEMPER'
+  const zrodlaPol = { tytulSzkolenia: kontekst.szkolenie.tytul, termin, godziny, miejsce, sala, grupa: grupa.nazwa, trener, organizator, dodatkowyTekst: opiekun ? `Opiekun: ${opiekun}` : '' }
+  return utworzKarteNaDrzwi({ ...zrodlaPol, zrodlaPol, grupaId: grupa.id, szczegolyOrganizacyjneId: kontekst.zrodlo.szczegolyOrganizacyjneId })
 }
-
-export function utworzDaneKartyNaDrzwiZKontekstu(kontekst: KontekstDokumentuSzkolenia, grupaId: string, opiekun = ''): DaneKartyNaDrzwi | null {
-  const grupa = kontekst.grupy.find((pozycja) => pozycja.id === grupaId)
-  if (!grupa) return null
-  const lokalizacja = grupa.lokalizacje.find((pozycja) => pozycja.nazwa || pozycja.sala || pozycja.adres || pozycja.trybOnline)
-  const miejsce = [lokalizacja?.nazwa, lokalizacja?.sala, lokalizacja?.adres].filter(Boolean).join(', ') || (lokalizacja?.trybOnline ? 'Online' : '')
-  const organizator = kontekst.organizator.marka || kontekst.organizator.nazwa || 'SEMPER'
-  const trenerzy = grupa.trenerzy.map((trener) => trener.imieINazwisko).join(', ')
-  const dodatkowyTekst = [trenerzy ? `Ekspert: ${trenerzy}` : '', opiekun ? `Opiekun: ${opiekun}` : ''].filter(Boolean).join('\n')
-  const dane = utworzDomyslneDaneKartyNaDrzwi()
-  return {
-    ...dane,
-    szczegolyOrganizacyjneId: kontekst.zrodlo.szczegolyOrganizacyjneId,
-    grupaId,
-    daneWejsciowe: [
-      `Tytuł szkolenia: ${kontekst.szkolenie.tytul}`,
-      `Data: ${grupa.daty.join(', ')}`,
-      `Miejsce: ${miejsce}`,
-      `Ekspert merytoryczny: ${trenerzy}`,
-      `Opiekun szkolenia: ${opiekun}`,
-      `Organizator: ${organizator}`,
-      `Marka: ${organizator}`,
-      `Dodatkowy tekst: ${dodatkowyTekst}`,
-    ].join('\n'),
-  }
-}
-
-export function serializujDaneKartyNaDrzwi(dane: DaneKartyNaDrzwi) {
-  return JSON.stringify(dane)
-}
-
+export function utworzDaneKartyNaDrzwiZKontekstu(kontekst: KontekstDokumentuSzkolenia, grupaId: string, opiekun = ''): DaneKartyNaDrzwi | null { const karta = utworzKarteZKontekstu(kontekst, grupaId, opiekun); return karta ? { wersjaSchematu: 3, zestaw: { szczegolyOrganizacyjneId: kontekst.zrodlo.szczegolyOrganizacyjneId, nazwaZestawu: `Karty — ${karta.tytulSzkolenia}`, kartaZaznaczonaId: karta.id }, karty: [karta], ustawieniaSzablonu: utworzUstawieniaBazowegoSzablonu() } : null }
+export function utworzKartyZGrupISal(kontekst: KontekstDokumentuSzkolenia, opiekun = ''): KartaNaDrzwi[] { const klucze = new Set<string>(); return uporzadkujKarty(kontekst.grupy.flatMap((grupa) => (grupa.lokalizacje.length ? grupa.lokalizacje : [null]).flatMap((lokalizacja, indeks) => { const karta = utworzKarteZKontekstu(kontekst, grupa.id, opiekun, indeks); const klucz = [grupa.id, lokalizacja?.data ?? karta?.termin, lokalizacja?.sala ?? '', lokalizacja?.nazwa ?? '', lokalizacja?.adres ?? ''].join('|'); if (!karta || klucze.has(klucz)) return []; klucze.add(klucz); return [karta] }))) }
+export function zduplikujKarteNaDrzwi(karta: KartaNaDrzwi): KartaNaDrzwi { return utworzKarteNaDrzwi({ ...klonuj(karta), id: utworzId('karta'), kolejnosc: karta.kolejnosc + 1 }) }
+export function zmienPoleKartyLokalnie(karta: KartaNaDrzwi, pole: KluczPolaKartyNaDrzwi, wartosc: string): KartaNaDrzwi { return { ...karta, [pole]: wartosc, nadpisaniaLokalne: { ...karta.nadpisaniaLokalne, [pole]: karta.zrodlaPol[pole] !== undefined && karta.zrodlaPol[pole] !== null && wartosc !== karta.zrodlaPol[pole] } } }
+export function przywrocPoleKartyZeZrodla(karta: KartaNaDrzwi, pole: KluczPolaKartyNaDrzwi): KartaNaDrzwi { const zrodlo = karta.zrodlaPol[pole]; return zrodlo === undefined || zrodlo === null ? karta : { ...karta, [pole]: zrodlo, nadpisaniaLokalne: { ...karta.nadpisaniaLokalne, [pole]: false } } }
+export function pobierzDaneRenderowaniaKarty(karta: KartaNaDrzwi) { return { ...karta, salaLokalizacja: [karta.sala, karta.miejsce].filter(Boolean).join(' · '), terminGodziny: [karta.termin, karta.godziny].filter(Boolean).join(' · ') } }
+export function obliczRozmiarTytuluKarty(tytul: string, docelowyPt: number, minimalnyPt = 12, pojemnoscZnakow = 54) { return Math.max(minimalnyPt, Math.round(Math.min(docelowyPt, docelowyPt * Math.sqrt(pojemnoscZnakow / Math.max(tytul.trim().length, 1))))) }
+export function serializujDaneKartyNaDrzwi(dane: DaneKartyNaDrzwi) { return JSON.stringify(dane) }
 export function deserializujDaneKartyNaDrzwi(zapis: string | null): DaneKartyNaDrzwi {
-  const domyslne = utworzDomyslneDaneKartyNaDrzwi()
-  if (!zapis?.trim()) return domyslne
-  try {
-    const rekord = JSON.parse(zapis) as Record<string, unknown>
-    if (!rekord || typeof rekord !== 'object' || Array.isArray(rekord)) return { ...domyslne, daneWejsciowe: zapis }
-    const orientacja = rekord.orientacja === 'pionowa' ? 'pionowa' : 'pozioma'
-    const bloki = normalizujBlokiSwobodneDokumentu(rekord.blokiSwobodne)
-    return {
-      ...domyslne,
-      daneWejsciowe: typeof rekord.daneWejsciowe === 'string' ? rekord.daneWejsciowe : domyslne.daneWejsciowe,
-      orientacja,
-      blokiSwobodne: bloki.length ? bloki : utworzBlokiSzablonuKartyNaDrzwi(orientacja),
-      szczegolyOrganizacyjneId: typeof rekord.szczegolyOrganizacyjneId === 'string' ? rekord.szczegolyOrganizacyjneId : null,
-      grupaId: typeof rekord.grupaId === 'string' ? rekord.grupaId : null,
-    }
-  } catch {
-    return { ...domyslne, daneWejsciowe: zapis }
-  }
+  const domyslne = utworzDomyslneDaneKartyNaDrzwi(); if (!zapis?.trim()) return domyslne
+  try { const rekord = JSON.parse(zapis) as Record<string, unknown>; if (Array.isArray(rekord.karty) && rekord.ustawieniaSzablonu && rekord.zestaw) { const suroweUstawienia = rekord.ustawieniaSzablonu as Record<string, unknown>; const orientacja = suroweUstawienia.orientacja === 'pionowa' ? 'pionowa' : 'pozioma'; const wariant = suroweUstawienia.wariant === 'nowoczesny' || suroweUstawienia.wariant === 'wlasny' ? suroweUstawienia.wariant : 'oryginalny'; const baza = wariant === 'wlasny' ? utworzUstawieniaBazowegoSzablonu() : utworzUstawieniaBazowegoSzablonu(wariant, orientacja); const karty = uporzadkujKarty(rekord.karty.filter((karta): karta is Record<string, unknown> => Boolean(karta && typeof karta === 'object')).map((karta, indeks) => utworzKarteNaDrzwi({ ...(karta as Partial<KartaNaDrzwi>), id: typeof karta.id === 'string' ? karta.id : undefined, kolejnosc: indeks + 1, zrodlaPol: typeof karta.zrodlaPol === 'object' && karta.zrodlaPol ? karta.zrodlaPol as KartaNaDrzwi['zrodlaPol'] : {}, nadpisaniaLokalne: typeof karta.nadpisaniaLokalne === 'object' && karta.nadpisaniaLokalne ? karta.nadpisaniaLokalne as KartaNaDrzwi['nadpisaniaLokalne'] : {} }))); const zestaw = rekord.zestaw as Record<string, unknown>; return { wersjaSchematu: 3, zestaw: { szczegolyOrganizacyjneId: typeof zestaw.szczegolyOrganizacyjneId === 'string' ? zestaw.szczegolyOrganizacyjneId : null, nazwaZestawu: typeof zestaw.nazwaZestawu === 'string' ? zestaw.nazwaZestawu : 'Karty na drzwi', kartaZaznaczonaId: typeof zestaw.kartaZaznaczonaId === 'string' ? zestaw.kartaZaznaczonaId : karty[0]?.id ?? null }, karty: karty.length ? karty : [utworzKarteNaDrzwi()], ustawieniaSzablonu: { ...baza, id: typeof suroweUstawienia.id === 'string' ? suroweUstawienia.id : baza.id, nazwa: typeof suroweUstawienia.nazwa === 'string' ? suroweUstawienia.nazwa : baza.nazwa, wariant, format: suroweUstawienia.format === 'a5' || suroweUstawienia.format === 'a6' ? suroweUstawienia.format : 'a4', orientacja, widocznoscPol: { ...domyslnaWidocznosc, ...(typeof suroweUstawienia.widocznoscPol === 'object' && suroweUstawienia.widocznoscPol ? suroweUstawienia.widocznoscPol as Partial<WidocznoscPolKartyNaDrzwi> : {}) }, blokiSwobodne: normalizujBlokiSwobodneDokumentu(suroweUstawienia.blokiSwobodne).length ? normalizujBlokiSwobodneDokumentu(suroweUstawienia.blokiSwobodne) : baza.blokiSwobodne, kilkaKartNaArkuszuA4: suroweUstawienia.kilkaKartNaArkuszuA4 === true } } }
+    const orientacja = rekord.orientacja === 'pionowa' ? 'pionowa' : 'pozioma'; const daneWejsciowe = typeof rekord.daneWejsciowe === 'string' ? rekord.daneWejsciowe : zapis; const pola = pobierzDaneKartyNaDrzwi(daneWejsciowe); const karta = utworzKarteNaDrzwi({ ...pola, zrodlaPol: { ...pola }, grupaId: typeof rekord.grupaId === 'string' ? rekord.grupaId : null, szczegolyOrganizacyjneId: typeof rekord.szczegolyOrganizacyjneId === 'string' ? rekord.szczegolyOrganizacyjneId : null }); const baza = utworzUstawieniaBazowegoSzablonu('oryginalny', orientacja); return { wersjaSchematu: 3, zestaw: { szczegolyOrganizacyjneId: karta.szczegolyOrganizacyjneId, nazwaZestawu: `Karty — ${karta.tytulSzkolenia}`, kartaZaznaczonaId: karta.id }, karty: [karta], ustawieniaSzablonu: { ...baza, blokiSwobodne: normalizujBlokiSwobodneDokumentu(rekord.blokiSwobodne).length ? normalizujBlokiSwobodneDokumentu(rekord.blokiSwobodne) : baza.blokiSwobodne } }
+  } catch { return { ...domyslne, karty: [utworzKarteNaDrzwi({ ...pobierzDaneKartyNaDrzwi(zapis) })] } }
 }
-
-export function pobierzDaneKartyNaDrzwi(tekst: string) {
-  const pobierz = (etykieta: string) => tekst.split('\n').find((wiersz) => wiersz.toLocaleLowerCase('pl').startsWith(`${etykieta.toLocaleLowerCase('pl')}:`))?.split(':').slice(1).join(':').trim() ?? ''
-  const ekspert = pobierz('Ekspert merytoryczny')
-  const opiekun = pobierz('Opiekun szkolenia')
-  const telefon = pobierz('Telefon opiekuna')
-  const marka = pobierz('Marka') || pobierz('Organizator') || 'SEMPER'
-  return {
-    tytulSzkolenia: pobierz('Tytuł szkolenia') || 'Tytuł szkolenia',
-    termin: pobierz('Data') || 'Termin szkolenia',
-    miejsce: pobierz('Miejsce') || 'Miejsce / sala',
-    dodatkowyTekst: pobierz('Dodatkowy tekst') || [ekspert && `Ekspert: ${ekspert}`, opiekun && `Opiekun: ${opiekun}`, telefon].filter(Boolean).join('\n'),
-    organizator: pobierz('Organizator') || marka,
-    marka,
-  }
-}
+export function pobierzDaneKartyNaDrzwi(tekst: string) { const pobierz = (etykieta: string) => tekst.split('\n').find((wiersz) => wiersz.toLocaleLowerCase('pl').startsWith(`${etykieta.toLocaleLowerCase('pl')}:`))?.split(':').slice(1).join(':').trim() ?? ''; const ekspert = pobierz('Ekspert merytoryczny'); const opiekun = pobierz('Opiekun szkolenia'); const telefon = pobierz('Telefon opiekuna'); const marka = pobierz('Marka') || pobierz('Organizator') || 'SEMPER'; return { tytulSzkolenia: pobierz('Tytuł szkolenia') || 'Tytuł szkolenia', termin: pobierz('Data') || '', godziny: pobierz('Godziny'), miejsce: pobierz('Miejsce') || '', sala: pobierz('Sala'), grupa: pobierz('Grupa'), trener: ekspert, dodatkowyTekst: pobierz('Dodatkowy tekst') || [ekspert && `Ekspert: ${ekspert}`, opiekun && `Opiekun: ${opiekun}`, telefon].filter(Boolean).join('\n'), organizator: pobierz('Organizator') || marka, marka } }
