@@ -231,3 +231,26 @@
   #wydruk-checklisty table { break-inside: avoid; }
   #wydruk-checklisty th, #wydruk-checklisty td { min-height: 18px; }
 }
+
+.checklista-paczki__paczka { margin-top: 14px; border: 1px solid var(--checklista-obramowanie); border-radius: 8px; background: color-mix(in srgb, var(--ui-pole) 42%, transparent); }
+.checklista-paczki__paczka > summary { min-height: 44px; padding: 12px; cursor: pointer; font-weight: 700; }
+.checklista-paczki__paczka-akcje, .checklista-paczki__szablony { display: flex; flex-wrap: wrap; gap: 10px; padding: 12px; }
+.checklista-paczki__paczka-akcje > label, .checklista-paczki__szablony > label { flex: 1 1 160px; }
+.checklista-paczki__wiersz { grid-template-columns: 44px minmax(170px, 1fr) minmax(95px, auto) minmax(74px, 100px) auto; align-items: center; }
+.checklista-paczki__przycisk-gotowosci { min-width: 44px; min-height: 44px; padding: 0; font-size: 1.25rem; }
+.checklista-paczki__nazwa-pozycji { font-weight: 600; }
+.checklista-paczki__ilosci { display: grid; gap: 2px; white-space: nowrap; }
+.checklista-paczki__ilosci small { font-weight: 400; color: var(--checklista-tekst-wtorny); }
+.checklista-paczki__szczegoly-pozycji { min-width: 92px; }
+.checklista-paczki__szczegoly-pozycji > summary { min-height: 38px; padding: 8px; cursor: pointer; }
+.checklista-paczki__szczegoly-pozycji[open] { grid-column: 1 / -1; }
+.checklista-paczki__szczegoly-pozycji label { margin-top: 8px; }
+.checklista-paczki__wydruk-paczka { break-before: auto; break-inside: avoid; margin-top: 6mm; }
+.checklista-paczki__wydruk-paczka h2 { break-after: avoid; margin: 0 0 3mm; }
+
+@container (max-width: 700px) {
+  .checklista-paczki__wiersz { grid-template-columns: 44px minmax(0, 1fr) auto; }
+  .checklista-paczki__ilosci { grid-column: 2; }
+  .checklista-paczki__wiersz > input[type='number'] { grid-column: 3; grid-row: 1 / span 2; min-width: 62px; }
+  .checklista-paczki__szczegoly-pozycji { grid-column: 1 / -1; }
+}

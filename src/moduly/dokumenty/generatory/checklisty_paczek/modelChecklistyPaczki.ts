@@ -2,6 +2,7 @@ import { WERSJA_SCHEMATU_SWOBODNYCH_BLOKOW, normalizujBlokiSwobodneDokumentu, ty
 
 export type StatusGotowosciPozycji = 'NIEGOTOWE' | 'W_TOKU_LUB_PROBLEM' | 'CZESCIOWO_GOTOWE' | 'GOTOWE'
 export type StatusChecklistyPaczki = 'KOPIA_ROBOCZA' | 'GOTOWA_DO_WYDRUKU' | 'WYDRUKOWANA' | 'KOMPLETNA' | 'ZARCHIWIZOWANA'
+export type StatusOperacyjnyPaczki = 'ROBOCZA' | 'W_PRZYGOTOWANIU' | 'GOTOWA' | 'WYSŁANA'
 export type TypRegulyIlosci = 'STALA' | 'UCZESTNICY' | 'UCZESTNICY_RAZY_MNOZNIK' | 'UCZESTNICY_PLUS_DODATEK' | 'NA_KAZDY_DZIEN' | 'RECZNA' | 'WYLACZONA'
 export type TypZalacznikaChecklisty = 'SKAN_PODPISANEJ_CHECKLISTY' | 'ZDJECIE_PACZKI' | 'INSTRUKCJA' | 'INNY'
 export type TrybPrePostTestow = 'BRAK' | 'PRE' | 'POST' | 'PRE_I_POST'
@@ -26,6 +27,7 @@ export type KategoriaChecklisty = {
 
 export type PozycjaChecklisty = {
   id: string
+  paczkaId: string
   kategoriaId: string
   nazwa: string
   kolejnosc: number
@@ -42,6 +44,31 @@ export type PozycjaChecklisty = {
   wzorKlienta: string
   uwagiDrukowane: string
   notatkiWewnetrzne: string
+}
+
+export type ParametryLogistycznePaczki = {
+  przewoznik: string
+  numerPrzesylki: string
+  waga: string
+  wysokosc: string
+  dataWyslania: string
+}
+
+export type PaczkaChecklisty = {
+  id: string
+  nazwa: string
+  kolejnosc: number
+  statusOperacyjny: StatusOperacyjnyPaczki
+  parametryLogistyczne: ParametryLogistycznePaczki
+}
+
+export type SzablonChecklistyPaczki = {
+  id: string
+  nazwa: string
+  utworzono: string
+  paczki: PaczkaChecklisty[]
+  kategorie: KategoriaChecklisty[]
+  pozycje: Array<Omit<PozycjaChecklisty, 'id' | 'paczkaId' | 'statusGotowosci' | 'iloscPrzygotowana'> & { paczkaId: string }>
 }
 
 export type DaneOdbiorcyChecklisty = {
@@ -140,6 +167,7 @@ export type DaneChecklistyPaczki = {
   opiekunId: string
   wysylaczId: string | null
   pilna: boolean
+  paczki: PaczkaChecklisty[]
   kategorie: KategoriaChecklisty[]
   pozycje: PozycjaChecklisty[]
   wariantyMaterialow: WariantMaterialow[]
@@ -195,6 +223,7 @@ export function utworzNowaPozycjeChecklisty(kategoriaId: string, nazwa: string, 
   if (!kategoriaId || !nazwaPoPrzycieciu) return null
   return {
     id: utworzId('pozycja'),
+    paczkaId: 'paczka-glowna',
     kategoriaId,
     nazwa: nazwaPoPrzycieciu,
     kolejnosc: Math.max(-1, ...pozycje.filter((pozycja) => pozycja.kategoriaId === kategoriaId).map((pozycja) => pozycja.kolejnosc)) + 1,
@@ -218,6 +247,7 @@ function utworzPozycjeDomyslne(kategorie: KategoriaChecklisty[], wariantOnline: 
   const kategoria = (nazwa: string) => kategorie.find((pozycja) => pozycja.nazwa === nazwa)?.id ?? kategorie[0].id
   const utworz = (nazwa: string, nazwaKategorii: string, regulaIlosci: RegulaIlosci, kolejnosc: number, opcje: Partial<PozycjaChecklisty> = {}): PozycjaChecklisty => ({
     id: utworzId('pozycja'),
+    paczkaId: 'paczka-glowna',
     kategoriaId: kategoria(nazwaKategorii),
     nazwa,
     kolejnosc,
@@ -348,7 +378,7 @@ export function zastosujWariantMaterialowOnline(dane: DaneChecklistyPaczki): Dan
 export function przeniesPozycjeWObrebieKategorii(dane: DaneChecklistyPaczki, pozycjaId: string, przesuniecie: -1 | 1): DaneChecklistyPaczki {
   const pozycja = dane.pozycje.find((obecna) => obecna.id === pozycjaId)
   if (!pozycja) return dane
-  const wKategorii = dane.pozycje.filter((obecna) => obecna.kategoriaId === pozycja.kategoriaId).sort((pierwsza, druga) => pierwsza.kolejnosc - druga.kolejnosc)
+  const wKategorii = dane.pozycje.filter((obecna) => obecna.kategoriaId === pozycja.kategoriaId && obecna.paczkaId === pozycja.paczkaId).sort((pierwsza, druga) => pierwsza.kolejnosc - druga.kolejnosc)
   const indeks = wKategorii.findIndex((obecna) => obecna.id === pozycjaId)
   const cel = indeks + przesuniecie
   if (cel < 0 || cel >= wKategorii.length) return dane
@@ -373,6 +403,7 @@ export function utworzDomyslneDaneChecklisty(opcje: { identyfikator: string; num
     opiekunId: migawka?.opiekunId ?? '',
     wysylaczId: null,
     pilna: false,
+    paczki: [{ id: 'paczka-glowna', nazwa: 'Paczka 1', kolejnosc: 0, statusOperacyjny: 'ROBOCZA', parametryLogistyczne: utworzParametryLogistycznePaczki() }],
     kategorie,
     pozycje: utworzPozycjeDomyslne(kategorie, Boolean(opcje.wariantOnline)),
     wariantyMaterialow: [],
@@ -400,11 +431,24 @@ export function normalizujDaneChecklisty(dane: DaneChecklistyPaczki): DaneCheckl
     logotypy: dane.migawkaZrodla.logotypy ?? [],
   } : null
   const bloki = normalizujBlokiSwobodneDokumentu(dane.blokiSwobodne)
+  const starszePaczki = Array.isArray(dane.paczki) && dane.paczki.length
+    ? dane.paczki
+    : [{ id: 'paczka-glowna', nazwa: 'Paczka 1', kolejnosc: 0, statusOperacyjny: 'ROBOCZA' as const, parametryLogistyczne: utworzParametryLogistycznePaczki({ przewoznik: dane.przewoznik, numerPrzesylki: dane.numerPrzesylki, waga: dane.waga, wysokosc: dane.wysokosc, dataWyslania: dane.dataWyslania }) }]
+  const paczki = starszePaczki.map((paczka, indeks) => ({
+    id: paczka.id || `paczka-${indeks + 1}`,
+    nazwa: paczka.nazwa?.trim() || `Paczka ${indeks + 1}`,
+    kolejnosc: Number.isFinite(paczka.kolejnosc) ? paczka.kolejnosc : indeks,
+    statusOperacyjny: ['ROBOCZA', 'W_PRZYGOTOWANIU', 'GOTOWA', 'WYSŁANA'].includes(paczka.statusOperacyjny) ? paczka.statusOperacyjny : 'ROBOCZA' as StatusOperacyjnyPaczki,
+    parametryLogistyczne: utworzParametryLogistycznePaczki(paczka.parametryLogistyczne),
+  }))
+  const domyslnaPaczkaId = paczki[0].id
   return {
     ...dane,
     migawkaZrodla: migawka,
+    paczki,
     pozycje: dane.pozycje.map((pozycja) => ({
       ...pozycja,
+      paczkaId: pozycja.paczkaId && paczki.some((paczka) => paczka.id === pozycja.paczkaId) ? pozycja.paczkaId : domyslnaPaczkaId,
       trybPrePost: pozycja.trybPrePost ?? (pozycja.nazwa.toLocaleLowerCase('pl').includes('pre-test') ? 'PRE_I_POST' : null),
       wzorKlienta: pozycja.wzorKlienta ?? '',
       dodatkoweEgzemplarze: pozycja.dodatkoweEgzemplarze ?? [],
@@ -446,4 +490,55 @@ export function czyMoznaFinalizowacCheckliste(dane: DaneChecklistyPaczki) {
 
 export function pobierzEtykieteStatusuGotowosci(status: StatusGotowosciPozycji) {
   return { NIEGOTOWE: 'Niegotowe', W_TOKU_LUB_PROBLEM: 'W toku / problem', CZESCIOWO_GOTOWE: 'Częściowo gotowe', GOTOWE: 'Gotowe' }[status]
+}
+
+function utworzParametryLogistycznePaczki(zrodlo?: Partial<ParametryLogistycznePaczki>): ParametryLogistycznePaczki {
+  return { przewoznik: '', numerPrzesylki: '', waga: '', wysokosc: '', dataWyslania: '', ...zrodlo }
+}
+
+export function utworzNowaPaczkeChecklisty(paczki: PaczkaChecklisty[], nazwa?: string): PaczkaChecklisty {
+  const kolejnosc = Math.max(-1, ...paczki.map((paczka) => paczka.kolejnosc)) + 1
+  return { id: utworzId('paczka'), nazwa: nazwa?.trim() || `Paczka ${kolejnosc + 1}`, kolejnosc, statusOperacyjny: 'ROBOCZA', parametryLogistyczne: utworzParametryLogistycznePaczki() }
+}
+
+export function duplikujPaczkeChecklisty(dane: DaneChecklistyPaczki, paczkaId: string): DaneChecklistyPaczki {
+  const zrodlo = dane.paczki.find((paczka) => paczka.id === paczkaId)
+  if (!zrodlo) return dane
+  const paczka = { ...utworzNowaPaczkeChecklisty(dane.paczki, `${zrodlo.nazwa} — kopia`), parametryLogistyczne: { ...zrodlo.parametryLogistyczne, numerPrzesylki: '', dataWyslania: '' } }
+  const pozycje = dane.pozycje.filter((pozycja) => pozycja.paczkaId === paczkaId).map((pozycja) => ({ ...pozycja, id: utworzId('pozycja'), paczkaId: paczka.id, statusGotowosci: 'NIEGOTOWE' as const, iloscPrzygotowana: null, dodatkoweEgzemplarze: pozycja.dodatkoweEgzemplarze.map((dodatek) => ({ ...dodatek })), regulaIlosci: { ...pozycja.regulaIlosci } }))
+  return { ...dane, paczki: [...dane.paczki, paczka], pozycje: [...dane.pozycje, ...pozycje] }
+}
+
+export function przeniesKategorieChecklisty(dane: DaneChecklistyPaczki, kategoriaId: string, przesuniecie: -1 | 1): DaneChecklistyPaczki {
+  const kategorie = [...dane.kategorie].sort((pierwsza, druga) => pierwsza.kolejnosc - druga.kolejnosc)
+  const indeks = kategorie.findIndex((kategoria) => kategoria.id === kategoriaId)
+  const cel = indeks + przesuniecie
+  if (indeks < 0 || cel < 0 || cel >= kategorie.length) return dane
+  const pierwsza = kategorie[indeks]
+  const druga = kategorie[cel]
+  return { ...dane, kategorie: dane.kategorie.map((kategoria) => kategoria.id === pierwsza.id ? { ...kategoria, kolejnosc: druga.kolejnosc } : kategoria.id === druga.id ? { ...kategoria, kolejnosc: pierwsza.kolejnosc } : kategoria) }
+}
+
+export function utworzSzablonChecklistyPaczki(dane: DaneChecklistyPaczki, nazwa: string): SzablonChecklistyPaczki | null {
+  const nazwaPoPrzycieciu = nazwa.trim()
+  if (!nazwaPoPrzycieciu) return null
+  return {
+    id: utworzId('szablon-checklisty'),
+    nazwa: nazwaPoPrzycieciu,
+    utworzono: new Date().toISOString(),
+    paczki: dane.paczki.map((paczka) => ({ ...paczka, statusOperacyjny: 'ROBOCZA', parametryLogistyczne: { ...paczka.parametryLogistyczne, numerPrzesylki: '', dataWyslania: '' } })),
+    kategorie: dane.kategorie.map((kategoria) => ({ ...kategoria })),
+    pozycje: dane.pozycje.map((pozycja) => ({ paczkaId: pozycja.paczkaId, kategoriaId: pozycja.kategoriaId, nazwa: pozycja.nazwa, kolejnosc: pozycja.kolejnosc, czyWymagana: pozycja.czyWymagana, czyOpcjonalna: pozycja.czyOpcjonalna, czyNieDotyczy: pozycja.czyNieDotyczy, czyOnline: pozycja.czyOnline, regulaIlosci: { ...pozycja.regulaIlosci }, trybPrePost: pozycja.trybPrePost, dodatkoweEgzemplarze: pozycja.dodatkoweEgzemplarze.map((dodatek) => ({ ...dodatek })), nadpisanieReczne: pozycja.nadpisanieReczne, wzorKlienta: pozycja.wzorKlienta, uwagiDrukowane: pozycja.uwagiDrukowane, notatkiWewnetrzne: pozycja.notatkiWewnetrzne })),
+  }
+}
+
+export function zastosujSzablonChecklistyPaczki(dane: DaneChecklistyPaczki, szablon: SzablonChecklistyPaczki): DaneChecklistyPaczki {
+  const mapowaniePaczek = new Map(szablon.paczki.map((paczka) => [paczka.id, utworzId('paczka')]))
+  const mapowanieKategorii = new Map(szablon.kategorie.map((kategoria) => [kategoria.id, utworzId('kategoria')]))
+  return {
+    ...dane,
+    paczki: szablon.paczki.map((paczka) => ({ ...paczka, id: mapowaniePaczek.get(paczka.id)!, statusOperacyjny: 'ROBOCZA', parametryLogistyczne: { ...paczka.parametryLogistyczne, numerPrzesylki: '', dataWyslania: '' } })),
+    kategorie: szablon.kategorie.map((kategoria) => ({ ...kategoria, id: mapowanieKategorii.get(kategoria.id)! })),
+    pozycje: szablon.pozycje.map((pozycja) => ({ ...pozycja, id: utworzId('pozycja'), paczkaId: mapowaniePaczek.get(pozycja.paczkaId) ?? mapowaniePaczek.values().next().value!, kategoriaId: mapowanieKategorii.get(pozycja.kategoriaId) ?? mapowanieKategorii.values().next().value!, statusGotowosci: 'NIEGOTOWE' as const, iloscPrzygotowana: null, dodatkoweEgzemplarze: pozycja.dodatkoweEgzemplarze.map((dodatek) => ({ ...dodatek })), regulaIlosci: { ...pozycja.regulaIlosci } })),
+  }
 }
