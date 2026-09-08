@@ -78,8 +78,7 @@
 
 .szczegoly-sticky__akcje,
 .szczegoly-sticky__kotwice,
-.szczegoly-akcje,
-.szczegoly-flagi {
+.szczegoly-akcje {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -1065,11 +1064,6 @@ button.szczegoly-checklista__naglowek:hover {
 .szczegoly-kopie button {
   justify-self: start;
   text-align: left;
-}
-
-.szczegoly-flagi--pion {
-  align-content: center;
-  flex-direction: column;
 }
 
 @media (max-width: 1120px) {

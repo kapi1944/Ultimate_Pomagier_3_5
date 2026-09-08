@@ -9,7 +9,6 @@
 .profil-uzytkownika__kolumny { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .profil-uzytkownika__kolumny section, .profil-uzytkownika__formularz section { border: 1px solid color-mix(in srgb, var(--ui-akcent) 20%, transparent); border-radius: 8px; background: var(--ui-powierzchnia); padding: 16px; }
 .profil-uzytkownika__siatka { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.profil-uzytkownika__telefon { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 6px; }
 .profil-uzytkownika__zlozone-pole { display: flex; gap: 6px; align-items: center; }
 .profil-uzytkownika__zlozone-pole > :first-child { flex: 1; min-width: 0; }
 .profil-uzytkownika__zlozone-pole .pole-telefonu { flex: 1; min-width: 0; }

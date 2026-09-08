@@ -162,8 +162,6 @@
 .checklista-paczki__wydruk { width: min(100%, 210mm); box-sizing: border-box; margin: 0 auto; padding: 10mm 9mm; background: #fff; color: #111; font-family: Arial, sans-serif; font-size: 9.5px; line-height: 1.25; }
 .checklista-paczki .checklista-paczki__wydruk, .checklista-paczki .checklista-paczki__wydruk * { color: #111; }
 .checklista-paczki__wydruk h2, .checklista-paczki__wydruk h3, .checklista-paczki__wydruk p { margin: 0; }
-.checklista-paczki__wydruk-tytul { margin-bottom: 8px !important; text-align: center; font-size: 16px; font-weight: 800; }
-.checklista-paczki__wydruk-tytul span { padding: 1px 2px; background: #fff200; }
 .checklista-paczki__wydruk table { width: 100%; margin-top: 7px; table-layout: fixed; border-collapse: collapse; font-size: 8.5px; }
 .checklista-paczki__wydruk th, .checklista-paczki__wydruk td { min-height: 18px; padding: 3px 4px; border: 1px solid #111; vertical-align: middle; text-align: left; overflow-wrap: anywhere; }
 .checklista-paczki__wydruk-tabela-danych th { width: 19%; background: #f2f2f2; }

@@ -80,19 +80,19 @@ test('wspólny odcisk rozpoznaje zmianę względem zapisanego dokumentu', () => 
 
 test('sześć generatorów korzysta ze wspólnego stanu i statusu zapisu', () => {
   const wspolnyHook = odczytajZrodlo('../src/moduly/dokumenty/wspolne/useStanDokumentu.ts')
-  const stanProstegoGeneratora = odczytajZrodlo('../src/moduly/dokumenty/wspolne/useStanProstegoGeneratora.ts')
-  const prostyGenerator = odczytajZrodlo('../src/moduly/dokumenty/wspolne/ProstyGeneratorDokumentu.tsx')
   const programy = odczytajZrodlo('../src/moduly/dokumenty/generatory/programy_szkolen/WidokProgramowSzkolen.tsx')
   const dyplomy = odczytajZrodlo('../src/moduly/dokumenty/generatory/dyplomy/WidokDyplomow.tsx')
   const listy = odczytajZrodlo('../src/moduly/dokumenty/generatory/listy_obecnosci/WidokListyObecnosciZDokumentu.tsx')
   const checklisty = odczytajZrodlo('../src/moduly/dokumenty/generatory/checklisty_paczek/WidokChecklistPaczek.tsx')
+  const ankiety = odczytajZrodlo('../src/moduly/dokumenty/generatory/ankiety/WidokAnkiet.tsx')
+  const karty = odczytajZrodlo('../src/moduly/dokumenty/generatory/karta_na_drzwi/WidokKartNaDrzwi.tsx')
   const aplikacja = odczytajZrodlo('../src/aplikacja/layout/UkladAplikacji.tsx')
 
   assert.match(wspolnyHook, /opoznienieAutosave/)
   assert.match(wspolnyHook, /window\.setTimeout/)
   assert.match(wspolnyHook, /beforeunload/)
-  for (const zrodlo of [stanProstegoGeneratora, programy, dyplomy, listy, checklisty]) assert.match(zrodlo, /useStanDokumentu/)
-  for (const zrodlo of [prostyGenerator, programy, dyplomy, listy, checklisty]) assert.match(zrodlo, /StatusZapisuDokumentu/)
+  for (const zrodlo of [programy, dyplomy, listy, checklisty, ankiety, karty]) assert.match(zrodlo, /useStanDokumentu/)
+  for (const zrodlo of [programy, dyplomy, listy, checklisty, ankiety, karty]) assert.match(zrodlo, /StatusZapisuDokumentu/)
   assert.match(aplikacja, /czyDokumentMaNiezapisaneZmiany/)
   assert.doesNotMatch(programy, /ostrzezPrzedOdswiezeniem/)
 })

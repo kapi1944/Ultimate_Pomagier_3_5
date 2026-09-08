@@ -89,7 +89,6 @@ test('pięć modułów ma spójne trasy i pozycje Wszystkie', () => {
 })
 
 test('generatory korzystają ze wspólnego układu paneli, paska akcji i jawnej konfiguracji zapisu', () => {
-  const prostyGenerator = odczytajZrodlo('../src/moduly/dokumenty/wspolne/ProstyGeneratorDokumentu.tsx')
   const wspolnyUklad = odczytajZrodlo('../src/moduly/dokumenty/wspolne/UkladGeneratoraDokumentu.tsx')
   const ukladGeneratora = odczytajZrodlo('../src/moduly/dokumenty/wspolne/ukladGeneratoraDokumentu.css')
   const listaZDokumentu = odczytajZrodlo('../src/moduly/dokumenty/generatory/listy_obecnosci/WidokListyObecnosciZDokumentu.tsx')
@@ -102,8 +101,6 @@ test('generatory korzystają ze wspólnego układu paneli, paska akcji i jawnej 
   const lista = odczytajZrodlo('../src/moduly/dokumenty/generatory/listy_obecnosci/WidokListObecnosci.tsx')
   const karta = odczytajZrodlo('../src/moduly/dokumenty/generatory/karta_na_drzwi/WidokKartNaDrzwi.tsx')
 
-  assert.match(prostyGenerator, /UkladGeneratoraDokumentu/)
-  assert.match(prostyGenerator, /UkladFormularzaIPodgladu/)
   assert.match(listaZDokumentu, /UkladFormularzaIPodgladu/)
   assert.match(listaZDokumentu, /RendererListyObecnosci/)
   assert.match(listaZDokumentu, /AkcjeEksportuPdf/)
@@ -112,12 +109,10 @@ test('generatory korzystają ze wspólnego układu paneli, paska akcji i jawnej 
   assert.match(wspolnyUklad, /ObszarZPanelemGeneratora/)
   assert.match(wspolnyUklad, /PanelBocznyGeneratora/)
   assert.match(wspolnyUklad, /usePanelUstawienGeneratora/)
-  assert.match(prostyGenerator, /ObszarZPanelemGeneratora/)
   assert.match(listaZDokumentu, /ObszarZPanelemGeneratora/)
   assert.match(checklista, /ObszarZPanelemGeneratora/)
   assert.match(program, /ObszarZPanelemGeneratora/)
   assert.match(dyplom, /ObszarZPanelemGeneratora/)
-  assert.match(prostyGenerator, /PasekAkcjiGeneratora/)
   assert.match(checklista, /PasekAkcjiGeneratora/)
   assert.match(program, /PasekAkcjiGeneratora/)
   assert.match(program, /utworzNazwePlikuDokumentu\('PROGRAM_SZKOLENIA'/)

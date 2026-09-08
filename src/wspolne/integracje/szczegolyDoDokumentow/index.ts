@@ -1,5 +1,4 @@
 export * from './typyKontekstuDokumentu'
-export * from './strategieGenerowania'
 export * from './zbudujKontekstZeSzczegolow'
 export * from './walidujKontekstDokumentu'
 export * from './przygotujPlanGenerowania'

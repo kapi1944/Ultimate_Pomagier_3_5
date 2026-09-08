@@ -177,11 +177,6 @@
   outline-offset: 2px;
 }
 
-.generator-ankiet__przelaczniki {
-  display: grid;
-  gap: 8px;
-}
-
 .generator-ankiet__ustawienia-pytania {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -198,18 +193,6 @@
 
 .generator-ankiet__wymagane input {
   width: auto;
-}
-
-.generator-ankiet__przelaczniki label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-}
-
-.generator-ankiet__przelaczniki input[type='checkbox'] {
-  width: auto;
-  min-height: auto;
 }
 
 .generator-ankiet__opis-wygladu {
@@ -415,18 +398,6 @@
   background: #fff;
 }
 
-.ankieta-a4--gesta {
-  font-size: clamp(4px, 1.06cqw, 8.4px);
-}
-
-.ankieta-a4--gesta .ankieta-a4__wiersz-danych:first-child {
-  min-height: 7.5em;
-}
-
-.ankieta-a4--gesta .ankieta-a4__oceny td {
-  height: 2.95em;
-}
-
 .ankieta-a4__tresc--druga {
   margin-top: 5.3%;
 }
@@ -443,8 +414,7 @@
   font-size: 1.12em;
 }
 
-.ankieta-a4__pytanie-otwarte span,
-.ankieta-a4__linie-uwag span {
+.ankieta-a4__pytanie-otwarte span {
   display: block;
   height: 3.2em;
   border-bottom: 1px solid #111;
@@ -475,14 +445,6 @@
 
 .ankieta-a4__uwagi {
   margin-top: 1.7em;
-}
-
-.ankieta-a4__linie-uwag {
-  margin-bottom: 1.9em;
-}
-
-.ankieta-a4__linie-uwag span {
-  height: 2.85em;
 }
 
 .ankieta-a4__odpowiedzi-tak-nie {

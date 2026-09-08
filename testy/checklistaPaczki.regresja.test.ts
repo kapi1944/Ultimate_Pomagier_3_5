@@ -274,7 +274,6 @@ test('formularz checklisty ma niezależnie zwijane kategorie oparte na ich stabi
   assert.match(style, /grid-template-rows: 1fr/)
   assert.match(style, /grid-template-rows: 0fr/)
   assert.match(style, /@media \(prefers-reduced-motion: reduce\)/)
-  assert.match(style, /background: #fff200/)
   assert.match(style, /writing-mode: vertical-rl/)
   assert.match(druk, /kategoria\.nazwa === 'Inne' \? 2 : 1/)
 })
