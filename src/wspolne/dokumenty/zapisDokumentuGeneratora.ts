@@ -1,4 +1,4 @@
-import { utworzNowyDokument, type TypDokumentu } from './modelDokumentu'
+import { utworzNowyDokument, type IntegralnoscDokumentu, type PowiazaniaDokumentu, type TypDokumentu } from './modelDokumentu'
 import { repozytoriumWspolnychDokumentow } from './rejestrDokumentow'
 
 type DaneZapisuDokumentuGeneratora = {
@@ -13,6 +13,8 @@ type DaneZapisuDokumentuGeneratora = {
   organizatorId?: string | null
   autorId?: string | null
   wlascicielId?: string | null
+  powiazania?: Partial<PowiazaniaDokumentu>
+  integralnosc?: Partial<IntegralnoscDokumentu>
 }
 
 export function zapiszDokumentRoboczyGeneratora(dane: DaneZapisuDokumentuGeneratora) {
@@ -28,6 +30,8 @@ export function zapiszDokumentRoboczyGeneratora(dane: DaneZapisuDokumentuGenerat
       organizatorId: dane.organizatorId ?? poprzedni.organizatorId,
       autorId: dane.autorId ?? poprzedni.autorId,
       wlascicielId: dane.wlascicielId ?? poprzedni.wlascicielId,
+      powiazania: dane.powiazania ? { ...poprzedni.powiazania, ...dane.powiazania } : poprzedni.powiazania,
+      integralnosc: dane.integralnosc ? { ...poprzedni.integralnosc, ...dane.integralnosc } : poprzedni.integralnosc,
     })
   }
 
@@ -43,5 +47,7 @@ export function zapiszDokumentRoboczyGeneratora(dane: DaneZapisuDokumentuGenerat
     organizatorId: dane.organizatorId,
     autorId: dane.autorId,
     wlascicielId: dane.wlascicielId,
+    powiazania: dane.powiazania,
+    integralnosc: dane.integralnosc,
   }))
 }

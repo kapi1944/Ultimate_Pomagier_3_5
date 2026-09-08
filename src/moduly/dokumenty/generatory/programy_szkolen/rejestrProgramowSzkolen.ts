@@ -1,6 +1,6 @@
 import type { KopiaRobocza } from '../../../../wspolne/dokumenty/magazynKopiiRoboczych'
 import { filtrujDokumenty } from '../../../../wspolne/dokumenty/filtryDokumentow'
-import { utworzNowyDokument, type Dokument } from '../../../../wspolne/dokumenty/modelDokumentu'
+import { utworzNowyDokument, type Dokument, type IntegralnoscDokumentu, type PowiazaniaDokumentu } from '../../../../wspolne/dokumenty/modelDokumentu'
 import { repozytoriumWspolnychDokumentow } from '../../../../wspolne/dokumenty/rejestrDokumentow'
 import {
   normalizujProgramSzkolenia,
@@ -16,6 +16,8 @@ type DaneZapisuProgramu = {
   daneDokumentu: ModelProgramuSzkolenia
   metadane: MetadaneProgramuSzkolenia
   uzytkownikId?: string
+  powiazania?: Partial<PowiazaniaDokumentu>
+  integralnosc?: Partial<IntegralnoscDokumentu>
 }
 
 type UstawieniaRejestruProgramu = {
@@ -93,6 +95,8 @@ export function zapiszProgramWRejestrze(dane: DaneZapisuProgramu) {
     szkolenieId: dane.metadane.szkolenieId ?? null,
     klientId: dane.metadane.klient ?? null,
     organizatorId: dane.metadane.organizator,
+    powiazania: dane.powiazania,
+    integralnosc: dane.integralnosc,
     autorId: dane.uzytkownikId ?? null,
     wlascicielId: dane.uzytkownikId ?? null,
     ostatnioModyfikujacyId: dane.uzytkownikId ?? null,
