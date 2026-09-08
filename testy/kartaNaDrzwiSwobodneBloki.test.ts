@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict'
-import { deserializujDaneKartyNaDrzwi, obliczRozmiarTytuluKarty, przywrocPoleKartyZeZrodla, serializujDaneKartyNaDrzwi, utworzDaneKartyNaDrzwiZKontekstu, utworzDomyslneDaneKartyNaDrzwi, utworzKarteNaDrzwi, utworzKartyZGrupISal, utworzUstawieniaBazowegoSzablonu, uporzadkujKarty, zduplikujKarteNaDrzwi, zmienPoleKartyLokalnie } from '../src/moduly/dokumenty/generatory/karta_na_drzwi/modelKartyNaDrzwi.ts'
+import { deserializujDaneKartyNaDrzwi, obliczRozmiarTytuluKarty, pobierzDaneRenderowaniaKarty, pobierzUkladKartNaArkuszuA4, pobierzWymiaryKartyNaDrzwi, przeskalujBlokiKartyNaDrzwi, przywrocPoleKartyZeZrodla, serializujDaneKartyNaDrzwi, utworzDaneKartyNaDrzwiZKontekstu, utworzDomyslneDaneKartyNaDrzwi, utworzKarteNaDrzwi, utworzKartyZGrupISal, utworzUstawieniaBazowegoSzablonu, uporzadkujKarty, zduplikujKarteNaDrzwi, zmienPoleKartyLokalnie } from '../src/moduly/dokumenty/generatory/karta_na_drzwi/modelKartyNaDrzwi.ts'
 import type { KontekstDokumentuSzkolenia } from '../src/wspolne/integracje/szczegolyDoDokumentow/index.ts'
 
 const domyslne = utworzDomyslneDaneKartyNaDrzwi()
-assert.equal(domyslne.wersjaSchematu, 3)
+assert.equal(domyslne.wersjaSchematu, 4)
 assert.equal(domyslne.karty.length, 1)
 assert.equal(domyslne.ustawieniaSzablonu.nazwa, 'Oryginalny')
 assert.equal(utworzUstawieniaBazowegoSzablonu('nowoczesny').nazwa, 'Nowoczesny')
@@ -22,6 +22,25 @@ const duplikat = zduplikujKarteNaDrzwi(karta)
 assert.notEqual(duplikat.id, karta.id)
 assert.deepEqual(uporzadkujKarty([duplikat, karta]).map((pozycja) => pozycja.kolejnosc), [1, 2])
 assert.equal(obliczRozmiarTytuluKarty('x'.repeat(400), 28, 12), 12)
+const kartaPol = utworzKarteNaDrzwi({ termin: '2026-10-01', godziny: '09:00–17:00', sala: 'Sala A', miejsce: 'Poznań' })
+const widocznosc = { ...utworzUstawieniaBazowegoSzablonu().widocznoscPol, godziny: false }
+assert.equal(pobierzDaneRenderowaniaKarty(kartaPol, widocznosc).terminGodziny, '2026-10-01')
+assert.equal(pobierzDaneRenderowaniaKarty(kartaPol, { ...widocznosc, termin: false, godziny: true }).terminGodziny, '09:00–17:00')
+assert.equal(pobierzDaneRenderowaniaKarty(kartaPol, { ...widocznosc, termin: false, godziny: false }).terminGodziny, '')
+assert.equal(pobierzDaneRenderowaniaKarty(kartaPol, { ...widocznosc, sala: false, miejsce: true }).salaLokalizacja, 'Poznań')
+assert.equal(pobierzDaneRenderowaniaKarty(kartaPol, { ...widocznosc, sala: true, miejsce: false }).salaLokalizacja, 'Sala A')
+assert.equal(pobierzDaneRenderowaniaKarty(kartaPol, { ...widocznosc, sala: false, miejsce: false }).salaLokalizacja, '')
+assert.deepEqual(utworzUstawieniaBazowegoSzablonu('oryginalny').widocznoscPol, { termin: true, godziny: true, miejsce: true, sala: true, grupa: false, trener: false, organizator: true, dodatkowyTekst: true })
+assert.deepEqual(pobierzWymiaryKartyNaDrzwi('a4', 'pionowa'), { szerokoscMm: 210, wysokoscMm: 297 })
+assert.deepEqual(pobierzWymiaryKartyNaDrzwi('a5', 'pionowa'), { szerokoscMm: 148, wysokoscMm: 210 })
+assert.deepEqual(pobierzWymiaryKartyNaDrzwi('a6', 'pionowa'), { szerokoscMm: 105, wysokoscMm: 148 })
+const a5NaA4 = pobierzUkladKartNaArkuszuA4('a5', 'pionowa')
+assert.deepEqual(a5NaA4, { szerokoscMm: 297, wysokoscMm: 210, liczbaKolumn: 2, liczbaWierszy: 1, liczbaKart: 2, szerokoscKartyMm: 148, wysokoscKartyMm: 210 })
+const a6NaA4 = pobierzUkladKartNaArkuszuA4('a6', 'pionowa')
+assert.deepEqual(a6NaA4, { szerokoscMm: 210, wysokoscMm: 297, liczbaKolumn: 2, liczbaWierszy: 2, liczbaKart: 4, szerokoscKartyMm: 105, wysokoscKartyMm: 148 })
+assert.equal(obliczRozmiarTytuluKarty('bardzo długi '.repeat(80), 28, 12, 54, { szerokoscMm: 80, wysokoscMm: 20 }), 12)
+const bezZmianyTresci = { ...domyslne, ustawieniaSzablonu: { ...domyslne.ustawieniaSzablonu, format: 'a5' as const, blokiSwobodne: przeskalujBlokiKartyNaDrzwi(domyslne.ustawieniaSzablonu.blokiSwobodne, 'a4', 'pozioma', 'a5', 'pozioma') } }
+assert.equal(bezZmianyTresci.karty[0].tytulSzkolenia, domyslne.karty[0].tytulSzkolenia)
 
 const kontekst: KontekstDokumentuSzkolenia = { zrodlo: { szczegolyOrganizacyjneId: 's1', wersjaSzczegolowId: null, zmodyfikowano: '2026-09-04', odciskDanych: 'test' }, szkolenie: { id: 'szkolenie-1', tytul: 'Prawo pracy', typ: null, tryb: null, liczbaGodzin: 8 }, organizator: { id: 'iist', nazwa: 'IIST', marka: 'IIST', logoId: null, logoNazwaPliku: null, logoPodglad: null }, klient: { id: null, nazwa: 'Klient', nip: null, adres: null, osobaKontaktowa: null }, trenerzy: [], grupy: [{ id: 'g1', nazwa: 'Grupa A', daty: ['2026-10-01'], tryb: 'Stacjonarne', liczbaGodzin: 8, lokalizacje: [{ data: '2026-10-01', lokalizacjaId: null, nazwa: 'Hotel', adres: 'Poznań', sala: 'Sala A', trybOnline: false }, { data: '2026-10-02', lokalizacjaId: null, nazwa: 'Hotel', adres: 'Poznań', sala: 'Sala B', trybOnline: false }], trenerzy: [{ id: 't1', imieINazwisko: 'Jan Nowak' }], uczestnicy: [], liczbaUczestnikow: 0, wysylkaMaterialow: { wymagana: null, odbiorca: null, adres: null, uwagi: null } }], uwagi: null }
 const zestaw = utworzDaneKartyNaDrzwiZKontekstu(kontekst, 'g1')
