@@ -124,8 +124,9 @@ test('generatory korzystają ze wspólnego układu paneli, paska akcji i jawnej 
   assert.doesNotMatch(ukladGeneratora, /generator-z-panelem--otwarty \.generator-z-panelem__tresc[\s\S]{0,80}padding-right/)
   assert.match(wspolnyUklad, /czyOtwarty && czyPrzypiety && 'generator-z-panelem--przypiety'/)
   assert.doesNotMatch(ukladGeneratora, /uklad-aplikacji__kolumna-glowna:has/)
-  assert.match(program, /@container \(max-width: 760px\)/)
-  assert.match(stylDyplomow, /@container obszar-roboczy \(max-width: 1280px\)/)
+  assert.match(ukladGeneratora, /container: obszar-roboczy \/ inline-size/)
+  assert.match(program, /@container \(max-width: 980px\)/)
+  assert.match(stylDyplomow, /@container obszar-roboczy \(max-width: 760px\)/)
   assert.doesNotMatch(stylDyplomow, /\.dyplomy--panel-ustawien-otwarty\s*\{\s*width:/)
   assert.doesNotMatch(stylChecklisty, /checklista-paczki__uklad-roboczy/)
 

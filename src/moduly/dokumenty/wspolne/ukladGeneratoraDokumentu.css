@@ -61,6 +61,7 @@
   align-items: start;
   width: 100%;
   min-width: 0;
+  container: obszar-roboczy / inline-size;
 }
 
 .generator-dokumentu__status-zapisu {

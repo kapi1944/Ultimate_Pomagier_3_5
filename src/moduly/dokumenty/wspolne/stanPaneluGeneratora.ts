@@ -12,6 +12,18 @@ export type AkcjaPaneluGeneratora =
   | 'PRZELACZ_WYSUWANIE'
   | 'SCHOWAJ_JESLI_ODPIETY'
 
+export function utworzPoczatkowyStanPaneluGeneratora({
+  czyOtwartyPoczatkowo = false,
+  czyPrzypiety = false,
+  czyWysuwanieWlaczone = true,
+}: Partial<StanPaneluGeneratora> & { czyOtwartyPoczatkowo?: boolean } = {}): StanPaneluGeneratora {
+  return {
+    czyOtwarty: czyOtwartyPoczatkowo || czyPrzypiety,
+    czyPrzypiety,
+    czyWysuwanieWlaczone,
+  }
+}
+
 export function zredukujStanPaneluGeneratora(stan: StanPaneluGeneratora, akcja: AkcjaPaneluGeneratora): StanPaneluGeneratora {
   switch (akcja) {
     case 'OTWORZ':
@@ -19,7 +31,9 @@ export function zredukujStanPaneluGeneratora(stan: StanPaneluGeneratora, akcja: 
     case 'ZAMKNIJ':
       return { ...stan, czyOtwarty: false, czyPrzypiety: false }
     case 'PRZELACZ':
-      return { ...stan, czyOtwarty: !stan.czyOtwarty }
+      return stan.czyOtwarty
+        ? { ...stan, czyOtwarty: false, czyPrzypiety: false }
+        : { ...stan, czyOtwarty: true }
     case 'PRZELACZ_PRZYPIECIE': {
       const czyPrzypiac = !stan.czyPrzypiety
       return { ...stan, czyOtwarty: czyPrzypiac, czyPrzypiety: czyPrzypiac }

@@ -25,8 +25,9 @@ export function normalizujUstawieniaUkladuDokumentu(wartosc: unknown, blokiDomys
   const rekord = rekordZewnetrzny.ukladDokumentu && typeof rekordZewnetrzny.ukladDokumentu === 'object' && !Array.isArray(rekordZewnetrzny.ukladDokumentu)
     ? rekordZewnetrzny.ukladDokumentu as Record<string, unknown>
     : Array.isArray(wartosc) ? { blokiSwobodne: wartosc } : rekordZewnetrzny
-  const bloki = normalizujBloki(rekord.blokiSwobodne ?? rekord.bloki)
-  return utworzUstawieniaUkladuDokumentu(bloki.length ? bloki : blokiDomyslne, typeof rekord.zoom === 'number' ? rekord.zoom : 1)
+  const zapisaneBloki = rekord.blokiSwobodne ?? rekord.bloki
+  const bloki = normalizujBloki(zapisaneBloki)
+  return utworzUstawieniaUkladuDokumentu(Array.isArray(zapisaneBloki) ? bloki : blokiDomyslne, typeof rekord.zoom === 'number' ? rekord.zoom : 1)
 }
 
 export const wersjaUkladuDokumentu = WERSJA_UKLADU_DOKUMENTU

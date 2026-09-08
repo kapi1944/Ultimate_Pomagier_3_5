@@ -1,5 +1,5 @@
 import { createContext, forwardRef, useCallback, useContext, useEffect, useMemo, useReducer, type CSSProperties, type PropsWithChildren, type ReactNode } from 'react'
-import { zredukujStanPaneluGeneratora } from './stanPaneluGeneratora'
+import { utworzPoczatkowyStanPaneluGeneratora, zredukujStanPaneluGeneratora } from './stanPaneluGeneratora'
 import './ukladGeneratoraDokumentu.css'
 
 type WlasciwosciUkladuGeneratoraDokumentu = PropsWithChildren<{
@@ -130,11 +130,11 @@ function usePanelUstawienGeneratora({
 }: OpcjePaneluUstawienGeneratora = {}) {
   const [stan, wykonajAkcje] = useReducer(zredukujStanPaneluGeneratora, undefined, () => {
     const czyPrzypiety = pobierzUstawienieLogicznePanelu(kluczPrzypiecia, false)
-    return {
+    return utworzPoczatkowyStanPaneluGeneratora({
       czyPrzypiety,
       czyWysuwanieWlaczone: pobierzUstawienieLogicznePanelu(kluczWysuwania, true),
-      czyOtwarty: czyOtwartyPoczatkowo || czyPrzypiety,
-    }
+      czyOtwartyPoczatkowo,
+    })
   })
   const { czyOtwarty, czyPrzypiety, czyWysuwanieWlaczone } = stan
 
