@@ -21,16 +21,17 @@ export function zapiszDokumentRoboczyGeneratora(dane: DaneZapisuDokumentuGenerat
   const poprzedni = dane.id ? repozytoriumWspolnychDokumentow.pobierzPoId(dane.id) : null
 
   if (poprzedni) {
+    const powiazania = dane.powiazania ? { ...poprzedni.powiazania, ...dane.powiazania } : poprzedni.powiazania
     return repozytoriumWspolnychDokumentow.aktualizuj(poprzedni.id, {
       tytul: dane.tytul,
       daneDokumentu: dane.daneDokumentu,
       ustawieniaDokumentu: dane.ustawieniaDokumentu,
-      szkolenieId: dane.szkolenieId ?? poprzedni.szkolenieId,
-      klientId: dane.klientId ?? poprzedni.klientId,
-      organizatorId: dane.organizatorId ?? poprzedni.organizatorId,
+      szkolenieId: dane.szkolenieId ?? powiazania.szkolenieId ?? poprzedni.szkolenieId,
+      klientId: dane.klientId ?? powiazania.klientId ?? poprzedni.klientId,
+      organizatorId: dane.organizatorId ?? powiazania.organizatorId ?? poprzedni.organizatorId,
       autorId: dane.autorId ?? poprzedni.autorId,
       wlascicielId: dane.wlascicielId ?? poprzedni.wlascicielId,
-      powiazania: dane.powiazania ? { ...poprzedni.powiazania, ...dane.powiazania } : poprzedni.powiazania,
+      powiazania,
       integralnosc: dane.integralnosc ? { ...poprzedni.integralnosc, ...dane.integralnosc } : poprzedni.integralnosc,
     })
   }
@@ -42,9 +43,9 @@ export function zapiszDokumentRoboczyGeneratora(dane: DaneZapisuDokumentuGenerat
     tytul: dane.tytul,
     daneDokumentu: dane.daneDokumentu,
     ustawieniaDokumentu: dane.ustawieniaDokumentu,
-    szkolenieId: dane.szkolenieId,
-    klientId: dane.klientId,
-    organizatorId: dane.organizatorId,
+    szkolenieId: dane.szkolenieId ?? dane.powiazania?.szkolenieId,
+    klientId: dane.klientId ?? dane.powiazania?.klientId,
+    organizatorId: dane.organizatorId ?? dane.powiazania?.organizatorId,
     autorId: dane.autorId,
     wlascicielId: dane.wlascicielId,
     powiazania: dane.powiazania,

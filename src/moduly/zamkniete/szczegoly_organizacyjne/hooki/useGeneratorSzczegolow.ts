@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   pobierzLokalizacjeZMagazynu,
   pobierzPotwierdzonyMiejscownikLokalizacji,
@@ -581,6 +581,7 @@ export function useGeneratorSzczegolow() {
   const [historiaSzczegolow, ustawHistorieSzczegolow] = useState(() => pobierzHistorieSzczegolow())
   const [autosaveDoDecyzji, ustawAutosaveDoDecyzji] = useState<AutosaveSzczegolow | null>(() => pobierzAutosaveSzczegolow())
   const [czyAutosaveAktywny, ustawCzyAutosaveAktywny] = useState(() => !pobierzAutosaveSzczegolow())
+  const czyPominacNastepnyAutosave = useRef(true)
   const podstawoweProblemyWalidacji = useMemo(() => zbudujProblemyWalidacji(daneFormularza, grupy), [daneFormularza, grupy])
   const efektywneStatusyPol = useMemo(
     () => pobierzEfektywneStatusyPolOdbiorcy(daneFormularza, statusyPol),
@@ -624,6 +625,11 @@ export function useGeneratorSzczegolow() {
 
   useEffect(() => {
     if (!czyAutosaveAktywny) {
+      return
+    }
+
+    if (czyPominacNastepnyAutosave.current) {
+      czyPominacNastepnyAutosave.current = false
       return
     }
 
@@ -799,6 +805,7 @@ export function useGeneratorSzczegolow() {
       id: aktywnaKopiaId,
       zrodloOpublikowanegoId,
     })
+    czyPominacNastepnyAutosave.current = true
     zapiszWersjeRobocza(wersja)
     ustawDaneFormularza(normalizujDane(daneDoZapisu))
     ustawAktywnaKopiaId(wersja.id)
@@ -824,6 +831,7 @@ export function useGeneratorSzczegolow() {
       return
     }
 
+    czyPominacNastepnyAutosave.current = true
     ustawDaneFormularza(normalizujDane())
     ustawGrupy([normalizujGrupe()])
     ustawAdresaci({ ...poczatkowiAdresaci })
@@ -904,6 +912,7 @@ export function useGeneratorSzczegolow() {
       zrodloOpublikowanegoId,
     })
 
+    czyPominacNastepnyAutosave.current = true
     opublikujWersjeRobocza(wersja)
     ustawDaneFormularza(normalizujDane())
     ustawGrupy([normalizujGrupe()])
@@ -958,6 +967,7 @@ export function useGeneratorSzczegolow() {
       zrodloOpublikowanegoId: autosaveDoDecyzji.zrodloOpublikowanegoId,
     })
 
+    czyPominacNastepnyAutosave.current = true
     zapiszWersjeRobocza(wersja)
     ustawDaneFormularza(dane)
     ustawGrupy(grupyDoZapisu)
@@ -973,6 +983,7 @@ export function useGeneratorSzczegolow() {
   }
 
   function odrzucAutosave() {
+    czyPominacNastepnyAutosave.current = true
     usunAutosaveSzczegolow()
     ustawAutosaveDoDecyzji(null)
     ustawCzyAutosaveAktywny(true)

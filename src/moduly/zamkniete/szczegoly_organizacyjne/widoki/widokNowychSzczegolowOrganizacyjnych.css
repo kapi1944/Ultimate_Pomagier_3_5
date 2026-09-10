@@ -233,6 +233,103 @@
   color: #fde68a;
 }
 
+.szczegoly-sekcja-dokumentow {
+  display: grid;
+  gap: 16px;
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 24%, transparent);
+  border-radius: 8px;
+  background: var(--ui-powierzchnia);
+  padding: 16px;
+}
+
+.szczegoly-sekcja-dokumentow > h2,
+.szczegoly-sekcja-dokumentow > p,
+.szczegoly-dokumenty-blok > h3,
+.szczegoly-dokumenty-wyniki > h3 {
+  margin: 0;
+}
+
+.szczegoly-sekcja-dokumentow > summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.szczegoly-dokumenty-blok,
+.szczegoly-dokumenty-wybor,
+.szczegoly-dokumenty-potwierdzenie,
+.szczegoly-dokumenty-wyniki {
+  display: grid;
+  gap: 12px;
+}
+
+.szczegoly-dokumenty-siatka {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.szczegoly-dokument-karta {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+  border: 1px solid color-mix(in srgb, var(--ui-tekst-drugi) 20%, transparent);
+  border-radius: 8px;
+  background: var(--ui-pole);
+  padding: 12px;
+}
+
+.szczegoly-dokument-karta__typ {
+  color: var(--ui-tekst-drugi);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.szczegoly-dokument-karta__metadane {
+  display: grid;
+  gap: 4px;
+  color: var(--ui-tekst-drugi);
+  font-size: 0.9rem;
+}
+
+.szczegoly-dokument-karta button {
+  margin-top: auto;
+}
+
+.szczegoly-dokumenty-akcje,
+.szczegoly-dokumenty-wynik {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.szczegoly-dokumenty-wybor label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.szczegoly-dokumenty-potwierdzenie,
+.szczegoly-dokumenty-wyniki {
+  border-left: 3px solid var(--ui-akcent);
+  background: color-mix(in srgb, var(--ui-akcent) 8%, transparent);
+  padding: 12px;
+}
+
+.szczegoly-dokumenty-wynik {
+  justify-content: space-between;
+}
+
+.szczegoly-sekcja-dokumentow summary:focus-visible,
+.szczegoly-sekcja-dokumentow button:focus-visible,
+.szczegoly-sekcja-dokumentow input:focus-visible {
+  outline: 2px solid var(--ui-akcent);
+  outline-offset: 2px;
+}
+
 .szczegoly-sekcja,
 .szczegoly-karta-grupy,
 .szczegoly-kolumna-danych {
@@ -1196,6 +1293,24 @@ button.szczegoly-checklista__naglowek:hover {
   .szczegoly-kolumna-danych__naglowek .szczegoly-checkbox {
     justify-content: flex-start;
     text-align: left;
+  }
+
+  .szczegoly-dokumenty-siatka {
+    grid-template-columns: 1fr;
+  }
+
+  .szczegoly-dokumenty-akcje,
+  .szczegoly-dokumenty-wynik {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .szczegoly-dokumenty-akcje button,
+  .szczegoly-dokumenty-wynik button,
+  .szczegoly-dokument-karta button,
+  .szczegoly-dokumenty-wybor button {
+    width: 100%;
+    min-height: 44px;
   }
 }
 

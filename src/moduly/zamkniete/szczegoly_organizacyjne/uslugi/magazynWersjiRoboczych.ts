@@ -255,6 +255,10 @@ export function wyczyscAktualnaWersjeRobocza() {
   localStorage.removeItem(kluczAktualnejWersji)
 }
 
+export function rozpocznijNoweSzczegolyOrganizacyjne() {
+  wyczyscAktualnaWersjeRobocza()
+}
+
 export function opublikujWersjeRobocza(wersja: WersjaRoboczaGeneratora) {
   wersja = normalizujWersjeRobocza(wersja)
   const walidacjaPrzejscia = walidujPrzejscieStatusuSzczegolow(wersja.dane.status, 'OCZEKUJĄCE')

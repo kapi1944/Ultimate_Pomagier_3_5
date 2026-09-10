@@ -1,4 +1,4 @@
-import type { Dokument, TypDokumentu } from '../../dokumenty/modelDokumentu'
+import { czyDokumentMaNowszeDaneZrodlowe, type Dokument, type TypDokumentu } from '../../dokumenty/modelDokumentu'
 import { repozytoriumWspolnychDokumentow } from '../../dokumenty/rejestrDokumentow'
 import { zapiszDokumentRoboczyGeneratora } from '../../dokumenty/zapisDokumentuGeneratora'
 import { utworzUstawieniaUkladuDokumentu } from '../../dokumenty/ustawieniaUkladuDokumentu'
@@ -21,7 +21,7 @@ export type WynikUtworzeniaDokumentu = {
   rodzaj: RodzajDokumentuZeSzczegolow
   etykieta: string
   grupaId: string | null
-  status: 'utworzono' | 'istnieje' | 'pomieto'
+  status: 'utworzono' | 'istnieje' | 'pomieto' | 'blad'
   dokument: Dokument<unknown, unknown> | null
   komunikat: string
 }
@@ -47,6 +47,10 @@ const typyRodzajow: Record<RodzajDokumentuZeSzczegolow, TypDokumentu[]> = {
   checklista: ['CHECKLISTA_PACZKI'],
 }
 
+export function pobierzRodzajDokumentuZeSzczegolow(typ: TypDokumentu) {
+  return (Object.entries(typyRodzajow) as Array<[RodzajDokumentuZeSzczegolow, TypDokumentu[]]>).find(([, typy]) => typy.includes(typ))?.[0] ?? null
+}
+
 export function czyDokumentJestGrupowy(rodzaj: RodzajDokumentuZeSzczegolow) {
   return rodzaj === 'lista' || rodzaj === 'ankieta' || rodzaj === 'dyplomy' || rodzaj === 'checklista'
 }
@@ -63,6 +67,16 @@ export function pobierzIstniejacyDokument(szczegolyId: string, rodzaj: RodzajDok
     typyRodzajow[rodzaj].includes(dokument.typ)
     && (!czyDokumentJestGrupowy(rodzaj) || dokument.powiazania.grupaId === grupaId),
   ) ?? null
+}
+
+export function pobierzStanDokumentuZeSzczegolow(wersja: WersjaRoboczaGeneratora, rodzaj: RodzajDokumentuZeSzczegolow, grupaId: string | null) {
+  const kontekst = zbudujKontekstZeSzczegolow(przygotujZrodloZWersjiRoboczej(wersja))
+  const dokument = pobierzIstniejacyDokument(kontekst.zrodlo.szczegolyOrganizacyjneId, rodzaj, grupaId)
+  if (!dokument) return { stan: 'brak' as const, dokument: null }
+  return {
+    stan: czyDokumentMaNowszeDaneZrodlowe(dokument, kontekst.zrodlo.odciskDanych) ? 'wymaga_aktualizacji' as const : 'istnieje' as const,
+    dokument,
+  }
 }
 
 function zbudujPowiazania(wersja: WersjaRoboczaGeneratora, grupaId: string | null) {
@@ -89,6 +103,17 @@ function zbudujPowiazania(wersja: WersjaRoboczaGeneratora, grupaId: string | nul
 
 function wynikPominiecia(rodzaj: RodzajDokumentuZeSzczegolow, grupaId: string | null, komunikat: string): WynikUtworzeniaDokumentu {
   return { rodzaj, etykieta: etykietyDokumentowZeSzczegolow[rodzaj], grupaId, status: 'pomieto', dokument: null, komunikat }
+}
+
+function wynikBledu(rodzaj: RodzajDokumentuZeSzczegolow, grupaId: string | null, blad: unknown): WynikUtworzeniaDokumentu {
+  return {
+    rodzaj,
+    etykieta: etykietyDokumentowZeSzczegolow[rodzaj],
+    grupaId,
+    status: 'blad',
+    dokument: null,
+    komunikat: blad instanceof Error ? blad.message : 'Nieznany błąd tworzenia dokumentu',
+  }
 }
 
 export function utworzDokumentZeSzczegolow(wersja: WersjaRoboczaGeneratora, rodzaj: RodzajDokumentuZeSzczegolow, grupaId: string | null, uzytkownikId: string | null): WynikUtworzeniaDokumentu {
@@ -142,12 +167,26 @@ export function utworzDokumentZeSzczegolow(wersja: WersjaRoboczaGeneratora, rodz
   const odbiorca = wersja.dane.odbiorcaPaczki
   const dokument = utworzChecklistePaczkiZeZrodla(kontekst, grupaId!, { opiekunId: wersja.dane.opiekunId, finansowanie: wersja.dane.dodatkoweWymogi.uwagiDodatkowe, odbiorca: { ...odbiorca, zrodloPropozycji: null } }, uzytkownikId)
   if (!dokument) return wynikPominiecia(rodzaj, grupaId, 'Brak grupy')
-  repozytoriumWspolnychDokumentow.aktualizuj(dokument.id, { powiazania })
+  repozytoriumWspolnychDokumentow.aktualizuj(dokument.id, {
+    powiazania: { ...dokument.powiazania, ...powiazania },
+    integralnosc: { ...dokument.integralnosc, ...integralnosc },
+  })
   return { rodzaj, etykieta: etykietyDokumentowZeSzczegolow[rodzaj], grupaId, status: 'utworzono', dokument: repozytoriumWspolnychDokumentow.pobierzPoId(dokument.id), komunikat: 'Utworzono' }
 }
 
 export function utworzPakietDokumentow(wersja: WersjaRoboczaGeneratora, rodzaje: RodzajDokumentuZeSzczegolow[], uzytkownikId: string | null) {
-  return rodzaje.flatMap((rodzaj) => czyDokumentJestGrupowy(rodzaj)
-    ? (wersja.grupy.length ? wersja.grupy.map((grupa) => utworzDokumentZeSzczegolow(wersja, rodzaj, grupa.id, uzytkownikId)) : [wynikPominiecia(rodzaj, null, 'Brak grupy')])
-    : [utworzDokumentZeSzczegolow(wersja, rodzaj, null, uzytkownikId)])
+  return rodzaje.flatMap((rodzaj) => {
+    const grupyId = czyDokumentJestGrupowy(rodzaj)
+      ? (wersja.grupy.length ? wersja.grupy.map((grupa) => grupa.id) : [null])
+      : [null]
+
+    return grupyId.map((grupaId) => {
+      if (czyDokumentJestGrupowy(rodzaj) && !grupaId) return wynikPominiecia(rodzaj, null, 'Brak grupy')
+      try {
+        return utworzDokumentZeSzczegolow(wersja, rodzaj, grupaId, uzytkownikId)
+      } catch (blad) {
+        return wynikBledu(rodzaj, grupaId, blad)
+      }
+    })
+  })
 }

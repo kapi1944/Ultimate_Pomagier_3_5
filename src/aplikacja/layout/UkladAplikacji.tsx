@@ -37,6 +37,7 @@ import WidokPulpitu from '../../moduly/zamkniete/pulpit/WidokPulpitu'
 import WidokKopiiRoboczychSzczegolowOrganizacyjnych from '../../moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokKopiiRoboczychSzczegolowOrganizacyjnych'
 import WidokListySzczegolowOrganizacyjnych from '../../moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokListySzczegolowOrganizacyjnych'
 import WidokNowychSzczegolowOrganizacyjnych from '../../moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokNowychSzczegolowOrganizacyjnych'
+import { rozpocznijNoweSzczegolyOrganizacyjne } from '../../moduly/zamkniete/szczegoly_organizacyjne/uslugi/magazynWersjiRoboczych'
 import WidokGeneratoraSzczegolow from '../../moduly/zamkniete/szkolenia/generator_szczegolow/WidokGeneratoraSzczegolow'
 import WidokSzkolenZamknietych from '../../moduly/zamkniete/szkolenia/WidokSzkolenZamknietych'
 import { pobierzSciezkeGeneratoraDokumentu } from '../../wspolne/dokumenty/konfiguracjaDokumentow'
@@ -124,6 +125,13 @@ function pobierzIdProfiluZeSciezki() {
   return dopasowanie ? decodeURIComponent(dopasowanie[1]) : null
 }
 
+function pobierzPoczatkowaWersjeFormularzaSzczegolow() {
+  if (window.location.pathname === '/szkolenia-zamkniete/szczegoly-organizacyjne/nowe') {
+    rozpocznijNoweSzczegolyOrganizacyjne()
+  }
+  return 0
+}
+
 function pobierzIdProgramuZeSciezki() {
   const dopasowanie = window.location.pathname.match(/^\/dokumenty\/programy-szkolen\/([^/]+)$/)
   return dopasowanie ? decodeURIComponent(dopasowanie[1]) : null
@@ -170,6 +178,7 @@ function renderujWidok(
   zmienZakladkeKartotek: (zakladka: ZakladkaKartotek) => void,
   ustawAktywnyWidok: UstawWidok,
   wersjaProgramu: number,
+  wersjaFormularzaSzczegolow: number,
   otworzDokument: (dokument: Dokument<unknown, unknown>) => void,
   uzytkownikIdProfilu: string | null,
   wybierzProfil: (uzytkownikId: string) => void,
@@ -186,13 +195,13 @@ function renderujWidok(
     case 'szkolenia-zamkniete':
       return <WidokSzkolenZamknietych />
     case 'generator-szczegolow':
-      return <WidokGeneratoraSzczegolow />
+      return <WidokGeneratoraSzczegolow otworzDokument={otworzDokument} />
     case 'zamkniete_szczegoly_organizacyjne_lista':
       return <WidokListySzczegolowOrganizacyjnych otworzNoweSzczegoly={() => ustawAktywnyWidok('zamkniete_szczegoly_organizacyjne_nowe')} />
     case 'zamkniete_szczegoly_organizacyjne_kopie_robocze':
       return <WidokKopiiRoboczychSzczegolowOrganizacyjnych otworzNoweSzczegoly={() => ustawAktywnyWidok('zamkniete_szczegoly_organizacyjne_nowe')} />
     case 'zamkniete_szczegoly_organizacyjne_nowe':
-      return <WidokNowychSzczegolowOrganizacyjnych />
+      return <WidokNowychSzczegolowOrganizacyjnych key={wersjaFormularzaSzczegolow} otworzDokument={otworzDokument} />
     case 'szkolenia-otwarte':
       return <WidokSzkolenOtwartych />
     case 'dokumenty':
@@ -286,6 +295,7 @@ export default function UkladAplikacji() {
   const [czyProfilMaNiezapisaneZmiany, ustawCzyProfilMaNiezapisaneZmiany] = useState(false)
   const [czyWylogowanieDoPotwierdzenia, ustawCzyWylogowanieDoPotwierdzenia] = useState(false)
   const [wersjaProgramu, ustawWersjeProgramu] = useState(0)
+  const [wersjaFormularzaSzczegolow, ustawWersjeFormularzaSzczegolow] = useState(pobierzPoczatkowaWersjeFormularzaSzczegolow)
   const [widokDoPotwierdzenia, ustawWidokDoPotwierdzenia] = useState<WidokNawigacji | null>(null)
 
   useEffect(() => {
@@ -305,6 +315,11 @@ export default function UkladAplikacji() {
     if (widok === 'programy_szkolen' && !opcje.zachowajKopieProgramu) {
       wyczyscAktywnaKopieProgramu()
       ustawWersjeProgramu((obecna) => obecna + 1)
+    }
+
+    if (widok === 'zamkniete_szczegoly_organizacyjne_nowe') {
+      rozpocznijNoweSzczegolyOrganizacyjne()
+      ustawWersjeFormularzaSzczegolow((obecna) => obecna + 1)
     }
 
     const sciezka = widok === 'profil_uzytkownika' ? opcje.uzytkownikId ? `/profil/${encodeURIComponent(opcje.uzytkownikId)}` : '/profil' : pobierzSciezkeGeneratora(widok) ?? '/'
@@ -481,7 +496,7 @@ export default function UkladAplikacji() {
       <MenuBoczne aktywnyWidok={aktywnyWidok} poZmianieStanuMenu={zglosStanMenu} ustawAktywnyWidok={ustawWidok} />
       <div className="uklad-aplikacji__kolumna-glowna">
         <NaglowekAplikacji otworzProfil={() => otworzProfil()} wyloguj={obsluzWylogowanie} />
-        <main className="uklad-aplikacji__obszar-roboczy">{renderujWidok(aktywnyWidok, zmienZakladkeKartotek, ustawWidok, wersjaProgramu, otworzDokument, uzytkownikIdProfilu, (uzytkownikId) => otworzProfil(uzytkownikId), ustawCzyProfilMaNiezapisaneZmiany, () => ustawWidok('zamkniete_szczegoly_organizacyjne_lista'), () => ustawWidok('dokumenty_wszystkie'), () => ustawWidok('checklisty_paczek'))}</main>
+        <main className="uklad-aplikacji__obszar-roboczy">{renderujWidok(aktywnyWidok, zmienZakladkeKartotek, ustawWidok, wersjaProgramu, wersjaFormularzaSzczegolow, otworzDokument, uzytkownikIdProfilu, (uzytkownikId) => otworzProfil(uzytkownikId), ustawCzyProfilMaNiezapisaneZmiany, () => ustawWidok('zamkniete_szczegoly_organizacyjne_lista'), () => ustawWidok('dokumenty_wszystkie'), () => ustawWidok('checklisty_paczek'))}</main>
       </div>
       {(widokDoPotwierdzenia || czyWylogowanieDoPotwierdzenia) && (
         <section className="program-panel-roboczy program-szkolen__komunikat" role="dialog" aria-modal="true" aria-label="Niezapisane zmiany">

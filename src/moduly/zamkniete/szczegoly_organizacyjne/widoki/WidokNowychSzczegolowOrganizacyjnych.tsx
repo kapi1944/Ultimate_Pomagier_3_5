@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type KeyboardEvent, type ReactNode } from 'react'
 import { pobierzLokalizacjeZMagazynu } from '../../../../kartoteki/lokalizacje/magazynLokalizacji'
-import { zbudujKontekstZeSzczegolow, przygotujZrodloZWersjiRoboczej } from '../../../../wspolne/integracje/szczegolyDoDokumentow'
-import { utworzChecklistePaczkiZeZrodla } from '../../../dokumenty/generatory/checklisty_paczek/rejestrChecklistPaczek'
+import type { Dokument } from '../../../../wspolne/dokumenty/modelDokumentu'
+import { utworzDokumentZeSzczegolow } from '../../../../wspolne/integracje/szczegolyDoDokumentow'
 import KartaGrupySzkoleniowej from '../komponenty/KartaGrupySzkoleniowej'
 import { DostawcaBledowPol } from '../komponenty/KontekstBledowPol'
 import PoleMinutWczesniejszegoPrzyjazdu from '../komponenty/PoleMinutWczesniejszegoPrzyjazdu'
 import PanelDokumentowPowiazanych from '../komponenty/PanelDokumentowPowiazanych'
-import PanelTworzeniaListObecnosci from '../komponenty/PanelTworzeniaListObecnosci'
+import PanelPrzygotowaniaDokumentow from '../komponenty/PanelPrzygotowaniaDokumentow'
 import PanelWykrytychProblemow from '../komponenty/PanelWykrytychProblemow'
 import PasekStickySzczegolow from '../komponenty/PasekStickySzczegolow'
 import { pobierzIdKompletnychSekcji } from '../komponenty/logikaPaskaStickySzczegolow'
@@ -257,47 +257,19 @@ function WierszWymoguRozszerzony({
 }
 
 type WlasciwosciWidokuNowychSzczegolow = {
-  otworzListeObecnosci: (id: string) => void
+  otworzDokument: (dokument: Dokument<unknown, unknown>) => void
 }
 
-export default function WidokNowychSzczegolowOrganizacyjnych() {
+export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }: WlasciwosciWidokuNowychSzczegolow) {
   const generator = useGeneratorSzczegolow()
-  const otworzListeObecnosci: WlasciwosciWidokuNowychSzczegolow['otworzListeObecnosci'] = (id) => {
-    const sciezka = `/dokumenty/listy-obecnosci/${encodeURIComponent(id)}`
-    if (window.location.pathname !== sciezka) {
-      window.history.pushState({ widok: 'listy-obecnosci' }, '', sciezka)
-    }
-    window.dispatchEvent(new PopStateEvent('popstate'))
-  }
-
   const [odswiezaczDokumentow, ustawOdswiezaczDokumentow] = useState(0)
   const aktywnaWersja = generator.kopieRobocze.find((kopia) => kopia.id === generator.aktywnaKopiaId) ?? null
   const szczegolyOrganizacyjneId = generator.zrodloOpublikowanegoId ?? aktywnaWersja?.id ?? null
 
   function utworzChecklisteDlaGrupy(grupaId: string) {
-    if (!aktywnaWersja) {
-      return
-    }
-
-    const kontekst = zbudujKontekstZeSzczegolow(przygotujZrodloZWersjiRoboczej(aktywnaWersja))
-    const odbiorca = generator.daneFormularza.odbiorcaPaczki
-    const checklista = utworzChecklistePaczkiZeZrodla(kontekst, grupaId, {
-      opiekunId: generator.daneFormularza.opiekunId,
-      finansowanie: generator.daneFormularza.dodatkoweWymogi.uwagiDodatkowe,
-      odbiorca: { ...odbiorca, zrodloPropozycji: null },
-    }, aktywnaWersja.autorId)
-
-    if (checklista) {
-      ustawOdswiezaczDokumentow((obecny) => obecny + 1)
-    }
-  }
-
-  function otworzChecklistePaczki(id: string) {
-    const sciezka = `/dokumenty/checklisty-paczek/${encodeURIComponent(id)}`
-    if (window.location.pathname !== sciezka) {
-      window.history.pushState({ widok: 'checklisty_paczek' }, '', sciezka)
-    }
-    window.dispatchEvent(new PopStateEvent('popstate'))
+    if (!aktywnaWersja) return
+    utworzDokumentZeSzczegolow(aktywnaWersja, 'checklista', grupaId, aktywnaWersja.autorId)
+    ustawOdswiezaczDokumentow((obecny) => obecny + 1)
   }
   const [podgladyWzorowKlienta, ustawPodgladyWzorowKlienta] = useState<Record<string, PodgladWzoruKlienta>>({})
   const [porownywanaWersjaId, ustawPorownywanaWersjaId] = useState<string | null>(null)
@@ -612,26 +584,26 @@ export default function WidokNowychSzczegolowOrganizacyjnych() {
           }
         />
 
-      <p className="szczegoly-komunikat">{generator.komunikat}</p>
-      <PanelTworzeniaListObecnosci
-        wersja={aktywnaWersja}
-        otworzDokument={otworzListeObecnosci}
-        poUtworzeniu={() => ustawOdswiezaczDokumentow((obecny) => obecny + 1)}
-      />
-      <PanelDokumentowPowiazanych szczegolyOrganizacyjneId={szczegolyOrganizacyjneId} odswiezacz={odswiezaczDokumentow} otworzDokument={otworzListeObecnosci} otworzCheckliste={otworzChecklistePaczki} />
-
       {generator.autosaveDoDecyzji && (
         <div className="szczegoly-autosave">
-          <strong>Znaleziono niezapisaną wersję roboczą</strong>
+          <strong>Znaleziono niezapisaną kopię roboczą.</strong>
           <span>{new Date(generator.autosaveDoDecyzji.dataZapisu).toLocaleString('pl-PL')}</span>
           <button type="button" onClick={generator.przywrocAutosave}>
-            Przywróć draft
+            Przywróć kopię
           </button>
           <button type="button" onClick={generator.odrzucAutosave}>
-            Odrzuć draft
+            Odrzuć kopię
           </button>
         </div>
       )}
+
+      <p className="szczegoly-komunikat">{generator.komunikat}</p>
+      <PanelPrzygotowaniaDokumentow
+        wersja={aktywnaWersja}
+        otworzDokument={otworzDokument}
+        poUtworzeniu={() => ustawOdswiezaczDokumentow((obecny) => obecny + 1)}
+      />
+      <PanelDokumentowPowiazanych szczegolyOrganizacyjneId={szczegolyOrganizacyjneId} wersja={aktywnaWersja} odswiezacz={odswiezaczDokumentow} otworzDokument={otworzDokument} />
 
       <div className="szczegoly-uklad-generatora">
         <div className="szczegoly-formularz">

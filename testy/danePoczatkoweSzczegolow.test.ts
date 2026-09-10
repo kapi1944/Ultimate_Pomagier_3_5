@@ -1,7 +1,17 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import { poczatkoweDaneFormularza } from '../src/moduly/zamkniete/szczegoly_organizacyjne/danePoczatkowe.ts'
-import { pobierzKopieRobocze, zapiszWersjeRobocza } from '../src/moduly/zamkniete/szczegoly_organizacyjne/uslugi/magazynWersjiRoboczych.ts'
+import {
+  pobierzAktualnaWersjeRobocza,
+  pobierzAutosaveSzczegolow,
+  pobierzKopieRobocze,
+  rozpocznijNoweSzczegolyOrganizacyjne,
+  usunAutosaveSzczegolow,
+  ustawAktualnaWersjeRobocza,
+  zapiszAutosaveSzczegolow,
+  zapiszWersjeRobocza,
+} from '../src/moduly/zamkniete/szczegoly_organizacyjne/uslugi/magazynWersjiRoboczych.ts'
 import type { DaneFormularza, WersjaRoboczaGeneratora } from '../src/moduly/zamkniete/szczegoly_organizacyjne/typy.ts'
 
 const magazyn = new Map<string, string>()
@@ -93,4 +103,56 @@ test('wczytana kopia robocza zachowuje zapisane wartości zamiast nowych domyśl
   assert.equal(wczytana.dane.dokumentacja.kartaInformacyjna, true)
   assert.equal(wczytana.dane.dodatkoweWymogi.wczesniejszyPrzyjazdTrenera, false)
   assert.equal(wczytana.dane.dodatkoweWymogi.minutyWczesniej, 45)
+})
+
+test('nowe Szczegóły zaczynają od pustego formularza i pozostawiają autosave do jawnej decyzji', () => {
+  magazyn.clear()
+  const dane = structuredClone(poczatkoweDaneFormularza) as DaneFormularza
+  dane.tytulSzkolenia = 'Dane z poprzedniej sesji'
+  const wersja: WersjaRoboczaGeneratora = {
+    id: 'poprzednia-kopia',
+    dokumentId: 'poprzednia-kopia',
+    wersja: 'test',
+    etykietaWersji: 'testowa',
+    nazwa: 'Poprzednia kopia',
+    dataZapisu: '2026-09-10T08:00:00.000Z',
+    autorId: 'autor',
+    autorNazwa: 'Autor',
+    dane,
+    grupy: [],
+    adresaci: { reczniAdresaci: '', trybTresci: 'Tylko zmiany', czyPodpis: true, wiadomoscWlasna: '' },
+    statusyPol: {},
+  }
+  ustawAktualnaWersjeRobocza(wersja)
+  zapiszAutosaveSzczegolow({
+    id: 'autosave-1',
+    dataZapisu: '2026-09-10T09:00:00.000Z',
+    dane,
+    grupy: [],
+    adresaci: wersja.adresaci,
+    statusyPol: {},
+    aktywnaKopiaId: wersja.id,
+  })
+
+  rozpocznijNoweSzczegolyOrganizacyjne()
+
+  assert.equal(pobierzAktualnaWersjeRobocza(), null)
+  assert.equal(pobierzAutosaveSzczegolow()?.dane.tytulSzkolenia, 'Dane z poprzedniej sesji')
+  assert.equal(poczatkoweDaneFormularza.tytulSzkolenia, '')
+
+  usunAutosaveSzczegolow()
+  assert.equal(pobierzAutosaveSzczegolow(), null)
+})
+
+test('banner kopii roboczej ma trwałe, jawne akcje przywrócenia i odrzucenia', () => {
+  const widok = readFileSync(new URL('../src/moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokNowychSzczegolowOrganizacyjnych.tsx', import.meta.url), 'utf8')
+  const hook = readFileSync(new URL('../src/moduly/zamkniete/szczegoly_organizacyjne/hooki/useGeneratorSzczegolow.ts', import.meta.url), 'utf8')
+  assert.match(widok, /Znaleziono niezapisaną kopię roboczą\./)
+  assert.match(widok, /Przywróć kopię/)
+  assert.match(widok, /onClick=\{generator\.przywrocAutosave\}/)
+  assert.match(widok, /Odrzuć kopię/)
+  assert.match(widok, /onClick=\{generator\.odrzucAutosave\}/)
+  assert.doesNotMatch(widok, /toast/i)
+  assert.match(hook, /czyPominacNastepnyAutosave = useRef\(true\)/)
+  assert.match(hook, /function odrzucAutosave\(\)[\s\S]*czyPominacNastepnyAutosave\.current = true[\s\S]*usunAutosaveSzczegolow\(\)/)
 })
