@@ -598,12 +598,6 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
       )}
 
       <p className="szczegoly-komunikat">{generator.komunikat}</p>
-      <PanelPrzygotowaniaDokumentow
-        wersja={aktywnaWersja}
-        otworzDokument={otworzDokument}
-        poUtworzeniu={() => ustawOdswiezaczDokumentow((obecny) => obecny + 1)}
-      />
-      <PanelDokumentowPowiazanych szczegolyOrganizacyjneId={szczegolyOrganizacyjneId} wersja={aktywnaWersja} odswiezacz={odswiezaczDokumentow} otworzDokument={otworzDokument} />
 
       <div className="szczegoly-uklad-generatora">
         <div className="szczegoly-formularz">
@@ -995,6 +989,13 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
             Wyślij aktualizację
           </button>
         </SekcjaFormularza>
+
+        <PanelPrzygotowaniaDokumentow
+          wersja={aktywnaWersja}
+          otworzDokument={otworzDokument}
+          poUtworzeniu={() => ustawOdswiezaczDokumentow((obecny) => obecny + 1)}
+        />
+        <PanelDokumentowPowiazanych szczegolyOrganizacyjneId={szczegolyOrganizacyjneId} wersja={aktywnaWersja} odswiezacz={odswiezaczDokumentow} otworzDokument={otworzDokument} />
 
         <SekcjaFormularza id="historia-wersji" tytul="Historia wersji i zdarzeń">
           <div className="szczegoly-historia">

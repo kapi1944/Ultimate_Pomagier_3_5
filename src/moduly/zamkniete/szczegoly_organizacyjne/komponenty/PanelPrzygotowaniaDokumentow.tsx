@@ -6,6 +6,7 @@ import {
   pobierzStanDokumentuZeSzczegolow,
   rodzajeDokumentowDodatkowych,
   rodzajePakietuPodstawowego,
+  rodzajeWszystkichDokumentow,
   utworzDokumentZeSzczegolow,
   utworzPakietDokumentow,
   type RodzajDokumentuZeSzczegolow,
@@ -76,8 +77,10 @@ export default function PanelPrzygotowaniaDokumentow({ wersja, otworzDokument, p
     ustawWybraneDodatkowe((obecne) => obecne.includes(rodzaj) ? obecne.filter((pozycja) => pozycja !== rodzaj) : [...obecne, rodzaj])
   }
 
-  const rodzajeWszystkich = [...new Set([...rodzajePakietuPodstawowego, ...wybraneDodatkowe])]
   const liczbaUtworzonych = wyniki.filter((wynik) => wynik.status === 'utworzono').length
+  const naglowekWynikow = liczbaUtworzonych === 0
+    ? 'Nie utworzono nowych dokumentów.'
+    : `Utworzono ${liczbaUtworzonych} ${liczbaUtworzonych === 1 ? 'dokument' : liczbaUtworzonych < 5 ? 'dokumenty' : 'dokumentów'}`
 
   return (
     <section className="szczegoly-sekcja-dokumentow" aria-labelledby="przygotuj-dokumenty-tytul">
@@ -141,10 +144,10 @@ export default function PanelPrzygotowaniaDokumentow({ wersja, otworzDokument, p
           <div className="szczegoly-dokumenty-potwierdzenie">
             <strong>Zostaną utworzone brakujące dokumenty:</strong>
             <ul>
-              {rodzajeWszystkich.map((rodzaj) => <li key={rodzaj}>{etykietyDokumentowZeSzczegolow[rodzaj]}</li>)}
+              {rodzajeWszystkichDokumentow.map((rodzaj) => <li key={rodzaj}>{etykietyDokumentowZeSzczegolow[rodzaj]}</li>)}
             </ul>
             <div className="szczegoly-dokumenty-akcje">
-              <button type="button" onClick={() => { wykonajPakiet(rodzajeWszystkich); ustawCzyPotwierdzicWszystkie(false) }}>Utwórz</button>
+              <button type="button" onClick={() => { wykonajPakiet(rodzajeWszystkichDokumentow); ustawCzyPotwierdzicWszystkie(false) }}>Utwórz</button>
               <button type="button" onClick={() => ustawCzyPotwierdzicWszystkie(false)}>Anuluj</button>
             </div>
           </div>
@@ -153,7 +156,7 @@ export default function PanelPrzygotowaniaDokumentow({ wersja, otworzDokument, p
 
       {wyniki.length > 0 && (
         <div className="szczegoly-dokumenty-wyniki" aria-live="polite">
-          <h3>Utworzono {liczbaUtworzonych} {liczbaUtworzonych === 1 ? 'dokument' : 'dokumenty'}</h3>
+          <h3>{naglowekWynikow}</h3>
           {wyniki.map((wynik, indeks) => (
             <div className="szczegoly-dokumenty-wynik" key={`${wynik.rodzaj}-${wynik.grupaId ?? 'zbiorczy'}-${indeks}`}>
               <span>{etykietaWyniku(wynik)}{pobierzNazweGrupy(wynik.grupaId) ? ` — ${pobierzNazweGrupy(wynik.grupaId)}` : ''}</span>

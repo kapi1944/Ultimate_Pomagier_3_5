@@ -14,6 +14,7 @@ import {
   pobierzStanDokumentuZeSzczegolow,
   rodzajeDokumentowDodatkowych,
   rodzajePakietuPodstawowego,
+  rodzajeWszystkichDokumentow,
   utworzPakietDokumentow,
 } from '../src/wspolne/integracje/szczegolyDoDokumentow/index.ts'
 
@@ -32,7 +33,7 @@ function klonuj<TDane>(dane: TDane): TDane {
   return JSON.parse(JSON.stringify(dane)) as TDane
 }
 
-function utworzWersje(czyZGrupa = true): WersjaRoboczaGeneratora {
+function utworzWersje(czyZGrupa = true, liczbaGrup = 1): WersjaRoboczaGeneratora {
   const dane = klonuj(poczatkoweDaneFormularza) as DaneFormularza
   dane.tytulSzkolenia = 'Bezpieczna praca'
   dane.nazwaKlienta = 'Klient Testowy'
@@ -56,6 +57,19 @@ function utworzWersje(czyZGrupa = true): WersjaRoboczaGeneratora {
       { id: 'uczestnik-2', imie: 'Piotr', nazwisko: 'Lis', email: 'piotr@example.com' },
     ],
   }
+  const drugaGrupa = {
+    ...klonuj(grupa),
+    id: 'grupa-b',
+    nazwa: 'Grupa B',
+    dataOd: '2026-09-17',
+    dataDo: '2026-09-18',
+    miejsce: 'Sala 8, Kraków',
+    trenerzy: [{ id: 'trener-2', imieNazwisko: 'Ewa Trener', telefon: '', email: '' }],
+    uczestnicy: [
+      { id: 'uczestnik-3', imie: 'Ola', nazwisko: 'Kowalska', email: 'ola@example.com' },
+      { id: 'uczestnik-4', imie: 'Marek', nazwisko: 'Wilk', email: 'marek@example.com' },
+    ],
+  }
 
   return {
     id: 'szczegoly-1',
@@ -67,7 +81,7 @@ function utworzWersje(czyZGrupa = true): WersjaRoboczaGeneratora {
     autorId: 'uzytkownik-1',
     autorNazwa: 'Użytkownik Testowy',
     dane,
-    grupy: czyZGrupa ? [grupa] : [],
+    grupy: czyZGrupa ? [grupa, ...(liczbaGrup > 1 ? [drugaGrupa] : [])] : [],
     adresaci: klonuj(poczatkowiAdresaci),
     statusyPol: {},
   }
@@ -119,11 +133,40 @@ test('pakiet podstawowy, dodatkowy i wszystkie dokumenty mają właściwy zakres
   const wersja = utworzWersje()
   const podstawowy = utworzPakietDokumentow(wersja, rodzajePakietuPodstawowego, wersja.autorId)
   const dodatkowy = utworzPakietDokumentow(wersja, rodzajeDokumentowDodatkowych, wersja.autorId)
-  const wszystkie = utworzPakietDokumentow(wersja, [...rodzajePakietuPodstawowego, ...rodzajeDokumentowDodatkowych], wersja.autorId)
+  const wszystkie = utworzPakietDokumentow(wersja, rodzajeWszystkichDokumentow, wersja.autorId)
 
   assert.deepEqual(podstawowy.map((wynik) => wynik.rodzaj), ['program', 'lista', 'ankieta', 'dyplomy'])
   assert.deepEqual(dodatkowy.map((wynik) => wynik.rodzaj), ['karty', 'checklista'])
   assert.ok(wszystkie.every((wynik) => wynik.status === 'istnieje'))
+})
+
+test('pełny workflow dla dwóch grup tworzy właściwe zestawy i nie tworzy duplikatów', () => {
+  magazyn.clear()
+  const wersja = utworzWersje(true, 2)
+  const wyniki = utworzPakietDokumentow(wersja, rodzajeWszystkichDokumentow, wersja.autorId)
+
+  assert.equal(wyniki.length, 10)
+  assert.equal(wyniki.filter((wynik) => wynik.rodzaj === 'program').length, 1)
+  assert.equal(wyniki.filter((wynik) => wynik.rodzaj === 'karty').length, 1)
+  ;(['lista', 'ankieta', 'dyplomy', 'checklista'] as const).forEach((rodzaj) => {
+    const wynikiRodzaju = wyniki.filter((wynik) => wynik.rodzaj === rodzaj)
+    assert.equal(wynikiRodzaju.length, 2)
+    assert.deepEqual(new Set(wynikiRodzaju.map((wynik) => wynik.grupaId)), new Set(['grupa-a', 'grupa-b']))
+  })
+
+  const program = wyniki.find((wynik) => wynik.rodzaj === 'program')?.dokument
+  const daneProgramu = pobierzProgramPoId(program?.id ?? '')?.daneDokumentu as { trescProgramu?: string } | undefined
+  assert.match(daneProgramu?.trescProgramu ?? '', /Moduł 1\. Wprowadzenie/)
+  const karty = wyniki.find((wynik) => wynik.rodzaj === 'karty')?.dokument
+  const daneKart = deserializujDaneKartyNaDrzwi((karty?.daneDokumentu as { tekst?: string })?.tekst ?? null)
+  assert.equal(daneKart.karty.length, 4)
+  assert.deepEqual(new Set(daneKart.karty.map((karta) => karta.grupaId)), new Set(['grupa-a', 'grupa-b']))
+  assert.match(daneKart.karty.map((karta) => karta.miejsce).join(' '), /Sala 7.*Sala 8/s)
+  assert.ok(wyniki.every((wynik) => wynik.dokument && repozytoriumWspolnychDokumentow.pobierzPoId(wynik.dokument.id)?.id === wynik.dokument.id))
+
+  const powtorzenie = utworzPakietDokumentow(wersja, rodzajeWszystkichDokumentow, wersja.autorId)
+  assert.ok(powtorzenie.every((wynik) => wynik.status === 'istnieje'))
+  assert.equal(pobierzDokumentyPowiazaneZeSzczegolami(wersja.id).length, 10)
 })
 
 test('brak grupy nie blokuje utworzenia programu i daje trwałe wyniki pominięcia', () => {
@@ -192,11 +235,17 @@ test('widok udostępnia pojedyncze dokumenty, pakiety, pełne powiązania i istn
   assert.match(przygotowanie, /Utwórz pakiet podstawowy/)
   assert.match(przygotowanie, /Utwórz dokumenty dodatkowe/)
   assert.match(przygotowanie, /Utwórz wszystkie dokumenty/)
+  assert.match(przygotowanie, /wykonajPakiet\(rodzajeWszystkichDokumentow\)/)
+  assert.doesNotMatch(przygotowanie, /wykonajPakiet\(wybraneDodatkowe\).*Utwórz wszystkie/s)
+  assert.match(przygotowanie, /Nie utworzono nowych dokumentów\./)
   assert.match(przygotowanie, /Najpierw zapisz Szczegóły organizacyjne\./)
   assert.match(powiazane, /pobierzDokumentyPowiazaneZeSzczegolami/)
   assert.match(powiazane, /otworzDokument\(dokument\)/)
   assert.doesNotMatch(powiazane, />\{dokument\.id\}</)
   assert.match(widok, /PanelPrzygotowaniaDokumentow/)
+  assert.ok(widok.indexOf('id="wyslij-aktualizacje"') < widok.indexOf('<PanelPrzygotowaniaDokumentow'))
+  assert.ok(widok.indexOf('<PanelPrzygotowaniaDokumentow') < widok.indexOf('id="historia-wersji"'))
+  assert.ok(widok.indexOf('generator.autosaveDoDecyzji') < widok.indexOf('<div className="szczegoly-uklad-generatora">'))
   assert.match(uklad, /<WidokNowychSzczegolowOrganizacyjnych[^>]+otworzDokument=\{otworzDokument\}/)
   assert.match(style, /\.szczegoly-dokumenty-siatka\s*\{[^}]*grid-template-columns:\s*1fr/s)
   assert.match(style, /\.szczegoly-sekcja-dokumentow button:focus-visible/)
