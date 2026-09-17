@@ -79,6 +79,56 @@
   gap: 8px;
 }
 
+.generator-list-obecnosci__kalendarz-terminu {
+  display: grid;
+  gap: 10px;
+}
+
+.generator-list-obecnosci__kalendarz-naglowek {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px;
+}
+
+.generator-list-obecnosci__kalendarz {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.generator-list-obecnosci__dzien-tygodnia {
+  color: var(--ui-tekst-drugi);
+  font-size: .76rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.generator-list-obecnosci__dzien {
+  min-height: 36px;
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 22%, transparent);
+  border-radius: 6px;
+  background: var(--ui-pole);
+  color: var(--ui-tekst);
+  cursor: pointer;
+  font: inherit;
+}
+
+.generator-list-obecnosci__dzien--weekend {
+  background: color-mix(in srgb, var(--ui-pole) 82%, #000);
+}
+
+.generator-list-obecnosci__dzien:hover,
+.generator-list-obecnosci__dzien--aktywny {
+  border-color: var(--ui-akcent);
+  background: var(--ui-akcent);
+  color: var(--ui-tekst-na-akcencie);
+}
+
+.generator-list-obecnosci__dzien--spoza {
+  color: var(--ui-tekst-drugi);
+}
+
 .generator-list-obecnosci__uczestnicy,
 .generator-list-obecnosci__synchronizacja,
 .generator-list-obecnosci__kolumny,

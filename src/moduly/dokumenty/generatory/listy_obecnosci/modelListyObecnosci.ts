@@ -2,7 +2,7 @@ import type { DaneListyObecnosciZIntegracji, KorektyReczneListyObecnosci } from 
 import { WERSJA_SCHEMATU_SWOBODNYCH_BLOKOW, normalizujBlokiSwobodneDokumentu, type BlokSwobodnyDokumentu } from '../../../../wspolne/dokumenty/modelSwobodnychBlokow'
 
 export type OrganizatorListyObecnosci = 'SEMPER' | 'IIST'
-export type TrybListyObecnosci = 'WYPELNIONA' | 'PUSTA'
+export type TrybListyObecnosci = 'WYPELNIONA' | 'WKLEJONA' | 'PUSTA'
 export type WariantWielodniowyListyObecnosci = 'KOLUMNY_PODPISOW' | 'OSOBNE_STRONY'
 export type KolumnaListyObecnosci = 'LP' | 'IMIE_I_NAZWISKO' | 'FIRMA' | 'PODPIS'
 
@@ -24,6 +24,7 @@ export type DaneListyObecnosci = {
   organizator: OrganizatorListyObecnosci
   trybListy: TrybListyObecnosci
   liczbaPustychWierszy: number
+  uczestnicyTekst: string
   uczestnicy: UczestnikListyObecnosci[]
   kolumny: KolumnaListyObecnosci[]
   wariantWielodniowy: WariantWielodniowyListyObecnosci
@@ -39,6 +40,13 @@ export type RozniceUczestnikowListyObecnosci = {
   zmienieni: Array<{ obecny: UczestnikListyObecnosci; zrodlowy: UczestnikListyObecnosci }>
 }
 
+export type DzienKalendarzaListyObecnosci = {
+  iso: string
+  dzien: number
+  wMiesiacu: boolean
+  weekend: boolean
+}
+
 const maksymalnaLiczbaDni = 31
 const domyslneKolumny: KolumnaListyObecnosci[] = ['LP', 'IMIE_I_NAZWISKO', 'PODPIS']
 
@@ -52,6 +60,24 @@ export const etykietyWariantowWielodniowych: Record<WariantWielodniowyListyObecn
 
 export function zaproponujWariantWielodniowyListyObecnosci(daty: string[]): WariantWielodniowyListyObecnosci {
   return daty.filter(Boolean).length > 3 ? 'OSOBNE_STRONY' : 'KOLUMNY_PODPISOW'
+}
+
+export function pobierzDniKalendarzaListyObecnosci(miesiacKalendarza: string): DzienKalendarzaListyObecnosci[] {
+  const [rok, miesiac] = miesiacKalendarza.split('-').map(Number)
+  if (!Number.isInteger(rok) || !Number.isInteger(miesiac) || miesiac < 1 || miesiac > 12) return []
+  const pierwszyDzien = new Date(rok, miesiac - 1, 1)
+  const przesuniecieStartu = (pierwszyDzien.getDay() + 6) % 7
+  const start = new Date(rok, miesiac - 1, 1 - przesuniecieStartu)
+  return Array.from({ length: 42 }, (_, indeks) => {
+    const data = new Date(start)
+    data.setDate(start.getDate() + indeks)
+    return {
+      iso: `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-${String(data.getDate()).padStart(2, '0')}`,
+      dzien: data.getDate(),
+      wMiesiacu: data.getMonth() === miesiac - 1,
+      weekend: data.getDay() === 0 || data.getDay() === 6,
+    }
+  })
 }
 
 export function utworzBlokiSzablonuListyObecnosci(): BlokSwobodnyDokumentu[] {
@@ -77,6 +103,7 @@ function normalizujOrganizatora(wartosc: unknown): OrganizatorListyObecnosci {
 }
 
 function normalizujTrybListy(wartosc: unknown): TrybListyObecnosci {
+  if (wartosc === 'WKLEJONA') return 'WKLEJONA'
   return typeof wartosc === 'string' && wartosc.toUpperCase().includes('PUST') ? 'PUSTA' : 'WYPELNIONA'
 }
 
@@ -118,6 +145,13 @@ function normalizujUczestnikow(wartosc: unknown) {
   })
 }
 
+export function utworzUczestnikowZWklejonegoTekstu(tekst: string): UczestnikListyObecnosci[] {
+  return tekst.split(/\r?\n/).flatMap((wiersz, indeks): UczestnikListyObecnosci[] => {
+    const imieINazwisko = wiersz.split('\t').map((kolumna) => kolumna.trim()).filter(Boolean).join(' ').replace(/\s+/g, ' ').trim()
+    return imieINazwisko ? [{ id: `wklejony-${indeks + 1}`, imieINazwisko, czyReczny: true }] : []
+  })
+}
+
 function odczytajPoleLegacy(tekst: string, etykieta: string) {
   const wiersz = tekst.split(/\r?\n/).find((linia) => linia.toLocaleLowerCase('pl').startsWith(`${etykieta.toLocaleLowerCase('pl')}:`))
   return wiersz?.split(':').slice(1).join(':').trim() ?? ''
@@ -154,6 +188,7 @@ export function utworzDomyslneDaneListyObecnosci(): DaneListyObecnosci {
     organizator: 'SEMPER',
     trybListy: 'WYPELNIONA',
     liczbaPustychWierszy: 20,
+    uczestnicyTekst: '',
     uczestnicy: [],
     kolumny: [...domyslneKolumny],
     wariantWielodniowy: 'KOLUMNY_PODPISOW',
@@ -187,6 +222,7 @@ export function deserializujDaneListyObecnosci(tekst: string | null): DaneListyO
       organizator: normalizujOrganizatora(dane.organizator),
       trybListy: normalizujTrybListy(dane.trybListy),
       liczbaPustychWierszy: normalizujLiczbePustychWierszy(dane.liczbaPustychWierszy),
+      uczestnicyTekst: pobierzTekst(dane, 'uczestnicyTekst'),
       uczestnicy: normalizujUczestnikow(dane.uczestnicy),
       kolumny: normalizujKolumny(dane.kolumny),
       wariantWielodniowy: normalizujWariantWielodniowy(dane.wariantWielodniowy, daty),
@@ -207,7 +243,7 @@ export function utworzDaneListyObecnosciZIntegracji(daneZrodlowe: DaneListyObecn
   const dane = { ...daneZrodlowe, ...korektyReczne }
   const uczestnicy = dane.uczestnicy.map((uczestnik, indeks) => ({ id: uczestnik.id ?? `uczestnik-${indeks + 1}`, imieINazwisko: uczestnik.nazwaPelna }))
   const daty = normalizujDaty(dane.daty)
-  return { wersjaSchematu: 2, trener: dane.trenerzy.map((trener) => trener.imieINazwisko).join(', '), szczegolyId: dane.daneZrodlowe.szczegolyOrganizacyjneId, tytulSzkolenia: dane.tytulSzkolenia, miejsce: pobierzMiejsce(dane), daty, organizator: normalizujOrganizatora(dane.organizator.marka ?? dane.organizator.nazwa), trybListy: 'WYPELNIONA', liczbaPustychWierszy: Math.max(dane.liczbaUczestnikow, 20), uczestnicy, kolumny: [...domyslneKolumny], wariantWielodniowy: zaproponujWariantWielodniowyListyObecnosci(daty), czyPokazacPodpisTrenera: false, czyPokazacPodpisOrganizatora: false, blokiSwobodne: utworzBlokiSzablonuListyObecnosci(), wersjaSchematuBlokow: WERSJA_SCHEMATU_SWOBODNYCH_BLOKOW }
+  return { wersjaSchematu: 2, trener: dane.trenerzy.map((trener) => trener.imieINazwisko).join(', '), szczegolyId: dane.daneZrodlowe.szczegolyOrganizacyjneId, tytulSzkolenia: dane.tytulSzkolenia, miejsce: pobierzMiejsce(dane), daty, organizator: normalizujOrganizatora(dane.organizator.marka ?? dane.organizator.nazwa), trybListy: 'WYPELNIONA', liczbaPustychWierszy: Math.max(dane.liczbaUczestnikow, 20), uczestnicyTekst: '', uczestnicy, kolumny: [...domyslneKolumny], wariantWielodniowy: zaproponujWariantWielodniowyListyObecnosci(daty), czyPokazacPodpisTrenera: false, czyPokazacPodpisOrganizatora: false, blokiSwobodne: utworzBlokiSzablonuListyObecnosci(), wersjaSchematuBlokow: WERSJA_SCHEMATU_SWOBODNYCH_BLOKOW }
 }
 
 export function pobierzLiczbeWierszyNaStronieListyObecnosci(dane: DaneListyObecnosci) {

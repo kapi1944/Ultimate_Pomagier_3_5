@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { deserializujDaneAnkiety, podzielAnkieteNaStrony, serializujDaneAnkiety, utworzDomyslneDaneAnkiety, zastosujPresetAnkiety, type PytanieAnkiety } from '../src/moduly/dokumenty/generatory/ankiety/modelAnkiety.ts'
-import { deserializujDaneListyObecnosci, pobierzBladEksportuListy, podzielListeObecnosciNaStrony, porownajUczestnikowListyObecnosci, serializujDaneListyObecnosci, utworzDomyslneDaneListyObecnosci, zastosujSynchronizacjeUczestnikow } from '../src/moduly/dokumenty/generatory/listy_obecnosci/modelListyObecnosci.ts'
+import { deserializujDaneListyObecnosci, pobierzBladEksportuListy, pobierzDniKalendarzaListyObecnosci, podzielListeObecnosciNaStrony, porownajUczestnikowListyObecnosci, serializujDaneListyObecnosci, utworzDomyslneDaneListyObecnosci, utworzUczestnikowZWklejonegoTekstu, zastosujSynchronizacjeUczestnikow } from '../src/moduly/dokumenty/generatory/listy_obecnosci/modelListyObecnosci.ts'
 import { pobierzSzablonyDokumentow, zapiszKopieUkladuSwobodnychBlokow } from '../src/wspolne/dokumenty/szablonyDokumentow.ts'
 import { utworzBlokiWzorcaProjektowego } from '../src/moduly/dokumenty/wspolne/blokiWzorcaProjektowego.ts'
 
@@ -49,6 +49,21 @@ test('pusta lista wymaga jawnego wyboru; 10, 15, 20 i własna liczba są eksport
   }
   assert.ok(pobierzBladEksportuListy({ ...dane, trybListy: 'PUSTA', liczbaPustychWierszy: 1.5 }))
   assert.ok(pobierzBladEksportuListy({ ...dane, kolumny: [] }))
+})
+
+test('wklejona lista rozpoznaje pełne nazwiska oraz dwie kolumny z Excela', () => {
+  const uczestnicy = utworzUczestnikowZWklejonegoTekstu('Adam Kończak\r\nMarta\tKucfir\n\nMonika\tGlińska')
+  assert.deepEqual(uczestnicy.map((uczestnik) => uczestnik.imieINazwisko), ['Adam Kończak', 'Marta Kucfir', 'Monika Glińska'])
+  const dane = { ...utworzDomyslneDaneListyObecnosci(), trybListy: 'WKLEJONA' as const, uczestnicyTekst: 'Adam\tKończak', uczestnicy }
+  assert.equal(pobierzBladEksportuListy(dane), null)
+  assert.equal(deserializujDaneListyObecnosci(serializujDaneListyObecnosci(dane)).uczestnicyTekst, 'Adam\tKończak')
+})
+
+test('kalendarz terminu pokazuje pełne tygodnie i poprawnie oznacza bieżący miesiąc', () => {
+  const dni = pobierzDniKalendarzaListyObecnosci('2026-09')
+  assert.equal(dni.length, 42)
+  assert.deepEqual(dni.filter((dzien) => dzien.wMiesiacu).map((dzien) => dzien.iso), Array.from({ length: 30 }, (_, indeks) => `2026-09-${String(indeks + 1).padStart(2, '0')}`))
+  assert.deepEqual(pobierzDniKalendarzaListyObecnosci('błędny'), [])
 })
 
 test('kolumny podpisów nie są ściskane; przełączanie dni zachowuje osoby i numerację', () => {
