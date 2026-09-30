@@ -1,4 +1,5 @@
-import type { DokumentBlokowy, ProblemDokumentu } from '../../../../wspolne/dokumenty/modelBlokowy'
+import { czyStylOznaczeniaPoprawny, wyznaczOznaczeniaProgramu, type UstawienieWierszaProgramu } from './oznaczeniaProgramu'
+import type { BlokDokumentu, DokumentBlokowy, ProblemDokumentu } from '../../../../wspolne/dokumenty/modelBlokowy'
 import { sprawdzDokumentBlokowy } from '../../../../wspolne/dokumenty/modelBlokowy'
 import { normalizujBlokiSwobodneDokumentu, type BlokSwobodnyDokumentu, type ZrodloObrazuBloku } from '../../../../wspolne/dokumenty/modelSwobodnychBlokow'
 import { konwertujTekstProgramuNaHtml } from './komponenty/konwersjaProgramuWysiwyg'
@@ -32,6 +33,7 @@ export type UstawieniaProgramuSzkolenia = {
   stylPodpunktow: StylPodpunktowProgramu
   stylListyGlownej: StylListyGlownejProgramu
   stylePoziomowListy: string[]
+  oznaczeniaPoziomow?: string[]
   gruboscObramowaniaTytulu: number
   formatCudzyslowu: FormatCudzyslowuProgramu
   szerokoscLogotypu: number
@@ -42,6 +44,7 @@ export type UstawieniaProgramuSzkolenia = {
 export type ModelProgramuSzkolenia = {
   tytulSzkolenia: string
   trescProgramu: string
+  ustawieniaWierszyProgramu?: UstawienieWierszaProgramu[]
   czyWynikParsowaniaZatwierdzony: boolean
   ustawienia: UstawieniaProgramuSzkolenia
   logotypProgramu: string
@@ -151,6 +154,10 @@ export function normalizujProgramSzkolenia(zapis: unknown): ModelProgramuSzkolen
   return {
     tytulSzkolenia: tekstLubDomyslny(dane.tytulSzkolenia),
     trescProgramu,
+    ...(Array.isArray(dane.ustawieniaWierszyProgramu) ? { ustawieniaWierszyProgramu: dane.ustawieniaWierszyProgramu.map((wiersz) => czyObiekt(wiersz) ? {
+      ...(czyStylOznaczeniaPoprawny(wiersz.styl) ? { styl: wiersz.styl } : {}),
+      ...(typeof wiersz.poziom === 'number' && Number.isInteger(wiersz.poziom) && wiersz.poziom >= 0 && wiersz.poziom <= 8 ? { poziom: wiersz.poziom } : {}),
+    } : {}) } : {}),
     czyWynikParsowaniaZatwierdzony: dane.czyWynikParsowaniaZatwierdzony === true,
     ustawienia: {
       ...domyslneUstawieniaProgramu,
@@ -169,6 +176,7 @@ export function normalizujProgramSzkolenia(zapis: unknown): ModelProgramuSzkolen
       separacjaModulow: ustawienia.separacjaModulow === 'brak' || ustawienia.separacjaModulow === 'ramka' || ustawienia.separacjaModulow === 'linia' ? ustawienia.separacjaModulow : 'separator-pytan',
       stylPodpunktow: ustawienia.stylPodpunktow === 'numeracja' ? 'numeracja' : 'punktory',
       stylListyGlownej: ustawienia.stylListyGlownej === 'punktory' ? 'punktory' : 'numeracja',
+      oznaczeniaPoziomow: Array.isArray(ustawienia.oznaczeniaPoziomow) ? ustawienia.oznaczeniaPoziomow.map((styl) => czyStylOznaczeniaPoprawny(styl) ? styl : 'oryginalne') : [],
       stylePoziomowListy: stylePoziomowListy.length ? stylePoziomowListy : [...domyslneUstawieniaProgramu.stylePoziomowListy],
       gruboscObramowaniaTytulu: liczbaLubDomyslna(ustawienia.gruboscObramowaniaTytulu, domyslneUstawieniaProgramu.gruboscObramowaniaTytulu),
       formatCudzyslowu: ustawienia.formatCudzyslowu === 'dolny-gorny' ? 'dolny-gorny' : 'gorny-gorny',
@@ -181,18 +189,60 @@ export function normalizujProgramSzkolenia(zapis: unknown): ModelProgramuSzkolen
   }
 }
 
-export function pobierzHtmlProgramuSzkolenia(dane: Pick<ModelProgramuSzkolenia, 'trescProgramu'>) {
-  return konwertujTekstProgramuNaHtml(dane.trescProgramu)
+export function pobierzHtmlProgramuSzkolenia(dane: Pick<ModelProgramuSzkolenia, 'trescProgramu' | 'ustawieniaWierszyProgramu'>) {
+  return konwertujTekstProgramuNaHtml(dane.trescProgramu, dane.ustawieniaWierszyProgramu)
+}
+
+export function parsujProgramZModelu(dane: ModelProgramuSzkolenia) {
+  const program = parsujTekstProgramu(dane.trescProgramu, { czyScalacKontynuacje: false, czyZachowacWierszeListy: true, ustawieniaWierszy: dane.ustawieniaWierszyProgramu })
+  program.dokumentBlokowy.struktura = program.dokumentBlokowy.struktura.map((dzien) => dzien.typ !== 'Dzien' ? dzien : {
+    ...dzien, dzieci: dzien.dzieci.map((modul) => modul.typ !== 'Modul' ? modul : {
+      ...modul, dzieci: modul.dzieci.map((punkt) => {
+        const poziom = (punkt.metadane.poziom ?? 0) + (punkt.dane?.czyPoziomJawny ? 0 : 1)
+        return { ...punkt, metadane: { ...punkt.metadane, poziom }, stylLokalny: { ...punkt.stylLokalny, wciecie: poziom } }
+      }),
+    }),
+  })
+  return program
+}
+
+export function pobierzDomyslneOznaczeniaProgramu(ustawienia: UstawieniaProgramuSzkolenia, czyPodpunkty = false) {
+  return Array.from({ length: 9 }, (_, poziom) => {
+    const poziomGlowny = czyPodpunkty ? 1 : 0
+    const stylListy = czyPodpunkty ? ustawienia.stylPodpunktow : ustawienia.stylListyGlownej
+    if (poziom === poziomGlowny && stylListy === 'numeracja') return 'arabskie.'
+    return ustawienia.stylePoziomowListy[Math.min(Math.max(0, poziom - poziomGlowny), ustawienia.stylePoziomowListy.length - 1)] ?? '•'
+  })
+}
+
+function zastosujOznaczeniaBlokow(bloki: BlokDokumentu[], dane: ModelProgramuSzkolenia, czyPodpunkty = false): BlokDokumentu[] {
+  const pozycje = bloki.filter((blok) => ['Punkt', 'Podpunkt', 'Modul'].includes(blok.typ))
+  const oznaczenia = wyznaczOznaczeniaProgramu(pozycje.map((blok) => ({
+    poziom: blok.stylLokalny.wciecie ?? blok.metadane.poziom ?? 0,
+    oryginalne: typeof blok.dane?.oznaczenieOryginalne === 'string' ? blok.dane.oznaczenieOryginalne : undefined,
+    styl: typeof blok.dane?.stylOznaczenia === 'string' ? blok.dane.stylOznaczenia : undefined,
+    wartosc: typeof blok.dane?.wartoscOznaczenia === 'number' ? blok.dane.wartoscOznaczenia : undefined,
+  })), dane.ustawienia.oznaczeniaPoziomow ?? [], pobierzDomyslneOznaczeniaProgramu(dane.ustawienia, czyPodpunkty))
+  return bloki.map((blok) => {
+    const indeks = pozycje.indexOf(blok)
+    const czyUkrycOznaczenieModulu = blok.typ === 'Modul' && !blok.dane?.oznaczenieOryginalne && !blok.dane?.stylOznaczenia && (!dane.ustawienia.oznaczeniaPoziomow?.[0] || dane.ustawienia.oznaczeniaPoziomow[0] === 'oryginalne')
+    return {
+      ...blok,
+      dane: { ...blok.dane, ...(indeks >= 0 ? { oznaczenieWyswietlane: czyUkrycOznaczenieModulu ? '' : oznaczenia[indeks] } : {}) },
+      dzieci: zastosujOznaczeniaBlokow(blok.dzieci, dane, blok.typ === 'Modul'),
+    }
+  })
 }
 
 export function utworzDokumentProgramuSzkolenia(
   dane: ModelProgramuSzkolenia,
-  wynikParsowania: ProgramSzkolenia = parsujTekstProgramu(dane.trescProgramu),
+  wynikParsowania: ProgramSzkolenia = parsujProgramZModelu(dane),
 ): DokumentBlokowy {
   const organizator = dane.ustawienia.profilFirmy === 'iist' ? 'IIST' : 'SEMPER'
 
   return {
     ...wynikParsowania.dokumentBlokowy,
+    struktura: zastosujOznaczeniaBlokow(wynikParsowania.dokumentBlokowy.struktura, dane),
     ...(dane.ustawienia.blokiSwobodne ? { blokiSwobodne: dane.ustawienia.blokiSwobodne } : {}),
     dane: {
       ...wynikParsowania.dokumentBlokowy.dane,

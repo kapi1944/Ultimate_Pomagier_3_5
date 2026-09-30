@@ -14,6 +14,7 @@ import {
   type WlasciwosciWygladuTrescProgramu,
 } from './RendererPodgladuProgramu'
 import { usePaginacjaProgramu } from './usePaginacjaProgramu'
+import { oznaczSemantykePdf } from '../../../../wspolne/dokumenty/semantykaPdf'
 import logotypSemper from './zasoby/logotyp-semper.png'
 import mapaPolskiSemper from './zasoby/mapa-polski-semper.png'
 import {
@@ -88,7 +89,7 @@ function RendererZawartosciStrony({ strona, wyglad, trybRenderowania }: { strona
   )
 }
 
-function StronaFizycznaProgramu({
+function ZawartoscStronyFizycznejProgramu({
   strona,
   pierwszaStrona,
   preset,
@@ -131,11 +132,11 @@ function StronaFizycznaProgramu({
               <img alt="Logotyp" src={logotypUzytkownika} style={{ width: `${szerokoscLogotypu}%` }} />
             </div>
           )}
-          {pierwszaStrona && <div className="program-kartka-a4__etykieta">Program szkolenia</div>}
+          {pierwszaStrona && <div className="program-kartka-a4__etykieta" style={{ color: wyglad.kolorAkcentu }}>Program szkolenia</div>}
           {pierwszaStrona && (
             <div
               className="program-kartka-a4__tytul"
-              style={{ borderWidth: `${gruboscObramowaniaTytulu}px`, color: wyglad.kolorAkcentu }}
+              style={{ borderWidth: `${gruboscObramowaniaTytulu}px`, color: '#000' }}
             >
               {tytul || '„Program szkolenia”'}
             </div>
@@ -172,6 +173,13 @@ function StronaFizycznaProgramu({
       {czyWarstwaEdycji && onZaznaczBlok && onZmienBlok && <EdytowalnaWarstwaSwobodnychBlokow bloki={blokiSwobodne ?? []} numerStrony={strona?.numer ?? 1} zaznaczonyBlokId={zaznaczonyBlokId ?? null} trybEdycjiSzablonu={trybEdycjiSzablonu} onZaznacz={onZaznaczBlok} onZmienBlok={onZmienBlok} />}
     </article>
   )
+}
+
+function StronaFizycznaProgramu(wlasciwosci: WlasciwosciStronyFizycznej) {
+  const zawartosc = ZawartoscStronyFizycznejProgramu(wlasciwosci)
+  return wlasciwosci.trybRenderowania === 'finalny' && wlasciwosci.atrybutyStrony?.['data-strona-dokumentu']
+    ? oznaczSemantykePdf(zawartosc)
+    : zawartosc
 }
 
 function utworzFragmentPomiarowyModulu(modul: ModelPaginacjiProgramu['dni'][number]['moduly'][number], czyPokazacTytul: boolean, grupyPunktow: GrupaPunktowProgramu[]): FragmentModuluProgramu {

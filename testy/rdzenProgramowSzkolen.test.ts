@@ -35,9 +35,11 @@ function przykladowyProgram() {
   return normalizujProgramSzkolenia({
     tytulSzkolenia: 'Bezpieczna komunikacja',
     trescProgramu: '1. Wprowadzenie\n- Zasady komunikacji',
+    ustawieniaWierszyProgramu: [{ styl: 'rzymskie)' }, { styl: 'brak', poziom: 1 }],
     czyWynikParsowaniaZatwierdzony: true,
     ustawienia: {
       profilFirmy: 'semper',
+      oznaczeniaPoziomow: ['oryginalne', 'literowe)'],
       kolorAkcentuProgramu: '#DE1914',
       blokiSwobodne: [{
         id: 'oznaczenie-testowe',

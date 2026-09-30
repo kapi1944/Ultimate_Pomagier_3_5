@@ -1,10 +1,13 @@
-﻿import { useState, type RefObject } from 'react'
+import { useState, type RefObject } from 'react'
 import { czyMoznaRozpoczacEksport, drukujDokument, pobierzPdfDokumentu } from './eksportPdf'
 import { czyNazwaWymagaOpisuUzytkownika, zbudujNazweEksportowanegoDokumentu, type DaneNazwyEksportowanegoDokumentu } from './nazwyDokumentow'
 import { wykonajEksportPoPrzygotowaniu } from './przygotowanieEksportu'
 import './eksportPdf.css'
+import { drukujProgram } from './drukProgramu'
+import './drukProgramu.css'
 
 type WlasciwosciAkcjiEksportuPdf = {
+  silnikPdf?: 'semantyczny' | 'raster_legacy'
   obszarDokumentu: RefObject<HTMLElement | null>
   nazwaPliku?: string
   daneNazwyEksportu?: DaneNazwyEksportowanegoDokumentu
@@ -19,7 +22,7 @@ type WlasciwosciAkcjiEksportuPdf = {
   zakonczEksport?: () => void
 }
 
-export default function AkcjeEksportuPdf({ obszarDokumentu, nazwaPliku, daneNazwyEksportu, czyMoznaEksportowac = () => true, className, classNamePrzycisku = 'akcje-eksportu-pdf__przycisk', etykietaPrzyciskuPdf = 'Pobierz PDF', pokazPrzyciskDruku = true, orientacja = 'pionowa', pobierzBladEksportu, przygotujEksport, zakonczEksport }: WlasciwosciAkcjiEksportuPdf) {
+export default function AkcjeEksportuPdf({ silnikPdf = 'raster_legacy', obszarDokumentu, nazwaPliku, daneNazwyEksportu, czyMoznaEksportowac = () => true, className, classNamePrzycisku = 'akcje-eksportu-pdf__przycisk', etykietaPrzyciskuPdf = 'Pobierz PDF', pokazPrzyciskDruku = true, orientacja = 'pionowa', pobierzBladEksportu, przygotujEksport, zakonczEksport }: WlasciwosciAkcjiEksportuPdf) {
   const [czyGenerowanie, ustawCzyGenerowanie] = useState(false)
   const [blad, ustawBlad] = useState<string | null>(null)
   const [nazwaUzytkownika, ustawNazweUzytkownika] = useState('')
@@ -49,7 +52,7 @@ export default function AkcjeEksportuPdf({ obszarDokumentu, nazwaPliku, daneNazw
     try {
       await wykonajEksportPoPrzygotowaniu({
         przygotuj: przygotujEksport,
-        wykonaj: () => pobierzPdfDokumentu({ obszarDokumentu: obszarDokumentu.current!, nazwaPliku: nazwaDoEksportu, format: 'a4', orientacja }),
+        wykonaj: () => pobierzPdfDokumentu({ silnikPdf, obszarDokumentu: obszarDokumentu.current!, nazwaPliku: nazwaDoEksportu, format: 'a4', orientacja }),
         zakoncz: zakonczEksport,
       })
     } catch {
@@ -62,10 +65,16 @@ export default function AkcjeEksportuPdf({ obszarDokumentu, nazwaPliku, daneNazw
   async function drukuj() {
     if (!czyMoznaRozpoczacEksport(czyGenerowanie) || !sprawdzGotowoscEksportu()) return
     ustawBlad(null)
+    ustawCzyGenerowanie(true)
     try {
-      await wykonajEksportPoPrzygotowaniu({ przygotuj: przygotujEksport, wykonaj: drukujDokument, zakoncz: zakonczEksport })
+      await wykonajEksportPoPrzygotowaniu({ przygotuj: przygotujEksport, wykonaj: () => {
+        const obszar = obszarDokumentu.current
+        return obszar?.querySelector('.program-strony') ? drukujProgram(obszar) : drukujDokument()
+      }, zakoncz: zakonczEksport })
     } catch {
       ustawBlad('Nie udało się przygotować dokumentu do druku.')
+    } finally {
+      ustawCzyGenerowanie(false)
     }
   }
 

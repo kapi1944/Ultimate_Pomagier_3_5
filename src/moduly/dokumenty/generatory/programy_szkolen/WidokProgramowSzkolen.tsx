@@ -1,3 +1,4 @@
+import { styleOznaczenProgramu } from './oznaczeniaProgramu'
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useKontekstUzytkownika } from '../../../../aplikacja/logowanie/useKontekstUzytkownika'
 import AkcjeEksportuPdf from '../../../../wspolne/dokumenty/AkcjeEksportuPdf'
@@ -23,7 +24,6 @@ import {
   przygotujRaportEksportuDokumentu,
   type BlokDokumentu,
 } from '../../../../wspolne/dokumenty/modelBlokowy'
-import { parsujTekstProgramu } from './ParserTekstu'
 import {
   importujTekstProgramu,
   pobierzDomyslnieZaakceptowanePolaImportuProgramu,
@@ -50,10 +50,13 @@ import {
 import { EdytorProgramuWysiwyg } from './komponenty/EdytorProgramuWysiwyg'
 import {
   konwertujHtmlNaTekstProgramu,
+  konwertujHtmlNaWierszeProgramu,
 } from './komponenty/konwersjaProgramuWysiwyg'
 import { czyUzytkownikMozeWymusicEksportProgramu } from './uprawnieniaEksportuProgramu'
 import {
   czyKolorProgramuPoprawny as sprawdzHex,
+  parsujProgramZModelu,
+  pobierzDomyslneOznaczeniaProgramu,
   domyslneUstawieniaProgramu as domyslneUstawienia,
   domyslnyProgramSzkolenia as domyslnyZapisProgramu,
   ID_LOGOTYPU_PROGRAMU,
@@ -80,7 +83,6 @@ type DaneProfiluFirmy = {
 }
 
 const punktoryDoWyboru = ['•', '◦', '▪', '-', '–', '*']
-const etykietaNumeracjiListyGlownej = '1,2,3'
 
 const daneProfilowFirmy: Record<ProfilFirmy, DaneProfiluFirmy> = {
   semper: {
@@ -333,6 +335,10 @@ const styleProgramuSzkolenia = `
   outline: none;
 }
 
+.program-szkolen__tiptap li[data-wyswietlane-oznaczenie] { list-style: none; }
+.program-szkolen__tiptap [data-wyswietlane-oznaczenie]::before { content: attr(data-wyswietlane-oznaczenie); margin-right: 0.4em; }
+.program-szkolen__tiptap [data-wyswietlane-oznaczenie=""]::before { margin-right: 0; }
+.program-szkolen__tiptap li[data-wyswietlane-oznaczenie] > p:first-child { display: inline; }
 .program-szkolen__tiptap p,
 .program-szkolen__tiptap h2,
 .program-szkolen__tiptap h3,
@@ -348,7 +354,7 @@ const styleProgramuSzkolenia = `
 
 .program-szkolen__tiptap ul,
 .program-szkolen__tiptap ol {
-  padding-left: 24px;
+  padding-left: 0;
 }
 
 .program-szkolen__tiptap hr {
@@ -1062,7 +1068,11 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
   }, [dokumentIdZTrasy, oznaczJakoZapisany])
   const { tytulSzkolenia, trescProgramu, czyWynikParsowaniaZatwierdzony, ustawienia, logotypProgramu, linkLogotypu } = daneProgramu
 
-  const program = useMemo(() => parsujTekstProgramu(trescProgramu), [trescProgramu])
+  const program = useMemo(() => parsujProgramZModelu(daneProgramu), [daneProgramu])
+  const domyslneStylePoziomow = useMemo(() => {
+    const glowne = pobierzDomyslneOznaczeniaProgramu(ustawienia)
+    return program.dni.length ? [glowne[0], ...pobierzDomyslneOznaczeniaProgramu(ustawienia, true).slice(1)] : glowne
+  }, [ustawienia, program.dni.length])
   const trescProgramuHtml = useMemo(() => pobierzHtmlProgramuSzkolenia(daneProgramu), [daneProgramu])
   const tytulDokumentu = pobierzTytulDokumentuProgramu(tytulSzkolenia)
   const kolorNiepoprawny = !sprawdzHex(ustawienia.kolorAkcentuProgramu)
@@ -1094,18 +1104,15 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
       }),
     [blokiDokumentu],
   )
-  const liczbaModulow = blokiDokumentu.filter((blok) => blok.typ === 'Modul').length
+  const liczbaDni = program.dni.length || (program.listaProsta.length ? 1 : 0)
+  const liczbaModulow = blokiDokumentu.filter((blok) => blok.typ === 'Modul').length || (program.listaProsta.length ? 1 : 0)
   const liczbaPunktow = blokiDokumentu.filter((blok) => blok.typ === 'Punkt' || blok.typ === 'Podpunkt').length
   const czyArchitekt = czyUzytkownikMozeWymusicEksportProgramu(zalogowanyUzytkownik)
   const gruboscObramowaniaTytulu = Number.isFinite(ustawienia.gruboscObramowaniaTytulu)
     ? Math.min(10, Math.max(0, ustawienia.gruboscObramowaniaTytulu))
     : domyslneUstawienia.gruboscObramowaniaTytulu
   const etykietaGrubosciObramowaniaTytulu = gruboscObramowaniaTytulu.toFixed(1).replace('.', ',')
-  const czyListaGlownaNumerowana = ustawienia.stylListyGlownej === 'numeracja'
-  const czyPokazacPoziomyPodpunktow = ustawienia.stylPodpunktow === 'punktory'
-  const widoczneStylePoziomowListy = ustawienia.stylePoziomowListy
-    .map((styl, indeks) => ({ styl, indeks }))
-    .filter(({ indeks }) => indeks === 0 || czyPokazacPoziomyPodpunktow)
+  const widoczneStylePoziomowListy = Array.from({ length: Math.max(ustawienia.stylePoziomowListy.length, ustawienia.oznaczeniaPoziomow?.length ?? 0) }, (_, indeks) => ({ styl: ustawienia.oznaczeniaPoziomow?.[indeks] ?? 'oryginalne', indeks }))
 
   const zmianyImportu = useMemo(
     () => wynikImportu ? przygotujZmianyImportuProgramu(daneProgramu, wynikImportu) : [],
@@ -1156,6 +1163,7 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
     ustawDaneProgramu((aktualne) => ({
       ...aktualne,
       trescProgramu: tekst,
+      ustawieniaWierszyProgramu: konwertujHtmlNaWierszeProgramu(html).ustawienia,
       czyWynikParsowaniaZatwierdzony: false,
     }))
   }
@@ -1214,7 +1222,7 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
         uzytkownikId: zalogowanyUzytkownikId,
         metadane: {
           organizator: ustawienia.profilFirmy === 'iist' ? 'IIST' : 'SEMPER',
-          liczbaDni: program.dni.length,
+          liczbaDni,
           liczbaModulow,
           autor: undefined,
           klient: undefined,
@@ -1232,7 +1240,7 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
       oznaczBladZapisu()
       ustawKomunikat('Nie udało się zapisać programu roboczo.')
     }
-  }, [aktywnaKopiaId, daneProgramu, liczbaModulow, oznaczBladZapisu, oznaczJakoZapisany, program.dni.length, rozpocznijZapis, ustawienia.profilFirmy, zalogowanyUzytkownikId])
+  }, [aktywnaKopiaId, daneProgramu, liczbaModulow, liczbaDni, oznaczBladZapisu, oznaczJakoZapisany, rozpocznijZapis, ustawienia.profilFirmy, zalogowanyUzytkownikId])
 
   function wyczyscProgram() {
     ustawDaneProgramu(domyslnyZapisProgramu)
@@ -1364,16 +1372,13 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
     }))
   }
 
-  function zmienStylPoziomu(indeks: number, wartosc: string) {
-    ustawDaneProgramu((aktualne) => ({
-      ...aktualne,
-      ustawienia: {
-        ...aktualne.ustawienia,
-        stylePoziomowListy: aktualne.ustawienia.stylePoziomowListy.map((styl, pozycja) =>
-          pozycja === indeks ? wartosc : styl,
-        ),
-      },
-    }))
+  function zmienOznaczeniePoziomu(indeks: number, styl: string) {
+    ustawDaneProgramu((aktualne) => {
+      const oznaczeniaPoziomow = [...(aktualne.ustawienia.oznaczeniaPoziomow ?? [])]
+      while (oznaczeniaPoziomow.length <= indeks) oznaczeniaPoziomow.push('oryginalne')
+      oznaczeniaPoziomow[indeks] = styl
+      return { ...aktualne, ustawienia: { ...aktualne.ustawienia, oznaczeniaPoziomow } }
+    })
   }
 
   function importujProgramZPliku(plik?: File) {
@@ -1537,6 +1542,7 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
           <PrzyciskPaneluGeneratora className="program-szkolen__przycisk">Ustawienia programu</PrzyciskPaneluGeneratora>
           <StatusZapisuDokumentu stan={stanZapisu} />
           <AkcjeEksportuPdf
+            silnikPdf="semantyczny"
             className="program-szkolen__akcje-eksportu"
             classNamePrzycisku="program-szkolen__przycisk"
             czyMoznaEksportowac={czyMoznaEksportowacProgram}
@@ -1599,7 +1605,7 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
                 czyZatwierdzony={czyWynikParsowaniaZatwierdzony}
                 diagnostykaParsera={diagnostykaParsera}
                 liczbaBlokow={blokiDokumentu.length}
-                liczbaDni={program.dni.length}
+                liczbaDni={liczbaDni}
                 liczbaModulow={liczbaModulow}
                 liczbaPunktow={liczbaPunktow}
                 pokazDiagnostykeParsera={czyArchitekt}
@@ -1788,7 +1794,6 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
 
               <div className="program-szkolen__siatka">
                 {widoczneStylePoziomowListy.map(({ styl, indeks }) => {
-                  const czyPoziomListyGlownejNumerowany = indeks === 0 && czyListaGlownaNumerowana
 
                   return (
                     <Fragment key={indeks}>
@@ -1804,26 +1809,17 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
                         </span>
                         <select
                           className="program-szkolen__lista program-szkolen__lista--punktor-poziomu"
-                          disabled={czyPoziomListyGlownejNumerowany}
-                          onChange={(zdarzenie) => zmienStylPoziomu(indeks, zdarzenie.target.value)}
-                          value={czyPoziomListyGlownejNumerowany ? etykietaNumeracjiListyGlownej : styl}
+                          onChange={(zdarzenie) => zmienOznaczeniePoziomu(indeks, zdarzenie.target.value)}
+                          value={styl}
                         >
-                          {czyPoziomListyGlownejNumerowany ? (
-                            <option value={etykietaNumeracjiListyGlownej}>{etykietaNumeracjiListyGlownej}</option>
-                          ) : (
-                            punktoryDoWyboru.map((punktor) => (
-                              <option key={punktor} value={punktor}>
-                                {punktor}
-                              </option>
-                            ))
-                          )}
+                          {styleOznaczenProgramu.map(([wartosc, etykieta]) => <option key={wartosc} value={wartosc}>{etykieta}</option>)}
                         </select>
                       </label>
                       {indeks === 0 && <div className="program-szkolen__separator" />}
                     </Fragment>
                   )
                 })}
-                {czyPokazacPoziomyPodpunktow && (
+                {(
                   <button className="program-szkolen__przycisk" onClick={dodajPoziomListy} type="button">
                     Dodaj poziom
                   </button>
@@ -1960,6 +1956,9 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
               </div>
 
               <EdytorProgramuWysiwyg
+                stylePoziomow={ustawienia.oznaczeniaPoziomow}
+                domyslneStylePoziomow={domyslneStylePoziomow}
+                onZmianaStyluPoziomu={zmienOznaczeniePoziomu}
                 onZmianaHtml={(html) => zmienTrescProgramuHtml(html)}
                 onZmianaTekstuProgramu={() => undefined}
                 wartoscHtml={trescProgramuHtml}

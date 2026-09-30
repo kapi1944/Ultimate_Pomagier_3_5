@@ -1,3 +1,4 @@
+import { polaczKontynuacjeProgramuPdf } from './ParserTekstu'
 import { importujTekstProgramu, utworzWynikImportuProgramu, type WynikImportuProgramu } from './pipelineImportuProgramu'
 
 type ElementTekstuPdf = { str?: string; hasEOL?: boolean }
@@ -100,7 +101,7 @@ export async function wyodrebnijTekstPdf(
 }
 
 export function utworzWynikImportuProgramuZTekstuPdf(tekst: string): WynikImportuProgramu {
-  const wynikTekstu = importujTekstProgramu(tekst)
+  const wynikTekstu = importujTekstProgramu(polaczKontynuacjeProgramuPdf(tekst))
 
   return utworzWynikImportuProgramu({
     zrodlo: 'PDF',

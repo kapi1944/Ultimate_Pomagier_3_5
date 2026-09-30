@@ -1,0 +1,67 @@
+@page program-fizyczny-a4 { size: A4 portrait; margin: 0; }
+
+@media print {
+  [data-przodek-druku-programu] > :not([data-przodek-druku-programu]):not([data-cel-druku-programu]):not(style):not(link) {
+    display: none !important;
+  }
+
+  [data-przodek-druku-programu] {
+    display: block !important;
+    position: static !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    overflow: visible !important;
+    transform: none !important;
+    contain: none !important;
+    container-type: normal !important;
+  }
+
+  body [data-cel-druku-programu],
+  body [data-cel-druku-programu] * {
+    visibility: visible !important;
+  }
+
+  body [data-cel-druku-programu] {
+    page: program-fizyczny-a4;
+    display: block !important;
+    width: 210mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    gap: 0 !important;
+    transform: none !important;
+  }
+
+  [data-cel-druku-programu] > :not(article[data-strona-dokumentu]) {
+    display: none !important;
+  }
+
+  body [data-cel-druku-programu] > article[data-strona-dokumentu] {
+    page: program-fizyczny-a4;
+    width: 210mm !important;
+    height: 297mm !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    transform: none !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  body [data-cel-druku-programu] > article[data-strona-dokumentu]:not(:last-of-type) {
+    break-after: page;
+    page-break-after: always;
+  }
+}

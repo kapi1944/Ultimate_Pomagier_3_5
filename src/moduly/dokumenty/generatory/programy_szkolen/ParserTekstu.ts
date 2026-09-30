@@ -1,3 +1,4 @@
+import { rozpoznajOznaczenieProgramu, wyznaczPoziomyProgramu, type OznaczenieProgramu, type UstawienieWierszaProgramu } from './oznaczeniaProgramu.ts'
 import type { BlokDokumentu, DokumentBlokowy, ProblemDokumentu } from '../../../../wspolne/dokumenty/modelBlokowy'
 import { utworzModelStronyProgramu } from './geometriaStronyProgramu.ts'
 
@@ -9,6 +10,8 @@ export interface PodpunktProgramu {
   poziom: number
   typ?: TypElementuProgramu
   czyNiepewne?: boolean
+  oznaczenie?: OznaczenieProgramu
+  ustawienieOznaczenia?: UstawienieWierszaProgramu
 }
 
 export interface ModulProgramu {
@@ -17,6 +20,8 @@ export interface ModulProgramu {
   podpunkty: PodpunktProgramu[]
   typ?: TypElementuProgramu
   czyNiepewne?: boolean
+  oznaczenie?: OznaczenieProgramu
+  ustawienieOznaczenia?: UstawienieWierszaProgramu
 }
 
 export interface DzienProgramu {
@@ -33,6 +38,8 @@ export interface PozycjaListyProgramu {
   poziom: number
   typ?: TypElementuProgramu
   czyNiepewne?: boolean
+  oznaczenie?: OznaczenieProgramu
+  ustawienieOznaczenia?: UstawienieWierszaProgramu
 }
 
 export interface BlokiStandardoweProgramu {
@@ -93,19 +100,22 @@ function utworzBlok(
   dzieci: BlokDokumentu[],
   czyNiepewne = false,
   poziom = 0,
+  oznaczenie?: OznaczenieProgramu,
+  ustawienie?: UstawienieWierszaProgramu,
 ): BlokDokumentu {
   return {
     id,
     typ,
-    tresc,
+    tresc: oznaczenie && (typ === 'Punkt' || typ === 'Podpunkt') ? tresc : rozpoznajOznaczenieProgramu(tresc ?? '')?.tresc ?? tresc,
+    dane: { oznaczenieOryginalne: oznaczenie?.zapis ?? rozpoznajOznaczenieProgramu(tresc ?? '')?.oznaczenie.zapis ?? null, wartoscOznaczenia: oznaczenie?.wartosc ?? null, stylOznaczenia: ustawienie?.styl ?? null, czyPoziomJawny: ustawienie?.poziom !== undefined },
     dzieci,
     metadane: {
       zrodlo: 'parser',
-      poziom,
+      poziom: ustawienie?.poziom ?? poziom,
       opisDiagnostyczny: czyNiepewne ? 'Parser nie ma pewności co do roli tego fragmentu.' : undefined,
     },
     stylLokalny: {
-      wciecie: poziom,
+      wciecie: ustawienie?.poziom ?? poziom,
     },
     statusDiagnostyczny: czyNiepewne ? 'do_sprawdzenia' : 'poprawny',
   }
@@ -144,9 +154,14 @@ function zbudujDokumentBlokowyProgramu(program: Omit<ProgramSzkolenia, 'dokument
                   [],
                   podpunkt.czyNiepewne,
                   podpunkt.poziom,
+                  podpunkt.oznaczenie,
+                  podpunkt.ustawienieOznaczenia,
                 ),
               ),
               modul.czyNiepewne,
+              0,
+              modul.oznaczenie,
+              modul.ustawienieOznaczenia,
             ),
           ),
         ],
@@ -161,6 +176,8 @@ function zbudujDokumentBlokowyProgramu(program: Omit<ProgramSzkolenia, 'dokument
         [],
         pozycja.czyNiepewne,
         pozycja.poziom,
+        pozycja.oznaczenie,
+        pozycja.ustawienieOznaczenia,
       ),
     ),
   ]
@@ -254,6 +271,9 @@ function pobierzPrefiksStruktury(tresc: string) {
     return { prefiks: naglowek[1].trimEnd(), reszta: naglowek[2] ?? '' }
   }
 
+  const oznaczenie = rozpoznajOznaczenieProgramu(tresc)
+  if (oznaczenie) return { prefiks: oznaczenie.oznaczenie.zapis, reszta: oznaczenie.tresc }
+
   const numer = tresc.match(/^([0-9]{1,3}(?:[.)]|\s*[-–—]|\s+))\s*(.+)$/)
 
   if (numer) {
@@ -266,7 +286,7 @@ function pobierzPrefiksStruktury(tresc: string) {
 function normalizujFormatowanieZnacznikaStruktury(tresc: string) {
   const bezFormatowaniaSamegoPrefiksu = tresc
     .replace(/^(\*\*|\+\+|\*)(Dzie(?:ń|n)\s+(?:[0-9]+|[ivxlcdm]+))\1\s*/i, '$2 ')
-    .replace(/^(\*\*|\+\+|\*)([0-9]{1,3}[.)])\1\s*/, '$2 ')
+    .replace(/^(\*\*|\+\+|\*)([0-9]+[.)]|[IVXLCDMivxlcdm]+[.)]|[a-zA-Z][.)])\1\s*/, '$2 ')
   const rozpakowane = rozpakujPelneFormatowanieLinii(bezFormatowaniaSamegoPrefiksu)
   const prefiks = pobierzPrefiksStruktury(rozpakowane.tresc)
 
@@ -375,6 +395,21 @@ function czyScalicZPoprzednim(ostatniElement: OstatniElement | null) {
   return /[,/-]$/.test(poprzedniaTresc) || czyKonczySieSkrotem(poprzedniaTresc) || poprzedniaTresc.length >= 70
 }
 
+export function polaczKontynuacjeProgramuPdf(tekst: string) {
+  const wynik: string[] = []
+  for (const surowy of tekst.split(/\r?\n/)) {
+    const tresc = przygotujTresc(surowy)
+    const poprzedni = wynik.at(-1) ?? ''
+    const poprzedniaTresc = przygotujTresc(poprzedni)
+    const oznaczenie = rozpoznajOznaczenieProgramu(poprzedniaTresc)
+    const czyNaglowek = wzorzecDnia.test(poprzedniaTresc) || wzorzecModulu.test(poprzedniaTresc) || wzorzecNaglowkaMarkdown.test(poprzedniaTresc) || (oznaczenie && oznaczenie.oznaczenie.rodzaj !== 'punktor')
+    const ostatni: OstatniElement = { rodzaj: 'podpunkt', poziom: 0, pobierzTresc: () => oznaczenie?.tresc ?? poprzedniaTresc, ustawTresc: () => undefined }
+    if (tresc && poprzedni.trim() && !czyNaglowek && !czyZnacznikProgramu({ surowy, tresc, indeks: 0, poziom: 0 }) && !rozpoznajOznaczenieProgramu(tresc) && czyScalicZPoprzednim(ostatni)) wynik[wynik.length - 1] = polaczTekst(poprzedni, surowy)
+    else wynik.push(surowy)
+  }
+  return wynik.join('\n')
+}
+
 function polaczTekst(pierwszy: string, drugi: string) {
   return `${pierwszy.replace(/\s+$/, '')} ${drugi.trim()}`.trim()
 }
@@ -419,10 +454,25 @@ function utworzProgram(): Omit<ProgramSzkolenia, 'dokumentBlokowy'> {
   }
 }
 
-export function parsujTekstProgramu(tresc: string): ProgramSzkolenia {
+export function parsujTekstProgramu(tresc: string, opcje: { czyScalacKontynuacje?: boolean; czyZachowacWierszeListy?: boolean; ustawieniaWierszy?: UstawienieWierszaProgramu[] } = {}): ProgramSzkolenia {
   const wiersze = przygotujWiersze(tresc)
   const program = utworzProgram()
 
+  if (opcje.czyZachowacWierszeListy && !wiersze.some((wiersz) => wzorzecDnia.test(wiersz.tresc) || wzorzecModulu.test(wiersz.tresc) || wzorzecNaglowkaMarkdown.test(wiersz.tresc))) {
+    const poziomy = wyznaczPoziomyProgramu(wiersze.map((wiersz) => ({ ...wiersz, jawnyPoziom: opcje.ustawieniaWierszy?.[wiersz.indeks]?.poziom })))
+    wiersze.forEach((wiersz, indeks) => {
+      if (czyTytulTechniczny(wiersz.tresc)) return
+      if (program.blokiStandardowe.informacjeOrganizacyjne) return
+      if (wzorzecInformacjiOrganizacyjnych.test(wiersz.tresc)) { program.blokiStandardowe.informacjeOrganizacyjne = true; return }
+      if (wzorzecNotatkiOnline.test(wiersz.tresc)) { program.blokiStandardowe.notatkaOnline = true; return }
+      if (wzorzecProgramuPartnerskiego.test(wiersz.tresc)) { program.blokiStandardowe.programPartnerski = true; return }
+      const rozpoznane = rozpoznajOznaczenieProgramu(wiersz.tresc)
+      program.listaProsta.push({ id: `pozycja-${wiersz.indeks + 1}`, tresc: rozpoznane?.tresc ?? wiersz.tresc, poziom: poziomy[indeks], oznaczenie: rozpoznane?.oznaczenie, ustawienieOznaczenia: opcje.ustawieniaWierszy?.[wiersz.indeks], typ: rozpoznajTypElementu(wiersz.tresc) })
+    })
+    return zakonczProgram(program)
+  }
+
+  let aktualnyWiersz: WierszProgramu | undefined
   let aktualnyDzien: DzienProgramu | null = null
   let aktualnyModul: ModulProgramu | null = null
   let ostatniElement: OstatniElement | null = null
@@ -496,6 +546,8 @@ export function parsujTekstProgramu(tresc: string): ProgramSzkolenia {
       podpunkty: [],
       typ: rozpoznajTypElementu(tytul),
       czyNiepewne,
+      oznaczenie: tytul === 'Zakres tematyczny' ? undefined : rozpoznajOznaczenieProgramu(aktualnyWiersz?.tresc ?? '')?.oznaczenie,
+      ustawienieOznaczenia: tytul === 'Zakres tematyczny' ? undefined : opcje.ustawieniaWierszy?.[aktualnyWiersz?.indeks ?? -1],
     }
     zrodloAktualnegoModulu = zrodlo
     aktualnyDzien?.moduly.push(aktualnyModul)
@@ -515,6 +567,8 @@ export function parsujTekstProgramu(tresc: string): ProgramSzkolenia {
       poziom,
       typ: rozpoznajTypElementu(trescPodpunktu),
       czyNiepewne,
+      oznaczenie: rozpoznajOznaczenieProgramu(aktualnyWiersz?.tresc ?? '')?.oznaczenie,
+      ustawienieOznaczenia: opcje.ustawieniaWierszy?.[aktualnyWiersz?.indeks ?? -1],
     }
 
     aktualnyModul?.podpunkty.push(podpunkt)
@@ -532,6 +586,7 @@ export function parsujTekstProgramu(tresc: string): ProgramSzkolenia {
 
   for (let indeks = 0; indeks < wiersze.length; indeks += 1) {
     const wiersz = wiersze[indeks]
+    aktualnyWiersz = wiersz
     const nastepny = wiersze[indeks + 1]
 
     if (czyTytulTechniczny(wiersz.tresc)) {
@@ -578,6 +633,12 @@ export function parsujTekstProgramu(tresc: string): ProgramSzkolenia {
       continue
     }
 
+    const oznaczenieWiersza = rozpoznajOznaczenieProgramu(wiersz.tresc)
+    if (oznaczenieWiersza && (wiersz.poziom > 0 || oznaczenieWiersza.oznaczenie.rodzaj === 'literowe' || (/^[ivxlcdm]/.test(oznaczenieWiersza.oznaczenie.zapis)))) {
+      dodajPodpunkt(oznaczenieWiersza.tresc, wiersz.poziom)
+      continue
+    }
+
     const rzymski = wiersz.tresc.match(wzorzecRzymski)
 
     if (rzymski) {
@@ -614,7 +675,7 @@ export function parsujTekstProgramu(tresc: string): ProgramSzkolenia {
 
     const elementDoScalenia = ostatniElement as OstatniElement | null
 
-    if (czyScalicZPoprzednim(elementDoScalenia)) {
+    if (opcje.czyScalacKontynuacje !== false && elementDoScalenia?.rodzaj !== 'modul' && czyScalicZPoprzednim(elementDoScalenia)) {
       elementDoScalenia?.ustawTresc(polaczTekst(elementDoScalenia.pobierzTresc(), wiersz.tresc))
       continue
     }

@@ -135,6 +135,7 @@ export function zastosujZaakceptowaneZmianyImportuProgramu(
   )
   const modelPoImporcie = normalizujProgramSzkolenia({
     ...danePoImporcie,
+    ...(propozycjeDoZastosowania.some((zmiana) => zmiana.pole === 'trescProgramu') ? { ustawieniaWierszyProgramu: undefined } : {}),
     czyWynikParsowaniaZatwierdzony: propozycjeDoZastosowania.some((zmiana) => zmiana.pole === 'trescProgramu')
       ? false
       : danePoImporcie.czyWynikParsowaniaZatwierdzony,

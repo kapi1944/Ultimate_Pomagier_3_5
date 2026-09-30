@@ -1,6 +1,20 @@
-const dozwoloneTagi = new Set(['p', 'br', 'strong', 'b', 'em', 'i', 'u', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'hr'])
+import { DOMParser as ParserWezlowEdytora } from '@tiptap/pm/model'
+import type { EditorView as WidokEdytora } from '@tiptap/pm/view'
+import { czyStylOznaczeniaPoprawny, liczbaRzymska, rozpoznajOznaczenieProgramu, type UstawienieWierszaProgramu } from '../oznaczeniaProgramu'
+const dozwoloneTagi = new Set(['div', 'p', 'br', 'strong', 'b', 'em', 'i', 'u', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'hr'])
 const tagiList = new Set(['ul', 'ol'])
 const znacznikiFormatowaniaLinii = ['**', '++', '*']
+
+export function obsluzWklejenieProgramu(widok: WidokEdytora, zdarzenie: ClipboardEvent) {
+  const tekst = zdarzenie.clipboardData?.getData('text/plain')
+  // Obce listy HTML nie są źródłem oznaczeń ani poziomów programu.
+  if (!tekst) return Boolean(zdarzenie.clipboardData?.getData('text/html'))
+  const element = document.createElement('div')
+  element.innerHTML = konwertujTekstProgramuNaHtml(tekst.replace(/\r\n?/g, '\n'))
+  const fragment = ParserWezlowEdytora.fromSchema(widok.state.schema).parseSlice(element)
+  widok.dispatch(widok.state.tr.replaceSelection(fragment).scrollIntoView())
+  return true
+}
 
 function oczyscWezelHtml(wezel: ChildNode, dokument: Document): ChildNode | DocumentFragment | null {
   if (wezel.nodeType === Node.TEXT_NODE) {
@@ -27,8 +41,12 @@ function oczyscWezelHtml(wezel: ChildNode, dokument: Document): ChildNode | Docu
     return fragment
   }
 
-  const nazwaDocelowa = nazwa === 'b' ? 'strong' : nazwa === 'i' ? 'em' : nazwa === 'h1' ? 'h2' : nazwa
+  const nazwaDocelowa = nazwa === 'div' && !wezel.querySelector('div,p,ul,ol') ? 'p' : nazwa === 'b' ? 'strong' : nazwa === 'i' ? 'em' : nazwa === 'h1' ? 'h2' : nazwa
   const element = dokument.createElement(nazwaDocelowa)
+  for (const atrybut of ['start', 'type', 'data-oznaczenie', 'data-styl-oznaczenia', 'data-poziom']) {
+    const wartosc = wezel.getAttribute(atrybut)
+    if (wartosc !== null && (atrybut !== 'data-styl-oznaczenia' || czyStylOznaczeniaPoprawny(wartosc))) element.setAttribute(atrybut, wartosc)
+  }
 
   wezel.childNodes.forEach((dziecko) => {
     const oczyszczone = oczyscWezelHtml(dziecko, dokument)
@@ -99,7 +117,7 @@ function pobierzTekstInline(wezel: ChildNode): string {
 function pobierzTekstBezListZagniezdzonych(element: HTMLElement) {
   return Array.from(element.childNodes)
     .filter((wezel) => !(wezel instanceof HTMLElement && tagiList.has(wezel.tagName.toLowerCase())))
-    .map(pobierzTekstInline)
+    .map((wezel) => wezel instanceof HTMLElement && ['p', 'div'].includes(wezel.tagName.toLowerCase()) ? `${pobierzTekstInline(wezel)}\n` : pobierzTekstInline(wezel))
     .join('')
     .trim()
 }
@@ -142,6 +160,9 @@ function pobierzPrefiksStruktury(tresc: string) {
     return { prefiks: naglowek[1].trimEnd(), reszta: naglowek[2] ?? '' }
   }
 
+  const oznaczenie = rozpoznajOznaczenieProgramu(tresc)
+  if (oznaczenie) return { prefiks: oznaczenie.oznaczenie.zapis, reszta: oznaczenie.tresc }
+
   const numer = tresc.match(/^([0-9]{1,3}(?:[.)]|\s*[-–—]|\s+))\s*(.+)$/)
 
   if (numer) {
@@ -155,7 +176,7 @@ function normalizujWierszProgramu(wiersz: string) {
   const przyciety = wiersz.trim()
   const bezFormatowaniaSamegoPrefiksu = przyciety
     .replace(/^(\*\*|\+\+|\*)(Dzie(?:ń|n)\s+(?:[0-9]+|[ivxlcdm]+))\1\s*/i, '$2 ')
-    .replace(/^(\*\*|\+\+|\*)([0-9]{1,3}[.)])\1\s*/, '$2 ')
+    .replace(/^(\*\*|\+\+|\*)([0-9]+[.)]|[IVXLCDMivxlcdm]+[.)]|[a-zA-Z][.)])\1\s*/, '$2 ')
   const rozpakowane = rozpakujPelneFormatowanieLinii(bezFormatowaniaSamegoPrefiksu)
   const prefiks = pobierzPrefiksStruktury(rozpakowane.tresc)
 
@@ -172,89 +193,61 @@ function czyWierszStrukturalny(wiersz: string) {
   return Boolean(pobierzPrefiksStruktury(rozpakujPelneFormatowanieLinii(wiersz.trim()).tresc))
 }
 
-function dodajWierszeBloku(tekst: string, wiersze: string[]) {
-  tekst
-    .split('\n')
-    .map(normalizujWierszProgramu)
-    .filter(Boolean)
-    .forEach((wiersz) => wiersze.push(wiersz))
-}
-
-function dodajListeDoTekstu(element: HTMLElement, wiersze: string[], poziom = 0) {
-  const czyNumerowana = element.tagName.toLowerCase() === 'ol'
-  const elementyListy = Array.from(element.children).filter((dziecko) => dziecko.tagName.toLowerCase() === 'li')
-
-  elementyListy.forEach((pozycja, indeks) => {
-    const tekst = normalizujWierszProgramu(pobierzTekstBezListZagniezdzonych(pozycja as HTMLElement))
-    const znacznik = czyNumerowana ? `${indeks + 1}.` : '-'
-
-    if (tekst) {
-      wiersze.push(czyWierszStrukturalny(tekst) ? tekst : `${'\t'.repeat(poziom)}${znacznik} ${tekst}`)
+export function konwertujHtmlNaWierszeProgramu(html: string) {
+  const dokument = new DOMParser().parseFromString(`<div>${oczyscHtmlProgramu(html)}</div>`, 'text/html')
+  const wiersze: string[] = []
+  const ustawienia: UstawienieWierszaProgramu[] = []
+  function dodajTekst(tekst: string, element?: HTMLElement, poziom = 0, prefiks = '') {
+    const styl = element?.getAttribute('data-styl-oznaczenia') ?? undefined
+    const wciecie = Number(element?.getAttribute('data-poziom') ?? poziom)
+    tekst.split('\n').forEach((wiersz, indeks) => {
+      const tresc = normalizujWierszProgramu(wiersz)
+      if (!tresc) return
+      const oznaczenie = rozpoznajOznaczenieProgramu(rozpakujPelneFormatowanieLinii(tresc).tresc)
+      wiersze.push(`${'\t'.repeat(Math.max(0, Math.min(8, wciecie)))}${indeks === 0 && prefiks && !oznaczenie && !czyWierszStrukturalny(tresc) ? `${prefiks} ` : ''}${tresc}`)
+      ustawienia.push({ styl, poziom: element?.hasAttribute('data-poziom') ? wciecie : undefined })
+    })
+  }
+  function dodajWezel(wezel: ChildNode, poziom = 0) {
+    if (wezel.nodeType === Node.TEXT_NODE) { dodajTekst(wezel.textContent ?? ''); return }
+    if (!(wezel instanceof HTMLElement)) return
+    const nazwa = wezel.tagName.toLowerCase()
+    if (tagiList.has(nazwa)) {
+      const poczatek = Number(wezel.getAttribute('start') ?? 1)
+      Array.from(wezel.children).filter((dziecko) => dziecko.tagName.toLowerCase() === 'li').forEach((dziecko, indeks) => {
+        const element = dziecko as HTMLElement
+        const typ = wezel.getAttribute('type')
+        const liczba = poczatek + indeks
+        const prefiks = element.getAttribute('data-oznaczenie') ?? (nazwa === 'ol' ? typ === 'a' ? `${String.fromCharCode(96 + liczba)})` : typ === 'I' ? `${liczbaRzymska(liczba)}.` : `${liczba}.` : '-')
+        dodajTekst(pobierzTekstBezListZagniezdzonych(element), element, poziom, prefiks)
+        Array.from(element.children).filter((lista) => tagiList.has(lista.tagName.toLowerCase())).forEach((lista) => dodajWezel(lista, poziom + 1))
+      })
+      return
     }
-
-    Array.from(pozycja.children)
-      .filter((dziecko) => tagiList.has(dziecko.tagName.toLowerCase()))
-      .forEach((lista) => dodajListeDoTekstu(lista as HTMLElement, wiersze, poziom + 1))
-  })
+    if (['h1', 'h2', 'h3'].includes(nazwa)) { dodajTekst(`## ${pobierzTekstInline(wezel)}`, wezel); return }
+    if (nazwa === 'p' || nazwa === 'div') {
+      if (Array.from(wezel.children).some((dziecko) => ['p', 'div', 'ul', 'ol'].includes(dziecko.tagName.toLowerCase()))) {
+        let tekstInline = ''
+        wezel.childNodes.forEach((dziecko) => {
+          if (dziecko instanceof HTMLElement && ['p', 'div', 'ul', 'ol'].includes(dziecko.tagName.toLowerCase())) {
+            dodajTekst(tekstInline, wezel, poziom)
+            tekstInline = ''
+            dodajWezel(dziecko, poziom)
+          } else tekstInline += pobierzTekstInline(dziecko)
+        })
+        dodajTekst(tekstInline, wezel, poziom)
+      } else dodajTekst(pobierzTekstInline(wezel), wezel, poziom, wezel.getAttribute('data-oznaczenie') ?? '')
+      return
+    }
+    if (nazwa === 'hr') { wiersze.push(''); ustawienia.push({}); return }
+    wezel.childNodes.forEach((dziecko) => dodajWezel(dziecko, poziom))
+  }
+  dokument.body.firstElementChild?.childNodes.forEach((wezel) => dodajWezel(wezel))
+  return { tekst: wiersze.join('\n').replace(/^\n+|\n+$/g, ''), ustawienia }
 }
 
 export function konwertujHtmlNaTekstProgramu(html: string) {
-  const dokument = new DOMParser().parseFromString(`<div>${oczyscHtmlProgramu(html)}</div>`, 'text/html')
-  const wiersze: string[] = []
-
-  function dodajWezel(wezel: ChildNode) {
-    if (wezel.nodeType === Node.TEXT_NODE) {
-      const tekst = wezel.textContent?.trim()
-
-      if (tekst) {
-        wiersze.push(tekst)
-      }
-
-      return
-    }
-
-    if (!(wezel instanceof HTMLElement)) {
-      return
-    }
-
-    const nazwa = wezel.tagName.toLowerCase()
-
-    if (['h1', 'h2', 'h3'].includes(nazwa)) {
-      const tekst = normalizujWierszProgramu(pobierzTekstInline(wezel))
-
-      if (tekst) {
-        wiersze.push(`## ${tekst}`)
-      }
-
-      return
-    }
-
-    if (nazwa === 'p') {
-      const tekst = pobierzTekstInline(wezel).trim()
-
-      if (tekst) {
-        dodajWierszeBloku(tekst, wiersze)
-      }
-
-      return
-    }
-
-    if (tagiList.has(nazwa)) {
-      dodajListeDoTekstu(wezel, wiersze)
-      return
-    }
-
-    if (nazwa === 'hr') {
-      wiersze.push('')
-      return
-    }
-
-    wezel.childNodes.forEach(dodajWezel)
-  }
-
-  dokument.body.firstElementChild?.childNodes.forEach(dodajWezel)
-
-  return wiersze.join('\n').replace(/\n{3,}/g, '\n\n').trim()
+  return konwertujHtmlNaWierszeProgramu(html).tekst
 }
 
 function zabezpieczHtml(tekst: string) {
@@ -272,71 +265,38 @@ function konwertujZnacznikiInlineNaHtml(tekst: string) {
     .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>')
 }
 
-function pobierzPozycjeListy(wiersz: string) {
-  const dopasowanie = wiersz.match(/^(\s*)(?:[-–—*•◦▪]|\d+[.)])\s+(.+)$/)
-
-  if (!dopasowanie) {
-    return null
-  }
-
-  const poziom = (dopasowanie[1].match(/\t/g) ?? []).length + Math.floor(dopasowanie[1].replace(/\t/g, '').length / 2)
-
-  return {
-    poziom,
-    tresc: dopasowanie[2],
-    czyNumerowana: /\d+[.)]/.test(wiersz.trimStart().split(/\s+/)[0] ?? ''),
-  }
-}
-
-export function konwertujTekstProgramuNaHtml(tekst: string) {
-  const wiersze = tekst.split(/\r?\n/)
+export function konwertujTekstProgramuNaHtml(tekst: string, ustawienia: UstawienieWierszaProgramu[] = []) {
   const fragmenty: string[] = []
-  let otwarteListy = 0
-
-  function zamknijListyDo(poziom: number) {
-    while (otwarteListy > poziom) {
-      fragmenty.push('</li></ul>')
-      otwarteListy -= 1
-    }
+  const listy: { tag: string; typ: string }[] = []
+  function zamknijDo(glebokosc: number) {
+    while (listy.length > glebokosc) { const lista = listy.pop(); fragmenty.push(`</li></${lista?.tag}>`) }
   }
-
-  wiersze.forEach((wiersz) => {
-    const tresc = wiersz.trim()
-
-    if (!tresc) {
-      zamknijListyDo(0)
+  tekst.split(/\r?\n/).forEach((wiersz, indeksWiersza) => {
+    const ustawienie = ustawienia[indeksWiersza]
+    const atrybuty = `${ustawienie?.styl ? ` data-styl-oznaczenia="${zabezpieczHtml(ustawienie.styl)}"` : ''}${ustawienie?.poziom !== undefined ? ` data-poziom="${ustawienie.poziom}"` : ''}`
+    const tresc = normalizujWierszProgramu(wiersz)
+    if (!tresc) { zamknijDo(0); return }
+    const pozycja = rozpoznajOznaczenieProgramu(tresc)
+    const wciecie = wiersz.match(/^\s*/)?.[0] ?? ''
+    const poziom = (wciecie.match(/\t/g) ?? []).length + Math.floor(wciecie.replace(/\t/g, '').length / 2)
+    if (pozycja) {
+      const tag = pozycja.oznaczenie.rodzaj === 'punktor' ? 'ul' : 'ol'
+      const typ = pozycja.oznaczenie.rodzaj === 'rzymskie' ? 'I' : pozycja.oznaczenie.rodzaj === 'literowe' ? 'a' : '1'
+      const docelowy = Math.min(poziom, listy.length)
+      zamknijDo(docelowy + 1)
+      if (listy[docelowy] && (listy[docelowy].tag !== tag || listy[docelowy].typ !== typ)) zamknijDo(docelowy)
+      if (listy.length === docelowy) {
+        fragmenty.push(`<${tag}${tag === 'ol' ? ` type="${typ}" start="${pozycja.oznaczenie.wartosc ?? 1}"` : ''}>`)
+        listy.push({ tag, typ })
+      } else fragmenty.push('</li>')
+      fragmenty.push(`<li${atrybuty}${ustawienie?.poziom === undefined && docelowy !== poziom ? ` data-poziom="${poziom}"` : ''} data-oznaczenie="${zabezpieczHtml(pozycja.oznaczenie.zapis)}"><p>${konwertujZnacznikiInlineNaHtml(pozycja.tresc)}</p>`)
       return
     }
-
-    const pozycjaListy = pobierzPozycjeListy(wiersz)
-
-    if (pozycjaListy) {
-      while (otwarteListy <= pozycjaListy.poziom) {
-        fragmenty.push('<ul>')
-        otwarteListy += 1
-      }
-
-      zamknijListyDo(pozycjaListy.poziom + 1)
-      fragmenty.push(`<li>${konwertujZnacznikiInlineNaHtml(pozycjaListy.tresc)}`)
-      return
-    }
-
-    zamknijListyDo(0)
-
-    if (/^#{2,3}\s+/.test(tresc)) {
-      fragmenty.push(`<h2>${konwertujZnacznikiInlineNaHtml(tresc.replace(/^#{2,3}\s+/, ''))}</h2>`)
-      return
-    }
-
-    if (/^-{3,}$/.test(tresc)) {
-      fragmenty.push('<hr>')
-      return
-    }
-
-    fragmenty.push(`<p>${konwertujZnacznikiInlineNaHtml(tresc)}</p>`)
+    zamknijDo(0)
+    if (/^#{2,3}\s+/.test(tresc)) fragmenty.push(`<h2${atrybuty}>${konwertujZnacznikiInlineNaHtml(tresc.replace(/^#{2,3}\s+/, ''))}</h2>`)
+    else if (/^-{3,}$/.test(tresc)) fragmenty.push('<hr>')
+    else fragmenty.push(`<p${atrybuty}${ustawienie?.poziom === undefined && poziom > 0 ? ` data-poziom="${poziom}"` : ''}>${konwertujZnacznikiInlineNaHtml(tresc)}</p>`)
   })
-
-  zamknijListyDo(0)
-
+  zamknijDo(0)
   return fragmenty.join('') || '<p></p>'
 }

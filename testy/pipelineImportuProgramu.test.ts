@@ -18,6 +18,21 @@ function utworzProgram(dane: Partial<{ tytulSzkolenia: string; trescProgramu: st
   })
 }
 
+test('zastąpienie treści importem usuwa stare ustawienia pozycji, zachowując style poziomów', () => {
+  const model = normalizujProgramSzkolenia({ trescProgramu: '1. Stara treść', ustawieniaWierszyProgramu: [{ styl: 'brak' }], ustawienia: { oznaczeniaPoziomow: ['rzymskie)'] } })
+  const wynik = zastosujZaakceptowaneZmianyImportuProgramu(model, importujTekstProgramu('I. Nowa treść'), 'ZASTAP', ['trescProgramu'])
+  assert.equal(wynik.model.ustawieniaWierszyProgramu, undefined)
+  assert.deepEqual(wynik.model.ustawienia.oznaczeniaPoziomow, ['rzymskie)'])
+})
+
+test('PDF łączy zawiniętą kontynuację, a import tekstowy zachowuje akapity', () => {
+  const naglowek = 'I. Wprowadzenie do zmian w prawie budowlanym i szczegółowa analiza odpowiedzialności'
+  const punkt = '- Długa pozycja programu zawierająca szczegółowe omówienie aktualnych obowiązków inwestora,'
+  const tekst = `${naglowek}\nOsobny akapit\n${punkt}\nkontynuacja zawinięta w PDF`
+  assert.equal(importujTekstProgramu(tekst).znalezioneDane.trescProgramu, tekst)
+  assert.equal(utworzWynikImportuProgramuZTekstuPdf(tekst).znalezioneDane.trescProgramu, `${naglowek}\nOsobny akapit\n${punkt} kontynuacja zawinięta w PDF`)
+})
+
 function utworzWynik(propozycje: Parameters<typeof utworzWynikImportuProgramu>[0]['propozycje']) {
   return utworzWynikImportuProgramu({ zrodlo: 'TEKST', propozycje, ostrzezenia: [], bledy: [] })
 }

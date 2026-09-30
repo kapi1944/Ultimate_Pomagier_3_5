@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="pl"><meta charset="utf-8"><title>Regresje oznaczeń programu</title>
+<style>
+body { font: 16px sans-serif; max-width: 1000px; margin: 24px auto; }
+li[data-wyswietlane-oznaczenie] { list-style: none; }
+[data-wyswietlane-oznaczenie]::before { content: attr(data-wyswietlane-oznaczenie); margin-right: 0.4em; }
+li[data-wyswietlane-oznaczenie] > p:first-child { display: inline; }
+.program-szkolen__pasek-edytora { display: flex; gap: 6px; flex-wrap: wrap; }
+.program-szkolen__obszar-edytora { border: 1px solid; padding: 12px; }
+</style>
+<body><h1>Regresje oznaczeń programu</h1><pre id="wynik"></pre><div id="edytor"></div>
+<script type="module" src="./oznaczeniaProgramu.przegladarka.tsx"></script></body></html>

@@ -62,6 +62,7 @@ function pobierzPoziom(blok: BlokDokumentu) {
 }
 
 function pobierzMarker(blok: BlokDokumentu, liczniki: number[], stylListy: StylListyPodgladu, stylePoziomowListy: string[]) {
+  if (typeof blok.dane?.oznaczenieWyswietlane === 'string') return blok.dane.oznaczenieWyswietlane
   const poziom = pobierzPoziom(blok)
 
   liczniki[poziom] = (liczniki[poziom] ?? 0) + 1
@@ -175,7 +176,7 @@ export function RendererFragmentuModuluProgramu({
     >
       {czyPokazacTytul && modul.blok.tresc && (
         <h3 className={`program-kartka-a4__modul-tytul${separacjaModulow === 'linia' ? ' program-kartka-a4__modul-tytul--linia' : ''}`}>
-          {renderujMarkdownInline(modul.blok.tresc)}
+          {typeof modul.blok.dane?.oznaczenieWyswietlane === 'string' && modul.blok.dane.oznaczenieWyswietlane ? `${modul.blok.dane.oznaczenieWyswietlane} ` : ''}{renderujMarkdownInline(modul.blok.tresc)}
         </h3>
       )}
       {grupyPunktow.length ? (
