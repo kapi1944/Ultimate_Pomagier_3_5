@@ -1,3 +1,4 @@
+import { domyslnyWygladTabeliListy, normalizujWygladTabeliListy, type WygladTabeliListy } from './wygladTabeliListy'
 import type { DaneListyObecnosciZIntegracji, KorektyReczneListyObecnosci } from '../../../../wspolne/integracje/szczegolyDoDokumentow'
 import { WERSJA_SCHEMATU_SWOBODNYCH_BLOKOW, normalizujBlokiSwobodneDokumentu, type BlokSwobodnyDokumentu } from '../../../../wspolne/dokumenty/modelSwobodnychBlokow'
 
@@ -15,6 +16,7 @@ export type UczestnikListyObecnosci = {
 
 export type DaneListyObecnosci = {
   wersjaSchematu: 2
+  wygladTabeli: WygladTabeliListy
   szczegolyId?: string
   grupaId?: string
   trener?: string
@@ -182,6 +184,7 @@ function pobierzMiejsce(dane: DaneListyObecnosciZIntegracji) {
 export function utworzDomyslneDaneListyObecnosci(): DaneListyObecnosci {
   return {
     wersjaSchematu: 2,
+    wygladTabeli: { ...domyslnyWygladTabeliListy },
     tytulSzkolenia: '',
     miejsce: '',
     daty: [],
@@ -213,6 +216,7 @@ export function deserializujDaneListyObecnosci(tekst: string | null): DaneListyO
     const bloki = normalizujBlokiSwobodneDokumentu(dane.blokiSwobodne)
     return {
       wersjaSchematu: 2,
+      wygladTabeli: normalizujWygladTabeliListy(dane.wygladTabeli),
       szczegolyId: pobierzTekst(dane, 'szczegolyId'),
       grupaId: pobierzTekst(dane, 'grupaId'),
       trener: pobierzTekst(dane, 'trener'),
@@ -243,11 +247,14 @@ export function utworzDaneListyObecnosciZIntegracji(daneZrodlowe: DaneListyObecn
   const dane = { ...daneZrodlowe, ...korektyReczne }
   const uczestnicy = dane.uczestnicy.map((uczestnik, indeks) => ({ id: uczestnik.id ?? `uczestnik-${indeks + 1}`, imieINazwisko: uczestnik.nazwaPelna }))
   const daty = normalizujDaty(dane.daty)
-  return { wersjaSchematu: 2, trener: dane.trenerzy.map((trener) => trener.imieINazwisko).join(', '), szczegolyId: dane.daneZrodlowe.szczegolyOrganizacyjneId, tytulSzkolenia: dane.tytulSzkolenia, miejsce: pobierzMiejsce(dane), daty, organizator: normalizujOrganizatora(dane.organizator.marka ?? dane.organizator.nazwa), trybListy: 'WYPELNIONA', liczbaPustychWierszy: Math.max(dane.liczbaUczestnikow, 20), uczestnicyTekst: '', uczestnicy, kolumny: [...domyslneKolumny], wariantWielodniowy: zaproponujWariantWielodniowyListyObecnosci(daty), czyPokazacPodpisTrenera: false, czyPokazacPodpisOrganizatora: false, blokiSwobodne: utworzBlokiSzablonuListyObecnosci(), wersjaSchematuBlokow: WERSJA_SCHEMATU_SWOBODNYCH_BLOKOW }
+  return { wersjaSchematu: 2, wygladTabeli: { ...domyslnyWygladTabeliListy }, trener: dane.trenerzy.map((trener) => trener.imieINazwisko).join(', '), szczegolyId: dane.daneZrodlowe.szczegolyOrganizacyjneId, tytulSzkolenia: dane.tytulSzkolenia, miejsce: pobierzMiejsce(dane), daty, organizator: normalizujOrganizatora(dane.organizator.marka ?? dane.organizator.nazwa), trybListy: 'WYPELNIONA', liczbaPustychWierszy: Math.max(dane.liczbaUczestnikow, 20), uczestnicyTekst: '', uczestnicy, kolumny: [...domyslneKolumny], wariantWielodniowy: zaproponujWariantWielodniowyListyObecnosci(daty), czyPokazacPodpisTrenera: false, czyPokazacPodpisOrganizatora: false, blokiSwobodne: utworzBlokiSzablonuListyObecnosci(), wersjaSchematuBlokow: WERSJA_SCHEMATU_SWOBODNYCH_BLOKOW }
 }
 
 export function pobierzLiczbeWierszyNaStronieListyObecnosci(dane: DaneListyObecnosci) {
-  return dane.czyPokazacPodpisTrenera || dane.czyPokazacPodpisOrganizatora ? 24 : 28
+  const dotychczasowyLimit = dane.czyPokazacPodpisTrenera || dane.czyPokazacPodpisOrganizatora ? 24 : 28
+  const wyglad = normalizujWygladTabeliListy(dane.wygladTabeli)
+  const rezerwaNaglowkaMm = Math.max(0, wyglad.rozmiarNaglowkowPt - domyslnyWygladTabeliListy.rozmiarNaglowkowPt) * 25.4 / 72 * 1.15 * 2
+  return Math.max(1, Math.floor((dotychczasowyLimit * domyslnyWygladTabeliListy.wysokoscWierszaMm - rezerwaNaglowkaMm) / wyglad.wysokoscWierszaMm + 1e-9))
 }
 
 export function pobierzWierszeListyObecnosci(dane: DaneListyObecnosci): UczestnikListyObecnosci[] {
@@ -262,8 +269,9 @@ export function podzielWierszeListyObecnosci(dane: DaneListyObecnosci, liczbaWie
   const limit = Math.max(1, Math.floor(liczbaWierszyNaStronie))
   let koszt = 0
   for (const uczestnik of wiersze) {
-    const szerokoscTekstu = dane.kolumny.includes('FIRMA') ? 23 : 48
-    const kosztWiersza = Math.max(1, Math.ceil(uczestnik.imieINazwisko.length / szerokoscTekstu), dane.kolumny.includes('FIRMA') ? Math.ceil((uczestnik.firma?.length ?? 0) / 23) : 1)
+    const skalaFontu = normalizujWygladTabeliListy(dane.wygladTabeli).rozmiarTekstuPt / domyslnyWygladTabeliListy.rozmiarTekstuPt
+    const szerokoscTekstu = (dane.kolumny.includes('FIRMA') ? 23 : 48) / skalaFontu
+    const kosztWiersza = Math.max(1, Math.ceil(uczestnik.imieINazwisko.length / szerokoscTekstu), dane.kolumny.includes('FIRMA') ? Math.ceil((uczestnik.firma?.length ?? 0) / (23 / skalaFontu)) : 1)
     if (!strony.length || (koszt + kosztWiersza > limit && strony.at(-1)!.length)) { strony.push([]); koszt = 0 }
     strony.at(-1)!.push(uczestnik)
     koszt += kosztWiersza

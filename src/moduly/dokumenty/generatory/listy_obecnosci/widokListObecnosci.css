@@ -257,7 +257,7 @@
   width: 100%;
   table-layout: fixed;
   border-collapse: collapse;
-  font-size: inherit;
+  font-size: var(--font-tabeli);
 }
 
 .lista-obecnosci-a4__kolumna-lp {
@@ -270,15 +270,17 @@
 
 .lista-obecnosci-a4__tabela th,
 .lista-obecnosci-a4__tabela td {
-  height: 3.34cqw;
+  height: var(--wysokosc-wiersza);
   box-sizing: border-box;
-  border: max(1px, .105cqw) solid #c8c8c8;
-  padding: .57cqw 1.47cqw;
+  border: .105cqw solid #c8c8c8;
+  padding: var(--padding-pionowy) 1.47cqw;
   font-weight: 400;
-  line-height: 1.15;
+  line-height: var(--interlinia-tabeli);
 }
 
 .lista-obecnosci-a4__tabela th {
+  height: 3.34cqw;
+  font-size: var(--font-naglowkow);
   padding: .42cqw .78cqw;
   text-align: center;
 }
@@ -393,3 +395,7 @@
 .lista-obecnosci-a4__tabela th, .lista-obecnosci-a4__tabela td { overflow-wrap: anywhere; }
 .lista-obecnosci-a4__naglowek-kontynuacji { overflow-wrap: anywhere; }
 .generator-list-obecnosci__formularz button, .generator-list-obecnosci__formularz select { min-height: 44px; }
+
+.generator-list-obecnosci__regulacja { display: flex; align-items: center; gap: 8px; }
+.generator-list-obecnosci__regulacja input { flex: 1; min-width: 0; }
+.generator-list-obecnosci__regulacja output { white-space: nowrap; }

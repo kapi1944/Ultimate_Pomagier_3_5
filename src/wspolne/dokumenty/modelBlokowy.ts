@@ -58,6 +58,7 @@ export type BlokDokumentu = {
 }
 
 export type DaneDokumentu = {
+  konfiguracjaGeneratora?: Record<string, unknown>
   uczestnik?: string
   klient?: string
   data?: string

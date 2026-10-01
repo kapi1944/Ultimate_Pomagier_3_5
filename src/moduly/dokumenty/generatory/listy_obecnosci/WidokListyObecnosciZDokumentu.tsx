@@ -1,3 +1,4 @@
+import { pobierzBladPrzepelnieniaListy } from './wygladTabeliListy'
 import { useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import AkcjeEksportuPdf from '../../../../wspolne/dokumenty/AkcjeEksportuPdf'
 import { zbudujNazweEksportowanegoDokumentu } from '../../../../wspolne/dokumenty/nazwyDokumentow'
@@ -107,7 +108,7 @@ function EdytorListyObecnosci({ dokumentId }: { dokumentId: string }) {
   if (!dokument) return <section className="widok"><p>Nie odnaleziono Listy obecności.</p></section>
 
   const daneNazwyEksportu = { typDokumentu: 'LISTA_OBECNOSCI' as const, organizator: dane.organizator, terminy: dane.daty, miejsce: dane.miejsce, czyOnline: dane.miejsce.trim().toLocaleLowerCase('pl') === 'online', tytulSzkolenia: dane.tytulSzkolenia, wersja: dokument.wersja }
-  const akcje = <PasekAkcjiGeneratora><StatusZapisuDokumentu stan={stanDokumentu.stanZapisu} /><PrzyciskPaneluGeneratora>Edytuj dane</PrzyciskPaneluGeneratora><button type="button" onClick={zapiszDokument}>Zapisz</button><AkcjeEksportuPdf czyMoznaEksportowac={() => !pobierzBladEksportuListy(dane)} pobierzBladEksportu={() => pobierzBladEksportuListy(dane)} daneNazwyEksportu={daneNazwyEksportu} nazwaPliku={zbudujNazweEksportowanegoDokumentu(daneNazwyEksportu)} obszarDokumentu={obszarPodgladuRef} /></PasekAkcjiGeneratora>
+  const akcje = <PasekAkcjiGeneratora><StatusZapisuDokumentu stan={stanDokumentu.stanZapisu} /><PrzyciskPaneluGeneratora>Edytuj dane</PrzyciskPaneluGeneratora><button type="button" onClick={zapiszDokument}>Zapisz</button><AkcjeEksportuPdf czyMoznaEksportowac={() => !(pobierzBladEksportuListy(dane) ?? pobierzBladPrzepelnieniaListy(obszarPodgladuRef.current))} pobierzBladEksportu={() => pobierzBladEksportuListy(dane) ?? pobierzBladPrzepelnieniaListy(obszarPodgladuRef.current)} daneNazwyEksportu={daneNazwyEksportu} nazwaPliku={zbudujNazweEksportowanegoDokumentu(daneNazwyEksportu)} obszarDokumentu={obszarPodgladuRef} /></PasekAkcjiGeneratora>
 
   return <ObszarZPanelemGeneratora idPanelu="panel-edycji-listy-obecnosci" kluczPrzypiecia="ultimate-pomagier.panel-generatora.listy-obecnosci.przypiety" kluczWysuwania="ultimate-pomagier.panel-generatora.listy-obecnosci.wysuwanie" tytulPanelu="Edycja Listy obecności">
     <UkladGeneratoraDokumentu akcje={akcje} className="generator-list-obecnosci" komunikat={komunikat} opis="Dokument roboczy utworzony ze Szczegółów organizacyjnych." tytul="Lista obecności">

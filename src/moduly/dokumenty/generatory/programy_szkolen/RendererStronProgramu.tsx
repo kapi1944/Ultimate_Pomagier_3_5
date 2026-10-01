@@ -1,3 +1,4 @@
+import { pobierzLogoOrganizatora } from '../../../../wspolne/dokumenty/logoOrganizatora'
 import { Fragment, useMemo, type CSSProperties, type ReactNode, type RefObject } from 'react'
 import type { DokumentBlokowy } from '../../../../wspolne/dokumenty/modelBlokowy'
 import ElementPomocniczyEdytora from '../../../../wspolne/dokumenty/ElementPomocniczyEdytora'
@@ -124,7 +125,11 @@ function ZawartoscStronyFizycznejProgramu({
       <article className="program-dotychczasowy__strona program-kartka-a4" {...atrybutyStrony}>
         <header className="program-kartka-a4__naglowek" style={{ borderColor: wyglad.kolorAkcentu }}>
           <div className="program-kartka-a4__meta">
-            <div className="program-kartka-a4__profil">{nazwaOrganizatora}</div>
+            <div className="program-kartka-a4__profil">
+              {profilFirmy === 'semper'
+                ? <img alt="SEMPER — Dobry wybór od 2009" src={pobierzLogoOrganizatora('SEMPER')} style={{ display: 'block', width: '160px', maxWidth: '100%', height: 'auto' }} />
+                : nazwaOrganizatora}
+            </div>
             <div className="program-kartka-a4__kontakt">{kontaktOrganizatora}</div>
           </div>
           {pierwszaStrona && logotypUzytkownika && (

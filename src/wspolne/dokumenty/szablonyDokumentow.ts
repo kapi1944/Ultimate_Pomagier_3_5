@@ -30,6 +30,7 @@ export function zapiszKopieUkladuSwobodnychBlokow(dane: {
   autor: string
   bloki: BlokSwobodnyDokumentu[]
   tytulSzkolenia?: string
+  konfiguracjaGeneratora?: Record<string, unknown>
 }) {
   const teraz = new Date().toISOString()
   const dokumentPodgladu = utworzDokumentZTekstu(dane.nazwa, dane.tytulSzkolenia ?? dane.nazwa)
@@ -51,7 +52,7 @@ export function zapiszKopieUkladuSwobodnychBlokow(dane: {
     dokumentBlokowy: {
       id: `dokument-blokowy-${Date.now()}`,
       typ: 'inny',
-      dane: { tytulSzkolenia: dane.tytulSzkolenia, organizator: dane.organizator },
+      dane: { tytulSzkolenia: dane.tytulSzkolenia, organizator: dane.organizator, ...(dane.konfiguracjaGeneratora ? { konfiguracjaGeneratora: dane.konfiguracjaGeneratora } : {}) },
       struktura: [{ id: 'uklad-swobodnych-blokow', typ: 'Sekcja', tresc: dane.nazwa, dzieci: [], metadane: { zrodlo: 'uzytkownik' }, stylLokalny: {}, statusDiagnostyczny: 'poprawny' }],
       strona,
       wyglad: { marginesy: strona.marginesy, styleBlokow: {} },
