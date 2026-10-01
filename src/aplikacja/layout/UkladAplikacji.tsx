@@ -330,6 +330,7 @@ export default function UkladAplikacji() {
 
     if (widok === 'profil_uzytkownika') ustawUzytkownikIdProfilu(opcje.uzytkownikId ?? null)
     ustawAktywnyWidok(widok)
+    if (widok === 'checklisty_paczek') window.dispatchEvent(new PopStateEvent('popstate'))
   }
 
   function ustawWidok(widok: WidokNawigacji, opcje: OpcjeZmianyWidoku = {}) {
@@ -445,6 +446,7 @@ export default function UkladAplikacji() {
       const sciezka = `/dokumenty/checklisty-paczek/${encodeURIComponent(dokument.id)}`
       if (window.location.pathname !== sciezka) window.history.pushState({ widok: 'checklisty_paczek' }, '', sciezka)
       ustawAktywnyWidok('checklisty_paczek')
+      window.dispatchEvent(new PopStateEvent('popstate'))
       return
     }
 

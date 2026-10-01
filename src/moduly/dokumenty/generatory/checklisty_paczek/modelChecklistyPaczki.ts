@@ -154,7 +154,27 @@ export type ProsbaOWeryfikacje = {
   odpowiedz: string
 }
 
+export type DaneSzkoleniaChecklisty = {
+  tytulSzkolenia: string
+  miejsce: string
+  terminy: string[]
+  organizator: string
+  trenerzy: string[]
+  nazwaGrupy: string
+  liczbaUczestnikow: number
+}
+
+export function pobierzDaneSzkoleniaChecklisty(dane: Pick<DaneChecklistyPaczki, 'daneSzkolenia' | 'migawkaZrodla'>): DaneSzkoleniaChecklisty {
+  const zrodlo = dane.migawkaZrodla
+  return { tytulSzkolenia: zrodlo?.tytulSzkolenia ?? '', miejsce: zrodlo?.miejsce ?? '', terminy: zrodlo?.terminy ?? [], organizator: '', trenerzy: zrodlo?.trenerzy ?? [], nazwaGrupy: zrodlo?.nazwaGrupy ?? '', liczbaUczestnikow: zrodlo?.liczbaUczestnikow ?? 0, ...dane.daneSzkolenia }
+}
+
+export function czyMoznaEksportowacCheckliste(dane: DaneChecklistyPaczki) {
+  return dane.statusChecklisty !== 'ZARCHIWIZOWANA'
+}
+
 export type DaneChecklistyPaczki = {
+  daneSzkolenia?: DaneSzkoleniaChecklisty
   identyfikator: string
   numerDzienny: number
   statusChecklisty: StatusChecklistyPaczki
@@ -445,6 +465,9 @@ export function normalizujDaneChecklisty(dane: DaneChecklistyPaczki): DaneCheckl
   return {
     ...dane,
     migawkaZrodla: migawka,
+    szczegolyOrganizacyjneId: dane.szczegolyOrganizacyjneId ?? null,
+    grupaId: dane.grupaId ?? null,
+    daneSzkolenia: pobierzDaneSzkoleniaChecklisty({ ...dane, migawkaZrodla: migawka }),
     paczki,
     pozycje: dane.pozycje.map((pozycja) => ({
       ...pozycja,
@@ -477,8 +500,8 @@ export function czyDaneOdbiorcySaKompletne(dane: DaneOdbiorcyChecklisty) {
 }
 
 export function czyMoznaFinalizowacCheckliste(dane: DaneChecklistyPaczki) {
-  const liczbaUczestnikow = dane.migawkaZrodla?.liczbaUczestnikow ?? 0
-  const liczbaDni = new Set(dane.migawkaZrodla?.terminy ?? []).size
+  const liczbaUczestnikow = pobierzDaneSzkoleniaChecklisty(dane).liczbaUczestnikow
+  const liczbaDni = new Set(pobierzDaneSzkoleniaChecklisty(dane).terminy).size
   const brakujacePozycje = dane.pozycje.filter((pozycja) => {
     if (!pozycja.czyWymagana || pozycja.czyOpcjonalna || !czyPozycjaJestAktywna(pozycja) || pozycja.czyOnline) return false
     const wymaganaIlosc = pobierzIloscPozycji(pozycja, liczbaUczestnikow, liczbaDni).koncowa

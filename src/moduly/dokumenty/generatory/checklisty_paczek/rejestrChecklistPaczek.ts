@@ -11,6 +11,8 @@ import type { RolaUzytkownika } from '../../../../kartoteki/uzytkownicy/typyUzyt
 import { utworzUstawieniaUkladuDokumentu } from '../../../../wspolne/dokumenty/ustawieniaUkladuDokumentu'
 import {
   normalizujDaneChecklisty,
+  pobierzDaneSzkoleniaChecklisty,
+  czyMoznaEksportowacCheckliste,
   type DaneChecklistyPaczki,
   type DaneOdbiorcyChecklisty,
   type MigawkaZrodlaChecklisty,
@@ -132,12 +134,14 @@ export function utworzChecklistePaczkiZeZrodla(kontekst: KontekstDokumentuSzkole
   const numerDzienny = pobierzKolejnyNumerDziennyDokumentu(dokumenty, 'CHECKLISTA_PACZKI')
   const identyfikator = utworzIdentyfikatorDokumentu('CHECKLISTA_PACZKI', numerDzienny, 1)
   const dane = zastosujWzoryKlienta(utworzDomyslneDaneChecklisty({ identyfikator, numerDzienny, migawka, wariantOnline: false, uzytkownikId }), daneZrodla.wzoryKlienta)
+  dane.daneSzkolenia = { ...pobierzDaneSzkoleniaChecklisty(dane), organizator: kontekst.organizator.nazwa ?? '' }
   return repozytoriumWspolnychDokumentow.utworz(utworzNowyDokument({
     typ: 'CHECKLISTA_PACZKI',
     tytul: pobierzTytul(migawka),
     generatorId: 'checklisty_paczek',
     daneDokumentu: dane,
     ustawieniaDokumentu: { ukladDokumentu: utworzUstawieniaUkladuDokumentu(dane.blokiSwobodne) },
+    powiazania: { szkolenieId: kontekst.szkolenie.id, grupaId, szczegolyOrganizacyjneId: migawka.szczegolyOrganizacyjneId, wersjaSzczegolowId: kontekst.zrodlo.wersjaSzczegolowId, odciskDanychZrodlowych: migawka.odciskDanych },
     szkolenieId: kontekst.szkolenie.id,
     klientId: kontekst.klient.id,
     autorId: uzytkownikId,
@@ -153,11 +157,29 @@ export function utworzRecznaChecklistePaczki(uzytkownikId: string | null) {
   return repozytoriumWspolnychDokumentow.utworz(utworzNowyDokument({ typ: 'CHECKLISTA_PACZKI', tytul: 'Checklista paczki — ręczna', generatorId: 'checklisty_paczek', daneDokumentu: dane, ustawieniaDokumentu: { ukladDokumentu: utworzUstawieniaUkladuDokumentu(dane.blokiSwobodne) }, autorId: uzytkownikId, wlascicielId: uzytkownikId })) as DokumentChecklistyPaczki
 }
 
-export function zapiszChecklistePaczki(id: string, dane: DaneChecklistyPaczki, uzytkownikId: string | null, opis = 'Zapisano zmiany checklisty.') {
+type ZmianaPowiazaniaChecklisty = Pick<DokumentChecklistyPaczki, 'szkolenieId' | 'klientId' | 'organizatorId' | 'powiazania'> & { integralnosc: Partial<DokumentChecklistyPaczki['integralnosc']> }
+
+function zapiszDaneChecklisty(id: string, dane: DaneChecklistyPaczki, uzytkownikId: string | null, opis: string, powiazanie?: ZmianaPowiazaniaChecklisty) {
   const dokument = pobierzChecklistePaczki(id)
   if (!dokument || dokument.status === 'ZARCHIWIZOWANY') return null
   const zaktualizowane = dodajWpisHistorii(normalizujDaneChecklisty(dane), 'EDYCJA', uzytkownikId, opis)
-  return repozytoriumWspolnychDokumentow.aktualizuj(id, { daneDokumentu: zaktualizowane, ustawieniaDokumentu: { ukladDokumentu: utworzUstawieniaUkladuDokumentu(zaktualizowane.blokiSwobodne) }, status: pobierzStatusWspolny(zaktualizowane.statusChecklisty), tytul: pobierzTytul(zaktualizowane.migawkaZrodla) }) as DokumentChecklistyPaczki | null
+  const daneSzkolenia = pobierzDaneSzkoleniaChecklisty(zaktualizowane)
+  const reczneNadpisania = zaktualizowane.migawkaZrodla
+    ? Object.fromEntries(Object.entries(daneSzkolenia).filter(([pole, wartosc]) => JSON.stringify(wartosc) !== JSON.stringify(zaktualizowane.migawkaZrodla?.[pole as keyof MigawkaZrodlaChecklisty])))
+    : {}
+  if (zaktualizowane.migawkaZrodla && zaktualizowane.klient !== zaktualizowane.migawkaZrodla.klient) reczneNadpisania.klient = zaktualizowane.klient
+  return repozytoriumWspolnychDokumentow.aktualizuj(id, {
+    ...powiazanie,
+    daneDokumentu: zaktualizowane,
+    ustawieniaDokumentu: { ...dokument.ustawieniaDokumentu, ukladDokumentu: utworzUstawieniaUkladuDokumentu(zaktualizowane.blokiSwobodne) },
+    status: pobierzStatusWspolny(zaktualizowane.statusChecklisty),
+    tytul: ['Checklista paczki', daneSzkolenia.tytulSzkolenia, daneSzkolenia.nazwaGrupy].filter(Boolean).join(' — '),
+    integralnosc: { ...dokument.integralnosc, ...powiazanie?.integralnosc, reczneNadpisania },
+  }) as DokumentChecklistyPaczki | null
+}
+
+export function zapiszChecklistePaczki(id: string, dane: DaneChecklistyPaczki, uzytkownikId: string | null, opis = 'Zapisano zmiany checklisty.') {
+  return zapiszDaneChecklisty(id, dane, uzytkownikId, opis)
 }
 
 export function ustawStatusChecklisty(id: string, statusChecklisty: StatusChecklistyPaczki, uzytkownikId: string | null, opis: string) {
@@ -182,7 +204,7 @@ function odciskTresci(dane: DaneChecklistyPaczki) {
 
 export function zarejestrujWydrukChecklisty(id: string, uzytkownikId: string | null) {
   const dokument = pobierzChecklistePaczki(id)
-  if (!dokument) return null
+  if (!dokument || !czyMoznaEksportowacCheckliste(dokument.daneDokumentu)) return null
   const statusChecklisty = dokument.daneDokumentu.statusChecklisty === 'KOPIA_ROBOCZA' || dokument.daneDokumentu.statusChecklisty === 'GOTOWA_DO_WYDRUKU' ? 'WYDRUKOWANA' : dokument.daneDokumentu.statusChecklisty
   const odcisk = odciskTresci({ ...dokument.daneDokumentu, statusChecklisty })
   const ostatnia = dokument.daneDokumentu.wersjeWydruku.at(-1)
@@ -237,4 +259,49 @@ export function duplikujIstniejacaChecklistePaczki(id: string, uzytkownikId: str
 
 export function usunChecklistePaczki(id: string) {
   return repozytoriumWspolnychDokumentow.usunMiekko(id)
+}
+
+export function powiazChecklisteZeSzkoleniem(id: string, kontekst: KontekstDokumentuSzkolenia, grupaId: string, daneZrodla: DaneZrodlaChecklisty, uzytkownikId: string | null) {
+  const dokument = pobierzChecklistePaczki(id)
+  const migawka = utworzMigawke(kontekst, grupaId, daneZrodla)
+  if (!dokument || !migawka || dokument.status === 'ZARCHIWIZOWANY') return null
+  const obecne = pobierzDaneSzkoleniaChecklisty(dokument.daneDokumentu)
+  const pobrane = { ...pobierzDaneSzkoleniaChecklisty({ migawkaZrodla: migawka }), organizator: kontekst.organizator.nazwa ?? '' }
+  const daneSzkolenia = { ...pobrane, ...Object.fromEntries(Object.entries(obecne).filter(([, wartosc]) => Array.isArray(wartosc) ? wartosc.length > 0 : typeof wartosc === 'number' ? wartosc > 0 : wartosc !== '')) }
+  return zapiszDaneChecklisty(id, {
+    ...dokument.daneDokumentu,
+    daneSzkolenia,
+    migawkaZrodla: migawka,
+    szczegolyOrganizacyjneId: migawka.szczegolyOrganizacyjneId,
+    grupaId,
+    czyDaneZrodloweNowsze: false,
+    klient: dokument.daneDokumentu.klient || migawka.klient,
+    opiekunId: dokument.daneDokumentu.opiekunId || migawka.opiekunId,
+    daneOdbiorcy: { ...migawka.odbiorca, ...Object.fromEntries(Object.entries(dokument.daneDokumentu.daneOdbiorcy).filter(([, wartosc]) => Boolean(wartosc))) },
+  }, uzytkownikId, 'Powiązano ze szkoleniem, zachowując lokalne dane i pozycje.', {
+    szkolenieId: kontekst.szkolenie.id,
+    klientId: kontekst.klient.id,
+    organizatorId: kontekst.organizator.id,
+    powiazania: { ...dokument.powiazania, szkolenieId: kontekst.szkolenie.id, klientId: kontekst.klient.id, organizatorId: kontekst.organizator.id, grupaId, szczegolyOrganizacyjneId: migawka.szczegolyOrganizacyjneId, wersjaSzczegolowId: kontekst.zrodlo.wersjaSzczegolowId, odciskDanychZrodlowych: migawka.odciskDanych },
+    integralnosc: { powiazanieZeSzczegolami: 'POWIAZANY_ZE_SZCZEGOLAMI', idZrodlowychSzczegolow: migawka.szczegolyOrganizacyjneId, znacznikDanychZrodlowych: migawka.odciskDanych, czyDaneZrodloweNowsze: false },
+  })
+}
+
+export function odlaczChecklisteOdSzkolenia(id: string, uzytkownikId: string | null) {
+  const dokument = pobierzChecklistePaczki(id)
+  if (!dokument || dokument.status === 'ZARCHIWIZOWANY') return null
+  return zapiszDaneChecklisty(id, {
+    ...dokument.daneDokumentu,
+    daneSzkolenia: pobierzDaneSzkoleniaChecklisty(dokument.daneDokumentu),
+    migawkaZrodla: null,
+    szczegolyOrganizacyjneId: null,
+    grupaId: null,
+    czyDaneZrodloweNowsze: false,
+  }, uzytkownikId, 'Odłączono szkolenie, zachowując treść checklisty.', {
+    szkolenieId: null,
+    klientId: null,
+    organizatorId: null,
+    powiazania: { szkolenieId: null, klientId: null, organizatorId: null, grupaId: null, szczegolyOrganizacyjneId: null, wersjaSzczegolowId: null, odciskDanychZrodlowych: null },
+    integralnosc: { powiazanieZeSzczegolami: 'SAMODZIELNY', idZrodlowychSzczegolow: null, znacznikDanychZrodlowych: null, czyDaneZrodloweNowsze: false },
+  })
 }

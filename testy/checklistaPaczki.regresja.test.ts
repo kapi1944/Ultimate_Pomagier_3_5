@@ -2,9 +2,11 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import type { KontekstDokumentuSzkolenia } from '../src/wspolne/integracje/szczegolyDoDokumentow/index.ts'
-import { utworzIdentyfikatorDokumentu } from '../src/wspolne/dokumenty/nazwyDokumentow.ts'
+import { zbudujNazweEksportowanegoDokumentu, utworzIdentyfikatorDokumentu } from '../src/wspolne/dokumenty/nazwyDokumentow.ts'
 import { repozytoriumWspolnychDokumentow } from '../src/wspolne/dokumenty/rejestrDokumentow.ts'
 import {
+  czyMoznaEksportowacCheckliste,
+  pobierzDaneSzkoleniaChecklisty,
   czyMoznaFinalizowacCheckliste,
   duplikujPaczkeChecklisty,
   czyPozycjaJestAktywna,
@@ -26,6 +28,9 @@ import {
   type StatusGotowosciPozycji,
 } from '../src/moduly/dokumenty/generatory/checklisty_paczek/modelChecklistyPaczki.ts'
 import {
+  utworzRecznaChecklistePaczki,
+  powiazChecklisteZeSzkoleniem,
+  odlaczChecklisteOdSzkolenia,
   dodajZalacznikChecklisty,
   odswiezStanZrodlaChecklisty,
   otworzPonownieCheckliste,
@@ -316,8 +321,8 @@ test.skip('historyczny kontrakt poprzedniego formularza checklisty', () => {
 test('widok checklisty zachowuje workflow źródła, panel układu i operację wielu paczek', () => {
   const widok = readFileSync(new URL('../src/moduly/dokumenty/generatory/checklisty_paczek/WidokChecklistPaczek.tsx', import.meta.url), 'utf8')
   assert.match(widok, /pobierzSzczegolyDoChecklisty/)
-  assert.match(widok, /utworzChecklistePaczkiZeZrodla/)
-  assert.match(widok, /Istniejące checklisty/)
+  assert.match(widok, /powiazChecklisteZeSzkoleniem/)
+  assert.match(widok, /utworzRecznaChecklistePaczki/)
   assert.match(widok, /PanelBocznyGeneratora/)
   assert.match(widok, /PanelEdycjiSwobodnychBlokow/)
   assert.match(widok, /duplikujPaczkeChecklisty/)
@@ -325,4 +330,75 @@ test('widok checklisty zachowuje workflow źródła, panel układu i operację w
   assert.match(widok, /dodajZalacznikChecklisty/)
   assert.match(widok, /ustawStatusChecklisty/)
   assert.match(widok, /otworzPonownieCheckliste/)
+})
+
+
+test('samodzielna checklista zapisuje dane, pozycje i kopię roboczą bez szkolenia', () => {
+  magazyn.clear()
+  const nowa = utworzRecznaChecklistePaczki('autor')
+  assert.equal(nowa.szkolenieId, null)
+  assert.equal(nowa.daneDokumentu.szczegolyOrganizacyjneId, null)
+  assert.equal(pobierzDaneSzkoleniaChecklisty(nowa.daneDokumentu).tytulSzkolenia, '')
+  const pozycja = utworzNowaPozycjeChecklisty(nowa.daneDokumentu.kategorie[0].id, 'Ręczny materiał', nowa.daneDokumentu.pozycje)!
+  const dane = { ...nowa.daneDokumentu, daneSzkolenia: { ...pobierzDaneSzkoleniaChecklisty(nowa.daneDokumentu), tytulSzkolenia: 'Szybkie szkolenie', miejsce: 'Sala ręczna', nazwaGrupy: 'Moja grupa' }, pozycje: [...nowa.daneDokumentu.pozycje, pozycja] }
+  const zapis = zapiszChecklistePaczki(nowa.id, dane, 'autor')!
+  assert.equal(zapis.status, 'ROBOCZY')
+  assert.ok(pobierzChecklistyPaczek().some((dokument) => dokument.id === nowa.id && dokument.status === 'ROBOCZY'))
+  assert.deepEqual(pobierzChecklistePaczki(nowa.id)?.daneDokumentu.pozycje, dane.pozycje)
+  assert.equal(pobierzChecklistePaczki(nowa.id)?.daneDokumentu.daneSzkolenia?.tytulSzkolenia, 'Szybkie szkolenie')
+  assert.equal(czyMoznaEksportowacCheckliste(zapis.daneDokumentu), true)
+  assert.equal(czyMoznaFinalizowacCheckliste(zapis.daneDokumentu).czyMozna, false)
+  assert.equal(zarejestrujWydrukChecklisty(nowa.id, 'autor')?.daneDokumentu.wersjeWydruku.length, 1)
+})
+
+test('późniejsze powiązanie zachowuje ręczne pola i pozycje, odłączenie zachowuje całą treść', () => {
+  magazyn.clear()
+  const nowa = utworzRecznaChecklistePaczki('autor')
+  const lokalne = { ...nowa.daneDokumentu, daneSzkolenia: { ...pobierzDaneSzkoleniaChecklisty(nowa.daneDokumentu), tytulSzkolenia: 'Skrócony tytuł', miejsce: 'Inna sala' }, klient: 'Ręczna firma' }
+  zapiszChecklistePaczki(nowa.id, lokalne, 'autor')
+  const kontekst = utworzKontekst()
+  const przed = JSON.stringify(kontekst)
+  const powiazana = powiazChecklisteZeSzkoleniem(nowa.id, kontekst, 'grupa-1', daneZrodla(), 'autor')!
+  assert.equal(powiazana.szkolenieId, 'szkolenie-1')
+  assert.equal(powiazana.powiazania.szczegolyOrganizacyjneId, 'szczegoly-1')
+  assert.equal(powiazana.integralnosc.powiazanieZeSzczegolami, 'POWIAZANY_ZE_SZCZEGOLAMI')
+  assert.equal(powiazana.daneDokumentu.daneSzkolenia?.tytulSzkolenia, 'Skrócony tytuł')
+  assert.equal(powiazana.daneDokumentu.daneSzkolenia?.miejsce, 'Inna sala')
+  assert.equal(powiazana.daneDokumentu.daneSzkolenia?.liczbaUczestnikow, 16)
+  assert.equal(powiazana.daneDokumentu.klient, 'Ręczna firma')
+  assert.equal(powiazana.integralnosc.reczneNadpisania.tytulSzkolenia, 'Skrócony tytuł')
+  assert.deepEqual(powiazana.daneDokumentu.pozycje, lokalne.pozycje)
+  assert.equal(JSON.stringify(kontekst), przed)
+  const odlaczona = odlaczChecklisteOdSzkolenia(nowa.id, 'autor')!
+  assert.equal(odlaczona.szkolenieId, null)
+  assert.ok(Object.values(odlaczona.powiazania).every((wartosc) => wartosc === null))
+  assert.equal(odlaczona.daneDokumentu.migawkaZrodla, null)
+  assert.deepEqual(odlaczona.daneDokumentu.daneSzkolenia, powiazana.daneDokumentu.daneSzkolenia)
+  assert.deepEqual(odlaczona.daneDokumentu.pozycje, lokalne.pozycje)
+  assert.deepEqual(odlaczona.daneDokumentu.paczki, lokalne.paczki)
+  assert.ok(pobierzChecklistePaczki(nowa.id))
+})
+
+test('puste pola pobierają dane szkolenia, a stare checklisty zachowują migawkę', () => {
+  magazyn.clear()
+  const nowa = utworzRecznaChecklistePaczki(null)
+  const powiazana = powiazChecklisteZeSzkoleniem(nowa.id, utworzKontekst(), 'grupa-1', daneZrodla(), null)!
+  assert.equal(powiazana.daneDokumentu.daneSzkolenia?.tytulSzkolenia, 'Bezpieczna praca')
+  assert.equal(powiazana.daneDokumentu.daneSzkolenia?.organizator, 'Semper')
+  const stara = utworzChecklistePaczkiZeZrodla(utworzKontekst(), 'grupa-1', daneZrodla(), null)!
+  const { daneSzkolenia: pominiete, ...stareDane } = stara.daneDokumentu
+  assert.ok(pominiete)
+  assert.equal(normalizujDaneChecklisty(stareDane).daneSzkolenia?.tytulSzkolenia, 'Bezpieczna praca')
+  assert.equal(normalizujDaneChecklisty(stareDane).szczegolyOrganizacyjneId, 'szczegoly-1')
+})
+
+test('eksport i druk samodzielnego dokumentu nie wymagają finalizacji ani opisów', () => {
+  const dane = utworzDomyslneDaneChecklisty({ identyfikator: 'test', numerDzienny: 1 })
+  assert.equal(czyMoznaEksportowacCheckliste(dane), true)
+  const nazwa = zbudujNazweEksportowanegoDokumentu({ typDokumentu: 'CHECKLISTA_PACZKI', ...pobierzDaneSzkoleniaChecklisty(dane) })
+  assert.doesNotMatch(nazwa, /undefined|null|__/)
+  const widok = readFileSync(new URL('../src/moduly/dokumenty/generatory/checklisty_paczek/WidokChecklistPaczek.tsx', import.meta.url), 'utf8')
+  const druk = widok.slice(widok.indexOf('function Druk('), widok.indexOf('export default function'))
+  assert.doesNotMatch(druk, /Brak szkolenia|Nie znaleziono szczegółów|trainingId/)
+  assert.match(widok, /czyMoznaEksportowac=\{\(\) => czyMoznaEksportowacCheckliste\(dane\)\}/)
 })

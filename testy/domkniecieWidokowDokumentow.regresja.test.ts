@@ -33,10 +33,10 @@ test('moduły Checklist i Szczegółów nie zawierają mojibake, a etykiety gene
   pliki.forEach((plik) => assert.equal(niedozwoloneSekwencje.test(odczytajZrodlo(plik)), false, `Mojibake w ${plik}`))
 
   const widokChecklist = odczytajZrodlo('../src/moduly/dokumenty/generatory/checklisty_paczek/WidokChecklistPaczek.tsx')
-  assert.match(widokChecklist, /Przygotuj roboczą Checklistę dla konkretnej grupy szkoleniowej\./)
-  assert.match(widokChecklist, /Wybierz Szczegóły organizacyjne/)
-  assert.match(widokChecklist, /Utwórz Checklistę paczki/)
-  assert.match(widokChecklist, /Istniejące checklisty/)
+  assert.match(widokChecklist, /Przygotuj Checklistę ręcznie lub powiąż ją ze szkoleniem\./)
+  assert.match(widokChecklist, /Wybierz istniejące szkolenie/)
+  assert.match(widokChecklist, /Uzupełnij ręcznie/)
+  assert.match(widokChecklist, /Powiąż ze szkoleniem/)
 })
 
 test('generator Checklist pobiera także kopię roboczą Szczegółów z kanonicznego rejestru i zachowuje stabilne grupaId', () => {
