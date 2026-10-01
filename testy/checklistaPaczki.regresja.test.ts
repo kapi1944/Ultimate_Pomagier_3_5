@@ -402,3 +402,31 @@ test('eksport i druk samodzielnego dokumentu nie wymagają finalizacji ani opis�
   assert.doesNotMatch(druk, /Brak szkolenia|Nie znaleziono szczegółów|trainingId/)
   assert.match(widok, /czyMoznaEksportowac=\{\(\) => czyMoznaEksportowacCheckliste\(dane\)\}/)
 })
+
+
+test('wydruk grupuje aktywne pozycje kategorii i zachowuje pionową checklistę z tabelą wysyłki', () => {
+  const widok = readFileSync(new URL('../src/moduly/dokumenty/generatory/checklisty_paczek/WidokChecklistPaczek.tsx', import.meta.url), 'utf8')
+  const style = readFileSync(new URL('../src/moduly/dokumenty/generatory/checklisty_paczek/widokChecklistPaczek.css', import.meta.url), 'utf8')
+  const druk = widok.slice(widok.indexOf('function Druk('), widok.indexOf('export default function'))
+  assert.match(druk, /czyPozycjaJestAktywna\(pozycja\)/)
+  assert.match(druk, /if \(!aktywnePozycje.length\) return null/)
+  assert.match(druk, /<tbody key=\{kategoria.id\} className=\{pobierzKlaseKoloruKategorii\(kategoria.nazwa\)\}/)
+  assert.match(druk, /indeks === 0 && <th scope="rowgroup" rowSpan=\{aktywnePozycje.length\}/)
+  assert.equal(druk.match(/\{kategoria.nazwa\}/g)?.length, 1)
+  assert.doesNotMatch(druk, /<td>\{kategoria.nazwa\}<\/td>|Przewoźnik:/)
+  assert.match(druk, /<table className="checklista-paczki__wydruk-tabela-wysylki"/)
+  for (const naglowek of ['Przewoźnik', 'Numer przesyłki', 'Waga', 'Wysłano']) assert.ok(druk.includes('>' + naglowek + '</th>'))
+  for (const pole of ['przewoznik', 'numerPrzesylki', 'waga']) assert.ok(druk.includes('paczka.parametryLogistyczne.' + pole + " || '—'"))
+  assert.ok(druk.includes("formatujDateDoWydruku(paczka.parametryLogistyczne.dataWyslania) || '—'"))
+  assert.doesNotMatch(druk, /wysokosc|notatkiWewnetrzne/)
+  assert.match(druk, /checklista-paczki__wydruk-paczka/)
+  assert.match(widok, /toLocaleLowerCase\('pl'\)/)
+  for (const kolor of ['materialy', 'teczki', 'pakiet-crm', 'gadzety', 'inne', 'niestandardowa']) {
+    assert.ok(widok.includes('checklista-paczki__wydruk-tabela--' + kolor))
+    assert.ok(style.includes('checklista-paczki__wydruk-tabela--' + kolor))
+  }
+  assert.match(style, /@page\s*\{\s*size: A4 portrait;/)
+  assert.doesNotMatch(style, /landscape|writing-mode: vertical|rotate\(180deg\)/)
+  assert.match(style, /print-color-adjust: exact/)
+  assert.match(style, /wydruk-paczka h2 \{ break-after: avoid/)
+})
