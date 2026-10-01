@@ -23,6 +23,7 @@ export function zapiszDokumentRoboczyGeneratora(dane: DaneZapisuDokumentuGenerat
   if (poprzedni) {
     const powiazania = dane.powiazania ? { ...poprzedni.powiazania, ...dane.powiazania } : poprzedni.powiazania
     return repozytoriumWspolnychDokumentow.aktualizuj(poprzedni.id, {
+      typ: dane.typ,
       tytul: dane.tytul,
       daneDokumentu: dane.daneDokumentu,
       ustawieniaDokumentu: dane.ustawieniaDokumentu,

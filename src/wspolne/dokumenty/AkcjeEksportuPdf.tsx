@@ -17,12 +17,14 @@ type WlasciwosciAkcjiEksportuPdf = {
   etykietaPrzyciskuPdf?: string
   pokazPrzyciskDruku?: boolean
   orientacja?: 'pionowa' | 'pozioma'
+  format?: 'a4' | 'a5' | 'a6'
+  etykietaPrzyciskuDruku?: string
   pobierzBladEksportu?: () => string | null
   przygotujEksport?: () => void | Promise<void>
   zakonczEksport?: () => void
 }
 
-export default function AkcjeEksportuPdf({ silnikPdf = 'raster_legacy', obszarDokumentu, nazwaPliku, daneNazwyEksportu, czyMoznaEksportowac = () => true, className, classNamePrzycisku = 'akcje-eksportu-pdf__przycisk', etykietaPrzyciskuPdf = 'Pobierz PDF', pokazPrzyciskDruku = true, orientacja = 'pionowa', pobierzBladEksportu, przygotujEksport, zakonczEksport }: WlasciwosciAkcjiEksportuPdf) {
+export default function AkcjeEksportuPdf({ silnikPdf = 'raster_legacy', obszarDokumentu, nazwaPliku, daneNazwyEksportu, czyMoznaEksportowac = () => true, className, classNamePrzycisku = 'akcje-eksportu-pdf__przycisk', etykietaPrzyciskuPdf = 'Pobierz PDF', pokazPrzyciskDruku = true, orientacja = 'pionowa', format = 'a4', etykietaPrzyciskuDruku = 'Drukuj', pobierzBladEksportu, przygotujEksport, zakonczEksport }: WlasciwosciAkcjiEksportuPdf) {
   const [czyGenerowanie, ustawCzyGenerowanie] = useState(false)
   const [blad, ustawBlad] = useState<string | null>(null)
   const [nazwaUzytkownika, ustawNazweUzytkownika] = useState('')
@@ -52,7 +54,7 @@ export default function AkcjeEksportuPdf({ silnikPdf = 'raster_legacy', obszarDo
     try {
       await wykonajEksportPoPrzygotowaniu({
         przygotuj: przygotujEksport,
-        wykonaj: () => pobierzPdfDokumentu({ silnikPdf, obszarDokumentu: obszarDokumentu.current!, nazwaPliku: nazwaDoEksportu, format: 'a4', orientacja }),
+        wykonaj: () => pobierzPdfDokumentu({ silnikPdf, obszarDokumentu: obszarDokumentu.current!, nazwaPliku: nazwaDoEksportu, format, orientacja }),
         zakoncz: zakonczEksport,
       })
     } catch {
@@ -69,7 +71,8 @@ export default function AkcjeEksportuPdf({ silnikPdf = 'raster_legacy', obszarDo
     try {
       await wykonajEksportPoPrzygotowaniu({ przygotuj: przygotujEksport, wykonaj: () => {
         const obszar = obszarDokumentu.current
-        return obszar?.querySelector('.program-strony') ? drukujProgram(obszar) : drukujDokument()
+        if (!obszar) throw new Error('Nie znaleziono podglądu dokumentu do druku.')
+        return obszar.querySelector('.program-strony') ? drukujProgram(obszar) : drukujDokument(obszar, orientacja, format)
       }, zakoncz: zakonczEksport })
     } catch {
       ustawBlad('Nie udało się przygotować dokumentu do druku.')
@@ -82,7 +85,7 @@ export default function AkcjeEksportuPdf({ silnikPdf = 'raster_legacy', obszarDo
     <button className={classNamePrzycisku} disabled={czyGenerowanie} onClick={pobierzPdf} type="button">
       {czyGenerowanie ? 'Generowanie PDF...' : etykietaPrzyciskuPdf}
     </button>
-    {pokazPrzyciskDruku && <button className={classNamePrzycisku} disabled={czyGenerowanie} onClick={drukuj} type="button">Drukuj</button>}
+    {pokazPrzyciskDruku && <button className={classNamePrzycisku} disabled={czyGenerowanie} onClick={drukuj} type="button">{etykietaPrzyciskuDruku}</button>}
     {czyPytacONazwe && <div className="akcje-eksportu-pdf__nazwa" role="dialog" aria-label="Nazwa eksportowanego pliku">
       <label>Krótka nazwa pliku<input autoFocus onChange={(zdarzenie) => ustawNazweUzytkownika(zdarzenie.target.value)} placeholder="Np. Rozliczenie projektu" value={nazwaUzytkownika} /></label>
       <small>Proponowana nazwa: {nazwaDoEksportu}</small>

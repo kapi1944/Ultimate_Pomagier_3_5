@@ -1,3 +1,4 @@
+import { pobierzLogoOrganizatora } from '../../../../wspolne/dokumenty/logoOrganizatora'
 import { EdytowalnaWarstwaSwobodnychBlokow } from '../../../../wspolne/dokumenty/EdytorSwobodnychBlokow'
 import type { CSSProperties } from 'react'
 import RendererSwobodnychBlokow from '../../../../wspolne/dokumenty/RendererSwobodnychBlokow'
@@ -17,8 +18,8 @@ export default function RendererKartyNaDrzwi({ karta, ustawieniaSzablonu, zasoby
   const { szerokoscMm: szerokosc, wysokoscMm: wysokosc } = pobierzWymiaryKartyNaDrzwi(ustawieniaSzablonu.format, ustawieniaSzablonu.orientacja)
   const dane = pobierzDaneRenderowaniaKarty(karta, ustawieniaSzablonu.widocznoscPol)
   const bloki = ustawieniaSzablonu.blokiSwobodne.filter((blok) => czyPokazacBlok(blok.id, ustawieniaSzablonu)).map((blok) => blok.id === 'tytul' && blok.typ === 'tekst' ? { ...blok, dane: { ...blok.dane, rozmiarCzcionkiPt: obliczRozmiarTytuluKarty(karta.tytulSzkolenia, blok.dane.rozmiarCzcionkiPt, 12, 54, { szerokoscMm: blok.szerokoscMm - 2 * (blok.dane.marginesWewnetrznyMm ?? 0), wysokoscMm: blok.wysokoscMm - 2 * (blok.dane.marginesWewnetrznyMm ?? 0), interlinia: blok.dane.interlinia }) } } : blok)
-  const logo = karta.organizator.toLocaleUpperCase('pl').includes('IIST') ? '/logo-iist.png' : '/logo-semper.png'
-  return <section className={`karta-na-drzwi__strona karta-na-drzwi__strona--${ustawieniaSzablonu.orientacja} karta-na-drzwi__strona--${ustawieniaSzablonu.format}`} style={{ '--szerokosc-karty-mm': `${szerokosc}mm`, '--wysokosc-karty-mm': `${wysokosc}mm` } as CSSProperties} {...(czyStronaDokumentu ? { 'data-strona-dokumentu': true } : {})}>
+  const logo = pobierzLogoOrganizatora(karta.organizator.toLocaleUpperCase('pl').includes('IIST') ? 'IIST' : 'SEMPER')
+  return <section className={`karta-na-drzwi__strona karta-na-drzwi__strona--${ustawieniaSzablonu.orientacja} karta-na-drzwi__strona--${ustawieniaSzablonu.format}`} style={{ '--proporcje-karty': `${szerokosc} / ${wysokosc}`, '--szerokosc-karty-mm': `${szerokosc}mm`, '--wysokosc-karty-mm': `${wysokosc}mm` } as CSSProperties} {...(czyStronaDokumentu ? { 'data-strona-dokumentu': true } : {})}>
     <RendererSwobodnychBlokow bloki={bloki} numerStrony={1} kontekst={{ dane, zasobyObrazow: { logo_organizatora: logo, ...zasobyObrazow } }} trybRenderowania="roboczy" szerokoscStronyMm={szerokosc} wysokoscStronyMm={wysokosc} />
     {edytowalny && onZaznaczBlok && onZmienBlok && <EdytowalnaWarstwaSwobodnychBlokow bloki={bloki} numerStrony={1} zaznaczonyBlokId={zaznaczonyBlokId} trybEdycjiSzablonu={trybEdycjiSzablonu} onZaznacz={onZaznaczBlok} onZmienBlok={onZmienBlok} szerokoscStronyMm={szerokosc} wysokoscStronyMm={wysokosc} />}
   </section>

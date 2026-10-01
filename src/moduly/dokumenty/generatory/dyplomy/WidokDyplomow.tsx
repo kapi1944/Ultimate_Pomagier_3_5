@@ -15,7 +15,8 @@ import {
 } from '../../wspolne/UkladGeneratoraDokumentu'
 import StatusZapisuDokumentu from '../../wspolne/StatusZapisuDokumentu'
 import { useOchronaNiezapisanegoDokumentu, useStanDokumentu } from '../../wspolne/useStanDokumentu'
-import { zbudujDaneSeryjnychDyplomow } from './modelSeryjnychDyplomow'
+import { parsujListeUczestnikow, polaczUczestnikowPoNazwie, sprawdzDaneDyplomu, zbudujDaneSeryjnychDyplomow } from './modelSeryjnychDyplomow'
+import { pobierzLogoOrganizatora } from '../../../../wspolne/dokumenty/logoOrganizatora'
 import './widokDyplomow.css'
 
 type TrybSzkolenia = 'stacjonarne' | 'online'
@@ -124,9 +125,7 @@ const kluczDokumentuDyplomow = 'ultimate-pomagier.dyplomy.generator-pawla.dokume
 const kluczPrzypieciaPaneluUstawien = 'ultimate-pomagier.dyplomy.panel-ustawien-przypiety'
 const kluczWysuwaniaPaneluUstawien = 'ultimate-pomagier.dyplomy.panel-ustawien-wysuwanie'
 const kluczTrenerowKartoteki = 'ultimate-pomagier.kartoteki.trenerzy'
-const domyslnyNumerRejestru = '88754867/106061/2026'
-const domyslnaDataSzkolenia = '2026-05-18'
-const domyslniUczestnicy = 'Agnieszka Walo-Zagórska\nKatarzyna Szymaniak-Kalata'
+const domyslnyNumerRejestru = ''
 const koloryFirmoweDyplomu: Record<Exclude<MotywKoloruDyplomu, 'dowolny'>, string> = {
   semper: '#c5000b',
   iist: '#2E89BE',
@@ -407,13 +406,6 @@ function formatujTytulSzkolenia(tytul: string) {
   return czystyTytul ? `"${czystyTytul}"` : '"Tytuł szkolenia"'
 }
 
-function parsujListeUczestnikow(wartosc: string) {
-  return wartosc
-    .split(/\r?\n/)
-    .map((wiersz) => wiersz.split(/\t|;/)[0].trim())
-    .filter(Boolean)
-}
-
 function pobierzBlokiNumeruRejestru(wartosc: string): BlokNumeruRejestru[] {
   return Array.from(String(wartosc || '').matchAll(/\d+/g)).map((dopasowanie) => ({
     wartosc: dopasowanie[0],
@@ -507,19 +499,7 @@ function utworzUczestnika(imieNazwisko: string, indeks: number, dane: DaneNumera
 }
 
 function polaczUczestnikow(nazwy: string[], obecni: UczestnikDyplomu[], dane: DaneNumeracji) {
-  return nazwy.map((nazwa, indeks) => {
-    const obecny = obecni[indeks]
-
-    if (!obecny) {
-      return utworzUczestnika(nazwa, indeks, dane)
-    }
-
-    return {
-      ...obecny,
-      imieNazwisko: nazwa,
-      numerRejestru: obecny.numerRejestru || zbudujNumerRejestru(dane, indeks),
-    }
-  })
+  return polaczUczestnikowPoNazwie(nazwy, obecni, (nazwa, indeks) => utworzUczestnika(nazwa, indeks, dane))
 }
 
 function utworzDomyslnyZapis(): ZapisDyplomow {
@@ -537,22 +517,19 @@ function utworzDomyslnyZapis(): ZapisDyplomow {
     motywKoloru: 'semper',
     wariantSzablonu: 'CRM',
     kolorMotywu: koloryFirmoweDyplomu.semper,
-    tytulSzkolenia:
-      'Identyfikowanie podrobionych dokumentów jako instrument przeciwdziałania nadużyciom finansowym, w tym w FEnIKS',
+    tytulSzkolenia: '',
     rozmiarTytulu: 20,
     trybSzkolenia: 'stacjonarne',
-    miejsceSzkolenia: 'Warszawa',
-    trener: 'r. pr. Natalia Soroka-Tezcan',
-    liczbaGodzin: '8',
+    miejsceSzkolenia: '',
+    trener: '',
+    liczbaGodzin: '',
     rodzajGodzin: 'edukacyjnych',
     niestandardowyRodzajGodzin: '',
-    wybraneDaty: [domyslnaDataSzkolenia],
+    wybraneDaty: [],
     trybZapisuDat: 'lista_przecinek',
-    miesiacKalendarza: '2026-05',
-    uczestnicyTekst: domyslniUczestnicy,
-    uczestnicy: parsujListeUczestnikow(domyslniUczestnicy).map((nazwa, indeks) =>
-      utworzUczestnika(nazwa, indeks, daneNumeracji),
-    ),
+    miesiacKalendarza: pobierzDzisiejszaDateIso().slice(0, 7),
+    uczestnicyTekst: '',
+    uczestnicy: [],
     dodatki: [],
     szerokoscDodatkuGornego: 70,
     szerokoscDodatkuDolnego: 70,
@@ -563,7 +540,7 @@ function utworzDomyslnyZapis(): ZapisDyplomow {
     marginesDodatkuDolnego: 7.6,
     tloSzablonu: '',
     drugaStronaAktywna: false,
-    trescDrugiejStrony: 'Cele, korzyści, program szkolenia albo efekty uczenia się.',
+    trescDrugiejStrony: '',
     szczegolyOrganizacyjneId: null,
     grupaId: null,
   }
@@ -580,16 +557,14 @@ function wczytajZapisDyplomow(): ZapisDyplomow {
     }
 
     const dane = JSON.parse(zapis) as Partial<ZapisDyplomow>
-    const uczestnicyTekst = dane.uczestnicyTekst ?? domyslnyZapis.uczestnicyTekst
+    const uczestnicyTekst = dane.uczestnicyTekst ?? (Array.isArray(dane.uczestnicy) ? dane.uczestnicy.map((uczestnik) => uczestnik.imieNazwisko).join('\n') : '')
     const daneNumeracji: DaneNumeracji = {
       poczatkowyNumerRejestru: dane.poczatkowyNumerRejestru ?? domyslnyZapis.poczatkowyNumerRejestru,
       indeksZmiennegoBloku: dane.indeksZmiennegoBloku ?? null,
     }
-    const uczestnicyZListy = polaczUczestnikow(
-      parsujListeUczestnikow(uczestnicyTekst),
-      Array.isArray(dane.uczestnicy) ? dane.uczestnicy : [],
-      daneNumeracji,
-    )
+    const uczestnicyZListy = Array.isArray(dane.uczestnicy)
+      ? dane.uczestnicy
+      : polaczUczestnikow(parsujListeUczestnikow(uczestnicyTekst), [], daneNumeracji)
 
     return {
       ...domyslnyZapis,
@@ -830,47 +805,6 @@ function zbudujTekstMiejscaSzkolenia(dane: ZapisDyplomow) {
   return `Miejsce szkolenia: ${miejsceSzkolenia || '--'}.`
 }
 
-function sprawdzDane(dane: ZapisDyplomow) {
-  const problemy: string[] = []
-  const uczestnicy = dane.uczestnicy.filter((uczestnik) => uczestnik.imieNazwisko.trim())
-
-  if (!uczestnicy.length) {
-    problemy.push('dodaj co najmniej jednego uczestnika')
-  }
-
-  if (!dane.tytulSzkolenia.trim()) {
-    problemy.push('uzupełnij tytuł szkolenia')
-  }
-
-  if (!dane.wybraneDaty.length) {
-    problemy.push('wybierz termin szkolenia')
-  }
-
-  if (!dane.liczbaGodzin || Number(dane.liczbaGodzin) <= 0) {
-    problemy.push('uzupełnij liczbę godzin')
-  }
-
-  if (!dane.trener.trim()) {
-    problemy.push('uzupełnij eksperta / trenera')
-  }
-
-  if (dane.trybSzkolenia !== 'online' && !dane.miejsceSzkolenia.trim()) {
-    problemy.push('uzupełnij miejsce szkolenia')
-  }
-
-  const brakiNumerow = uczestnicy.filter((uczestnik) => !uczestnik.numerRejestru.trim()).length
-
-  if (brakiNumerow) {
-    problemy.push(
-      brakiNumerow === 1
-        ? 'uzupełnij numer rejestru dla 1 uczestnika'
-        : `uzupełnij numer rejestru dla ${brakiNumerow} uczestników`,
-    )
-  }
-
-  return problemy
-}
-
 function wczytajPlikJakoDataUrl(plik: File) {
   return new Promise<string>((resolve, reject) => {
     const czytnik = new FileReader()
@@ -970,7 +904,7 @@ function StronaDyplomu({ dane, uczestnik }: { dane: ZapisDyplomow; uczestnik: Uc
             <strong>{uczestnik.imieNazwisko || 'Imię i nazwisko'}</strong>
           </div>
           <div className="dyplom-kartka__ukonczenie">{pobierzZdanieUkonczenia(dane.trybTytulu)}</div>
-          <div className="dyplom-kartka__tytul" style={{ fontSize: `${dane.rozmiarTytulu}px` }}>
+          <div className="dyplom-kartka__tytul" style={{ fontSize: `${dane.rozmiarTytulu / 6.8}cqw` }}>
             {formatujTytulSzkolenia(dane.tytulSzkolenia)}
           </div>
           <div className="dyplom-kartka__szczegoly">
@@ -984,7 +918,7 @@ function StronaDyplomu({ dane, uczestnik }: { dane: ZapisDyplomow; uczestnik: Uc
 
         <footer className="dyplom-kartka__stopka">
           <div className="dyplom-kartka__logo-semper">
-            <img alt={dane.motywKoloru === 'iist' ? 'IIST' : 'SEMPER'} src={dane.motywKoloru === 'iist' ? '/logo-iist.png' : '/logo-semper.png'} />
+            <img alt={dane.motywKoloru === 'iist' ? 'IIST' : 'SEMPER'} src={pobierzLogoOrganizatora(dane.motywKoloru === 'iist' ? 'IIST' : 'SEMPER')} />
           </div>
           <div className="dyplom-kartka__organizator">
             {dane.motywKoloru === 'iist' ? <>Międzynarodowy Instytut Szkoleń Specjalistycznych <strong>IIST</strong></> : <>Centrum Organizacji Szkoleń i Konferencji <strong>SEMPER</strong></>}
@@ -1041,12 +975,13 @@ export default function WidokDyplomow() {
     ? Math.min(indeksUczestnikaPierwszejStrony, uczestnicyDoDruku.length - 1)
     : 0
   const uczestnikPierwszejStrony = uczestnicyDoDruku[indeksPierwszejStrony] ?? utworzUczestnika('', 0, dane)
+  const problemyWybranego = sprawdzDaneDyplomu({ ...dane, uczestnicy: uczestnicyDoDruku.length ? [uczestnikPierwszejStrony] : [] })
   const uczestnikDrugiejStrony = uczestnikPierwszejStrony
   const czyDrugaStronaDostepna = dane.drugaStronaAktywna && dane.czyPokazacDrugaStrone && Boolean(uczestnikPierwszejStrony.drugaStrona)
-  const problemy = useMemo(() => sprawdzDane(dane), [dane])
+  const problemy = useMemo(() => sprawdzDaneDyplomu(dane), [dane])
   const grupaDoNazwy = wybraneSzczegoly?.grupy.find((grupa) => grupa.id === dane.grupaId)?.nazwa
   const daneNazwyDyplomu = {
-    typDokumentu: 'DYPLOM' as const,
+    typDokumentu: dane.trybTytulu === 'certyfikat' ? 'CERTYFIKAT' as const : dane.trybTytulu === 'zaswiadczenie' ? 'ZASWIADCZENIE' as const : 'DYPLOM' as const,
     organizator: dane.motywKoloru === 'iist' ? 'IIST' : 'SEMPER',
     terminy: dane.wybraneDaty,
     miejsce: dane.trybSzkolenia === 'online' ? 'online' : dane.miejsceSzkolenia,
@@ -1168,7 +1103,7 @@ export default function WidokDyplomow() {
       wybraneDaty: daneSeryjne.daty,
       miesiacKalendarza: daneSeryjne.daty[0]?.slice(0, 7) ?? aktualne.miesiacKalendarza,
       uczestnicyTekst,
-      uczestnicy: nazwyUczestnikow.map((nazwa, indeks) => utworzUczestnika(nazwa, indeks, aktualne)),
+      uczestnicy: polaczUczestnikow(nazwyUczestnikow, aktualne.uczestnicy, aktualne),
       motywKoloru: czyIist ? 'iist' : 'semper',
       kolorMotywu: czyIist ? koloryFirmoweDyplomu.iist : koloryFirmoweDyplomu.semper,
       wariantSzablonu: 'CRM',
@@ -1499,7 +1434,9 @@ export default function WidokDyplomow() {
       trescDrugiejStrony: '',
     }
     ustawDane(wyczyszczoneDane)
-    localStorage.removeItem(kluczZapisuDyplomow)
+    localStorage.setItem(kluczZapisuDyplomow, JSON.stringify(wyczyszczoneDane))
+    localStorage.removeItem(kluczDokumentuDyplomow)
+    ustawIndeksUczestnikaPierwszejStrony(0)
     stanDokumentu.oznaczJakoZapisany(wyczyszczoneDane)
     ustawTrybPodgladuStron('pierwsza')
     ustawUkladPodgladuStron('pod_soba')
@@ -1560,7 +1497,8 @@ export default function WidokDyplomow() {
             classNamePrzycisku="dyplomy__przycisk dyplomy__przycisk--glowny"
             czyMoznaEksportowac={() => !problemy.length}
             daneNazwyEksportu={daneNazwyDyplomu}
-            etykietaPrzyciskuPdf="Pobierz PDF seryjny"
+            etykietaPrzyciskuPdf={`PDF wszystkich uczestników (${uczestnicyDoDruku.length})`}
+            etykietaPrzyciskuDruku="Drukuj wszystkich uczestników"
             obszarDokumentu={obszarEksportuSeryjnegoRef}
             pobierzBladEksportu={pobierzBladEksportuDyplomu}
             pokazPrzyciskDruku
@@ -1569,7 +1507,7 @@ export default function WidokDyplomow() {
             Zapisz roboczo
           </button>
           <button className="dyplomy__przycisk" onClick={wyczyscGenerator} type="button">
-            Wyczyść
+            Nowy pusty dokument
           </button>
         </div>
       </header>
@@ -2326,11 +2264,11 @@ export default function WidokDyplomow() {
           <AkcjeEksportuPdf
             className="dyplomy__eksport-wybranego"
             classNamePrzycisku="dyplomy__przycisk"
-            czyMoznaEksportowac={() => !problemy.length && Boolean(uczestnikPierwszejStrony.imieNazwisko.trim())}
+            czyMoznaEksportowac={() => !problemyWybranego.length}
             daneNazwyEksportu={{ ...daneNazwyDyplomu, uczestnik: uczestnikPierwszejStrony.imieNazwisko }}
             etykietaPrzyciskuPdf="Pobierz wybrany PDF"
             obszarDokumentu={obszarPodgladuWybranegoRef}
-            pobierzBladEksportu={pobierzBladEksportuDyplomu}
+            pobierzBladEksportu={() => problemyWybranego.length ? `Przed eksportem uzupełnij: ${problemyWybranego.join(', ')}.` : null}
             pokazPrzyciskDruku={false}
           />
         </aside>

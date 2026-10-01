@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { deserializujDaneKartyNaDrzwi, obliczRozmiarTytuluKarty, pobierzDaneRenderowaniaKarty, pobierzUkladKartNaArkuszuA4, pobierzWymiaryKartyNaDrzwi, przeskalujBlokiKartyNaDrzwi, przywrocPoleKartyZeZrodla, serializujDaneKartyNaDrzwi, utworzDaneKartyNaDrzwiZKontekstu, utworzDomyslneDaneKartyNaDrzwi, utworzKarteNaDrzwi, utworzKartyZGrupISal, utworzUstawieniaBazowegoSzablonu, uporzadkujKarty, zduplikujKarteNaDrzwi, zmienPoleKartyLokalnie } from '../src/moduly/dokumenty/generatory/karta_na_drzwi/modelKartyNaDrzwi.ts'
 import type { KontekstDokumentuSzkolenia } from '../src/wspolne/integracje/szczegolyDoDokumentow/index.ts'
 
@@ -49,3 +50,19 @@ const automatyczne = utworzKartyZGrupISal(kontekst)
 assert.equal(automatyczne.length, 2)
 assert.deepEqual(automatyczne.map((pozycja) => pozycja.sala), ['Sala A', 'Sala B'])
 console.log('OK: Karty na drzwi obsługują zestawy, migrację, źródła i szablony')
+
+assert.equal(domyslne.karty[0].tytulSzkolenia, '')
+assert.equal(domyslne.karty[0].termin, '')
+assert.equal(domyslne.karty[0].szczegolyOrganizacyjneId, null)
+const bezBlokow = deserializujDaneKartyNaDrzwi(serializujDaneKartyNaDrzwi({ ...domyslne, ustawieniaSzablonu: { ...domyslne.ustawieniaSzablonu, blokiSwobodne: [] } }))
+assert.deepEqual(bezBlokow.ustawieniaSzablonu.blokiSwobodne, [])
+assert.deepEqual(deserializujDaneKartyNaDrzwi(serializujDaneKartyNaDrzwi({ ...zestaw!, ustawieniaSzablonu: { ...zestaw!.ustawieniaSzablonu, blokiSwobodne: [] } })).karty, zestaw!.karty)
+
+const stylKarty = readFileSync(new URL('../src/moduly/dokumenty/generatory/karta_na_drzwi/widokKartNaDrzwi.css', import.meta.url), 'utf8')
+const rendererKarty = readFileSync(new URL('../src/moduly/dokumenty/generatory/karta_na_drzwi/RendererKartyNaDrzwi.tsx', import.meta.url), 'utf8')
+assert.ok(stylKarty.includes('aspect-ratio:var(--proporcje-karty)'))
+assert.ok(rendererKarty.includes("'--proporcje-karty': `${szerokosc} / ${wysokosc}`"))
+assert.ok(!stylKarty.includes('aspect-ratio:var(--szerokosc-karty-mm)'))
+
+const starszyZestawBezBlokow = deserializujDaneKartyNaDrzwi(JSON.stringify({ ...domyslne, wersjaSchematu: 3, ustawieniaSzablonu: { ...domyslne.ustawieniaSzablonu, blokiSwobodne: [] } }))
+assert.ok(starszyZestawBezBlokow.ustawieniaSzablonu.blokiSwobodne.length > 0)

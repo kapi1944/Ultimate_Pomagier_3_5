@@ -1,6 +1,6 @@
 ﻿import assert from 'node:assert/strict'
 import test from 'node:test'
-import { czyMoznaRozpoczacEksport, pobierzPodzialStronA4, pobierzStronyDokumentu, pobierzWymiaryStronyPdf, utworzNazwePlikuPdf } from '../src/wspolne/dokumenty/eksportPdf.ts'
+import { drukujDokument, czyMoznaRozpoczacEksport, pobierzPodzialStronA4, pobierzStronyDokumentu, pobierzWymiaryStronyPdf, utworzNazwePlikuPdf } from '../src/wspolne/dokumenty/eksportPdf.ts'
 import { formatujTerminyDoNazwy, sanityzujSegmentNazwy, zbudujNazweBazowaEksportowanegoDokumentu, zbudujNazweEksportowanegoDokumentu } from '../src/wspolne/dokumenty/nazwyDokumentow.ts'
 import { geometriaStronyProgramu, pobierzWymiaryStronyProgramu } from '../src/moduly/dokumenty/generatory/programy_szkolen/geometriaStronyProgramu.ts'
 
@@ -69,4 +69,48 @@ test('eksport rozpoznaje fizyczne strony dokumentu zamiast kroić cały podgląd
   } as unknown as HTMLElement
 
   assert.deepEqual(pobierzStronyDokumentu(obszar), [stronaPierwsza, stronaDruga])
+})
+
+test('PDF zachowuje fizyczne wymiary kart A5 i A6', () => {
+  assert.deepEqual(pobierzWymiaryStronyPdf('pionowa', 'a5'), { szerokoscMm: 148, wysokoscMm: 210, orientacjaJsPdf: 'portrait' })
+  assert.deepEqual(pobierzWymiaryStronyPdf('pozioma', 'a6'), { szerokoscMm: 148, wysokoscMm: 105, orientacjaJsPdf: 'landscape' })
+})
+
+test('druk obejmuje wskazany obszar, czeka na obrazy i sprząta po anulowaniu lub błędzie', async () => {
+  const poprzednieOkno = globalThis.window
+  const poprzedniDokument = globalThis.document
+  const zdarzenia = new EventTarget()
+  const atrybuty = new Map<string, string>()
+  const atrybutyPrzodka = new Map<string, string>()
+  let czyObrazGotowy = false
+  let czyStylUsuniety = false
+  let czyBladDruku = false
+  const styl = { textContent: '', remove: () => { czyStylUsuniety = true } }
+  const przodek = { parentElement: null, setAttribute: (klucz: string, wartosc: string) => atrybutyPrzodka.set(klucz, wartosc), removeAttribute: (klucz: string) => atrybutyPrzodka.delete(klucz) }
+  const obszar = { parentElement: przodek, querySelectorAll: () => [{ querySelectorAll: () => [{ decode: async () => { czyObrazGotowy = true } }] }], setAttribute: (klucz: string, wartosc: string) => atrybuty.set(klucz, wartosc), removeAttribute: (klucz: string) => atrybuty.delete(klucz) } as unknown as HTMLElement
+  globalThis.document = { fonts: { ready: Promise.resolve() }, createElement: () => styl, head: { append: () => {} } } as unknown as Document
+  globalThis.window = { addEventListener: zdarzenia.addEventListener.bind(zdarzenia), removeEventListener: zdarzenia.removeEventListener.bind(zdarzenia), print: () => {
+    assert.ok(czyObrazGotowy)
+    assert.ok(atrybuty.has('data-cel-druku-dokumentu'))
+    assert.ok(atrybutyPrzodka.has('data-przodek-druku-dokumentu'))
+    assert.ok(styl.textContent.includes('A5 landscape'))
+    if (czyBladDruku) throw new Error('Błąd drukarki')
+    zdarzenia.dispatchEvent(new Event('afterprint'))
+  } } as unknown as Window & typeof globalThis
+  try {
+    await drukujDokument(obszar, 'pozioma', 'a5')
+    assert.equal(atrybuty.size, 0)
+    assert.equal(atrybutyPrzodka.size, 0)
+    assert.ok(czyStylUsuniety)
+    czyBladDruku = true
+    czyStylUsuniety = false
+    await assert.rejects(drukujDokument(obszar, 'pozioma', 'a5'), /Błąd drukarki/)
+    assert.equal(atrybuty.size, 0)
+    assert.equal(atrybutyPrzodka.size, 0)
+    assert.ok(czyStylUsuniety)
+    await assert.rejects(drukujDokument({ querySelectorAll: () => [] } as unknown as HTMLElement), /Nie znaleziono stron/)
+  } finally {
+    globalThis.window = poprzednieOkno
+    globalThis.document = poprzedniDokument
+  }
 })

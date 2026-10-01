@@ -87,6 +87,7 @@
 .dyplomy__panel-pracy,
 .dyplomy__podglad {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   min-width: 0;
 }
@@ -97,6 +98,7 @@
 }
 
 .dyplomy__sekcja {
+  min-width: 0;
   border: 1px solid color-mix(in srgb, var(--ui-akcent) 25%, transparent);
   border-radius: 8px;
   padding: 16px;
@@ -583,6 +585,7 @@
   --semper-tlo: #ffffff;
   --semper-podpis: #4f46a5;
 
+  container-type: inline-size;
   position: relative;
   width: min(100%, 680px);
   aspect-ratio: 210 / 297;
@@ -631,7 +634,7 @@
   display: flex;
   align-items: center;
   color: #ffffff;
-  font-size: clamp(7px, 1.15vw, 11px);
+  font-size: 1.6176cqw;
   font-weight: 400;
   line-height: 1;
 }
@@ -681,7 +684,7 @@
 .dyplom-kartka__dodatek-tekst {
   white-space: pre-wrap;
   color: var(--semper-tekst);
-  font-size: clamp(7px, 1.18vw, 11px);
+  font-size: 1.6176cqw;
   font-weight: 700;
   line-height: 1.25;
 }
@@ -698,7 +701,7 @@
   justify-content: center;
   color: var(--semper-wodny);
   font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(76px, 10vw, 128px);
+  font-size: 18.8235cqw;
   font-style: italic;
   font-weight: 400;
   line-height: 0.8;
@@ -708,7 +711,7 @@
 }
 
 .dyplom-kartka__znak-wodny--zaswiadczenie {
-  font-size: clamp(54px, 7.5vw, 96px);
+  font-size: 14.1176cqw;
 }
 
 .dyplom-kartka__naglowek-ozdobny {
@@ -728,7 +731,7 @@
   left: 0;
   color: var(--semper-czerwony);
   font-family: var(--czcionka-typu, "Bradley Hand ITC", "Segoe Print", cursive);
-  font-size: clamp(48px, 7vw, 82px);
+  font-size: 12.0588cqw;
   font-style: italic;
   font-weight: normal;
   font-synthesis: none;
@@ -746,7 +749,7 @@
 
 .dyplom-kartka--zaswiadczenie .dyplom-kartka__typ {
   right: 2%;
-  font-size: clamp(32px, 4.9vw, 56px);
+  font-size: 8.2353cqw;
   font-synthesis: none;
 }
 
@@ -768,7 +771,7 @@
   top: 66%;
   right: 1%;
   color: var(--semper-czerwony);
-  font-size: clamp(13px, 1.7vw, 21px);
+  font-size: 3.0882cqw;
   font-weight: 800;
   letter-spacing: 0;
   line-height: 1;
@@ -788,7 +791,7 @@
 .dyplom-kartka__wstep {
   margin-bottom: 3px;
   color: var(--semper-tekst);
-  font-size: clamp(8px, 1.1vw, 12px);
+  font-size: 1.7647cqw;
   font-weight: 800;
   line-height: 1.2;
 }
@@ -804,13 +807,13 @@
 
 .dyplom-kartka__osoba span {
   color: var(--semper-tekst);
-  font-size: clamp(8px, 1.1vw, 12px);
+  font-size: 1.7647cqw;
   font-weight: 800;
 }
 
 .dyplom-kartka__osoba strong {
   color: var(--semper-tekst);
-  font-size: clamp(14px, 1.8vw, 21px);
+  font-size: 3.0882cqw;
   font-style: italic;
   font-weight: 800;
   line-height: 1.1;
@@ -819,7 +822,7 @@
 .dyplom-kartka__ukonczenie {
   margin-bottom: 22px;
   color: var(--semper-tekst);
-  font-size: clamp(8px, 1.1vw, 12px);
+  font-size: 1.7647cqw;
   font-weight: 800;
   line-height: 1.2;
 }
@@ -849,7 +852,7 @@
 .dyplom-kartka__szczegoly p {
   margin: 0;
   color: #000000 !important;
-  font-size: clamp(8px, 1.05vw, 12px);
+  font-size: 1.7647cqw;
   line-height: 1.2;
   opacity: 1;
   mix-blend-mode: normal;
@@ -857,7 +860,7 @@
 }
 
 .dyplom-kartka__szczegoly p:first-child {
-  font-size: clamp(9px, 1.2vw, 13px);
+  font-size: 1.9118cqw;
 }
 
 .dyplom-kartka__stopka {
@@ -893,7 +896,7 @@
   right: 0;
   left: 0;
   color: var(--semper-tekst);
-  font-size: clamp(7px, 1vw, 11px);
+  font-size: 1.6176cqw;
   line-height: 1.2;
 }
 
@@ -910,7 +913,7 @@
   width: 38%;
   gap: 0;
   color: rgba(0, 0, 0, 0.72);
-  font-size: clamp(6px, 0.85vw, 10px);
+  font-size: 1.4706cqw;
   line-height: 1.08;
 }
 
@@ -921,7 +924,7 @@
   left: -6%;
   color: rgba(79, 70, 165, 0.75);
   font-family: "Segoe Print", "Comic Sans MS", cursive;
-  font-size: clamp(13px, 1.8vw, 24px);
+  font-size: 3.5294cqw;
   font-style: normal;
   font-weight: 400;
   line-height: 1;
@@ -936,7 +939,7 @@
   width: 24.2%;
   overflow: hidden;
   color: var(--semper-tekst);
-  font-size: clamp(7px, 1vw, 10px);
+  font-size: 1.4706cqw;
   line-height: 1;
   white-space: nowrap;
 }
@@ -947,7 +950,7 @@
   right: 0;
   left: 0;
   color: var(--semper-tekst);
-  font-size: clamp(7px, 1vw, 10px);
+  font-size: 1.4706cqw;
   font-weight: 800;
   line-height: 1.2;
 }
@@ -958,7 +961,7 @@
   right: 0;
   left: 0;
   color: var(--semper-tekst);
-  font-size: clamp(7px, 1.05vw, 11px);
+  font-size: 1.6176cqw;
   font-weight: 400;
   line-height: 1.2;
 }
@@ -1093,8 +1096,6 @@
   .dyplom-kartka__pasek {
     height: 2.22% !important;
     color: #ffffff !important;
-    font-size: 9.5px !important;
-    font-weight: 400 !important;
   }
 
   .dyplom-kartka__pasek--lewy {
@@ -1107,14 +1108,11 @@
 
   .dyplom-kartka__typ {
     color: var(--semper-czerwony) !important;
-    font-size: 72px !important;
   }
 
   .dyplom-kartka--zaswiadczenie .dyplom-kartka__typ {
     right: 2% !important;
-    font-size: 52px !important;
     font-synthesis: none !important;
-    font-weight: 400 !important;
   }
 
   .dyplom-kartka__linia-tytulu {
@@ -1128,23 +1126,16 @@
 
   .dyplom-kartka__znak-wodny {
     color: rgba(0, 0, 0, 0.055) !important;
-    font-size: 118px !important;
-  }
-
-  .dyplom-kartka__znak-wodny--zaswiadczenie {
-    font-size: 88px !important;
   }
 
   .dyplom-kartka__wstep,
   .dyplom-kartka__osoba span,
   .dyplom-kartka__ukonczenie {
     color: #000000 !important;
-    font-size: 10px !important;
   }
 
   .dyplom-kartka__osoba strong {
     color: #000000 !important;
-    font-size: 16px !important;
   }
 
   .dyplom-kartka__tytul {

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { zbudujDaneSeryjnychDyplomow } from '../src/moduly/dokumenty/generatory/dyplomy/modelSeryjnychDyplomow.ts'
+import { parsujListeUczestnikow, polaczUczestnikowPoNazwie, sprawdzDaneDyplomu, zbudujDaneSeryjnychDyplomow } from '../src/moduly/dokumenty/generatory/dyplomy/modelSeryjnychDyplomow.ts'
 import { zbudujNazweEksportowanegoDokumentu } from '../src/wspolne/dokumenty/nazwyDokumentow.ts'
 import type { KontekstDokumentuSzkolenia } from '../src/wspolne/integracje/szczegolyDoDokumentow/index.ts'
 
@@ -27,3 +27,27 @@ assert.equal(zbudujNazweEksportowanegoDokumentu({ ...wspolneDaneNazwy, uczestnik
 assert.equal(zbudujNazweEksportowanegoDokumentu(wspolneDaneNazwy), 'IIST_2026.10.01-02_Prawo_zamowien_Grupa_A_Dyplom.pdf')
 
 console.log('OK: wspólny szablon dyplomu otrzymuje seryjne dane uczestników')
+
+const uczestnicyIndywidualni = [
+  { id: 'a', imieNazwisko: 'Anna Kowalska', numerRejestru: 'A/1', dodatek: 'logo-a', drugaStrona: false },
+  { id: 'p', imieNazwisko: 'Piotr Nowak', numerRejestru: 'P/2', dodatek: 'logo-p', drugaStrona: true },
+]
+const utworz = (nazwa: string, indeks: number) => ({ id: `nowy-${indeks}`, imieNazwisko: nazwa, numerRejestru: '', dodatek: '', drugaStrona: true })
+const poZmianieKolejnosci = polaczUczestnikowPoNazwie(parsujListeUczestnikow('Piotr Nowak\nAnna Kowalska\nAnna Kowalska'), uczestnicyIndywidualni, utworz)
+assert.deepEqual(poZmianieKolejnosci, [uczestnicyIndywidualni[1], uczestnicyIndywidualni[0]])
+assert.deepEqual(parsujListeUczestnikow('Anna Kowalska\n Anna Kowalska ; firma\r\nPiotr Nowak\n'), ['Anna Kowalska', 'Piotr Nowak'])
+assert.deepEqual(polaczUczestnikowPoNazwie([], uczestnicyIndywidualni, utworz), [])
+assert.deepEqual(polaczUczestnikowPoNazwie(['Anna Kowalska'], uczestnicyIndywidualni, utworz), [uczestnicyIndywidualni[0]])
+const kompletne = { uczestnicy: uczestnicyIndywidualni, tytulSzkolenia: 'Zażółć gęślą jaźń', wybraneDaty: ['2026-10-01'], liczbaGodzin: '8', trener: 'Trener', trybSzkolenia: 'online' as const, miejsceSzkolenia: '' }
+assert.deepEqual(sprawdzDaneDyplomu(kompletne), [])
+assert.ok(sprawdzDaneDyplomu({ ...kompletne, uczestnicy: [] }).includes('dodaj co najmniej jednego uczestnika'))
+assert.ok(sprawdzDaneDyplomu({ ...kompletne, liczbaGodzin: 'abc' }).includes('uzupełnij liczbę godzin'))
+assert.ok(sprawdzDaneDyplomu({ ...kompletne, uczestnicy: [{ ...uczestnicyIndywidualni[0], numerRejestru: '' }] }).includes('uzupełnij numer rejestru dla 1 uczestnika'))
+for (const typDokumentu of ['CERTYFIKAT', 'ZASWIADCZENIE', 'DYPLOM'] as const) {
+  assert.notEqual(zbudujNazweEksportowanegoDokumentu({ ...wspolneDaneNazwy, typDokumentu, uczestnik: 'Anna Kowalska' }), zbudujNazweEksportowanegoDokumentu({ ...wspolneDaneNazwy, typDokumentu, uczestnik: 'Piotr Nowak' }))
+}
+
+const imiennicy = [{ ...uczestnicyIndywidualni[0] }, { ...uczestnicyIndywidualni[0], id: 'inna-anna', numerRejestru: 'A/2' }]
+assert.deepEqual(polaczUczestnikowPoNazwie(['Anna Kowalska', 'Anna Kowalska'], imiennicy, utworz), imiennicy)
+assert.equal(new Set(polaczUczestnikowPoNazwie(['Anna Kowalska', 'Anna Kowalska'], imiennicy, utworz).map((uczestnik) => uczestnik.id)).size, 2)
+assert.deepEqual(zbudujDaneSeryjnychDyplomow({ ...kontekst, grupy: [{ ...kontekst.grupy[0], uczestnicy: [kontekst.grupy[0].uczestnicy[0], kontekst.grupy[0].uczestnicy[0]] }] }, 'grupa-1')?.uczestnicy, ['Anna Kowalska'])

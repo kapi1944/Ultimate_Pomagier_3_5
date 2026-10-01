@@ -54,3 +54,10 @@ for (const przypadek of przypadki) {
 }
 
 console.log('OK: wspólny rejestr kopii roboczych wszystkich generatorów')
+
+const certyfikat = zapiszDokumentRoboczyGeneratora({ typ: 'CERTYFIKAT', generatorId: 'dyplomy', tytul: 'Certyfikat', daneDokumentu: { uczestnicy: [{ id: 'osoba', imieNazwisko: 'Łukasz Żółć' }] }, ustawieniaDokumentu: {} })
+const dyplom = zapiszDokumentRoboczyGeneratora({ id: certyfikat.id, typ: 'DYPLOM', generatorId: 'dyplomy', tytul: 'Dyplom', daneDokumentu: certyfikat.daneDokumentu, ustawieniaDokumentu: {} })
+assert.equal(dyplom.id, certyfikat.id)
+assert.equal(dyplom.typ, 'DYPLOM')
+assert.equal(repozytoriumWspolnychDokumentow.pobierzWszystkie().length, przypadki.length + 1)
+assert.deepEqual(dyplom.daneDokumentu, certyfikat.daneDokumentu)

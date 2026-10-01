@@ -24,3 +24,35 @@
   [data-strona-dokumentu] { break-after: auto; page-break-after: auto; break-inside: avoid; }
   .program-kartka-a4__naglowek, .program-kartka-a4__stopka { break-inside: avoid; }
 }
+
+@media print {
+  [data-przodek-druku-dokumentu] > :not([data-przodek-druku-dokumentu]):not([data-cel-druku-dokumentu]):not(style):not(link) {
+    display: none !important;
+  }
+  body [data-przodek-druku-dokumentu], body [data-cel-druku-dokumentu] {
+    display: block !important;
+    position: static !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    overflow: visible !important;
+    transform: none !important;
+    contain: none !important;
+    container-type: normal !important;
+  }
+  body [data-cel-druku-dokumentu], body [data-cel-druku-dokumentu] * { visibility: visible !important; }
+  body [data-cel-druku-dokumentu] [data-strona-dokumentu] {
+    page: dokument-generatora;
+    box-shadow: none !important;
+    break-inside: avoid;
+    break-after: page;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}
