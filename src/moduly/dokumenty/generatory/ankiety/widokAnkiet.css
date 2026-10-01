@@ -792,6 +792,7 @@
   .generator-ankiet__podglad {
     position: absolute;
     inset: 0;
+    overflow: visible;
     width: 210mm;
     margin: 0;
     padding: 0;
@@ -834,6 +835,28 @@
 .ankieta-a4 header, .ankieta__naglowek-wstawiony { break-after: avoid; }
 .ankieta-a4--oryginalna .ankieta-a4__pytania-otwarte > header { display: none; }
 .ankieta-a4--oryginalna sup { display: none; }
+.ankieta-a4--semper-pelna .ankieta-a4__tresc,
+.ankieta-a4--semper-pelna .ankieta-a4__stopka { font-size: 1.55cqw; }
+.ankieta-a4--semper-pelna { padding-top: 4.8%; }
+.ankieta-a4--semper-pelna .ankieta-a4__stopka { bottom: 4%; }
+.ankieta-a4--semper-pelna .ankieta-a4__naglowek,
+.ankieta-a4--semper-pelna .ankieta-a4__tytul-naglowka { border: 0; }
+.ankieta-a4--semper-pelna .ankieta-a4__wiersz-danych:first-child { min-height: 3.55em; }
+.ankieta-a4--semper-pelna .ankieta-a4__wiersz-danych { grid-template-columns: 38.8% minmax(0, 1fr); }
+.ankieta-a4--semper-pelna .ankieta-a4__tresc--pierwsza { margin-top: 4.75%; }
+.ankieta-a4--semper-pelna .ankieta-a4__tresc--druga { margin-top: 7.25%; }
+.ankieta-a4--semper-pelna .ankieta-a4__pytania-otwarte { gap: 1.6em; }
+.ankieta-a4--semper-pelna .ankieta-a4__pytanie-otwarte span { height: 3em; }
+.ankieta-a4--semper-pelna .ankieta-a4__oceny th,
+.ankieta-a4--semper-pelna .ankieta-a4__oceny td { box-sizing: border-box; }
+.ankieta-a4--semper-pelna .ankieta-a4__oceny th { height: 4.7em; }
+.ankieta-a4--semper-pelna .ankieta-a4__oceny td { height: 3.7em; }
+.ankieta-a4--semper-pelna .ankieta-a4__kontakt { margin-top: 2.5cqw; gap: 1.5cqw; }
+.ankieta-a4--semper-pelna .ankieta-a4__opis-email { margin: 0; }
+.ankieta-a4--semper-pelna .ankieta-a4__kontakt .ankieta-a4__sekcja-email { margin-top: 0; }
+.ankieta-a4--semper-pelna .ankieta-a4__uwagi { margin-top: 0; }
+.ankieta-a4--semper-pelna .ankieta-a4__odpowiedzi-tak-nie { margin-bottom: 0; }
+.ankieta-a4--semper-pelna .ankieta-a4__pytania-otwarte:last-child { gap: 1.25em; }
 .ankieta-a4__sekcja-email { margin: 1em 0 2em auto; width: 70%; min-height: 11em; border: 1px solid #111; padding: 1em; box-sizing: border-box; }
 .ankieta-a4--wlasna .ankieta-a4__pytania-otwarte { gap: 1em; }
 .ankieta-a4--wlasna .ankieta-a4__pytania-otwarte > header h2 { margin: 1em 0 .4em; font-size: 1.2em; }

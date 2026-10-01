@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { pobierzLogoOrganizatora } from '../../../../wspolne/dokumenty/logoOrganizatora'
 import { EdytowalnaWarstwaSwobodnychBlokow } from '../../../../wspolne/dokumenty/EdytorSwobodnychBlokow'
 import RendererSwobodnychBlokow from '../../../../wspolne/dokumenty/RendererSwobodnychBlokow'
 import type { BlokSwobodnyDokumentu, KontekstSwobodnychBlokow } from '../../../../wspolne/dokumenty/modelSwobodnychBlokow'
@@ -66,7 +67,7 @@ function PytanieDoWypelnienia({ pytanie, nowoczesne }: { pytanie: PytanieAnkiety
 function SekcjaPytan({ sekcja, nowoczesna }: { sekcja: SekcjaAnkiety; nowoczesna: boolean }) {
   const tylkoOceny = sekcja.pytania.length && sekcja.pytania.every((pytanie) => czyPytanieSkalowane(pytanie) && JSON.stringify(pobierzSkalePytania(pytanie)) === JSON.stringify(pobierzSkalePytania(sekcja.pytania[0])))
   if (tylkoOceny) return <SekcjaOceny nowoczesna={nowoczesna} sekcja={sekcja} />
-  return <section className={nowoczesna ? `ankieta-nowoczesna__sekcja ${sekcja.id.startsWith('uwagi') ? 'ankieta-nowoczesna__sekcja--uwagi' : ''}` : 'ankieta-a4__pytania-otwarte'}>
+  return <section className={nowoczesna ? `ankieta-nowoczesna__sekcja ${sekcja.id.startsWith('uwagi') ? 'ankieta-nowoczesna__sekcja--uwagi' : ''}` : `ankieta-a4__pytania-otwarte ${sekcja.id === 'email' ? 'ankieta-a4__kontakt' : ''}`}>
     {sekcja.nazwa && <header><h2>{sekcja.nazwa}</h2>{sekcja.opis && <p>{sekcja.opis}</p>}</header>}
     {!nowoczesna && sekcja.id.startsWith('email') && sekcja.opis && <p className="ankieta-a4__opis-email">{sekcja.opis}</p>}
     {sekcja.pytania.map((pytanie) => <PytanieDoWypelnienia key={pytanie.id} nowoczesne={nowoczesna} pytanie={pytanie} />)}
@@ -79,22 +80,25 @@ export default function RendererAnkiety({ dane, zaznaczonyBlokId = null, trybEdy
   const strony = podzielAnkieteNaStrony(dane)
   const nowoczesna = dane.wariantSzablonu === 'NOWOCZESNA'
   const oryginalna = czyOryginalnaTrescAnkiety(dane)
-  const logo = dane.organizator === 'IIST' ? '/logo-iist.png' : '/logo-semper.png'
+  const logo = pobierzLogoOrganizatora(dane.organizator)
+  const semperPelna = oryginalna && dane.preset === 'ORYGINALNA_SEMPER_PELNA'
   return <div className="ankieta-a4__dokument" data-liczba-stron={strony.length}>{strony.map((strona) => {
     const kontekst: KontekstSwobodnychBlokow = { dane: { ...(dane as unknown as Record<string, unknown>), numerStrony: strona.numer, liczbaStron: strony.length }, zasobyObrazow: { logo_organizatora: logo, ...zasobyObrazow } }
     const blokiStrony = dane.blokiSwobodne.map((blok): BlokSwobodnyDokumentu => {
+      if (semperPelna && blok.id.startsWith('szablon-logo-') && blok.typ === 'obraz' && blok.xMm === 147.9 && blok.yMm === 12.6 && blok.szerokoscMm === 52 && blok.wysokoscMm === 19.75) return { ...blok, xMm: 167.9, yMm: 13.6, szerokoscMm: 32, wysokoscMm: 17.75 }
+      if (semperPelna && blok.id.startsWith('szablon-tytul-') && blok.typ === 'tekst' && blok.dane.rozmiarCzcionkiPt === 11.5) return { ...blok, dane: { ...blok.dane, rozmiarCzcionkiPt: 14.5 } }
       if (strona.numer <= 2 || blok.przypisanieDoStrony.rodzaj !== 'strona' || blok.przypisanieDoStrony.numer !== 2 || !blok.id.startsWith('szablon-')) return blok
       const przypisanieDoStrony = { rodzaj: 'strona' as const, numer: strona.numer }
       if (blok.typ === 'tekst' && blok.id.startsWith('szablon-numer')) return { ...blok, przypisanieDoStrony, dane: { ...blok.dane, zrodlo: { rodzaj: 'pole_danych', sciezka: 'numerStrony' } } }
       return { ...blok, przypisanieDoStrony }
     })
     const sekcjeOcen = strona.sekcje.filter((sekcja) => sekcja.pytania.length && sekcja.pytania.every(czyPytanieSkalowane))
-    return <section className={`ankieta-a4 ${nowoczesna ? 'ankieta-a4--nowoczesna' : ''} ${oryginalna ? 'ankieta-a4--oryginalna' : 'ankieta-a4--wlasna'}`} data-strona-dokumentu key={strona.numer}>
+    return <section className={`ankieta-a4 ${nowoczesna ? 'ankieta-a4--nowoczesna' : ''} ${oryginalna ? 'ankieta-a4--oryginalna' : 'ankieta-a4--wlasna'} ${semperPelna ? 'ankieta-a4--semper-pelna' : ''}`} data-strona-dokumentu key={strona.numer}>
       {nowoczesna ? <div aria-hidden="true" className={`ankieta-nowoczesna__naglowek ankieta-nowoczesna__naglowek--${dane.organizator.toLocaleLowerCase('pl')}`} /> : <header className="ankieta-a4__naglowek"><span aria-hidden="true" className="ankieta-a4__numer-strony" /><span aria-hidden="true" className="ankieta-a4__tytul-naglowka" /><span aria-hidden="true" className="ankieta-a4__logo" /></header>}
       <main className={nowoczesna ? 'ankieta-nowoczesna__tresc' : `ankieta-a4__tresc ${strona.numer === 1 ? 'ankieta-a4__tresc--pierwsza' : 'ankieta-a4__tresc--druga'}`}>
         {strona.numer === 1 && <DaneSzkolenia dane={dane} nowoczesne={nowoczesna} />}
         {!nowoczesna && oryginalna && sekcjeOcen.length > 0 && <OcenyOryginalne sekcje={strona.sekcje} />}
-        {strona.sekcje.filter((sekcja) => nowoczesna || !oryginalna || !sekcja.pytania.every(czyPytanieSkalowane)).map((sekcja) => <SekcjaPytan key={sekcja.id} nowoczesna={nowoczesna} sekcja={sekcja} />)}
+        {strona.sekcje.filter((sekcja) => nowoczesna || !oryginalna || !sekcja.pytania.every(czyPytanieSkalowane)).map((sekcja) => <SekcjaPytan key={sekcja.id} nowoczesna={nowoczesna} sekcja={semperPelna && sekcja.id === 'uwagi' ? { ...sekcja, pytania: sekcja.pytania.map((pytanie) => ['uwagi-2', 'uwagi-3'].includes(pytanie.id) ? { ...pytanie, tekst: `* ${pytanie.tekst}` } : pytanie) } : sekcja} />)}
       </main>
       <StopkaAnkiety liczbaStron={strony.length} nowoczesna={nowoczesna} numerStrony={strona.numer} />
       <RendererSwobodnychBlokow bloki={blokiStrony} numerStrony={strona.numer} kontekst={kontekst} trybRenderowania="roboczy" />
