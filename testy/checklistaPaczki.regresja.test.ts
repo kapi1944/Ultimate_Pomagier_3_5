@@ -430,3 +430,20 @@ test('wydruk grupuje aktywne pozycje kategorii i zachowuje pionową checklistę 
   assert.match(style, /print-color-adjust: exact/)
   assert.match(style, /wydruk-paczka h2 \{ break-after: avoid/)
 })
+
+
+test('checklista prezentuje faktyczną ilość przed oczekiwaną i tabelę danych szkolenia', () => {
+  const dane = utworzDomyslneDaneChecklisty({ identyfikator: 'test', numerDzienny: 1 })
+  const certyfikaty = pobierzPozycje(dane, 'Certyfikaty / Dyplomy')
+  certyfikaty.iloscPrzygotowana = 10
+  assert.equal(pobierzIloscPozycji(certyfikaty, 12, 1).koncowa, 12)
+  assert.equal(certyfikaty.iloscPrzygotowana, 10)
+  const widok = readFileSync(new URL('../src/moduly/dokumenty/generatory/checklisty_paczek/WidokChecklistPaczek.tsx', import.meta.url), 'utf8')
+  assert.match(widok, /<strong>\{pozycja.iloscPrzygotowana \?\? '—'\}<\/strong><small>\/ z /)
+  assert.match(widok, /Przygotowane \/ wymagane/)
+  assert.equal(widok.match(/<IlosciPozycji /g)?.length, 2)
+  assert.match(widok, /aria-label="Dane szkolenia"/)
+  for (const etykieta of ['Nazwa szkolenia:', 'Liczba osób:', 'Klient:', 'Termin:', 'Lokalizacja:', 'Opiekun:', 'Podpis opiekuna:']) assert.ok(widok.includes(etykieta))
+  assert.match(widok, /ikona="termin"/)
+  assert.match(widok, /className="checklista-paczki__pola-szczegolow"/)
+})
