@@ -165,6 +165,7 @@ function utworzPomiary(model: ModelPaginacjiProgramu, pojemnosc = 100, wysokoscP
           wysokoscBazyZTytulem: 10,
           wysokoscBazyBezTytulu: 2,
           wysokosciGrup,
+          wysokosciBlokow: Object.fromEntries(modul.grupyPunktow.flatMap((grupa) => grupa.bloki.map((blok) => [blok.id, wysokoscPunktu / grupa.bloki.length]))),
         }]
       }),
     ),
@@ -237,4 +238,87 @@ test('reprezentatywne modele dają 1, 2 oraz co najmniej 3 strony', () => {
   assert.equal(paginujProgram(jeden, utworzPomiary(jeden, 100, 20)).strony.length, 1)
   assert.equal(paginujProgram(dwa, utworzPomiary(dwa, 100, 30)).strony.length, 2)
   assert.ok(paginujProgram(trzy, utworzPomiary(trzy, 100, 30)).strony.length >= 3)
+})
+
+test('artefakty Unicode na brzegach nie zmieniają struktury ani markerów programu', () => {
+  for (const znak of ['\uFEFF', '\u200B', '\u200C', '\u200D', '\u2060', '\u00AD', '\u200E', '\u200F', '\u202A', '\u202E', '\u2066', '\u2069', '\u00A0', '\u202F', '\u2002', '\u2003']) {
+    const czysty = parsujProgramZModelu(normalizujProgramSzkolenia({ trescProgramu: 'Dyrektywa UE dotycząca równości\n• Punkt\n\nNastępny nagłówek\n• Kolejny punkt' }))
+    const zArtefaktem = parsujProgramZModelu(normalizujProgramSzkolenia({ trescProgramu: `${znak}Dyrektywa UE dotycząca równości${znak}\n${znak}• Punkt${znak}\n${znak}\n${znak}Następny nagłówek\n${znak}• Kolejny punkt` }))
+    assert.deepEqual(zArtefaktem, czysty, `U+${znak.charCodeAt(0).toString(16)}`)
+  }
+  const program = parsujProgramZModelu(normalizujProgramSzkolenia({ trescProgramu: 'Nagłówek\n• Treść a\u200Db' }))
+  assert.equal(program.dni[0].moduly[0].podpunkty[0].tresc, 'Treść a\u200Db')
+})
+
+test('rozpoznane nagłówki są od razu numerowane bez zmiany źródła i ustawień ręcznych', () => {
+  const trescProgramu = 'Nagłówek A\n• Punkt A\n\nNagłówek B\n• Punkt B'
+  const dane = normalizujProgramSzkolenia({ trescProgramu })
+  const moduly = utworzDokumentProgramuSzkolenia(dane).struktura[1].dzieci
+  assert.deepEqual(moduly.map((blok) => blok.typ), ['Modul', 'Modul'])
+  assert.deepEqual(moduly.map((blok) => blok.dane?.oznaczenieWyswietlane), ['1.', '2.'])
+  assert.deepEqual(moduly.map((blok) => blok.dzieci[0].dane?.oznaczenieWyswietlane), ['•', '•'])
+  assert.equal(dane.trescProgramu, trescProgramu)
+  for (const styl of ['brak', 'oryginalne', 'rzymskie.']) {
+    const zapis = normalizujProgramSzkolenia({ trescProgramu, ustawienia: { oznaczeniaPoziomow: [styl] } })
+    assert.equal(utworzDokumentProgramuSzkolenia(zapis).struktura[1].dzieci[0].dane?.oznaczenieWyswietlane, styl === 'rzymskie.' ? 'I.' : '')
+    assert.deepEqual(zapis.ustawienia.oznaczeniaPoziomow, [styl])
+  }
+  for (const marker of ['I.', '1)', 'A.']) {
+    const zapis = normalizujProgramSzkolenia({ trescProgramu: `${marker} Nagłówek\n• Punkt`, ustawienia: { oznaczeniaPoziomow: ['oryginalne'] } })
+    const dokument = utworzDokumentProgramuSzkolenia(zapis)
+    const bloki: BlokDokumentu[] = []
+    function zbierz(zrodlo: BlokDokumentu[]) { zrodlo.forEach((blok) => { bloki.push(blok); zbierz(blok.dzieci) }) }
+    zbierz(dokument.struktura)
+    assert.ok(bloki.some((blok) => blok.dane?.oznaczenieWyswietlane === marker))
+  }
+})
+
+test('punkt i nagłówek z pierwszym punktem przenoszą się zgodnie z pomiarami', () => {
+  for (const wysokosc of [25, 35]) {
+    const model = { dni: [utworzDzien('dzien', [utworzModul('modul', 3)])] }
+    const pomiary = utworzPomiary(model)
+    const pomiar = pomiary.moduly.modul
+    pomiar.wysokoscCalego = 200
+    pomiar.wysokosciGrup = { 'grupa-modul-punkt-1': 58, 'grupa-modul-punkt-2': wysokosc, 'grupa-modul-punkt-3': 30 }
+    const wynik = paginujProgram(model, pomiary)
+    assert.equal(wynik.strony[0].fragmentyDni[0].moduly[0].grupyPunktow.length, wysokosc === 25 ? 2 : 1)
+    const identyfikatory = wynik.strony.flatMap((strona) => strona.fragmentyDni.flatMap((dzien) => dzien.moduly.flatMap((fragment) => fragment.grupyPunktow.flatMap((grupa) => grupa.bloki.map((blok) => blok.id)))))
+    assert.deepEqual(identyfikatory, ['modul-punkt-1', 'modul-punkt-2', 'modul-punkt-3'])
+  }
+  const model = { dni: [utworzDzien('dzien', [utworzModul('pierwszy', 1), utworzModul('drugi', 1)])] }
+  const pomiary = utworzPomiary(model, 100, 30)
+  pomiary.moduly.pierwszy.wysokoscCalego = 75
+  const wynik = paginujProgram(model, pomiary)
+  assert.equal(wynik.strony[0].fragmentyDni[0].moduly.length, 1)
+  assert.equal(wynik.strony[1].fragmentyDni[0].moduly[0].czyPokazacTytul, true)
+  assert.equal(wynik.strony[1].fragmentyDni[0].moduly[0].grupyPunktow[0].bloki[0].id, 'drugi-punkt-1')
+})
+
+test('gigantyczny punkt dzieli się na zmierzonych granicach wierszy bez utraty obszaru treści', () => {
+  const model = { dni: [utworzDzien('dzien', [utworzModul('modul', 1)])] }
+  const pomiary = utworzPomiary(model, 100, 240)
+  pomiary.moduly.modul.graniceWierszy = { 'grupa-modul-punkt-1': [20, 40, 60, 80, 100, 120, 140, 160, 180, 200, 220, 240] }
+  const wynik = paginujProgram(model, pomiary)
+  const grupy = wynik.strony.flatMap((strona) => strona.fragmentyDni.flatMap((dzien) => dzien.moduly.flatMap((fragment) => fragment.grupyPunktow)))
+  assert.equal(wynik.strony.length, 3)
+  assert.ok(wynik.problemy.some((problem) => /awaryjny podział treści/.test(problem.komunikat)))
+  let koniec = 0
+  for (const grupa of grupy) {
+    assert.equal(grupa.bloki[0].id, 'modul-punkt-1')
+    assert.equal(grupa.wycinek?.przesuniecie, koniec)
+    koniec += grupa.wycinek!.wysokosc
+  }
+  assert.equal(koniec, 240)
+  assert.ok(wynik.strony.every((strona) => strona.fragmentyDni.length))
+})
+
+test('duża grupa zachowuje rodzica z pierwszym podpunktem i każdy blok dokładnie raz', () => {
+  const modul = utworzModul('modul', 5)
+  const bloki = modul.grupyPunktow.flatMap((grupa) => grupa.bloki)
+  modul.grupyPunktow = [{ id: 'grupa', bloki }]
+  const model = { dni: [utworzDzien('dzien', [modul])] }
+  const pomiary = utworzPomiary(model, 100, 150)
+  const wynik = paginujProgram(model, pomiary)
+  assert.deepEqual(wynik.strony[0].fragmentyDni[0].moduly[0].grupyPunktow[0].bloki.map((blok) => blok.id), bloki.slice(0, 2).map((blok) => blok.id))
+  assert.deepEqual(wynik.strony.flatMap((strona) => strona.fragmentyDni.flatMap((dzien) => dzien.moduly.flatMap((fragment) => fragment.grupyPunktow.flatMap((grupa) => grupa.bloki.map((blok) => blok.id))))), bloki.map((blok) => blok.id))
 })

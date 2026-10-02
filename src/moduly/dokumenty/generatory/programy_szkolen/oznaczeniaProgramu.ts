@@ -9,6 +9,13 @@ export const styleOznaczenProgramu = [
 export type OznaczenieProgramu = { zapis: string; wartosc?: number; rodzaj: 'arabskie' | 'rzymskie' | 'literowe' | 'punktor' }
 export type UstawienieWierszaProgramu = { styl?: string; poziom?: number }
 
+export function normalizujWierszWejsciowy(wiersz: string): string {
+  const wzorzecBrzegu = /^[\s\uFEFF\u200B-\u200F\u2060\u00AD\u202A-\u202E\u2066-\u2069]+|[\s\uFEFF\u200B-\u200F\u2060\u00AD\u202A-\u202E\u2066-\u2069]+$/gu
+  return wiersz.replace(wzorzecBrzegu, (brzeg, indeks: number) => indeks === 0
+    ? brzeg.replace(/[^ \t]/g, '')
+    : '')
+}
+
 export function wyznaczPoziomyProgramu(wiersze: { tresc: string; poziom: number; jawnyPoziom?: number }[]) {
   let poziomPoprzedni = 0
   let czyNaglowek = false
@@ -73,7 +80,7 @@ export function wyznaczOznaczeniaProgramu(pozycje: { poziom: number; oryginalne?
   const liczniki: number[] = []
   return pozycje.map((pozycja) => {
     const poziom = Math.max(0, pozycja.poziom)
-    const styl = pozycja.styl && pozycja.styl !== 'oryginalne' ? pozycja.styl : stylePoziomow[poziom] ?? 'oryginalne'
+    const styl = pozycja.styl ?? stylePoziomow[poziom] ?? 'oryginalne'
     const czyOryginalne = styl === 'oryginalne'
     liczniki[poziom] = czyOryginalne && pozycja.wartosc !== undefined ? pozycja.wartosc : (liczniki[poziom] ?? 0) + 1
     liczniki.length = poziom + 1

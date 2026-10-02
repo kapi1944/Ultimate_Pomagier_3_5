@@ -102,8 +102,10 @@ export function RendererGrupyPunktowProgramu({
     return (
       <div className="program-kartka-a4__surowy" {...atrybutyPomiaruListy}>
         {grupyPunktow.map((grupa) => (
-          <div className="program-kartka-a4__wiersz-surowy" key={grupa.id} {...atrybutyPomiaru?.(grupa)}>
-            {renderujMarkdownInline(grupa.bloki.map((blok) => blok.tresc ?? '').join(' '))}
+          <div key={grupa.id} aria-hidden={grupa.wycinek && grupa.wycinek.przesuniecie > 0 ? true : undefined} style={grupa.wycinek ? { height: grupa.wycinek.wysokosc, overflow: 'hidden' } : undefined}>
+            <div className="program-kartka-a4__wiersz-surowy" style={grupa.wycinek ? { transform: `translateY(-${grupa.wycinek.przesuniecie}px)` } : undefined} {...atrybutyPomiaru?.(grupa)}>
+              {renderujMarkdownInline(grupa.bloki.map((blok) => blok.tresc ?? '').join(' '))}
+            </div>
           </div>
         ))}
       </div>
@@ -113,26 +115,28 @@ export function RendererGrupyPunktowProgramu({
   return (
     <div className="program-kartka-a4__lista" {...atrybutyPomiaruListy}>
       {grupyPunktow.map((grupa) => (
-        <div className="program-kartka-a4__grupa-punktow" key={grupa.id} {...atrybutyPomiaru?.(grupa)}>
-          {grupa.bloki.map((blok) => {
-            const poziom = pobierzPoziom(blok)
+        <div key={grupa.id} aria-hidden={grupa.wycinek && grupa.wycinek.przesuniecie > 0 ? true : undefined} style={grupa.wycinek ? { height: grupa.wycinek.wysokosc, overflow: 'hidden' } : undefined}>
+          <div className="program-kartka-a4__grupa-punktow" style={grupa.wycinek ? { transform: `translateY(-${grupa.wycinek.przesuniecie}px)` } : undefined} {...atrybutyPomiaru?.(grupa)}>
+            {grupa.bloki.map((blok) => {
+              const poziom = pobierzPoziom(blok)
 
-            return (
-              <div
-                className={`program-kartka-a4__pozycja${
-                  blok.statusDiagnostyczny === 'do_sprawdzenia' && czyPokazacElementyPomocniczeEdytora(trybRenderowania) ? ' program-kartka-a4__pozycja--niepewna' : ''
-                }`}
-                key={blok.id}
-                data-pomiar-bloku={atrybutyPomiaru ? blok.id : undefined}
-                style={{ marginLeft: `${Math.min(poziom, 8) * 22}px` }}
-              >
-                <span className="program-kartka-a4__marker">{pobierzMarker(blok, liczniki, stylListy, stylePoziomowListy)}</span>
-                <span style={{ fontWeight: pobierzGruboscTekstuPozycjiListyProgramu(poziom, czyPogrubiacNaglowkiListyProgramu) }}>
-                  {renderujMarkdownInline(blok.tresc ?? '')}
-                </span>
-              </div>
-            )
-          })}
+              return (
+                <div
+                  className={`program-kartka-a4__pozycja${
+                    blok.statusDiagnostyczny === 'do_sprawdzenia' && czyPokazacElementyPomocniczeEdytora(trybRenderowania) ? ' program-kartka-a4__pozycja--niepewna' : ''
+                  }`}
+                  key={blok.id}
+                  data-pomiar-bloku={atrybutyPomiaru ? blok.id : undefined}
+                  style={{ marginLeft: `${Math.min(poziom, 8) * 22}px` }}
+                >
+                  <span className="program-kartka-a4__marker">{pobierzMarker(blok, liczniki, stylListy, stylePoziomowListy)}</span>
+                  <span style={{ fontWeight: pobierzGruboscTekstuPozycjiListyProgramu(poziom, czyPogrubiacNaglowkiListyProgramu) }}>
+                    {renderujMarkdownInline(blok.tresc ?? '')}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
         </div>
       ))}
     </div>

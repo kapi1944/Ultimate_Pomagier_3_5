@@ -3,6 +3,7 @@ import type { BlokDokumentu, DokumentBlokowy } from '../../../../wspolne/dokumen
 export type GrupaPunktowProgramu = {
   id: string
   bloki: BlokDokumentu[]
+  wycinek?: { przesuniecie: number; wysokosc: number }
 }
 
 export type ModulPaginacjiProgramu = {
@@ -54,6 +55,8 @@ export type PomiaryModuluProgramu = {
   wysokoscBazyBezTytulu: number
   wysokosciGrup: Record<string, number>
   wysokosciBlokow?: Record<string, number>
+  graniceWierszy?: Record<string, number[]>
+  wysokoscOdstepuMiedzyBlokami?: number
 }
 
 export type PomiaryPaginacjiProgramu = {
@@ -210,7 +213,8 @@ export function czyPomiaryProgramuSaKompletne(model: ModelPaginacjiProgramu, pom
           czyLiczbaJestPomiarem(pomiarModulu.wysokoscCalego) &&
           czyLiczbaJestPomiarem(pomiarModulu.wysokoscBazyZTytulem) &&
           czyLiczbaJestPomiarem(pomiarModulu.wysokoscBazyBezTytulu) &&
-          modul.grupyPunktow.every((grupa) => czyLiczbaJestPomiarem(pomiarModulu.wysokosciGrup[grupa.id])),
+          modul.grupyPunktow.every((grupa) => czyLiczbaJestPomiarem(pomiarModulu.wysokosciGrup[grupa.id]) &&
+            (grupa.bloki.length < 2 || grupa.bloki.every((blok) => czyLiczbaJestPomiarem(pomiarModulu.wysokosciBlokow?.[blok.id])))),
       )
     }),
   )
@@ -309,7 +313,7 @@ export function paginujProgram(model: ModelPaginacjiProgramu, pomiary: PomiaryPa
   for (const dzien of model.dni) {
     for (const modul of dzien.moduly) {
       const pomiarZrodlowy = pomiary.moduly[modul.id]
-      const pomiarModulu = pomiarZrodlowy ? { ...pomiarZrodlowy, wysokosciGrup: { ...pomiarZrodlowy.wysokosciGrup } } : undefined
+      const pomiarModulu = pomiarZrodlowy ? { ...pomiarZrodlowy, wysokosciGrup: { ...pomiarZrodlowy.wysokosciGrup }, graniceWierszy: { ...pomiarZrodlowy.graniceWierszy } } : undefined
       const grupyPunktow = [...modul.grupyPunktow]
       const indeksyNumeracji = grupyPunktow.map((_, indeks) => indeks)
 
@@ -394,15 +398,47 @@ export function paginujProgram(model: ModelPaginacjiProgramu, pomiary: PomiaryPa
           }
 
           const grupa = grupyPunktow[indeksPoczatkowejGrupy]
-          if (grupa.bloki.length > 1) {
-            const fragmenty = grupa.bloki.map((blok) => ({ id: `${grupa.id}-fragment-${blok.id}`, bloki: [blok] }))
-            const wysokoscGrupy = pomiarModulu.wysokosciGrup[grupa.id] ?? 0
-            fragmenty.forEach((fragment) => {
-              pomiarModulu.wysokosciGrup[fragment.id] = pomiarModulu.wysokosciBlokow?.[fragment.bloki[0].id] ?? wysokoscGrupy / fragmenty.length
-            })
+          if (grupa.bloki.length > 1 && grupa.bloki.every((blok) => czyLiczbaJestPomiarem(pomiarModulu.wysokosciBlokow?.[blok.id]))) {
+            const fragmenty = [grupa.bloki.slice(0, 2), ...grupa.bloki.slice(2).map((blok) => [blok])]
+              .map((bloki) => ({ id: `${grupa.id}-fragment-${bloki[0].id}`, bloki }))
+            if (grupa.bloki.length === 2) {
+              problemy.push({ id: `za-duza-para-${grupa.id}`, blokId: grupa.bloki[0].id, komunikat: 'Punkt nadrzędny z pierwszym podpunktem przekracza obszar strony. Wymaga awaryjnego podziału.' })
+            } else {
+              let przesuniecieFragmentu = 0
+              fragmenty.forEach((fragment) => {
+                pomiarModulu.wysokosciGrup[fragment.id] = fragment.bloki.reduce((suma, blok) => suma + (pomiarModulu.wysokosciBlokow?.[blok.id] ?? 0), 0)
+                  + (fragment.bloki.length - 1) * (pomiarModulu.wysokoscOdstepuMiedzyBlokami ?? 0)
+                const wysokosc = pomiarModulu.wysokosciGrup[fragment.id]
+                if (pomiarModulu.graniceWierszy?.[grupa.id]) {
+                  pomiarModulu.graniceWierszy[fragment.id] = [...pomiarModulu.graniceWierszy[grupa.id]
+                    .map((granica) => granica - przesuniecieFragmentu).filter((granica) => granica > 0 && granica < wysokosc), wysokosc]
+                }
+                przesuniecieFragmentu += wysokosc + (pomiarModulu.wysokoscOdstepuMiedzyBlokami ?? 0)
+              })
+              grupyPunktow.splice(indeksPoczatkowejGrupy, 1, ...fragmenty)
+              indeksyNumeracji.splice(indeksPoczatkowejGrupy, 1, ...fragmenty.map(() => indeksyNumeracji[indeksPoczatkowejGrupy]))
+              problemy.push({ id: `awaryjny-podzial-${grupa.id}`, blokId: grupa.bloki[0]?.id, komunikat: 'Zastosowano awaryjny podział zbyt wysokiej grupy punktów z zachowaniem rodzica i pierwszego podpunktu. Zachowano całą treść i kolejność.' })
+              continue
+            }
+          }
+          const wysokoscGrupy = pomiarModulu.wysokosciGrup[grupa.id] ?? 0
+          const wysokoscBazy = czyPierwszyFragmentModulu ? pomiarModulu.wysokoscBazyZTytulem : pomiarModulu.wysokoscBazyBezTytulu
+          const granice = pomiarModulu.graniceWierszy?.[grupa.id]
+          if (!grupa.wycinek && granice?.length && wysokoscGrupy > dostepnaWysokosc - wysokoscBazy) {
+            let przesuniecie = 0
+            const fragmenty: GrupaPunktowProgramu[] = []
+            while (przesuniecie < wysokoscGrupy) {
+              const limit = fragmenty.length ? pomiary.pojemnoscKolejnychStron - pomiarModulu.wysokoscBazyBezTytulu : dostepnaWysokosc - wysokoscBazy
+              const koniec = granice.filter((granica) => granica > przesuniecie && granica <= przesuniecie + limit).at(-1)
+                ?? granice.find((granica) => granica > przesuniecie) ?? wysokoscGrupy
+              const fragment = { ...grupa, id: `${grupa.id}-wycinek-${fragmenty.length}`, wycinek: { przesuniecie, wysokosc: koniec - przesuniecie } }
+              fragmenty.push(fragment)
+              pomiarModulu.wysokosciGrup[fragment.id] = koniec - przesuniecie
+              przesuniecie = koniec
+            }
             grupyPunktow.splice(indeksPoczatkowejGrupy, 1, ...fragmenty)
             indeksyNumeracji.splice(indeksPoczatkowejGrupy, 1, ...fragmenty.map(() => indeksyNumeracji[indeksPoczatkowejGrupy]))
-            problemy.push({ id: `awaryjny-podzial-${grupa.id}`, blokId: grupa.bloki[0]?.id, komunikat: 'Zastosowano awaryjny podział zbyt wysokiej grupy punktów na pojedyncze bloki. Zachowano całą treść i kolejność.' })
+            problemy.push({ id: `awaryjny-podzial-punktu-${grupa.id}`, blokId: grupa.bloki[0].id, komunikat: 'Pojedynczy punkt programu jest wyższy niż dostępny obszar jednej strony. Zastosowano awaryjny podział treści.' })
             continue
           }
           problemy.push({

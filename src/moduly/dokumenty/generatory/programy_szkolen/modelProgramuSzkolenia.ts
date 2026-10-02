@@ -226,7 +226,7 @@ function zastosujOznaczeniaBlokow(bloki: BlokDokumentu[], dane: ModelProgramuSzk
   })), dane.ustawienia.oznaczeniaPoziomow ?? [], pobierzDomyslneOznaczeniaProgramu(dane.ustawienia, czyPodpunkty))
   return bloki.map((blok) => {
     const indeks = pozycje.indexOf(blok)
-    const czyUkrycOznaczenieModulu = blok.typ === 'Modul' && !blok.dane?.oznaczenieOryginalne && !blok.dane?.stylOznaczenia && (!dane.ustawienia.oznaczeniaPoziomow?.[0] || dane.ustawienia.oznaczeniaPoziomow[0] === 'oryginalne')
+    const czyUkrycOznaczenieModulu = blok.typ === 'Modul' && !blok.dane?.oznaczenieOryginalne && !blok.dane?.stylOznaczenia && dane.ustawienia.oznaczeniaPoziomow?.[0] === 'oryginalne'
     return {
       ...blok,
       dane: { ...blok.dane, ...(indeks >= 0 ? { oznaczenieWyswietlane: czyUkrycOznaczenieModulu ? '' : oznaczenia[indeks] } : {}) },

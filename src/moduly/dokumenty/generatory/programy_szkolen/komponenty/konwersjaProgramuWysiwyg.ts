@@ -1,6 +1,6 @@
 import { DOMParser as ParserWezlowEdytora } from '@tiptap/pm/model'
 import type { EditorView as WidokEdytora } from '@tiptap/pm/view'
-import { czyStylOznaczeniaPoprawny, liczbaRzymska, rozpoznajOznaczenieProgramu, type UstawienieWierszaProgramu } from '../oznaczeniaProgramu'
+import { normalizujWierszWejsciowy, czyStylOznaczeniaPoprawny, liczbaRzymska, rozpoznajOznaczenieProgramu, type UstawienieWierszaProgramu } from '../oznaczeniaProgramu'
 const dozwoloneTagi = new Set(['div', 'p', 'br', 'strong', 'b', 'em', 'i', 'u', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'hr'])
 const tagiList = new Set(['ul', 'ol'])
 const znacznikiFormatowaniaLinii = ['**', '++', '*']
@@ -173,7 +173,7 @@ function pobierzPrefiksStruktury(tresc: string) {
 }
 
 function normalizujWierszProgramu(wiersz: string) {
-  const przyciety = wiersz.trim()
+  const przyciety = normalizujWierszWejsciowy(wiersz).trim()
   const bezFormatowaniaSamegoPrefiksu = przyciety
     .replace(/^(\*\*|\+\+|\*)(Dzie(?:ń|n)\s+(?:[0-9]+|[ivxlcdm]+))\1\s*/i, '$2 ')
     .replace(/^(\*\*|\+\+|\*)([0-9]+[.)]|[IVXLCDMivxlcdm]+[.)]|[a-zA-Z][.)])\1\s*/, '$2 ')

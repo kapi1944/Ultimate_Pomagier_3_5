@@ -43,6 +43,7 @@ function pobierzPomiaryZDomu(obszarPomiarowy: HTMLElement): PomiaryPaginacjiProg
       wysokoscBazyBezTytulu: pobierzWysokosc(znajdzElementPoAtrybucie(obszarPomiarowy, 'data-pomiar-modulu-baza-bez-tytulu', idModulu)),
       wysokosciGrup: {},
       wysokosciBlokow: {},
+      graniceWierszy: {},
     }
   })
 
@@ -51,6 +52,21 @@ function pobierzPomiaryZDomu(obszarPomiarowy: HTMLElement): PomiaryPaginacjiProg
 
     if (idModulu && idGrupy && moduly[idModulu]) {
       moduly[idModulu].wysokosciGrup[idGrupy] = pobierzWysokosc(element)
+      moduly[idModulu].wysokoscOdstepuMiedzyBlokami = pobierzWartoscStylu(element, 'gap') || 0
+      const zakres = document.createRange()
+      const poczatek = element.getBoundingClientRect().top
+      const prostokaty: DOMRect[] = []
+      const wezly = document.createTreeWalker(element, NodeFilter.SHOW_TEXT)
+      while (wezly.nextNode()) {
+        zakres.selectNodeContents(wezly.currentNode)
+        prostokaty.push(...Array.from(zakres.getClientRects()))
+      }
+      const dolneKrawedzie = [...new Set(prostokaty.map((prostokat) => prostokat.bottom - poczatek))].sort((a, b) => a - b)
+      const granice = dolneKrawedzie.map((dol) => {
+        const nastepnaGora = Math.min(...prostokaty.filter((prostokat) => prostokat.top - poczatek >= dol).map((prostokat) => prostokat.top - poczatek))
+        return Number.isFinite(nastepnaGora) ? (dol + nastepnaGora) / 2 : pobierzWysokosc(element)
+      })
+      moduly[idModulu].graniceWierszy![idGrupy] = [...new Set(granice)]
       element.querySelectorAll<HTMLElement>('[data-pomiar-bloku]').forEach((blok) => {
         const idBloku = blok.dataset.pomiarBloku
         if (idBloku) moduly[idModulu].wysokosciBlokow![idBloku] = pobierzWysokosc(blok)
@@ -97,6 +113,7 @@ function utworzSygnatureWyniku(wynik: WynikPaginacjiProgramu) {
           fragmentModulu.czyPokazacTytul,
           fragmentModulu.poczatkowyIndeksNumeracji,
           fragmentModulu.grupyPunktow.map((grupa) => grupa.id),
+          fragmentModulu.grupyPunktow.map((grupa) => grupa.wycinek),
         ]),
       ]),
     ),

@@ -2,10 +2,11 @@ import { Extension } from '@tiptap/react'
 import type { Node as WezelEdytora } from '@tiptap/pm/model'
 import { Plugin } from '@tiptap/pm/state'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
+import { parsujTekstProgramu } from '../ParserTekstu'
 import { czyStylOznaczeniaPoprawny, rozpoznajOznaczenieProgramu, wyznaczOznaczeniaProgramu, wyznaczPoziomyProgramu, formatujOznaczenieProgramu } from '../oznaczeniaProgramu'
 
 export function pobierzPozycjeOznaczenEdytora(dokument: WezelEdytora) {
-  const pozycje: { pozycja: number; rozmiar: number; poziom: number; jawnyPoziom?: number; tresc: string; oryginalne?: string; wartosc?: number; styl?: string; domyslnyStyl?: string }[] = []
+  const pozycje: { pozycja: number; rozmiar: number; poziom: number; jawnyPoziom?: number; tresc: string; oryginalne?: string; wartosc?: number; styl?: string; domyslnyStyl?: string; czyNaglowek?: boolean }[] = []
   dokument.descendants((wezel, pozycja, rodzic) => {
     if (/^Dzie(?:ń|n)\s+(?:\d+|[ivxlcdm]+)/i.test(wezel.textContent)) return
     if (!['listItem', 'paragraph', 'heading'].includes(wezel.type.name) || rodzic?.type.name === 'listItem' || !wezel.textContent.trim()) return
@@ -23,8 +24,17 @@ export function pobierzPozycjeOznaczenEdytora(dokument: WezelEdytora) {
     pozycje.push({ pozycja, rozmiar: wezel.nodeSize, poziom: Math.max(0, poziom), jawnyPoziom: wezel.attrs.poziomProgramu ?? undefined, tresc, oryginalne,
       wartosc: rozpoznajOznaczenieProgramu(tresc)?.oznaczenie.wartosc,
       styl: wezel.attrs.stylOznaczenia ?? undefined,
-      domyslnyStyl: wezel.type.name === 'heading' || /^Modu(?:ł|l)\s/i.test(tekst) ? 'brak' : undefined })
+      czyNaglowek: wezel.type.name === 'heading' })
   })
+  const program = parsujTekstProgramu(pozycje.map((pozycja) => `${'\t'.repeat(pozycja.poziom)}${pozycja.czyNaglowek ? '## ' : ''}${pozycja.tresc}`).join('\n'), {
+    czyZachowacWierszeListy: true, czyScalacKontynuacje: false,
+    ustawieniaWierszy: pozycje.map((pozycja) => ({ poziom: pozycja.jawnyPoziom, styl: pozycja.styl })),
+  })
+  const indeksyModulow = new Set(program.dni.flatMap((dzien) => dzien.moduly
+    .map((modul) => modul.indeksWierszaZrodlowego).filter((indeks) => indeks !== undefined)))
+  if (indeksyModulow.size) {
+    return pozycje.map((pozycja, indeks) => ({ ...pozycja, czyNaglowek: indeksyModulow.has(indeks), poziom: pozycja.jawnyPoziom ?? (indeksyModulow.has(indeks) ? 0 : pozycja.poziom + 1) }))
+  }
   const poziomy = wyznaczPoziomyProgramu(pozycje)
   return pozycje.map((pozycja, indeks) => ({ ...pozycja, poziom: poziomy[indeks] }))
 }
@@ -43,7 +53,9 @@ export const RozszerzenieOznaczenProgramu = Extension.create<{ stylePoziomow: st
     const opcje = this.options
     return [new Plugin({ props: { decorations(stan) {
       const pozycje = pobierzPozycjeOznaczenEdytora(stan.doc)
-      const oznaczenia = wyznaczOznaczeniaProgramu(pozycje, opcje.stylePoziomow, opcje.domyslneStyle)
+      const oznaczenia = wyznaczOznaczeniaProgramu(pozycje.map((pozycja) => ({ ...pozycja,
+        domyslnyStyl: pozycja.czyNaglowek && !pozycja.oryginalne && !pozycja.styl && opcje.stylePoziomow[pozycja.poziom] === 'oryginalne' ? 'brak' : pozycja.domyslnyStyl,
+      })), opcje.stylePoziomow, opcje.domyslneStyle)
       return DecorationSet.create(stan.doc, pozycje.map((pozycja, indeks) => Decoration.node(pozycja.pozycja, pozycja.pozycja + pozycja.rozmiar, {
         'data-wyswietlane-oznaczenie': oznaczenia[indeks],
         style: `margin-left: ${Math.max(0, pozycja.poziom - (pozycje.slice(0, indeks).filter((rodzic) => rodzic.pozycja < pozycja.pozycja && rodzic.pozycja + rodzic.rozmiar > pozycja.pozycja).at(-1)?.poziom ?? 0)) * 22}px`,

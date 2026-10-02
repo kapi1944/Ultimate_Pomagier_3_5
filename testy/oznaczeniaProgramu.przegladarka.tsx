@@ -1,10 +1,12 @@
 import { Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { createRoot } from 'react-dom/client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import RendererPodgladuProgramu from '../src/moduly/dokumenty/generatory/programy_szkolen/RendererPodgladuProgramu'
+import RendererStronProgramu from '../src/moduly/dokumenty/generatory/programy_szkolen/RendererStronProgramu'
+import zrodloWidoku from '../src/moduly/dokumenty/generatory/programy_szkolen/WidokProgramowSzkolen.tsx?raw'
 import { EdytorProgramuWysiwyg } from '../src/moduly/dokumenty/generatory/programy_szkolen/komponenty/EdytorProgramuWysiwyg'
-import { RozszerzenieOznaczenProgramu } from '../src/moduly/dokumenty/generatory/programy_szkolen/komponenty/rozszerzenieOznaczenProgramu'
+import { pobierzPozycjeOznaczenEdytora, RozszerzenieOznaczenProgramu } from '../src/moduly/dokumenty/generatory/programy_szkolen/komponenty/rozszerzenieOznaczenProgramu'
 import { konwertujHtmlNaWierszeProgramu, konwertujTekstProgramuNaHtml, obsluzWklejenieProgramu } from '../src/moduly/dokumenty/generatory/programy_szkolen/komponenty/konwersjaProgramuWysiwyg'
 import { normalizujProgramSzkolenia, pobierzHtmlProgramuSzkolenia, utworzDokumentProgramuSzkolenia } from '../src/moduly/dokumenty/generatory/programy_szkolen/modelProgramuSzkolenia'
 
@@ -63,6 +65,57 @@ sprawdz(utworzDokumentProgramuSzkolenia(model).struktura[1].dane?.oznaczenieWysw
 edytor.destroy()
 ponownyEdytor.destroy()
 
+const tekstModulow = '\uFEFFNagłówek A\n\u200E• Punkt A\n\n\u200BNagłówek B\n• Punkt B'
+const edytorModulow = new Editor({ extensions: [StarterKit, RozszerzenieOznaczenProgramu], content: konwertujTekstProgramuNaHtml(tekstModulow) })
+const pozycjeModulow = pobierzPozycjeOznaczenEdytora(edytorModulow.state.doc)
+sprawdz(JSON.stringify(pozycjeModulow.map((pozycja) => pozycja.poziom)) === '[0,1,0,1]', 'WYSIWYG rozdziela poziomy modułów i punktów przez istniejący parser')
+sprawdz(JSON.stringify(Array.from(edytorModulow.view.dom.querySelectorAll('p[data-wyswietlane-oznaczenie]')).map((element) => element.getAttribute('data-wyswietlane-oznaczenie'))) === '["1.","2."]', 'WYSIWYG automatycznie numeruje rozpoznane nagłówki 1 i 2')
+edytorModulow.destroy()
+const edytorOryginalny = new Editor({ extensions: [StarterKit, RozszerzenieOznaczenProgramu.configure({ stylePoziomow: ['oryginalne'] })], content: konwertujTekstProgramuNaHtml(tekstModulow) })
+sprawdz(Array.from(edytorOryginalny.view.dom.querySelectorAll('p[data-wyswietlane-oznaczenie]')).every((element) => element.getAttribute('data-wyswietlane-oznaczenie') === ''), 'Świadomie zapisane Oryginalne zachowuje nienumerowane nagłówki WYSIWYG')
+edytorOryginalny.destroy()
+
+function PodgladTestowyPaginacji() {
+  useEffect(() => {
+    document.body.dataset.wynik = 'pomiar'
+    const obszar = document.querySelector('#edytor')!
+    const obserwator = new MutationObserver(sprawdzPaginacje)
+    function sprawdzPaginacje() {
+      const strony = Array.from(obszar.querySelectorAll<HTMLElement>('[data-strona-dokumentu]'))
+      if (strony.length < 2 || !obszar.querySelector('[role="alert"]')) return
+      obserwator.disconnect()
+      const wycinki = Array.from(obszar.querySelectorAll<HTMLElement>('[data-strona-dokumentu] [style*="overflow: hidden"]'))
+      let koniec = 0
+      for (const wycinek of wycinki) {
+        const przesuniecie = Math.abs(Number.parseFloat((wycinek.firstElementChild as HTMLElement).style.transform.replace('translateY(', '')))
+        sprawdz(Math.abs(przesuniecie - koniec) < 0.1, 'Wycinki DOM zachowują ciągłość treści bez duplikacji widocznych wierszy')
+        koniec += wycinek.getBoundingClientRect().height
+        const tresc = wycinek.closest('main')!
+        sprawdz(wycinek.getBoundingClientRect().bottom <= tresc.getBoundingClientRect().bottom + 0.1, 'Awaryjny fragment mieści się w rzeczywistym obszarze strony')
+      }
+      sprawdz(Math.abs(koniec - wycinki[0].firstElementChild!.getBoundingClientRect().height) < 0.1, 'Suma wycinków obejmuje całą zmierzoną wysokość punktu')
+      sprawdz(strony.every((strona) => strona.querySelector('.program-kartka-a4__pozycja')), 'Brak pustych stron w awaryjnej paginacji DOM')
+      sprawdz(strony.flatMap((strona) => Array.from(strona.querySelectorAll('.program-kartka-a4__pozycja'))).filter((punkt) => punkt.textContent?.includes('Ostatni punkt programu.')).length === 1, 'Punkt po gigantycznym elemencie występuje dokładnie raz')
+      document.body.dataset.wynik = 'OK'
+    }
+    obserwator.observe(obszar, { childList: true, subtree: true })
+    sprawdzPaginacje()
+    return () => obserwator.disconnect()
+  }, [])
+  const dane = normalizujProgramSzkolenia({ trescProgramu: `Nagłówek modułu\n• ${Array.from({ length: 250 }, (_, indeks) => `Fragment ${indeks + 1}: szczegółowe omówienie metody wartościowania stanowisk i praktycznego zastosowania wyniku. `).join('')}\n• Ostatni punkt programu.` })
+  const style = zrodloWidoku.match(/const styleProgramuSzkolenia = `([\s\S]*?)`/)?.[1]
+  if (!style) throw new Error('Brak rzeczywistych stylów generatora w teście paginacji.')
+  return <>
+    <style>{style}</style>
+    <RendererStronProgramu dokument={utworzDokumentProgramuSzkolenia(dane)} preset="SEMPER_KOMPAKTOWY" profilFirmy="semper"
+      tytul="Test gigantycznego punktu" czyJustowac={false} szerokoscLogotypu={90} gruboscObramowaniaTytulu={1}
+      nazwaOrganizatora="SEMPER" kontaktOrganizatora="Test" stopkaOrganizatora="Test" czyFormatowanieSkryptowe
+      tekstSurowy={dane.trescProgramu} kontekstSwobodnychBlokow={{ dane: {}, zasobyObrazow: {} }} trybRenderowania="finalny"
+      kolorAkcentu="#DE1914" stylDni="naglowek" separacjaModulow="brak" stylPodpunktow="punktory" stylListyGlownej="numeracja"
+      stylePoziomowListy={dane.ustawienia.stylePoziomowListy} czyPogrubiacNaglowkiListyProgramu />
+  </>
+}
+
 export function EdytorTestowy() {
   const [model, ustawModel] = useState(() => normalizujProgramSzkolenia({ trescProgramu: tekst }))
   const dokument = utworzDokumentProgramuSzkolenia(model)
@@ -75,5 +128,5 @@ export function EdytorTestowy() {
     <RendererPodgladuProgramu dokument={dokument} trybRenderowania="finalny" kolorAkcentu="#000000" stylDni="naglowek" separacjaModulow="brak" stylPodpunktow={model.ustawienia.stylPodpunktow} stylListyGlownej={model.ustawienia.stylListyGlownej} stylePoziomowListy={model.ustawienia.stylePoziomowListy} czyPogrubiacNaglowkiListyProgramu />
   </>
 }
-createRoot(document.querySelector('#edytor')!).render(<EdytorTestowy />)
+createRoot(document.querySelector('#edytor')!).render(new URLSearchParams(window.location.search).has('paginacja') ? <PodgladTestowyPaginacji /> : <EdytorTestowy />)
 document.body.dataset.wynik = 'OK'

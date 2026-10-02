@@ -1,4 +1,4 @@
-import { rozpoznajOznaczenieProgramu, wyznaczPoziomyProgramu, type OznaczenieProgramu, type UstawienieWierszaProgramu } from './oznaczeniaProgramu.ts'
+import { normalizujWierszWejsciowy, rozpoznajOznaczenieProgramu, wyznaczPoziomyProgramu, type OznaczenieProgramu, type UstawienieWierszaProgramu } from './oznaczeniaProgramu.ts'
 import type { BlokDokumentu, DokumentBlokowy, ProblemDokumentu } from '../../../../wspolne/dokumenty/modelBlokowy'
 import { utworzModelStronyProgramu } from './geometriaStronyProgramu.ts'
 
@@ -16,6 +16,7 @@ export interface PodpunktProgramu {
 
 export interface ModulProgramu {
   id: string
+  indeksWierszaZrodlowego?: number
   tytul: string
   podpunkty: PodpunktProgramu[]
   typ?: TypElementuProgramu
@@ -314,7 +315,7 @@ function czyTytulTechniczny(tresc: string) {
 }
 
 function przygotujWiersze(tresc: string) {
-  const suroweWiersze = tresc.split(/\r?\n/)
+  const suroweWiersze = tresc.split(/\r?\n/).map(normalizujWierszWejsciowy)
   return suroweWiersze
     .map((surowy, indeks) => ({
       indeks,
@@ -541,6 +542,7 @@ export function parsujTekstProgramu(tresc: string, opcje: { czyScalacKontynuacje
     licznikModulow += 1
     aktualnyModul = {
       id: utworzId('modul', licznikModulow),
+      indeksWierszaZrodlowego: tytul === 'Zakres tematyczny' ? undefined : aktualnyWiersz?.indeks,
       tytul: tytul.trim(),
       podpunkty: [],
       typ: rozpoznajTypElementu(tytul),
