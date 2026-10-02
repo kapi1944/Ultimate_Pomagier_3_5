@@ -90,7 +90,7 @@ const daneProfilowFirmy: Record<ProfilFirmy, DaneProfiluFirmy> = {
     kolor: '#DE1914',
     kontakt: 'Centrum Organizacji Szkoleń i Konferencji SEMPER',
     stopka:
-      'Centrum Organizacji Szkoleń i Konferencji SEMPER | ul. Libelta 1a/2, 61-706 Poznań | NIP 7772616176 | REGON 301265926 | biuro@szkolenia-semper.pl',
+      'Centrum Organizacji Szkoleń i Konferencji SEMPER\nul. Libelta 1a/2, 61-706 Poznań | biuro@szkolenia-semper.pl | NIP 7772616176 | REGON 301265926',
   },
   iist: {
     nazwa: 'IIST',
@@ -612,6 +612,7 @@ const styleProgramuSzkolenia = `
 }
 
 .program-kartka-a4__stopka {
+  white-space: pre-line;
   margin-top: 42px;
   border-top: 1px solid #d1d5db;
   padding-top: 12px;
@@ -1742,6 +1743,23 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
               </label>
 
               <label className="program-szkolen__etykieta">
+                <span>
+                  <input
+                    aria-label="Nie dziel punktów głównych między stronami"
+                    checked={ustawienia.czyNieDzielicPunktowGlownych}
+                    onChange={(zdarzenie) => zmienUstawienie('czyNieDzielicPunktowGlownych', zdarzenie.target.checked)}
+                    role="switch"
+                    type="checkbox"
+                  />{' '}
+                  Nie dziel punktów głównych między stronami
+                </span>
+                <p className="program-szkolen__opis">
+                  Przenosi nagłówek wraz z podpunktami na kolejną stronę. Punkt większy niż cała strona jest dzielony.
+                  Wymaga włączonego formatowania skryptowego.
+                </p>
+              </label>
+
+              <label className="program-szkolen__etykieta">
                 Styl dni
                 <select
                   className="program-szkolen__lista"
@@ -1971,6 +1989,7 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
           <RendererStronProgramu
             czyFormatowanieSkryptowe={ustawienia.formatowanieSkryptowe}
             czyJustowac={ustawienia.czyJustowac}
+            czyNieDzielicPunktowGlownych={ustawienia.czyNieDzielicPunktowGlownych}
             czyPogrubiacNaglowkiListyProgramu={ustawienia.czyPogrubiacNaglowkiListyProgramu}
             dokument={dokumentProgramu}
             elementyIdentyfikacji={ustawienia.elementyIdentyfikacji}

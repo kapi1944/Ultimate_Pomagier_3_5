@@ -295,7 +295,7 @@ function dodajFragmentModulu(
   strona.wykorzystanaWysokosc += doplata + wysokosc
 }
 
-export function paginujProgram(model: ModelPaginacjiProgramu, pomiary: PomiaryPaginacjiProgramu): WynikPaginacjiProgramu {
+export function paginujProgram(model: ModelPaginacjiProgramu, pomiary: PomiaryPaginacjiProgramu, czyNieDzielicPunktowGlownych = false): WynikPaginacjiProgramu {
   const stronyWBudowie = [utworzPustaStrone(1)]
   const problemy: ProblemPaginacjiProgramu[] = [...model.problemy ?? []]
   const rozpoczęteDni = new Set<string>()
@@ -370,6 +370,15 @@ export function paginujProgram(model: ModelPaginacjiProgramu, pomiary: PomiaryPa
           )
           rozpoczęteDni.add(dzien.id)
           break
+        }
+
+        if (czyNieDzielicPunktowGlownych && czyPierwszyFragmentModulu && modul.blok.tresc?.trim() && modul.trybTresc !== 'surowa') {
+          const nowaStrona = utworzPustaStrone(aktualnaStrona.strona.numer + 1)
+          const doplataNaNowejStronie = pobierzDoplateZaDodanieModulu(nowaStrona, dzien, czyDzienZostalRozpoczety, pomiary)
+          if (doplataNaNowejStronie + pomiarModulu.wysokoscCalego <= pomiary.pojemnoscKolejnychStron) {
+            utworzNowaStrone()
+            continue
+          }
         }
 
         const dostepnaWysokosc = pobierzPojemnoscStrony(aktualnaStrona, pomiary) - aktualnaStrona.wykorzystanaWysokosc - doplata

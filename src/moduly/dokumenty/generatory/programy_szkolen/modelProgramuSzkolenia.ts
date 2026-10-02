@@ -38,6 +38,7 @@ export type UstawieniaProgramuSzkolenia = {
   gruboscObramowaniaTytulu: number
   formatCudzyslowu: FormatCudzyslowuProgramu
   szerokoscLogotypu: number
+  czyNieDzielicPunktowGlownych: boolean
   czyPogrubiacNaglowkiListyProgramu: boolean
   blokiSwobodne?: BlokSwobodnyDokumentu[]
 }
@@ -110,6 +111,7 @@ export const domyslneUstawieniaProgramu: UstawieniaProgramuSzkolenia = {
   gruboscObramowaniaTytulu: 1,
   formatCudzyslowu: 'gorny-gorny',
   szerokoscLogotypu: 90,
+  czyNieDzielicPunktowGlownych: false,
   czyPogrubiacNaglowkiListyProgramu: true,
 }
 
@@ -182,6 +184,7 @@ export function normalizujProgramSzkolenia(zapis: unknown): ModelProgramuSzkolen
       gruboscObramowaniaTytulu: liczbaLubDomyslna(ustawienia.gruboscObramowaniaTytulu, domyslneUstawieniaProgramu.gruboscObramowaniaTytulu),
       formatCudzyslowu: ustawienia.formatCudzyslowu === 'dolny-gorny' ? 'dolny-gorny' : 'gorny-gorny',
       szerokoscLogotypu: liczbaLubDomyslna(ustawienia.szerokoscLogotypu, domyslneUstawieniaProgramu.szerokoscLogotypu),
+      czyNieDzielicPunktowGlownych: typeof ustawienia.czyNieDzielicPunktowGlownych === 'boolean' ? ustawienia.czyNieDzielicPunktowGlownych : false,
       czyPogrubiacNaglowkiListyProgramu: typeof ustawienia.czyPogrubiacNaglowkiListyProgramu === 'boolean' ? ustawienia.czyPogrubiacNaglowkiListyProgramu : domyslneUstawieniaProgramu.czyPogrubiacNaglowkiListyProgramu,
       ...(blokiSwobodne ? { blokiSwobodne } : {}),
     },

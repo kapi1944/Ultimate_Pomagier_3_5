@@ -38,6 +38,7 @@ type WlasciwosciRendereraStronProgramu = WlasciwosciWygladuTrescProgramu & {
   nazwaOrganizatora: string
   kontaktOrganizatora: string
   stopkaOrganizatora: string
+  czyNieDzielicPunktowGlownych?: boolean
   czyFormatowanieSkryptowe: boolean
   tekstSurowy: string
   kontekstSwobodnychBlokow: KontekstSwobodnychBlokow
@@ -298,6 +299,7 @@ export default function RendererStronProgramu({
   nazwaOrganizatora,
   kontaktOrganizatora,
   stopkaOrganizatora,
+  czyNieDzielicPunktowGlownych = false,
   czyFormatowanieSkryptowe,
   tekstSurowy,
   kontekstSwobodnychBlokow,
@@ -321,8 +323,8 @@ export default function RendererStronProgramu({
     '--program-odstep-poziomy': `${geometriaStronyProgramu.odstepPoziomyMm}mm`,
     '--program-wysokosc-stopki': `${geometriaStronyProgramu.wysokoscStopkiMm}mm`,
   } as CSSProperties
-  const kluczUkladu = JSON.stringify({ dokument: dokument.struktura, tekstSurowy, czyFormatowanieSkryptowe, preset, profilFirmy, tytul, elementy, czyJustowac, logotypUzytkownika, szerokoscLogotypu, gruboscObramowaniaTytulu, trybRenderowania, wyglad })
-  const { obszarPomiarowyRef, wynik, czyPomiaryGotowe } = usePaginacjaProgramu(model, kluczUkladu)
+  const kluczUkladu = JSON.stringify({ dokument: dokument.struktura, tekstSurowy, czyFormatowanieSkryptowe, czyNieDzielicPunktowGlownych, preset, profilFirmy, tytul, elementy, czyJustowac, logotypUzytkownika, szerokoscLogotypu, gruboscObramowaniaTytulu, trybRenderowania, wyglad })
+  const { obszarPomiarowyRef, wynik, czyPomiaryGotowe } = usePaginacjaProgramu(model, kluczUkladu, czyNieDzielicPunktowGlownych)
   const wlasciwosciStrony = {
     preset,
     profilFirmy,

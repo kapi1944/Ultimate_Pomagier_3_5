@@ -121,7 +121,7 @@ function utworzSygnatureWyniku(wynik: WynikPaginacjiProgramu) {
   })
 }
 
-export function usePaginacjaProgramu(model: ModelPaginacjiProgramu, kluczUkladu: string) {
+export function usePaginacjaProgramu(model: ModelPaginacjiProgramu, kluczUkladu: string, czyNieDzielicPunktowGlownych = false) {
   const obszarPomiarowyRef = useRef<HTMLDivElement>(null)
   const [stanWyniku, ustawStanWyniku] = useState<{ kluczUkladu: string; wynik: WynikPaginacjiProgramu } | null>(null)
   const sygnaturaWynikuRef = useRef('')
@@ -139,7 +139,7 @@ export function usePaginacjaProgramu(model: ModelPaginacjiProgramu, kluczUkladu:
       return
     }
 
-    const nowyWynik = paginujProgram(model, pomiary)
+    const nowyWynik = paginujProgram(model, pomiary, czyNieDzielicPunktowGlownych)
     const sygnatura = `${kluczUkladu}|${utworzSygnatureWyniku(nowyWynik)}`
 
     if (sygnatura === sygnaturaWynikuRef.current) {
@@ -148,7 +148,7 @@ export function usePaginacjaProgramu(model: ModelPaginacjiProgramu, kluczUkladu:
 
     sygnaturaWynikuRef.current = sygnatura
     ustawStanWyniku({ kluczUkladu, wynik: nowyWynik })
-  }, [kluczUkladu, model])
+  }, [kluczUkladu, model, czyNieDzielicPunktowGlownych])
 
   useLayoutEffect(() => {
     const obszarPomiarowy = obszarPomiarowyRef.current

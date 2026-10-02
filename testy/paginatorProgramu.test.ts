@@ -322,3 +322,42 @@ test('duża grupa zachowuje rodzica z pierwszym podpunktem i każdy blok dokład
   assert.deepEqual(wynik.strony[0].fragmentyDni[0].moduly[0].grupyPunktow[0].bloki.map((blok) => blok.id), bloki.slice(0, 2).map((blok) => blok.id))
   assert.deepEqual(wynik.strony.flatMap((strona) => strona.fragmentyDni.flatMap((dzien) => dzien.moduly.flatMap((fragment) => fragment.grupyPunktow.flatMap((grupa) => grupa.bloki.map((blok) => blok.id))))), bloki.map((blok) => blok.id))
 })
+
+
+test('ochrona punktów przenosi nagłówek z wszystkimi podpunktami zamiast dzielić moduł', () => {
+  const model = { dni: [utworzDzien('dzien', [utworzModul('pierwszy', 2), utworzModul('drugi', 3)])] }
+  const pomiary = utworzPomiary(model, 100, 15)
+  const bezOchrony = paginujProgram(model, pomiary)
+  assert.equal(bezOchrony.strony[0].fragmentyDni[0].moduly.length, 2)
+  const wynik = paginujProgram(model, pomiary, true)
+  assert.equal(wynik.strony.length, 2)
+  assert.equal(wynik.strony[0].fragmentyDni[0].moduly.length, 1)
+  const fragment = wynik.strony[1].fragmentyDni[0].moduly[0]
+  assert.equal(fragment.modul.id, 'drugi')
+  assert.equal(fragment.czyPokazacTytul, true)
+  assert.equal(fragment.grupyPunktow.length, 3)
+  assert.equal(wynik.problemy.length, 0)
+})
+
+test('ochrona punktów pozwala dzielić moduł większy niż cała strona i zachowuje treść', () => {
+  const model = { dni: [utworzDzien('dzien', [utworzModul('duzy', 10)])] }
+  const wynik = paginujProgram(model, utworzPomiary(model), true)
+  assert.ok(wynik.strony.length > 1)
+  assert.deepEqual(wynik.strony.flatMap((strona) => strona.fragmentyDni.flatMap((dzien) => dzien.moduly.flatMap((fragment) => fragment.grupyPunktow.map((grupa) => grupa.id)))), model.dni[0].moduly[0].grupyPunktow.map((grupa) => grupa.id))
+})
+
+test('ochrona punktów przenosi moduł także z pierwszej strony o mniejszej pojemności', () => {
+  const model = { dni: [utworzDzien('dzien', [utworzModul('modul', 3)])] }
+  const pomiary = { ...utworzPomiary(model), pojemnoscPierwszejStrony: 40 }
+  const wynik = paginujProgram(model, pomiary, true)
+  assert.equal(wynik.strony.length, 2)
+  assert.equal(wynik.strony[0].fragmentyDni.length, 0)
+  assert.equal(wynik.strony[1].fragmentyDni[0].moduly[0].grupyPunktow.length, 3)
+})
+
+test('ustawienie ochrony punktów zachowuje zapis i zgodność starszych dokumentów', () => {
+  assert.equal(normalizujProgramSzkolenia({}).ustawienia.czyNieDzielicPunktowGlownych, false)
+  const model = normalizujProgramSzkolenia({ ustawienia: { czyNieDzielicPunktowGlownych: true } })
+  assert.equal(normalizujProgramSzkolenia(JSON.parse(JSON.stringify(model))).ustawienia.czyNieDzielicPunktowGlownych, true)
+  assert.equal(normalizujProgramSzkolenia({ ustawienia: { czyNieDzielicPunktowGlownych: 'false' } }).ustawienia.czyNieDzielicPunktowGlownych, false)
+})
