@@ -123,6 +123,7 @@ export function RendererGrupyPunktowProgramu({
                   blok.statusDiagnostyczny === 'do_sprawdzenia' && czyPokazacElementyPomocniczeEdytora(trybRenderowania) ? ' program-kartka-a4__pozycja--niepewna' : ''
                 }`}
                 key={blok.id}
+                data-pomiar-bloku={atrybutyPomiaru ? blok.id : undefined}
                 style={{ marginLeft: `${Math.min(poziom, 8) * 22}px` }}
               >
                 <span className="program-kartka-a4__marker">{pobierzMarker(blok, liczniki, stylListy, stylePoziomowListy)}</span>

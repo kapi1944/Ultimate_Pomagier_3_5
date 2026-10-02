@@ -4,6 +4,7 @@ import { sprawdzDokumentBlokowy } from '../../../../wspolne/dokumenty/modelBloko
 import { normalizujBlokiSwobodneDokumentu, type BlokSwobodnyDokumentu, type ZrodloObrazuBloku } from '../../../../wspolne/dokumenty/modelSwobodnychBlokow'
 import { konwertujTekstProgramuNaHtml } from './komponenty/konwersjaProgramuWysiwyg'
 import { parsujTekstProgramu, type ProgramSzkolenia } from './ParserTekstu'
+import { utworzModelPaginacjiProgramu } from './paginatorProgramu'
 import {
   konfiguracjePresetowProgramu,
   domyslnyPresetNowegoProgramu,
@@ -272,6 +273,9 @@ export function walidujProgramSzkolenia(
   dokument: DokumentBlokowy = utworzDokumentProgramuSzkolenia(dane),
 ): ProblemDokumentu[] {
   const problemy = [...sprawdzDokumentBlokowy(dokument), ...dokument.problemy]
+  for (const problem of utworzModelPaginacjiProgramu(dokument, dane.trescProgramu).problemy ?? []) {
+    problemy.push({ ...problem, poziom: 'ostrzezenie', kategoria: 'parser', czyBlokujeEksport: false })
+  }
 
   if (!dane.czyWynikParsowaniaZatwierdzony && dane.trescProgramu.trim()) {
     problemy.push({ id: 'wynik-parsowania-niezatwierdzony', poziom: 'ostrzezenie', kategoria: 'parser', komunikat: 'Wynik parsowania nie został jeszcze zatwierdzony.', czyBlokujeEksport: false })

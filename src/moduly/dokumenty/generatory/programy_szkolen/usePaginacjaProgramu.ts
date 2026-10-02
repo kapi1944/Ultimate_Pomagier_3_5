@@ -42,6 +42,7 @@ function pobierzPomiaryZDomu(obszarPomiarowy: HTMLElement): PomiaryPaginacjiProg
       wysokoscBazyZTytulem: pobierzWysokosc(znajdzElementPoAtrybucie(obszarPomiarowy, 'data-pomiar-modulu-baza-z-tytulem', idModulu)),
       wysokoscBazyBezTytulu: pobierzWysokosc(znajdzElementPoAtrybucie(obszarPomiarowy, 'data-pomiar-modulu-baza-bez-tytulu', idModulu)),
       wysokosciGrup: {},
+      wysokosciBlokow: {},
     }
   })
 
@@ -50,6 +51,10 @@ function pobierzPomiaryZDomu(obszarPomiarowy: HTMLElement): PomiaryPaginacjiProg
 
     if (idModulu && idGrupy && moduly[idModulu]) {
       moduly[idModulu].wysokosciGrup[idGrupy] = pobierzWysokosc(element)
+      element.querySelectorAll<HTMLElement>('[data-pomiar-bloku]').forEach((blok) => {
+        const idBloku = blok.dataset.pomiarBloku
+        if (idBloku) moduly[idModulu].wysokosciBlokow![idBloku] = pobierzWysokosc(blok)
+      })
     }
   })
 

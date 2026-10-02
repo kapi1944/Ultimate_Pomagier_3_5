@@ -309,7 +309,7 @@ export default function RendererStronProgramu({
   ...wyglad
 }: WlasciwosciRendereraStronProgramu) {
   const model = useMemo(
-    () => czyFormatowanieSkryptowe ? utworzModelPaginacjiProgramu(dokument) : utworzModelPaginacjiProgramuDlaTekstuSurowego(tekstSurowy),
+    () => czyFormatowanieSkryptowe ? utworzModelPaginacjiProgramu(dokument, tekstSurowy) : utworzModelPaginacjiProgramuDlaTekstuSurowego(tekstSurowy),
     [czyFormatowanieSkryptowe, dokument, tekstSurowy],
   )
   const elementy = pobierzElementyIdentyfikacjiProgramu(preset, nadpisania)

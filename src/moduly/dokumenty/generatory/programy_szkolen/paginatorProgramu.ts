@@ -21,6 +21,7 @@ export type DzienPaginacjiProgramu = {
 
 export type ModelPaginacjiProgramu = {
   dni: DzienPaginacjiProgramu[]
+  problemy?: ProblemPaginacjiProgramu[]
 }
 
 export type FragmentModuluProgramu = {
@@ -52,6 +53,7 @@ export type PomiaryModuluProgramu = {
   wysokoscBazyZTytulem: number
   wysokoscBazyBezTytulu: number
   wysokosciGrup: Record<string, number>
+  wysokosciBlokow?: Record<string, number>
 }
 
 export type PomiaryPaginacjiProgramu = {
@@ -80,11 +82,12 @@ function pobierzPoziom(blok: BlokDokumentu) {
 
 function utworzGrupyPunktow(bloki: BlokDokumentu[]) {
   const grupy: GrupaPunktowProgramu[] = []
+  const punkty = bloki.filter((blok) => blok.typ === 'Punkt' || blok.typ === 'Podpunkt')
+  const poziomBazowy = Math.min(...punkty.map(pobierzPoziom))
 
-  bloki
-    .filter((blok) => blok.typ === 'Punkt' || blok.typ === 'Podpunkt')
+  punkty
     .forEach((blok) => {
-      if (!grupy.length || pobierzPoziom(blok) === 0) {
+      if (!grupy.length || pobierzPoziom(blok) === poziomBazowy) {
         grupy.push({ id: `grupa-${blok.id}`, bloki: [blok] })
         return
       }
@@ -137,7 +140,7 @@ export function utworzModelPaginacjiProgramuDlaTekstuSurowego(tekst: string): Mo
   }
 }
 
-export function utworzModelPaginacjiProgramu(dokument: DokumentBlokowy): ModelPaginacjiProgramu {
+function zbudujModelPaginacjiProgramu(dokument: DokumentBlokowy): ModelPaginacjiProgramu {
   const dni = dokument.struktura.filter((blok) => blok.typ === 'Dzien')
 
   if (dni.length) {
@@ -158,6 +161,34 @@ export function utworzModelPaginacjiProgramu(dokument: DokumentBlokowy): ModelPa
       ? [{ id: 'dzien-listy-prostej', moduly: [utworzWirtualnyModulDlaPunktow(punkty)] }]
       : [],
   }
+}
+
+export function sprawdzSpojnoscPaginacjiProgramu(dokument: DokumentBlokowy, model: ModelPaginacjiProgramu, trescProgramu: string): ProblemPaginacjiProgramu[] {
+  function czyMaBlokiProgramu(bloki: BlokDokumentu[]): boolean {
+    return bloki.some((blok) => (['Modul', 'Punkt', 'Podpunkt'].includes(blok.typ) && Boolean(blok.tresc?.trim())) || czyMaBlokiProgramu(blok.dzieci))
+  }
+  const czyMaTresc = model.dni.some((dzien) => dzien.moduly.some((modul) => modul.blok.tresc?.trim() || modul.grupyPunktow.some((grupa) => grupa.bloki.some((blok) => blok.tresc?.trim()))))
+  return trescProgramu.trim() && czyMaBlokiProgramu(dokument.struktura) && !czyMaTresc
+    ? [{ id: 'niespojna-paginacja-programu', komunikat: 'Wykryto bloki programu bez renderowalnej zawartości modelu paginacji. Wynik wymaga weryfikacji; zastosowano awaryjne zachowanie treści.' }]
+    : []
+}
+
+export function utworzModelPaginacjiProgramu(dokument: DokumentBlokowy, trescProgramu = ''): ModelPaginacjiProgramu {
+  const model = zbudujModelPaginacjiProgramu(dokument)
+  const problemy = sprawdzSpojnoscPaginacjiProgramu(dokument, model, trescProgramu)
+  if (!problemy.length) return model
+
+  const bloki: BlokDokumentu[] = []
+  function zachowajTresc(zrodlo: BlokDokumentu[]) {
+    for (const blok of zrodlo) {
+      if (['Dzien', 'Sekcja', 'Modul', 'Punkt', 'Podpunkt'].includes(blok.typ) && blok.tresc?.trim()) {
+        bloki.push({ ...blok, typ: 'Punkt', dzieci: [], metadane: { ...blok.metadane, poziom: 0 }, stylLokalny: { ...blok.stylLokalny, wciecie: 0 } })
+      }
+      zachowajTresc(blok.dzieci)
+    }
+  }
+  zachowajTresc(dokument.struktura)
+  return { dni: [{ id: 'dzien-awaryjnej-tresci', moduly: [utworzWirtualnyModulDlaPunktow(bloki)] }], problemy }
 }
 
 function czyLiczbaJestPomiarem(wartosc: number | undefined) {
@@ -262,7 +293,7 @@ function dodajFragmentModulu(
 
 export function paginujProgram(model: ModelPaginacjiProgramu, pomiary: PomiaryPaginacjiProgramu): WynikPaginacjiProgramu {
   const stronyWBudowie = [utworzPustaStrone(1)]
-  const problemy: ProblemPaginacjiProgramu[] = []
+  const problemy: ProblemPaginacjiProgramu[] = [...model.problemy ?? []]
   const rozpoczęteDni = new Set<string>()
   let aktualnaStrona = stronyWBudowie[0]
 
@@ -277,10 +308,15 @@ export function paginujProgram(model: ModelPaginacjiProgramu, pomiary: PomiaryPa
 
   for (const dzien of model.dni) {
     for (const modul of dzien.moduly) {
-      const pomiarModulu = pomiary.moduly[modul.id]
+      const pomiarZrodlowy = pomiary.moduly[modul.id]
+      const pomiarModulu = pomiarZrodlowy ? { ...pomiarZrodlowy, wysokosciGrup: { ...pomiarZrodlowy.wysokosciGrup } } : undefined
+      const grupyPunktow = [...modul.grupyPunktow]
+      const indeksyNumeracji = grupyPunktow.map((_, indeks) => indeks)
 
       if (!pomiarModulu) {
         problemy.push({ id: `brak-pomiaru-${modul.id}`, blokId: modul.id, komunikat: 'Nie udało się zmierzyć modułu programu.' })
+        dodajFragmentModulu(aktualnaStrona, dzien, modul, grupyPunktow, true, 0, 0, 0, rozpoczęteDni.has(dzien.id))
+        rozpoczęteDni.add(dzien.id)
         continue
       }
 
@@ -304,13 +340,15 @@ export function paginujProgram(model: ModelPaginacjiProgramu, pomiary: PomiaryPa
           }
 
           problemy.push({ id: `za-duzy-modul-${modul.id}`, blokId: modul.id, komunikat: 'Moduł bez punktów jest wyższy niż dostępny obszar strony.' })
+          dodajFragmentModulu(aktualnaStrona, dzien, modul, [], true, 0, doplata, pomiarModulu.wysokoscCalego, czyDzienZostalRozpoczety)
+          rozpoczęteDni.add(dzien.id)
           break
         }
 
         continue
       }
 
-      while (indeksPoczatkowejGrupy < modul.grupyPunktow.length) {
+      while (indeksPoczatkowejGrupy < grupyPunktow.length) {
         const czyDzienZostalRozpoczety = rozpoczęteDni.has(dzien.id)
         const doplata = pobierzDoplateZaDodanieModulu(aktualnaStrona, dzien, czyDzienZostalRozpoczety, pomiary)
 
@@ -333,8 +371,8 @@ export function paginujProgram(model: ModelPaginacjiProgramu, pomiary: PomiaryPa
         const dostepnaWysokosc = pobierzPojemnoscStrony(aktualnaStrona, pomiary) - aktualnaStrona.wykorzystanaWysokosc - doplata
         let indeksKoncaGrupy = indeksPoczatkowejGrupy
 
-        while (indeksKoncaGrupy < modul.grupyPunktow.length) {
-          const kandydat = modul.grupyPunktow.slice(indeksPoczatkowejGrupy, indeksKoncaGrupy + 1)
+        while (indeksKoncaGrupy < grupyPunktow.length) {
+          const kandydat = grupyPunktow.slice(indeksPoczatkowejGrupy, indeksKoncaGrupy + 1)
           const wysokoscKandydata = pobierzWysokoscFragmentuModulu(
             pomiarModulu,
             kandydat,
@@ -355,17 +393,32 @@ export function paginujProgram(model: ModelPaginacjiProgramu, pomiary: PomiaryPa
             continue
           }
 
-          const grupa = modul.grupyPunktow[indeksPoczatkowejGrupy]
+          const grupa = grupyPunktow[indeksPoczatkowejGrupy]
+          if (grupa.bloki.length > 1) {
+            const fragmenty = grupa.bloki.map((blok) => ({ id: `${grupa.id}-fragment-${blok.id}`, bloki: [blok] }))
+            const wysokoscGrupy = pomiarModulu.wysokosciGrup[grupa.id] ?? 0
+            fragmenty.forEach((fragment) => {
+              pomiarModulu.wysokosciGrup[fragment.id] = pomiarModulu.wysokosciBlokow?.[fragment.bloki[0].id] ?? wysokoscGrupy / fragmenty.length
+            })
+            grupyPunktow.splice(indeksPoczatkowejGrupy, 1, ...fragmenty)
+            indeksyNumeracji.splice(indeksPoczatkowejGrupy, 1, ...fragmenty.map(() => indeksyNumeracji[indeksPoczatkowejGrupy]))
+            problemy.push({ id: `awaryjny-podzial-${grupa.id}`, blokId: grupa.bloki[0]?.id, komunikat: 'Zastosowano awaryjny podział zbyt wysokiej grupy punktów na pojedyncze bloki. Zachowano całą treść i kolejność.' })
+            continue
+          }
           problemy.push({
             id: `za-duzy-punkt-${grupa.id}`,
             blokId: grupa.bloki[0]?.id,
-            komunikat: 'Pojedynczy punkt programu jest wyższy niż dostępny obszar strony i nie może zostać podzielony automatycznie.',
+            komunikat: 'Pojedynczy punkt programu jest wyższy niż dostępny obszar strony. Zachowano go w całości; wymaga sprawdzenia układu przed eksportem.',
           })
+          dodajFragmentModulu(aktualnaStrona, dzien, modul, [grupa], czyPierwszyFragmentModulu, indeksyNumeracji[indeksPoczatkowejGrupy], doplata, pobierzWysokoscFragmentuModulu(pomiarModulu, [grupa], czyPierwszyFragmentModulu, 0), czyDzienZostalRozpoczety)
+          rozpoczęteDni.add(dzien.id)
+          czyPierwszyFragmentModulu = false
           indeksPoczatkowejGrupy += 1
+          if (indeksPoczatkowejGrupy < grupyPunktow.length) utworzNowaStrone()
           continue
         }
 
-        const grupyNaStronie = modul.grupyPunktow.slice(indeksPoczatkowejGrupy, indeksKoncaGrupy)
+        const grupyNaStronie = grupyPunktow.slice(indeksPoczatkowejGrupy, indeksKoncaGrupy)
         const wysokoscFragmentu = pobierzWysokoscFragmentuModulu(
           pomiarModulu,
           grupyNaStronie,
@@ -379,7 +432,7 @@ export function paginujProgram(model: ModelPaginacjiProgramu, pomiary: PomiaryPa
           modul,
           grupyNaStronie,
           czyPierwszyFragmentModulu,
-          indeksPoczatkowejGrupy,
+          indeksyNumeracji[indeksPoczatkowejGrupy],
           doplata,
           wysokoscFragmentu,
           czyDzienZostalRozpoczety,
@@ -388,7 +441,7 @@ export function paginujProgram(model: ModelPaginacjiProgramu, pomiary: PomiaryPa
         indeksPoczatkowejGrupy = indeksKoncaGrupy
         czyPierwszyFragmentModulu = false
 
-        if (indeksPoczatkowejGrupy < modul.grupyPunktow.length) {
+        if (indeksPoczatkowejGrupy < grupyPunktow.length) {
           utworzNowaStrone()
         }
       }
