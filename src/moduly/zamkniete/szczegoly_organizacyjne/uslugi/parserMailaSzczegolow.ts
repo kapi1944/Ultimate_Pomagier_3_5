@@ -18,10 +18,98 @@ function zabezpieczWyrazenie(tekst: string) {
   return tekst.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
+function normalizujTrescMaila(tresc: string) {
+  return tresc.replace(/\r\n?/g, '\n').replace(/\u00a0/g, ' ').replace(/^\uFEFF/, '')
+}
+
+function czyWierszJestEtykieta(wiersz: string) {
+  return /^[\p{L}][\p{L}\d .()/-]*\s*(?::|\s[-–]\s)/u.test(wiersz.trim())
+}
+
+function znajdzWartoscWNastepnejLinii(wiersze: string[], indeks: number) {
+  for (let nastepny = indeks + 1; nastepny < wiersze.length; nastepny += 1) {
+    const wartosc = wiersze[nastepny].trim()
+    if (!wartosc) continue
+    return czyWierszJestEtykieta(wartosc) ? '' : wartosc
+  }
+  return ''
+}
+
+function rozdzielNaglowkiWiadomosci(tresc: string) {
+  const wiersze = normalizujTrescMaila(tresc).split('\n')
+  const naglowki: Record<string, string> = {}
+  const trescWlasciwa: string[] = []
+
+  for (let indeks = 0; indeks < wiersze.length; indeks += 1) {
+    const naglowek = wiersze[indeks].match(/^\s*(Od|Do|DW|Data|Temat|Załączniki|Zalaczniki|From|To|Cc|Date|Sent|Subject|Attachments)\s*:\s*(.*)$/i)
+    if (!naglowek) {
+      trescWlasciwa.push(wiersze[indeks])
+      continue
+    }
+    const nazwa = normalizujTekst(naglowek[1])
+    const wartosc = naglowek[2].trim() || znajdzWartoscWNastepnejLinii(wiersze, indeks)
+    naglowki[nazwa] ??= wartosc
+    if (!naglowek[2].trim() && wartosc) {
+      while (!wiersze[indeks + 1].trim()) indeks += 1
+      indeks += 1
+    }
+  }
+
+  return { naglowki, tresc: trescWlasciwa.join('\n') }
+}
+
 function znajdzPoEtykiecie(tresc: string, etykiety: string[]) {
   const wzorEtykiet = etykiety.map(zabezpieczWyrazenie).join('|')
-  const wzor = new RegExp(`(?:^|\\n)\\s*(?:${wzorEtykiet})\\s*[:\\-–]\\s*(.+)`, 'i')
-  return tresc.match(wzor)?.[1]?.trim() ?? ''
+  const wzor = new RegExp(`^[ \\t]*(?:${wzorEtykiet})[ \\t]*[:\\-–][ \\t]*(.*)$`, 'i')
+  const wiersze = tresc.split('\n')
+  for (let indeks = 0; indeks < wiersze.length; indeks += 1) {
+    const dopasowanie = wiersze[indeks].match(wzor)
+    if (!dopasowanie) continue
+    const wartosc = dopasowanie[1].trim() || znajdzWartoscWNastepnejLinii(wiersze, indeks)
+    if (wartosc) return wartosc
+  }
+  return ''
+}
+
+type KandydatTytulu = {
+  wartosc: string
+  priorytet: number
+  niepewny: boolean
+}
+
+function czyTematKorespondencji(wartosc: string) {
+  const tekst = normalizujTekst(wartosc).replace(/ł/g, 'l')
+  return /szczegoly organizacyjne|\b(potwierdzenie|zamowienie|oferta)\b|\b(re|fw|fwd|odp)\s*:/i.test(tekst)
+    || /^\d{1,4}[./-]\d{1,2}[./-]\d{1,4}/.test(tekst)
+}
+
+function czySensownyTytul(wartosc: string) {
+  return wartosc.length <= 300
+    && (wartosc.match(/\p{L}{2,}/gu)?.length ?? 0) >= 2
+    && !czyTematKorespondencji(wartosc)
+    && !/@|https?:|www\.|\d+[./-]\d+|\b(?:NIP|nr|numer|umowa|kod|ulica|adres)\b|\bul\./i.test(wartosc)
+}
+
+function znajdzTytulWCudzyslowie(tekst: string) {
+  const kandydaci = [...tekst.matchAll(/„([^”\n]+)”|"([^"\n]+)"|'([^'\n]+)'/g)]
+    .map((dopasowanie) => (dopasowanie[1] ?? dopasowanie[2] ?? dopasowanie[3]).trim())
+    .filter(czySensownyTytul)
+  const unikalne = [...new Set(kandydaci)]
+  return unikalne.length === 1 ? unikalne[0] : ''
+}
+
+function parsujTematWiadomosci(temat: string) {
+  const tytulWCudzyslowie = znajdzTytulWCudzyslowie(temat)
+  const tytul = tytulWCudzyslowie || (czySensownyTytul(temat) && !/[,;„”"']/.test(temat) ? temat.trim() : '')
+  return {
+    kandydat: tytul ? { wartosc: tytul, priorytet: tytulWCudzyslowie ? 2 : 1, niepewny: true } : undefined,
+    daty: znajdzDaty(temat),
+  }
+}
+
+function wybierzNajlepszegoKandydata(kandydaci: (KandydatTytulu | undefined)[]) {
+  return kandydaci.filter((kandydat): kandydat is KandydatTytulu => Boolean(kandydat))
+    .sort((pierwszy, drugi) => drugi.priorytet - pierwszy.priorytet)[0]
 }
 
 function znajdzEmail(tekst: string) {
@@ -129,16 +217,27 @@ function uzupelnijDaneFirmy(czesciowe: Partial<DaneFirmy>, wartosci: Partial<Dan
 }
 
 export function parsujMailaSzczegolow(tresc: string): WynikParseraMailaSzczegolow {
+  const wiadomosc = rozdzielNaglowkiWiadomosci(tresc)
+  tresc = wiadomosc.tresc
+  const temat = parsujTematWiadomosci(wiadomosc.naglowki.temat ?? wiadomosc.naglowki.subject ?? '')
   const daneFormularza: Partial<DaneFormularza> = {}
   const pierwszaGrupa: Partial<GrupaSzkoleniowa> = {}
   const rozpoznaneObszary: string[] = []
   const rozpoznanePola: string[] = []
   const polaNiepewne: string[] = []
 
-  const tytul = znajdzPoEtykiecie(tresc, ['Tytuł szkolenia', 'Temat szkolenia', 'Temat'])
+  const jawnyTytul = znajdzPoEtykiecie(tresc, ['Tytuł szkolenia', 'Temat szkolenia', 'Nazwa szkolenia', 'Nazwa kursu', 'Szkolenie'])
+  const wzorzecWTresci = tresc.match(/\b(?:szkolenie|kurs)\s+(?:pt\.?|pod tytułem)\s+([^\n]+)/i)
+  const tytulWTresci = wzorzecWTresci ? znajdzTytulWCudzyslowie(wzorzecWTresci[1]) : ''
+  const tytul = wybierzNajlepszegoKandydata([
+    jawnyTytul && !czyTematKorespondencji(jawnyTytul) ? { wartosc: jawnyTytul, priorytet: 4, niepewny: false } : undefined,
+    tytulWTresci ? { wartosc: tytulWTresci, priorytet: 3, niepewny: false } : undefined,
+    temat.kandydat,
+  ])
   if (tytul) {
-    daneFormularza.tytulSzkolenia = tytul
+    daneFormularza.tytulSzkolenia = tytul.wartosc
     dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'podstawowe informacje', 'tytulSzkolenia')
+    if (tytul.niepewny) dodajNiepewne(polaNiepewne, 'tytulSzkolenia')
   }
 
   const nazwaKlienta = znajdzPoEtykiecie(tresc, ['Nazwa klienta', 'Klient'])
@@ -164,15 +263,19 @@ export function parsujMailaSzczegolow(tresc: string): WynikParseraMailaSzczegolo
   const dataDo = normalizujDate(znajdzPoEtykiecie(tresc, ['Data do']))
   const termin = znajdzPoEtykiecie(tresc, ['Termin', 'Data szkolenia'])
   const datyTerminu = termin ? znajdzDaty(termin) : { dataOd: '', dataDo: '' }
+  const dataOdZTresci = dataOd || datyTerminu.dataOd
+  const dataDoZTresci = dataDo || datyTerminu.dataDo
 
-  if (dataOd || datyTerminu.dataOd) {
-    pierwszaGrupa.dataOd = dataOd || datyTerminu.dataOd
+  if (dataOdZTresci || temat.daty.dataOd) {
+    pierwszaGrupa.dataOd = dataOdZTresci || temat.daty.dataOd
     dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'termin', 'grupy.0.dataOd')
+    if (!dataOdZTresci) dodajNiepewne(polaNiepewne, 'grupy.0.dataOd')
   }
 
-  if (dataDo || datyTerminu.dataDo) {
-    pierwszaGrupa.dataDo = dataDo || datyTerminu.dataDo
+  if (dataDoZTresci || (!dataOdZTresci && temat.daty.dataDo)) {
+    pierwszaGrupa.dataDo = dataDoZTresci || temat.daty.dataDo
     dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'termin', 'grupy.0.dataDo')
+    if (!dataDoZTresci) dodajNiepewne(polaNiepewne, 'grupy.0.dataDo')
   }
 
   if (termin && datyTerminu.dataOd && !dataDo && datyTerminu.dataOd === datyTerminu.dataDo) {
