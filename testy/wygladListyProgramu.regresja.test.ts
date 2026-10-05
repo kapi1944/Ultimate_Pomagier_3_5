@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { rozpoznajOznaczenieProgramu, wyznaczOznaczeniaProgramu } from '../src/moduly/dokumenty/generatory/programy_szkolen/oznaczeniaProgramu'
-import { normalizujProgramSzkolenia, parsujProgramZModelu, utworzDokumentProgramuSzkolenia } from '../src/moduly/dokumenty/generatory/programy_szkolen/modelProgramuSzkolenia'
+import { normalizujProgramSzkolenia, parsujProgramZModelu, utworzDokumentProgramuSzkolenia, pobierzSeparatorTytuluDnia, type SeparatorTytuluDniaProgramu } from '../src/moduly/dokumenty/generatory/programy_szkolen/modelProgramuSzkolenia'
+import { zapiszProgramWRejestrze, pobierzProgramPoId } from '../src/moduly/dokumenty/generatory/programy_szkolen/rejestrProgramowSzkolen'
 import { konwertujTekstProgramuNaHtml } from '../src/moduly/dokumenty/generatory/programy_szkolen/komponenty/konwersjaProgramuWysiwyg'
 import { utworzModelPaginacjiProgramu, paginujProgram } from '../src/moduly/dokumenty/generatory/programy_szkolen/paginatorProgramu'
 import { pobierzGruboscTekstuPozycjiListyProgramu } from '../src/moduly/dokumenty/generatory/programy_szkolen/stylPozycjiListyProgramu.ts'
@@ -66,3 +67,42 @@ const strony = paginujProgram(modelPaginacji, {
 assert.ok(strony.length > 1)
 assert.deepEqual(strony.flatMap((strona) => strona.fragmentyDni.flatMap((dzien) => dzien.moduly.flatMap((fragment) => fragment.grupyPunktow.flatMap((grupa) => grupa.bloki.map((blok) => blok.dane?.oznaczenieWyswietlane))))), zmienionyDokument.struktura.slice(1).map((blok) => blok.dane?.oznaczenieWyswietlane))
 console.log('OK: oryginalne oznaczenia, poziomy, zmiana stylu i zgodność zapisu programu')
+
+const tytulDnia = 'VAT – zasady rozliczania: art. 1.'
+for (const etykieta of ['DZIEŃ I', 'DZIEŃ II', 'DZIEŃ III', 'DZIEŃ 1', 'Dzień 2']) {
+  for (const separatorWejscia of [' – ', ' - ', ' — ', ': ', '. ', '\n']) {
+    const wczytany = parsujProgramZModelu(normalizujProgramSzkolenia({ trescProgramu: `${etykieta}${separatorWejscia}${tytulDnia}\n1. Zasady` }))
+    assert.equal(wczytany.dni[0].tytulDnia, tytulDnia, `${etykieta}${separatorWejscia} nie może zmieniać interpunkcji tytułu`)
+  }
+}
+const programDnia = normalizujProgramSzkolenia({ trescProgramu: `DZIEŃ I – ${tytulDnia}\n1. Zasady` })
+assert.equal(programDnia.ustawienia.separatorTytuluDnia, 'myslnik', 'starszy zapis otrzymuje domyślną półpauzę')
+assert.equal(normalizujProgramSzkolenia({ ustawienia: { separatorTytuluDnia: 'nieznany' } }).ustawienia.separatorTytuluDnia, 'myslnik')
+const warianty: [SeparatorTytuluDniaProgramu, string][] = [
+  ['myslnik', ' – '], ['dwukropek', ': '], ['kropka', '. '], ['nowa-linia', '\n'], ['myslnik', ' – '],
+]
+const trescZrodlowa = programDnia.trescProgramu
+const blokiZrodlowe = utworzDokumentProgramuSzkolenia(programDnia).struktura
+const magazynSeparatora = new Map<string, string>()
+globalThis.localStorage = {
+  getItem: (klucz: string) => magazynSeparatora.get(klucz) ?? null,
+  setItem: (klucz: string, wartosc: string) => { magazynSeparatora.set(klucz, wartosc) },
+  removeItem: (klucz: string) => { magazynSeparatora.delete(klucz) },
+  clear: () => magazynSeparatora.clear(),
+  key: (indeks: number) => [...magazynSeparatora.keys()][indeks] ?? null,
+  get length() { return magazynSeparatora.size },
+}
+for (const [separatorTytuluDnia, separator] of warianty) {
+  const wariant = normalizujProgramSzkolenia({ ...programDnia, ustawienia: { ...programDnia.ustawienia, separatorTytuluDnia } })
+  const dzien = parsujProgramZModelu(wariant).dni[0]
+  assert.equal(`${dzien.tytul}${pobierzSeparatorTytuluDnia(separatorTytuluDnia)}${dzien.tytulDnia}`, `Dzień I${separator}${tytulDnia}`)
+  assert.equal(wariant.trescProgramu, trescZrodlowa)
+  assert.deepEqual(utworzDokumentProgramuSzkolenia(wariant).struktura, blokiZrodlowe, 'zmiana stylu nie zmienia bloków treści')
+  const zapisany = zapiszProgramWRejestrze({
+    tryb: 'zapisz', tytul: 'Separator dnia', statusBiznesowy: 'robocza', daneDokumentu: wariant,
+    metadane: { organizator: 'SEMPER', liczbaDni: 1, liczbaModulow: 1, czyWynikParsowaniaZatwierdzony: false },
+  })
+  assert.equal(pobierzProgramPoId(zapisany.id)?.daneDokumentu.ustawienia.separatorTytuluDnia, separatorTytuluDnia)
+  assert.equal(pobierzProgramPoId(zapisany.id)?.daneDokumentu.trescProgramu, trescZrodlowa)
+}
+console.log('OK: separatory dnia, interpunkcja tytułu, fallback i zapis w rejestrze dokumentów')

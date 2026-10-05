@@ -5,6 +5,7 @@ import { czyPokazacElementyPomocniczeEdytora, type TrybRenderowaniaDokumentu } f
 import type { FragmentDniaProgramu, FragmentModuluProgramu, GrupaPunktowProgramu } from './paginatorProgramu'
 import { utworzModelPaginacjiProgramu } from './paginatorProgramu'
 import { pobierzGruboscTekstuPozycjiListyProgramu } from './stylPozycjiListyProgramu'
+import { pobierzSeparatorTytuluDnia, type SeparatorTytuluDniaProgramu } from './modelProgramuSzkolenia'
 
 type StylDniPodgladu = 'pasek' | 'naglowek'
 type SeparacjaModulowPodgladu = 'brak' | 'ramka' | 'linia' | 'separator-pytan'
@@ -13,6 +14,7 @@ type StylListyPodgladu = 'numeracja' | 'punktory'
 export type WlasciwosciWygladuTrescProgramu = {
   kolorAkcentu: string
   stylDni: StylDniPodgladu
+  separatorTytuluDnia?: SeparatorTytuluDniaProgramu
   separacjaModulow: SeparacjaModulowPodgladu
   stylPodpunktow: StylListyPodgladu
   stylListyGlownej: StylListyPodgladu
@@ -229,7 +231,10 @@ export function RendererFragmentuDniaProgramu({
           }}
         >
           {dzien.blok.tresc}
-          {dzien.temat?.tresc && <span className="program-kartka-a4__temat-dnia">{renderujMarkdownInline(dzien.temat.tresc)}</span>}
+          {dzien.temat?.tresc && <>
+            {wyglad.separatorTytuluDnia !== 'nowa-linia' && pobierzSeparatorTytuluDnia(wyglad.separatorTytuluDnia)}
+            <span className={`program-kartka-a4__temat-dnia${wyglad.separatorTytuluDnia === 'nowa-linia' ? ' program-kartka-a4__temat-dnia--nowa-linia' : ''}`}>{renderujMarkdownInline(dzien.temat.tresc)}</span>
+          </>}
         </h2>
       )}
       <div className="program-kartka-a4__moduly">

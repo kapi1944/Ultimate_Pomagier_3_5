@@ -70,6 +70,7 @@ import {
   type ProfilFirmyProgramu as ProfilFirmy,
   type SeparacjaModulowProgramu as SeparacjaModulow,
   type StylDniProgramu as StylDni,
+  type SeparatorTytuluDniaProgramu,
   type StylListyGlownejProgramu as StylListyGlownej,
   type StylPodpunktowProgramu as StylPodpunktow,
   type UstawieniaProgramuSzkolenia as UstawieniaProgramu,
@@ -546,10 +547,13 @@ const styleProgramuSzkolenia = `
 }
 
 .program-kartka-a4__temat-dnia {
-  display: block;
-  margin-top: 4px;
   font-size: 0.92rem;
   text-transform: none;
+}
+
+.program-kartka-a4__temat-dnia--nowa-linia {
+  display: block;
+  margin-top: 4px;
 }
 
 .program-kartka-a4__moduly {
@@ -1772,6 +1776,21 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
               </label>
 
               <label className="program-szkolen__etykieta">
+                Separator tytułu dnia
+                <select
+                  className="program-szkolen__lista"
+                  onChange={(zdarzenie) => zmienUstawienie('separatorTytuluDnia', zdarzenie.target.value as SeparatorTytuluDniaProgramu)}
+                  value={ustawienia.separatorTytuluDnia}
+                  title="Określa sposób prezentacji oznaczenia dnia i jego tytułu w pasku dnia."
+                >
+                  <option value="myslnik">Myślnik „–”</option>
+                  <option value="dwukropek">Dwukropek „:”</option>
+                  <option value="kropka">Kropka „.”</option>
+                  <option value="nowa-linia">Nowa linia</option>
+                </select>
+              </label>
+
+              <label className="program-szkolen__etykieta">
                 Separacja modułów
                 <select
                   className="program-szkolen__lista"
@@ -2005,6 +2024,7 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
             szerokoscLogotypu={ustawienia.szerokoscLogotypu}
             stopkaOrganizatora={profil.stopka}
             stylDni={ustawienia.stylDni}
+            separatorTytuluDnia={ustawienia.separatorTytuluDnia}
             stylListyGlownej={ustawienia.stylListyGlownej}
             stylPodpunktow={ustawienia.stylPodpunktow}
             stylePoziomowListy={ustawienia.stylePoziomowListy}

@@ -81,7 +81,7 @@ type OstatniElement = {
   ustawTresc: (tresc: string) => void
 }
 
-const wzorzecDnia = /^dzi(?:eń|en)\s+([0-9]+|[ivxlcdm]+)[.:)]?\s*(.*)$/i
+const wzorzecDnia = /^dzi(?:eń|en)\s+([0-9]+|[ivxlcdm]+)(?=$|\s|[.:)\-–—])\s*[.:)\-–—]?\s*(.*)$/i
 const wzorzecModulu = /^(modu(?:ł|l)|blok|rozdzia(?:ł|l))(?:\s+([0-9]+|[ivxlcdm]+))?[.:)–—-]?\s*(.*)$/i
 const wzorzecNaglowkaMarkdown = /^#{2,3}\s+(.+)$/
 const wzorzecRzymski = /^([IVXLCDM]+)[.)]\s*(.+)$/

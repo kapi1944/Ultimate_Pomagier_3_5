@@ -15,6 +15,7 @@ import {
 
 export type ProfilFirmyProgramu = 'semper' | 'iist'
 export type StylDniProgramu = 'pasek' | 'naglowek'
+export type SeparatorTytuluDniaProgramu = 'myslnik' | 'dwukropek' | 'kropka' | 'nowa-linia'
 export type SeparacjaModulowProgramu = 'brak' | 'ramka' | 'linia' | 'separator-pytan'
 export type StylPodpunktowProgramu = 'punktory' | 'numeracja'
 export type StylListyGlownejProgramu = 'numeracja' | 'punktory'
@@ -30,6 +31,7 @@ export type UstawieniaProgramuSzkolenia = {
   kolorReczny: boolean
   formatowanieSkryptowe: boolean
   stylDni: StylDniProgramu
+  separatorTytuluDnia: SeparatorTytuluDniaProgramu
   separacjaModulow: SeparacjaModulowProgramu
   stylPodpunktow: StylPodpunktowProgramu
   stylListyGlownej: StylListyGlownejProgramu
@@ -104,6 +106,7 @@ export const domyslneUstawieniaProgramu: UstawieniaProgramuSzkolenia = {
   kolorReczny: false,
   formatowanieSkryptowe: true,
   stylDni: 'pasek',
+  separatorTytuluDnia: 'myslnik',
   separacjaModulow: 'separator-pytan',
   stylPodpunktow: 'punktory',
   stylListyGlownej: 'numeracja',
@@ -138,6 +141,10 @@ function liczbaLubDomyslna(wartosc: unknown, domyslna: number) {
 
 export function czyKolorProgramuPoprawny(kolor: string) {
   return wzorzecHex.test(kolor)
+}
+
+export function pobierzSeparatorTytuluDnia(separator: SeparatorTytuluDniaProgramu = 'myslnik') {
+  return { myslnik: ' – ', dwukropek: ': ', kropka: '. ', 'nowa-linia': '\n' }[separator]
 }
 
 export function normalizujProgramSzkolenia(zapis: unknown): ModelProgramuSzkolenia {
@@ -176,6 +183,7 @@ export function normalizujProgramSzkolenia(zapis: unknown): ModelProgramuSzkolen
       kolorReczny: ustawienia.kolorReczny === true,
       formatowanieSkryptowe: typeof ustawienia.formatowanieSkryptowe === 'boolean' ? ustawienia.formatowanieSkryptowe : domyslneUstawieniaProgramu.formatowanieSkryptowe,
       stylDni: ustawienia.stylDni === 'naglowek' ? 'naglowek' : 'pasek',
+      separatorTytuluDnia: ustawienia.separatorTytuluDnia === 'dwukropek' || ustawienia.separatorTytuluDnia === 'kropka' || ustawienia.separatorTytuluDnia === 'nowa-linia' ? ustawienia.separatorTytuluDnia : 'myslnik',
       separacjaModulow: ustawienia.separacjaModulow === 'brak' || ustawienia.separacjaModulow === 'ramka' || ustawienia.separacjaModulow === 'linia' ? ustawienia.separacjaModulow : 'separator-pytan',
       stylPodpunktow: ustawienia.stylPodpunktow === 'numeracja' ? 'numeracja' : 'punktory',
       stylListyGlownej: ustawienia.stylListyGlownej === 'punktory' ? 'punktory' : 'numeracja',
