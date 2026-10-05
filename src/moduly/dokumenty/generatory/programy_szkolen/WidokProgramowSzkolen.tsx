@@ -474,7 +474,7 @@ const styleProgramuSzkolenia = `
 }
 
 .program-kartka-a4__etykieta {
-  margin-top: 30px;
+  margin-top: 12px;
   color: #111827;
   font-size: 1.08rem;
   font-weight: 700;
@@ -1547,7 +1547,7 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
           <PrzyciskPaneluGeneratora className="program-szkolen__przycisk">Ustawienia programu</PrzyciskPaneluGeneratora>
           <StatusZapisuDokumentu stan={stanZapisu} />
           <AkcjeEksportuPdf
-            silnikPdf="semantyczny"
+            silnikPdf="raster_legacy"
             className="program-szkolen__akcje-eksportu"
             classNamePrzycisku="program-szkolen__przycisk"
             czyMoznaEksportowac={czyMoznaEksportowacProgram}

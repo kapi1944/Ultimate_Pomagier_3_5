@@ -62,12 +62,12 @@ test('liczba i kolejność fizycznych stron PDF wynika z istniejącego paginator
   } finally { await odczyt.cleanup() }
 })
 
-test('Programy wybierają silnik semantyczny bez raster fallbacku; treść nie jest odczytywana z DOM', () => {
+test('Programy zachowują wygląd przez eksport rastrowy; silnik semantyczny pozostaje niezależny', () => {
   const wspolny = readFileSync('src/wspolne/dokumenty/eksportPdf.ts', 'utf8')
   const renderer = readFileSync('src/wspolne/dokumenty/rendererPdf.ts', 'utf8')
   const semantyka = readFileSync('src/wspolne/dokumenty/semantykaPdf.ts', 'utf8')
   const program = readFileSync('src/moduly/dokumenty/generatory/programy_szkolen/WidokProgramowSzkolen.tsx', 'utf8')
-  assert.match(program, /silnikPdf="semantyczny"/)
+  assert.match(program, /silnikPdf="raster_legacy"/)
   assert.ok(!/html2canvas|toDataURL|addImage/.test(wspolny))
   assert.ok(!/html2canvas/.test(renderer))
   assert.ok(!/\.(innerText|textContent|innerHTML)/.test(semantyka))
