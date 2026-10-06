@@ -1,3 +1,4 @@
+import { normalizujBlokiSwobodneDokumentu } from '../src/wspolne/dokumenty/modelSwobodnychBlokow.ts'
 import assert from 'node:assert/strict'
 import { existsSync, readFileSync } from 'node:fs'
 import { registerHooks } from 'node:module'
@@ -5,7 +6,7 @@ import { fileURLToPath } from 'node:url'
 import ts from 'typescript'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { deserializujDaneListyObecnosci, podzielListeObecnosciNaStrony, serializujDaneListyObecnosci, utworzDomyslneDaneListyObecnosci } from '../src/moduly/dokumenty/generatory/listy_obecnosci/modelListyObecnosci.ts'
+import { zmienWygladTytuluListy, deserializujDaneListyObecnosci, podzielListeObecnosciNaStrony, serializujDaneListyObecnosci, utworzDomyslneDaneListyObecnosci } from '../src/moduly/dokumenty/generatory/listy_obecnosci/modelListyObecnosci.ts'
 import { domyslnyWygladTabeliListy, minimalnaWysokoscWierszaMm, normalizujWygladTabeliListy, pobierzBladPrzepelnieniaListy, pobierzStylTabeliListy, przesunWygladTabeliListy, zmienWygladTabeliListy } from '../src/moduly/dokumenty/generatory/listy_obecnosci/wygladTabeliListy.ts'
 import { pobierzLogoOrganizatora } from '../src/wspolne/dokumenty/logoOrganizatora.ts'
 import { pobierzSzablonDokumentuPoId, zapiszKopieUkladuSwobodnychBlokow } from '../src/wspolne/dokumenty/szablonyDokumentow.ts'
@@ -106,3 +107,36 @@ assert.ok(!druk.includes('font-size') && !druk.includes('--wysokosc-wiersza'))
 assert.ok(odczytaj('../src/wspolne/dokumenty/eksportPdfLegacy.ts').includes('html2canvas(stronaDokumentu'))
 assert.equal(pobierzBladPrzepelnieniaListy(null), null)
 console.log('OK: wygląd List obecności — minimum, font, przyciski, normalizacja, zapis, szablon, paginacja, wspólny renderer i logo')
+
+const tytulZmieniony = zmienWygladTytuluListy(zmienWygladTytuluListy(dane, 'rozmiarCzcionkiPt', 12), 'marginesMm', 10)
+const blokTytulu = tytulZmieniony.blokiSwobodne.find((blok) => blok.id === 'lista-szkolenie')!
+assert.equal(blokTytulu.xMm, 10)
+assert.equal(blokTytulu.szerokoscMm, 190)
+assert.equal(210 - blokTytulu.xMm - blokTytulu.szerokoscMm, blokTytulu.xMm)
+assert.ok(blokTytulu.typ === 'tekst')
+assert.equal(blokTytulu.dane.rozmiarCzcionkiPt, 12)
+assert.deepEqual(tytulZmieniony.blokiSwobodne.filter((blok) => blok.id !== 'lista-szkolenie'), dane.blokiSwobodne.filter((blok) => blok.id !== 'lista-szkolenie'))
+assert.deepEqual(deserializujDaneListyObecnosci(serializujDaneListyObecnosci(tytulZmieniony)).blokiSwobodne, normalizujBlokiSwobodneDokumentu(tytulZmieniony.blokiSwobodne))
+assert.equal(zmienWygladTytuluListy(dane, 'marginesMm', NaN), dane)
+assert.equal(zmienWygladTytuluListy(dane, 'marginesMm', 100).blokiSwobodne.find((blok) => blok.id === 'lista-szkolenie')!.xMm, 55)
+const htmlTytulu = renderToStaticMarkup(createElement(Renderer, { dane: tytulZmieniony }))
+assert.ok(htmlTytulu.includes('font-size:2.016cqw'))
+assert.ok(htmlTytulu.includes(`width:${190 * 100 / 210}%`))
+const { default: KontrolkiTytulu } = await import('../src/moduly/dokumenty/generatory/listy_obecnosci/UstawieniaTytuluListy.tsx')
+assert.equal((renderToStaticMarkup(createElement(KontrolkiTytulu, { dane, ustawDane: () => {} })).match(/type="range"/g) ?? []).length, 2)
+const szablonTytulu = zapiszKopieUkladuSwobodnychBlokow({ nazwa: 'Test tytułu listy', typDokumentu: 'Lista obecności', organizator: 'SEMPER', autor: 'Test', bloki: tytulZmieniony.blokiSwobodne })
+assert.deepEqual(pobierzSzablonDokumentuPoId(szablonTytulu.id)?.dokumentBlokowy.blokiSwobodne, tytulZmieniony.blokiSwobodne)
+
+const widokListy = odczytaj('../src/moduly/dokumenty/generatory/listy_obecnosci/WidokListObecnosci.tsx')
+const formularzListy = widokListy.split('export function FormularzListyObecnosci')[1].split('export function UstawieniaUkladuListy')[0]
+const ustawieniaUkladu = widokListy.split('export function UstawieniaUkladuListy')[1].split('export default function')[0]
+assert.ok(formularzListy.includes('<KalendarzDatListy'))
+for (const kontrolka of ['<UstawieniaTytuluListy', '<UstawieniaTabeliListy', '<fieldset', 'Podpis trenera', 'Podpis organizatora', 'Zastosuj sugerowany wariant']) {
+  assert.ok(!formularzListy.includes(kontrolka))
+  assert.ok(ustawieniaUkladu.includes(kontrolka))
+}
+for (const widok of [widokListy, odczytaj('../src/moduly/dokumenty/generatory/listy_obecnosci/WidokListyObecnosciZDokumentu.tsx')]) {
+  const panel = widok.split('<PanelBocznyGeneratora>')[1].split('</PanelBocznyGeneratora>')[0]
+  assert.ok(panel.includes('<UstawieniaUkladuListy'))
+  assert.ok(!panel.includes('<FormularzEdycjiListy'))
+}

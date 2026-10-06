@@ -92,6 +92,16 @@ export function utworzBlokiSzablonuListyObecnosci(): BlokSwobodnyDokumentu[] {
   ]
 }
 
+export function zmienWygladTytuluListy(dane: DaneListyObecnosci, pole: 'rozmiarCzcionkiPt' | 'marginesMm', wartosc: number): DaneListyObecnosci {
+  if (!Number.isFinite(wartosc)) return dane
+  return { ...dane, blokiSwobodne: dane.blokiSwobodne.map((blok) => {
+    if (blok.id !== 'lista-szkolenie' || blok.typ !== 'tekst') return blok
+    if (pole === 'rozmiarCzcionkiPt') return { ...blok, dane: { ...blok.dane, rozmiarCzcionkiPt: Math.min(20, Math.max(8, wartosc)) } }
+    const marginesMm = Math.min(55, Math.max(5, wartosc))
+    return { ...blok, xMm: marginesMm, szerokoscMm: 210 - 2 * marginesMm }
+  }) }
+}
+
 function czyRekord(wartosc: unknown): wartosc is Record<string, unknown> {
   return Boolean(wartosc) && typeof wartosc === 'object' && !Array.isArray(wartosc)
 }

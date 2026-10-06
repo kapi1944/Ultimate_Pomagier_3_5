@@ -14,7 +14,7 @@ import UkladGeneratoraDokumentu, {
 import StatusZapisuDokumentu from '../../wspolne/StatusZapisuDokumentu'
 import { useOchronaNiezapisanegoDokumentu, useStanDokumentu } from '../../wspolne/useStanDokumentu'
 import RendererListyObecnosci from './RendererListyObecnosci'
-import WidokListObecnosci, { FormularzListyObecnosci } from './WidokListObecnosci'
+import WidokListObecnosci, { FormularzListyObecnosci, UstawieniaUkladuListy } from './WidokListObecnosci'
 import { deserializujDaneListyObecnosci, pobierzBladEksportuListy, utworzDaneListyObecnosciZIntegracji, utworzDomyslneDaneListyObecnosci, type DaneListyObecnosci } from './modelListyObecnosci'
 import {
   pobierzListeObecnosciPoId,
@@ -112,7 +112,7 @@ function EdytorListyObecnosci({ dokumentId }: { dokumentId: string }) {
 
   return <ObszarZPanelemGeneratora idPanelu="panel-edycji-listy-obecnosci" kluczPrzypiecia="ultimate-pomagier.panel-generatora.listy-obecnosci.przypiety" kluczWysuwania="ultimate-pomagier.panel-generatora.listy-obecnosci.wysuwanie" tytulPanelu="Edycja Listy obecności">
     <UkladGeneratoraDokumentu akcje={akcje} className="generator-list-obecnosci" komunikat={komunikat} opis="Dokument roboczy utworzony ze Szczegółów organizacyjnych." tytul="Lista obecności">
-      <PanelBocznyGeneratora><FormularzEdycjiListy dane={dane} prefiksId="panel-edycji-listy" tytulDokumentu={tytulDokumentu} ustawDane={ustawDane} ustawTytulDokumentu={ustawTytulDokumentu} /></PanelBocznyGeneratora>
+      <PanelBocznyGeneratora><UstawieniaUkladuListy dane={dane} ustawDane={ustawDane} /></PanelBocznyGeneratora>
       <UkladFormularzaIPodgladu>
         <PanelGeneratoraDokumentu tytul="Edycja" wariant="edycja"><FormularzEdycjiListy dane={dane} prefiksId="formularz-edycji-listy" tytulDokumentu={tytulDokumentu} ustawDane={ustawDane} ustawTytulDokumentu={ustawTytulDokumentu} /></PanelGeneratoraDokumentu>
         <PanelGeneratoraDokumentu className="generator-list-obecnosci__podglad" ref={obszarPodgladuRef} tytul="Podgląd A4" wariant="podglad"><RendererListyObecnosci dane={dane} /></PanelGeneratoraDokumentu>
