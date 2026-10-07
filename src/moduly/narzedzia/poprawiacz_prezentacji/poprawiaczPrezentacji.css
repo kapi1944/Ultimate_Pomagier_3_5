@@ -96,6 +96,18 @@
 .poprawiacz-prezentacji__podglad { min-height: 320px; }
 .poprawiacz-prezentacji__wybrany-plik { display: grid; gap: 8px; overflow-wrap: anywhere; }
 
+.poprawiacz-prezentacji__akcje { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.poprawiacz-prezentacji__wybor { display: flex; align-items: center; gap: 8px; }
+.poprawiacz-prezentacji__trafienia { margin: 8px 0; padding-left: 20px; }
+.poprawiacz-prezentacji__lista { max-height: 300px; overflow: auto; padding-left: 20px; }
+.poprawiacz-prezentacji__numery { max-height: 120px; overflow: auto; overflow-wrap: anywhere; }
+.poprawiacz-prezentacji__slajd { position: relative; width: 100%; overflow: hidden; background: #fff; color: #1f2937; border: 1px solid var(--ui-obramowanie); }
+.poprawiacz-prezentacji__obiekt { position: absolute; overflow: hidden; border: 1px solid #94a3b8; background: #e2e8f0; font-size: 11px; }
+.poprawiacz-prezentacji__obiekt--kandydat { outline: 3px solid #f97316; outline-offset: -3px; }
+.poprawiacz-prezentacji__modal { max-width: min(540px, 90vw); border: 1px solid var(--ui-obramowanie); border-radius: 8px; padding: 24px; background: var(--ui-powierzchnia); color: var(--ui-tekst); }
+.poprawiacz-prezentacji__modal p { margin: 18px 0; }
+.poprawiacz-prezentacji__modal::backdrop { background: rgb(0 0 0 / 65%); }
+
 @media (max-width: 900px) {
   .poprawiacz-prezentacji__uklad { grid-template-columns: minmax(0, 1fr); }
 }
