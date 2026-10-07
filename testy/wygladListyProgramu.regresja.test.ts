@@ -20,7 +20,19 @@ assert.equal(rozpoznajOznaczenieProgramu('2026 rok szkolenia'), null)
 assert.equal(rozpoznajOznaczenieProgramu('art. 1 ustawy'), null)
 assert.equal(rozpoznajOznaczenieProgramu('c) Trzeci podpunkt')?.oznaczenie.rodzaj, 'literowe')
 assert.equal(rozpoznajOznaczenieProgramu('d) Czwarty podpunkt')?.oznaczenie.wartosc, 4)
-assert.deepEqual(parsujProgramZModelu(normalizujProgramSzkolenia({ trescProgramu: 'I. Pierwszy\n1) Drugi\na) Trzeci' })).listaProsta.map((pozycja) => pozycja.poziom), [0, 0, 0], 'sam rodzaj oznaczenia nie zmienia poziomu listy')
+assert.deepEqual(parsujProgramZModelu(normalizujProgramSzkolenia({ trescProgramu: 'I. Pierwszy\n1) Drugi\na) Trzeci' })).listaProsta.map((pozycja) => pozycja.poziom), [0, 0, 1], 'podpunkt literowy należy do poprzedniego punktu numerowanego')
+
+const trescHierarchii = '1. Organizacja\na. Cykl\nb. Odpowiedzialność\n• Wymagania\n\t1. Zagnieżdżony\n2. Analiza\na. Rynek'
+for (const czyPogrubiac of [false, true]) {
+  const modelHierarchii = normalizujProgramSzkolenia({ trescProgramu: trescHierarchii })
+  const pozycje = parsujProgramZModelu(modelHierarchii).listaProsta
+  assert.deepEqual(pozycje.map((pozycja) => pozycja.poziom), [0, 1, 1, 1, 1, 0, 1])
+  assert.deepEqual(pozycje.map((pozycja) => pobierzGruboscTekstuPozycjiListyProgramu(pozycja.poziom, czyPogrubiac)), czyPogrubiac ? [700, 400, 400, 400, 400, 700, 400] : Array(7).fill(400))
+  modelHierarchii.ustawieniaWierszyProgramu = [{ poziom: 1 }, { poziom: 0 }]
+  const dokumentHierarchii = utworzDokumentProgramuSzkolenia(modelHierarchii)
+  const blokiHierarchii = dokumentHierarchii.struktura.filter((blok) => blok.typ === 'Punkt' || blok.typ === 'Podpunkt')
+  assert.deepEqual(blokiHierarchii.slice(0, 2).map((blok) => pobierzGruboscTekstuPozycjiListyProgramu(blok.stylLokalny.wciecie ?? 0, czyPogrubiac)), czyPogrubiac ? [400, 700] : [400, 400])
+}
 const naglowki = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII']
 const programZeZrzutu = parsujProgramZModelu(normalizujProgramSzkolenia({ trescProgramu: naglowki.map((numer) => `**${numer}. Nagłówek programu**\nPierwszy akapit\nDrugi akapit`).join('\n\n') }))
 assert.equal(programZeZrzutu.listaProsta.length, 21)

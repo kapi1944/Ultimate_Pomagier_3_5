@@ -19,14 +19,19 @@ export function normalizujWierszWejsciowy(wiersz: string): string {
 export function wyznaczPoziomyProgramu(wiersze: { tresc: string; poziom: number; jawnyPoziom?: number }[]) {
   let poziomPoprzedni = 0
   let czyNaglowek = false
+  let poziomPunktuNumerowanego: number | undefined
   return wiersze.map((wiersz) => {
     const oznaczenie = rozpoznajOznaczenieProgramu(wiersz.tresc)?.oznaczenie
     let poziom = wiersz.jawnyPoziom
     if (poziom === undefined) {
       poziom = oznaczenie ? wiersz.poziom : czyNaglowek ? poziomPoprzedni + 1 : poziomPoprzedni
       poziom = Math.max(poziom, wiersz.poziom)
+      if ((oznaczenie?.rodzaj === 'literowe' || oznaczenie?.rodzaj === 'punktor') && poziomPunktuNumerowanego !== undefined) {
+        poziom = Math.max(poziom, poziomPunktuNumerowanego + 1)
+      }
     }
     czyNaglowek = oznaczenie?.rodzaj === 'rzymskie' || oznaczenie?.rodzaj === 'arabskie'
+    if (czyNaglowek) poziomPunktuNumerowanego = poziom
     poziomPoprzedni = poziom
     return poziom
   })

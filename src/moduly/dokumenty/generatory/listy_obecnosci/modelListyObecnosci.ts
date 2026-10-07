@@ -92,13 +92,22 @@ export function utworzBlokiSzablonuListyObecnosci(): BlokSwobodnyDokumentu[] {
   ]
 }
 
-export function zmienWygladTytuluListy(dane: DaneListyObecnosci, pole: 'rozmiarCzcionkiPt' | 'marginesMm', wartosc: number): DaneListyObecnosci {
+export function zmienWygladTytuluListy(dane: DaneListyObecnosci, pole: 'rozmiarCzcionkiPt' | 'marginesMm' | 'szerokoscMm', wartosc: number): DaneListyObecnosci {
   if (!Number.isFinite(wartosc)) return dane
   return { ...dane, blokiSwobodne: dane.blokiSwobodne.map((blok) => {
     if (blok.id !== 'lista-szkolenie' || blok.typ !== 'tekst') return blok
     if (pole === 'rozmiarCzcionkiPt') return { ...blok, dane: { ...blok.dane, rozmiarCzcionkiPt: Math.min(20, Math.max(8, wartosc)) } }
-    const marginesMm = Math.min(55, Math.max(5, wartosc))
+    const marginesMm = pole === 'szerokoscMm' ? (210 - Math.min(200, Math.max(100, wartosc))) / 2 : Math.min(55, Math.max(5, wartosc))
     return { ...blok, xMm: marginesMm, szerokoscMm: 210 - 2 * marginesMm }
+  }) }
+}
+
+export function zmienOdstepyBlokuListy(dane: DaneListyObecnosci, id: string, pole: 'wysokoscMm' | 'marginesWewnetrznyMm', wartosc: number): DaneListyObecnosci {
+  if (!Number.isFinite(wartosc) || !['lista-szkolenie', 'lista-miejsce', 'lista-tytul'].includes(id)) return dane
+  return { ...dane, blokiSwobodne: dane.blokiSwobodne.map((blok) => {
+    if (blok.id !== id || blok.typ !== 'tekst') return blok
+    if (pole === 'wysokoscMm') return { ...blok, wysokoscMm: Math.min(30, Math.max(4, wartosc)) }
+    return { ...blok, dane: { ...blok.dane, marginesWewnetrznyMm: Math.min(5, Math.max(0, wartosc)) } }
   }) }
 }
 

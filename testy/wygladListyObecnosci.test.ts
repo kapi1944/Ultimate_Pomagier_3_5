@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url'
 import ts from 'typescript'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { zmienWygladTytuluListy, deserializujDaneListyObecnosci, podzielListeObecnosciNaStrony, serializujDaneListyObecnosci, utworzDomyslneDaneListyObecnosci } from '../src/moduly/dokumenty/generatory/listy_obecnosci/modelListyObecnosci.ts'
+import { zmienOdstepyBlokuListy, zmienWygladTytuluListy, deserializujDaneListyObecnosci, podzielListeObecnosciNaStrony, serializujDaneListyObecnosci, utworzDomyslneDaneListyObecnosci } from '../src/moduly/dokumenty/generatory/listy_obecnosci/modelListyObecnosci.ts'
 import { domyslnyWygladTabeliListy, minimalnaWysokoscWierszaMm, normalizujWygladTabeliListy, pobierzBladPrzepelnieniaListy, pobierzStylTabeliListy, przesunWygladTabeliListy, zmienWygladTabeliListy } from '../src/moduly/dokumenty/generatory/listy_obecnosci/wygladTabeliListy.ts'
 import { pobierzLogoOrganizatora } from '../src/wspolne/dokumenty/logoOrganizatora.ts'
 import { pobierzSzablonDokumentuPoId, zapiszKopieUkladuSwobodnychBlokow } from '../src/wspolne/dokumenty/szablonyDokumentow.ts'
@@ -123,7 +123,7 @@ const htmlTytulu = renderToStaticMarkup(createElement(Renderer, { dane: tytulZmi
 assert.ok(htmlTytulu.includes('font-size:2.016cqw'))
 assert.ok(htmlTytulu.includes(`width:${190 * 100 / 210}%`))
 const { default: KontrolkiTytulu } = await import('../src/moduly/dokumenty/generatory/listy_obecnosci/UstawieniaTytuluListy.tsx')
-assert.equal((renderToStaticMarkup(createElement(KontrolkiTytulu, { dane, ustawDane: () => {} })).match(/type="range"/g) ?? []).length, 2)
+assert.equal((renderToStaticMarkup(createElement(KontrolkiTytulu, { dane, ustawDane: () => {} })).match(/type="range"/g) ?? []).length, 8)
 const szablonTytulu = zapiszKopieUkladuSwobodnychBlokow({ nazwa: 'Test tytułu listy', typDokumentu: 'Lista obecności', organizator: 'SEMPER', autor: 'Test', bloki: tytulZmieniony.blokiSwobodne })
 assert.deepEqual(pobierzSzablonDokumentuPoId(szablonTytulu.id)?.dokumentBlokowy.blokiSwobodne, tytulZmieniony.blokiSwobodne)
 
@@ -140,3 +140,26 @@ for (const widok of [widokListy, odczytaj('../src/moduly/dokumenty/generatory/li
   assert.ok(panel.includes('<UstawieniaUkladuListy'))
   assert.ok(!panel.includes('<FormularzEdycjiListy'))
 }
+
+const szerszyTytul = zmienWygladTytuluListy(dane, 'szerokoscMm', 180).blokiSwobodne.find((blok) => blok.id === 'lista-szkolenie')!
+assert.equal(szerszyTytul.szerokoscMm, 180)
+assert.equal(szerszyTytul.xMm, 15)
+for (const id of ['lista-szkolenie', 'lista-miejsce', 'lista-tytul']) {
+  const zmiana = zmienOdstepyBlokuListy(zmienOdstepyBlokuListy(dane, id, 'wysokoscMm', 7), id, 'marginesWewnetrznyMm', 0)
+  const blok = zmiana.blokiSwobodne.find((blok) => blok.id === id)!
+  assert.equal(blok.wysokoscMm, 7)
+  assert.ok(blok.typ === 'tekst')
+  assert.equal(blok.dane.marginesWewnetrznyMm, 0)
+  assert.deepEqual(zmiana.blokiSwobodne.filter((blok) => blok.id !== id), dane.blokiSwobodne.filter((blok) => blok.id !== id))
+  assert.deepEqual(deserializujDaneListyObecnosci(serializujDaneListyObecnosci(zmiana)).blokiSwobodne, normalizujBlokiSwobodneDokumentu(zmiana.blokiSwobodne))
+}
+
+assert.equal(zmienWygladTytuluListy(dane, 'szerokoscMm', 999).blokiSwobodne.find((blok) => blok.id === 'lista-szkolenie')!.szerokoscMm, 200)
+assert.equal(zmienOdstepyBlokuListy(dane, 'lista-tytul', 'wysokoscMm', NaN), dane)
+const kontrolkiOdstepow = renderToStaticMarkup(createElement(KontrolkiTytulu, { dane, ustawDane: () => {} }))
+assert.ok(kontrolkiOdstepow.includes('Szerokość tytułu szkolenia'))
+assert.ok(!kontrolkiOdstepow.includes('Symetryczne marginesy'))
+const bezPaddingu = zmienOdstepyBlokuListy(zmienOdstepyBlokuListy(dane, 'lista-szkolenie', 'wysokoscMm', 7), 'lista-szkolenie', 'marginesWewnetrznyMm', 0)
+const htmlOdstepow = renderToStaticMarkup(createElement(Renderer, { dane: bezPaddingu }))
+assert.ok(htmlOdstepow.includes('padding:0cqw'))
+assert.ok(htmlOdstepow.includes('height:' + (7 * 100 / 297) + '%'))

@@ -129,10 +129,10 @@ export function RendererGrupyPunktowProgramu({
                   }`}
                   key={blok.id}
                   data-pomiar-bloku={atrybutyPomiaru ? blok.id : undefined}
-                  style={{ marginLeft: `${Math.min(poziom, 8) * 22}px` }}
+                  style={{ marginLeft: `${Math.min(poziom, 8) * 22}px`, fontWeight: pobierzGruboscTekstuPozycjiListyProgramu(poziom, czyPogrubiacNaglowkiListyProgramu) }}
                 >
                   <span className="program-kartka-a4__marker">{pobierzMarker(blok, liczniki, stylListy, stylePoziomowListy)}</span>
-                  <span style={{ fontWeight: pobierzGruboscTekstuPozycjiListyProgramu(poziom, czyPogrubiacNaglowkiListyProgramu) }}>
+                  <span>
                     {renderujMarkdownInline(blok.tresc ?? '')}
                   </span>
                 </div>
