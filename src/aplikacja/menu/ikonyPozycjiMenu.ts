@@ -1,6 +1,8 @@
 import type { TypIkonyMenu } from './IkonaMenu'
 
 export function pobierzTypIkonyMenu(id: string): TypIkonyMenu {
+  if (id === 'narzedzia') return 'narzedzia'
+  if (id === 'poprawiacz_prezentacji') return 'prezentacja'
   if (id.includes('kopie_robocze') || id.includes('kopie-robocze')) return 'kopie'
   if (id === 'dokumenty_kosz' || id.endsWith('_kosz')) return 'kosz'
   if (id === 'dokumenty_wszystkie' || id.endsWith('_lista') || id.endsWith('_wszystkie')) return 'wszystkie'

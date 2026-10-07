@@ -10,6 +10,9 @@ import NaglowekAplikacji from './NaglowekAplikacji'
 import { useKontekstUzytkownika } from '../logowanie/useKontekstUzytkownika'
 import type { WidokNawigacji } from '../nawigacja/typyNawigacji'
 import { pobierzSciezkeGeneratora, pobierzWidokGeneratoraZeSciezki } from '../nawigacja/konfiguracjaGeneratorow'
+import { pobierzSciezkeNarzedzia, pobierzWidokNarzedziaZeSciezki } from '../nawigacja/konfiguracjaNarzedzi'
+import WidokNarzedzi from '../../moduly/narzedzia/WidokNarzedzi'
+import WidokPoprawiaczaPrezentacji from '../../moduly/narzedzia/poprawiacz_prezentacji/WidokPoprawiaczaPrezentacji'
 import WidokKartotek, { type ZakladkaKartotek } from '../../kartoteki/WidokKartotek'
 import WidokProfiluUzytkownika from '../../kartoteki/uzytkownicy/WidokProfiluUzytkownika'
 import WidokKopiiRoboczychDokumentow from '../../moduly/dokumenty/WidokKopiiRoboczychDokumentow'
@@ -65,6 +68,8 @@ const dostepneWidoki: WidokNawigacji[] = [
   'zamkniete_szczegoly_organizacyjne_nowe',
   'szkolenia-otwarte',
   'dokumenty',
+  'narzedzia',
+  'poprawiacz_prezentacji',
   'dokumenty_wszystkie',
   'dokumenty_kopie_robocze',
   'dokumenty_kosz',
@@ -108,7 +113,7 @@ function czyWidokNawigacji(wartosc: string | null): wartosc is WidokNawigacji {
 function pobierzPoczatkowyWidok(): WidokNawigacji {
   try {
     if (/^\/profil(?:\/[^/]+)?$/.test(window.location.pathname)) return 'profil_uzytkownika'
-    const widokZeSciezki = pobierzWidokGeneratoraZeSciezki(window.location.pathname)
+    const widokZeSciezki = pobierzWidokNarzedziaZeSciezki(window.location.pathname) ?? pobierzWidokGeneratoraZeSciezki(window.location.pathname)
 
     if (widokZeSciezki) {
       return widokZeSciezki
@@ -207,6 +212,10 @@ function renderujWidok(
     case 'dokumenty':
     case 'dokumenty_wszystkie':
       return <WidokWszystkichDokumentow otworzDokument={otworzDokument} otworzNowyDokument={(typ) => otworzGeneratorZKafelka(typ, ustawAktywnyWidok)} />
+    case 'narzedzia':
+      return <WidokNarzedzi otworzPoprawiacz={() => ustawAktywnyWidok('poprawiacz_prezentacji')} />
+    case 'poprawiacz_prezentacji':
+      return <WidokPoprawiaczaPrezentacji />
     case 'dokumenty_kopie_robocze':
       return <WidokKopiiRoboczychDokumentow otworzDokument={otworzDokument} />
     case 'dokumenty_kosz':
@@ -322,7 +331,7 @@ export default function UkladAplikacji() {
       ustawWersjeFormularzaSzczegolow((obecna) => obecna + 1)
     }
 
-    const sciezka = widok === 'profil_uzytkownika' ? opcje.uzytkownikId ? `/profil/${encodeURIComponent(opcje.uzytkownikId)}` : '/profil' : pobierzSciezkeGeneratora(widok) ?? '/'
+    const sciezka = widok === 'profil_uzytkownika' ? opcje.uzytkownikId ? `/profil/${encodeURIComponent(opcje.uzytkownikId)}` : '/profil' : pobierzSciezkeNarzedzia(widok) ?? pobierzSciezkeGeneratora(widok) ?? '/'
 
     if (window.location.pathname !== sciezka) {
       window.history.pushState({ widok }, '', sciezka)
@@ -469,7 +478,7 @@ export default function UkladAplikacji() {
   useEffect(() => {
     function obsluzPowrotPrzegladarki() {
       const stanHistorii = window.history.state as { widok?: string } | null
-      const widokZeSciezki = /^\/profil(?:\/[^/]+)?$/.test(window.location.pathname) ? 'profil_uzytkownika' : pobierzWidokGeneratoraZeSciezki(window.location.pathname)
+      const widokZeSciezki = /^\/profil(?:\/[^/]+)?$/.test(window.location.pathname) ? 'profil_uzytkownika' : pobierzWidokNarzedziaZeSciezki(window.location.pathname) ?? pobierzWidokGeneratoraZeSciezki(window.location.pathname)
       const widok = widokZeSciezki ?? stanHistorii?.widok
       const poprawnyWidok = widok ?? null
 
@@ -478,7 +487,7 @@ export default function UkladAplikacji() {
       }
 
       if (poprawnyWidok !== aktywnyWidok && czyDokumentMaNiezapisaneZmiany()) {
-        const sciezkaBiezacegoWidoku = pobierzSciezkeGeneratora(aktywnyWidok) ?? '/'
+        const sciezkaBiezacegoWidoku = pobierzSciezkeNarzedzia(aktywnyWidok) ?? pobierzSciezkeGeneratora(aktywnyWidok) ?? '/'
         window.history.pushState({ widok: aktywnyWidok }, '', sciezkaBiezacegoWidoku)
         ustawWidokDoPotwierdzenia(poprawnyWidok)
         return

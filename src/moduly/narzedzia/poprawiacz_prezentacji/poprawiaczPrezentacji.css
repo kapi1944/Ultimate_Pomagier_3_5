@@ -1,0 +1,104 @@
+.narzedzia,
+.poprawiacz-prezentacji__lewy-panel {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+
+.narzedzia__naglowek {
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--ui-obramowanie);
+}
+
+.narzedzia h1,
+.narzedzia h2,
+.narzedzia p { margin: 0; }
+.narzedzia h2 { font-size: 1.05rem; }
+.narzedzia__naglowek p { margin-top: 8px; }
+.narzedzia__opis,
+.narzedzia__naglowek p { color: var(--ui-tekst-drugi); }
+
+.narzedzia__panel,
+.narzedzia__kafel {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--ui-obramowanie);
+  border-radius: 8px;
+  background: var(--ui-powierzchnia);
+}
+
+.narzedzia button {
+  padding: 10px 14px;
+  border: 1px solid var(--ui-obramowanie);
+  border-radius: 6px;
+  background: var(--ui-pole);
+  color: var(--ui-tekst);
+  font: inherit;
+  cursor: pointer;
+}
+
+.narzedzia button:hover:not(:disabled) { background: var(--ui-akcent-mocny); }
+.narzedzia button:focus-visible { outline: 2px solid var(--ui-tekst); outline-offset: 3px; }
+.narzedzia button:disabled { opacity: 0.55; cursor: not-allowed; }
+.narzedzia .narzedzia__kafel {
+  max-width: 420px;
+  padding: 24px;
+  background: var(--ui-powierzchnia);
+  text-align: left;
+}
+.narzedzia__kafel span { color: var(--ui-tekst-drugi); }
+.narzedzia .menu-boczne__ikona { width: 32px; height: 32px; }
+
+.poprawiacz-prezentacji__etapy {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.poprawiacz-prezentacji__etapy li {
+  padding: 12px;
+  border: 1px solid var(--ui-obramowanie);
+  border-radius: 6px;
+  color: var(--ui-tekst-drugi);
+  font-size: 0.85rem;
+}
+.poprawiacz-prezentacji__etapy [aria-current="step"] {
+  background: var(--ui-akcent-mocny);
+  color: var(--ui-tekst);
+  font-weight: 700;
+}
+
+.poprawiacz-prezentacji__uklad {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.poprawiacz-prezentacji__plik,
+.poprawiacz-prezentacji__podglad {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 14px;
+  padding: 28px 16px;
+  border: 1px dashed var(--ui-obramowanie);
+  border-radius: 8px;
+  background: var(--ui-pole);
+  text-align: center;
+}
+.poprawiacz-prezentacji__plik--przeciagany { background: var(--ui-akcent-mocny); }
+.poprawiacz-prezentacji__podglad { min-height: 320px; }
+.poprawiacz-prezentacji__wybrany-plik { display: grid; gap: 8px; overflow-wrap: anywhere; }
+
+@media (max-width: 900px) {
+  .poprawiacz-prezentacji__uklad { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 600px) {
+  .poprawiacz-prezentacji__etapy { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

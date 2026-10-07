@@ -204,6 +204,7 @@ export default function MenuBoczne({
             onClick={() => {
               if (czyRozwijalna) {
                 przelaczPodmenu(pozycja)
+                if (pozycja.widok === 'narzedzia') ustawAktywnyWidok(pozycja.widok)
                 return
               }
 

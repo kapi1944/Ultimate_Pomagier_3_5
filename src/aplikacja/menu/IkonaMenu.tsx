@@ -2,6 +2,8 @@ export type TypIkonyMenu =
   | 'pulpit'
   | 'szkolenia'
   | 'dokumenty'
+  | 'narzedzia'
+  | 'prezentacja'
   | 'wszystkie'
   | 'nowy'
   | 'kopie'
@@ -20,6 +22,8 @@ const sciezki: Record<TypIkonyMenu, string[]> = {
   pulpit: ['M4 4h6v6H4z', 'M14 4h6v6h-6z', 'M4 14h6v6H4z', 'M14 14h6v6h-6z'],
   szkolenia: ['M4 19.5V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v14.5', 'M4 17h16', 'M8 7h8', 'M8 11h6'],
   dokumenty: ['M6 2h8l4 4v16H6z', 'M14 2v5h5', 'M9 12h6', 'M9 16h6'],
+  narzedzia: ['M14 3a6 6 0 0 0-7 7L3 14a3 3 0 0 0 4 4l4-4a6 6 0 0 0 7-7l-4 4-3-3z'],
+  prezentacja: ['M3 3h18v13H3z', 'M12 16v5', 'M8 21h8', 'M8 9l3 3 5-5'],
   wszystkie: ['M4 4h10l3 3v13H4z', 'M8 2h10l2 2v14', 'M8 11h6', 'M8 15h6'],
   nowy: ['M6 2h8l4 4v16H6z', 'M14 2v5h5', 'M12 11v6', 'M9 14h6'],
   kopie: ['M4 5h6l2 2h8v12H4z', 'M9 12h6', 'M9 15h4', 'M17 3l1 1'],

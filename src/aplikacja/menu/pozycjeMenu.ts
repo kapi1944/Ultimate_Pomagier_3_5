@@ -62,6 +62,15 @@ export const pozycjeMenu: PozycjaMenu[] = [
     ],
   },
   {
+    id: 'narzedzia',
+    widok: 'narzedzia',
+    etykieta: 'NARZĘDZIA',
+    czyPrzelaczaPodmenu: true,
+    dzieci: [
+      { id: 'poprawiacz_prezentacji', widok: 'poprawiacz_prezentacji', etykieta: 'Poprawiacz prezentacji' },
+    ],
+  },
+  {
     id: 'kartoteki',
     widok: 'kartoteki',
     etykieta: 'KARTOTEKI',

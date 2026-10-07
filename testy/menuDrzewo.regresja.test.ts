@@ -2,7 +2,13 @@ import assert from 'node:assert/strict'
 import { pobierzIdRozwijalnychPozycji, pobierzSciezkeMenuDlaWidoku, pozycjeMenu } from '../src/aplikacja/menu/pozycjeMenu.ts'
 
 const nadrzedne = pozycjeMenu.map((pozycja) => pozycja.etykieta)
-assert.deepEqual(nadrzedne, ['PULPIT', 'SZKOLENIA ZAMKNIĘTE', 'SZKOLENIA OTWARTE', 'DOKUMENTY', 'KARTOTEKI', 'USTAWIENIA'])
+assert.deepEqual(nadrzedne, ['PULPIT', 'SZKOLENIA ZAMKNIĘTE', 'SZKOLENIA OTWARTE', 'DOKUMENTY', 'NARZĘDZIA', 'KARTOTEKI', 'USTAWIENIA'])
+
+const narzedzia = pozycjeMenu.find((pozycja) => pozycja.id === 'narzedzia')
+assert.ok(narzedzia?.czyPrzelaczaPodmenu)
+assert.ok(narzedzia?.dzieci?.some((pozycja) => pozycja.widok === 'poprawiacz_prezentacji' && pozycja.etykieta === 'Poprawiacz prezentacji'))
+assert.ok(pobierzIdRozwijalnychPozycji().includes('narzedzia'))
+assert.deepEqual(pobierzSciezkeMenuDlaWidoku('poprawiacz_prezentacji'), ['narzedzia', 'poprawiacz_prezentacji'])
 
 const dokumenty = pozycjeMenu.find((pozycja) => pozycja.id === 'dokumenty')
 assert.ok(dokumenty?.czyPrzelaczaPodmenu)

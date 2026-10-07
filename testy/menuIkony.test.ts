@@ -8,6 +8,11 @@ function pobierzWszystkiePozycje(pozycje: PozycjaMenu[]): PozycjaMenu[] {
   return pozycje.flatMap((pozycja) => [pozycja, ...(pozycja.dzieci ? pobierzWszystkiePozycje(pozycja.dzieci) : [])])
 }
 
+test('narzedzia i poprawiacz prezentacji maja dedykowane ikony', () => {
+  assert.equal(pobierzTypIkonyMenu('narzedzia'), 'narzedzia')
+  assert.equal(pobierzTypIkonyMenu('poprawiacz_prezentacji'), 'prezentacja')
+})
+
 test('kazda pozycja menu ma renderowana ikone', () => {
   const pozycje = pobierzWszystkiePozycje(pozycjeMenu)
   const kodMenu = readFileSync(new URL('../src/aplikacja/menu/MenuBoczne.tsx', import.meta.url), 'utf8')

@@ -8,6 +8,8 @@ export type WidokNawigacji =
   | 'zamkniete_szczegoly_organizacyjne_nowe'
   | 'szkolenia-otwarte'
   | 'dokumenty'
+  | 'narzedzia'
+  | 'poprawiacz_prezentacji'
   | 'dokumenty_wszystkie'
   | 'dokumenty_kopie_robocze'
   | 'dokumenty_kosz'
