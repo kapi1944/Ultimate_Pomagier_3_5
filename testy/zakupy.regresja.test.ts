@@ -13,7 +13,7 @@ test('ZAKUPY są zwijane pomiędzy narzędziami i kartotekami; siedem podsekcji 
   for (const podsekcja of podsekcjeZakupow) {
     assert.equal(pobierzSciezkeZakupow(podsekcja.widok), podsekcja.sciezka)
     assert.equal(pobierzWidokZakupowZeSciezki(podsekcja.sciezka), podsekcja.widok)
-    assert.deepEqual(pobierzSciezkeMenuDlaWidoku(podsekcja.widok), ['zakupy', podsekcja.widok])
+    assert.deepEqual(pobierzSciezkeMenuDlaWidoku(podsekcja.widok), podsekcja.widok === 'zakupy_magazyn' ? ['zakupy', 'zakupy_magazyn_grupa', 'zakupy_magazyn'] : ['zakupy', podsekcja.widok])
   }
   assert.equal(pobierzSciezkeZakupow('pulpit'), undefined)
   assert.equal(pobierzWidokZakupowZeSciezki('/zakupy/nieznane'), undefined)

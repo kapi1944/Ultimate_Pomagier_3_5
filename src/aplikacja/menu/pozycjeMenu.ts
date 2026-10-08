@@ -75,7 +75,12 @@ export const pozycjeMenu: PozycjaMenu[] = [
     id: 'zakupy',
     etykieta: 'ZAKUPY',
     czyPrzelaczaPodmenu: true,
-    dzieci: podsekcjeZakupow.map(({ widok, etykieta }) => ({ id: widok, widok, etykieta })),
+    dzieci: podsekcjeZakupow.map(({ widok, etykieta }) => widok === 'zakupy_magazyn' ? {
+      id: 'zakupy_magazyn_grupa',
+      etykieta,
+      czyPrzelaczaPodmenu: true,
+      dzieci: [{ id: widok, widok, etykieta: 'Stan magazynowy' }],
+    } : { id: widok, widok, etykieta }),
   },
   {
     id: 'kartoteki',

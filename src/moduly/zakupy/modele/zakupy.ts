@@ -7,6 +7,8 @@ export type Produkt = {
   sposobEwidencji: 'ILOSCIOWY' | 'EGZEMPLARZOWY'
   jednostkaMiary: string
   czyAktywny: boolean
+  stanMinimalny?: number
+  stanDocelowy?: number
 }
 
 export type WariantProduktu = {
@@ -16,6 +18,8 @@ export type WariantProduktu = {
   cechy: Record<string, string>
   kodProducenta?: string
   czyAktywny: boolean
+  stanMinimalny?: number
+  stanDocelowy?: number
 }
 
 // Wszystkie pozycje i stany wskazują ten sam katalog; wariant należy do produktu.

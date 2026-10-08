@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { podsekcjeZakupow, type WidokZakupow as TypWidokuZakupow } from '../../aplikacja/nawigacja/konfiguracjaZakupow'
 import { czyZapotrzebowanieZakupoweJestAktywne } from '../zamkniete/pulpit/logika/zapotrzebowaniaZakupowe'
 import { pobierzStanZakupow } from './uslugi/stanZakupow'
+import WidokStanowMagazynowych from './magazyn/WidokStanowMagazynowych'
 import './zakupy.css'
 
 export default function WidokZakupow({ widok, ustawWidok }: {
@@ -51,7 +52,7 @@ export default function WidokZakupow({ widok, ustawWidok }: {
               </ul>
             ) : <p>Nie zgłoszono jeszcze zapotrzebowań.</p>}
           </>
-        ) : (
+        ) : widok === 'zakupy_magazyn' ? <WidokStanowMagazynowych dane={stan} /> : (
           <>
             <h2>Obszar w przygotowaniu</h2>
             <p>Obsługa tego obszaru będzie dostępna w kolejnym etapie rozwoju modułu ZAKUPY.</p>

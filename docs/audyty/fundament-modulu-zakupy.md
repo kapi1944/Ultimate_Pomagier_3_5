@@ -19,3 +19,13 @@ Kwoty snapshotu są liczbami w najmniejszych jednostkach waluty; ilości są lic
 ## Granica kolejnego etapu
 
 Przed dodaniem zapisu należy wybrać docelowy magazyn domeny i przeprowadzić jawną, testowaną migrację zgłoszeń z Pulpitu, przełączając jednocześnie jego odczyt i zapis. Nie wolno rozszerzyć dwóch równoległych magazynów. Trzeba wtedy dodać normalizację i walidację referencji (w tym przynależności wariantu do produktu), ilości, kwot i reguł ewidencji, obsługę błędów zapisu, uprawnienia oraz zgodność backupu. Ten etap nie implementuje operacji zakupowych ani magazynowych.
+
+## Stan magazynowy — widok odczytu
+
+Magazyn ma podsekcję „Stan magazynowy” pod adresem `/zakupy/magazyn/stan-magazynowy`; dotychczasowy adres `/zakupy/magazyn` nadal działa. Widok korzysta z `StanZakupow`. Nie dodaje persistence, danych demonstracyjnych, edycji ilości ani niezależnego stanu całkowitego. Dopóki katalog jest pusty, pokazuje komunikat pustej tabeli.
+
+Sumy produktu obejmują wszystkie jego lokalizacje i warianty; osobne wiersze wariantów są częściami tej sumy i nie należy sumować ich ponownie z wierszem produktu. Akcja „Lokalizacje” pokazuje składniki sumy. Minimum i cel są opcjonalnymi polami produktu oraz wariantu. Próg produktu dotyczy jego sumy, a próg wariantu wyłącznie wariantu; wariant nie dziedziczy celu całego produktu. Brak pól w starszym rekordzie oznacza nieustawione progi i nie wymaga migracji.
+
+Miarka ma 10 segmentów. Dodatni zapas wypełnia `ceil(stan/cel*10)` segmentów (minimum 1, maksimum 10); zero nie wypełnia żadnego. Kolor wszystkich aktywnych segmentów zależy od ich liczby: 1–3 czerwony, 4–6 pomarańczowy, 7–10 zielony. Procent nie jest ograniczany do 100. Nieustawiony, zerowy lub nieprawidłowy cel daje neutralne „brak celu”. Tooltip zawiera stan, cel, procent i minimum; jest dostępny po najechaniu i z klawiatury, z zamknięciem przez Escape.
+
+Filtr „do zamówienia” oznacza stan zerowy lub poniżej ustawionego minimum; „niski stan” — 1–6 aktywnych segmentów; „stan prawidłowy” — 7–10. „Brak” oznacza zero. „Do przeliczenia” oznacza brak zamkniętego przeliczenia którejś kombinacji lokalizacji, wariantu i egzemplarza albo trwającą inwentaryzację z pozycją produktu. Wiersz bez stanów i bez przeliczeń też wymaga przeliczenia. Ostatnia inwentaryzacja to najnowsza data zamknięcia z wypełnioną ilością stwierdzoną; data pojedynczej lokalizacji nie oznacza kompletnego przeliczenia całego produktu.
