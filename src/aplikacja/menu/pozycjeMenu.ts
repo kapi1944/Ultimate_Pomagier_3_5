@@ -1,4 +1,4 @@
-import { podsekcjeZakupow } from '../nawigacja/konfiguracjaZakupow'
+import { podsekcjeMagazynu, podsekcjeZakupow } from '../nawigacja/konfiguracjaZakupow'
 import type { WidokNawigacji } from '../nawigacja/typyNawigacji'
 import { pobierzKonfiguracjePodmenuGeneratorow, pozycjeRejestruDokumentow } from '../nawigacja/konfiguracjaGeneratorow'
 
@@ -79,7 +79,7 @@ export const pozycjeMenu: PozycjaMenu[] = [
       id: 'zakupy_magazyn_grupa',
       etykieta,
       czyPrzelaczaPodmenu: true,
-      dzieci: [{ id: widok, widok, etykieta: 'Stan magazynowy' }],
+      dzieci: podsekcjeMagazynu.map(({ widok, etykieta }) => ({ id: widok, widok, etykieta })),
     } : { id: widok, widok, etykieta }),
   },
   {

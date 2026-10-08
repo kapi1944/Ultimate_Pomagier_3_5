@@ -1,5 +1,6 @@
 import { pobierzStanPulpitu } from '../../zamkniete/pulpit/uslugi/magazynPulpitu'
 import type { StanZakupow } from '../modele/zakupy'
+import { pobierzLokalizacjeMagazynowe } from './magazynLokalizacji'
 
 // Projekcja tylko do odczytu. Pulpit pozostaje źródłem zapotrzebowań do jawnej migracji.
 export function pobierzStanZakupow(): StanZakupow {
@@ -15,7 +16,7 @@ export function pobierzStanZakupow(): StanZakupow {
       ilosc: zapotrzebowanie.ilosc,
     })),
     listyZakupowe: [], pozycjeListZakupowych: [], zamowienia: [], pozycjeZamowien: [],
-    przesylki: [], pozycjePrzesylek: [], lokalizacjeMagazynowe: [], egzemplarzeProduktow: [],
+    przesylki: [], pozycjePrzesylek: [], lokalizacjeMagazynowe: pobierzLokalizacjeMagazynowe().lokalizacje, egzemplarzeProduktow: [],
     stanyWLokalizacjach: [], ruchyMagazynowe: [], inwentaryzacje: [], pozycjeInwentaryzacji: [],
   }
 }

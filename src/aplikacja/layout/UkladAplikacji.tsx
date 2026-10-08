@@ -1,4 +1,4 @@
-import { czyWidokZakupow, podsekcjeZakupow, pobierzSciezkeZakupow, pobierzWidokZakupowZeSciezki } from '../nawigacja/konfiguracjaZakupow'
+import { czyWidokZakupow, trasyZakupow, pobierzSciezkeZakupow, pobierzWidokZakupowZeSciezki } from '../nawigacja/konfiguracjaZakupow'
 import WidokZakupow from '../../moduly/zakupy/WidokZakupow'
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import WidokUstawien from '../ustawienia/WidokUstawien'
@@ -61,7 +61,7 @@ type OpcjeZmianyWidoku = {
 type UstawWidok = (widok: WidokNawigacji, opcje?: OpcjeZmianyWidoku) => void
 
 const dostepneWidoki: WidokNawigacji[] = [
-  ...podsekcjeZakupow.map((podsekcja) => podsekcja.widok),
+  ...trasyZakupow.map((podsekcja) => podsekcja.widok),
   'profil_uzytkownika',
   'pulpit',
   'szkolenia-zamkniete',
@@ -364,13 +364,14 @@ export default function UkladAplikacji() {
       return
     }
 
+    if (!zapiszDokumentPrzedWyjsciem()) return
+
     if (czyWylogowanieDoPotwierdzenia) {
       ustawCzyWylogowanieDoPotwierdzenia(false)
       wyloguj()
       return
     }
 
-    zapiszDokumentPrzedWyjsciem()
     const docelowyWidok = widokDoPotwierdzenia
     ustawWidokDoPotwierdzenia(null)
     if (docelowyWidok) wykonajZmianeWidoku(docelowyWidok, { pomijajOstrzezenie: true })

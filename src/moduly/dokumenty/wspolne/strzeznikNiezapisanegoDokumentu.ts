@@ -1,6 +1,6 @@
 export type ObslugaNiezapisanegoDokumentu = {
   czySaNiezapisaneZmiany: () => boolean
-  zapiszPrzedWyjsciem: () => void
+  zapiszPrzedWyjsciem: () => void | boolean
 }
 
 let aktywnaObsluga: ObslugaNiezapisanegoDokumentu | null = null
@@ -20,5 +20,5 @@ export function czyDokumentMaNiezapisaneZmiany() {
 }
 
 export function zapiszDokumentPrzedWyjsciem() {
-  aktywnaObsluga?.zapiszPrzedWyjsciem()
+  return aktywnaObsluga?.zapiszPrzedWyjsciem() !== false
 }

@@ -10,6 +10,7 @@ export function czyMozeEksportowac(uzytkownik: Uzytkownik | null | undefined) { 
 export function czyMozeWysylac(uzytkownik: Uzytkownik | null | undefined) { return czyMozeZarzadzacUzytkownikami(uzytkownik) || czyMaOdznake(uzytkownik, 'WYSYLACZ') }
 export function czyMozeRozliczac(uzytkownik: Uzytkownik | null | undefined) { return czyMozeZarzadzacUzytkownikami(uzytkownik) || czyMaOdznake(uzytkownik, 'ROZLICZAJACY') }
 export function czyMozeCzytacAudyt(uzytkownik: Uzytkownik | null | undefined) { return czyMozeZarzadzacUzytkownikami(uzytkownik) || czyMaOdznake(uzytkownik, 'AUDYTOR') }
+export function czyMozeEdytowacMapeMagazynu(uzytkownik: Uzytkownik | null | undefined) { return czyJestPracownikiemWewnetrznym(uzytkownik) }
 
 export function czyMozePrzegladacProfil(zalogowanyUzytkownik: Uzytkownik | null | undefined, przegladanyUzytkownik: Uzytkownik | null | undefined) {
   if (!zalogowanyUzytkownik || !przegladanyUzytkownik || !czyKontoJestAktywne(zalogowanyUzytkownik)) return false

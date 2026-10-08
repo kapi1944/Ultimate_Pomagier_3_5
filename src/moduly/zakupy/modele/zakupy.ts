@@ -112,11 +112,25 @@ export type PozycjaPrzesylki = {
   ilosc: number
 }
 
+export type TypLokalizacjiMagazynowej = 'OBIEKT' | 'STREFA' | 'REGAL' | 'POLKA' | 'POZYCJA'
+export type ProstokatMapy = { x: number; y: number; szerokosc: number; wysokosc: number }
+
 export type LokalizacjaMagazynowa = {
   id: string
   nazwa: string
   nadrzednaLokalizacjaId?: LokalizacjaMagazynowa['id']
   czyAktywna: boolean
+  kod?: string
+  typ?: TypLokalizacjiMagazynowej
+  opis?: string
+  zdjecie?: string
+  polozenieNaMapie?: ProstokatMapy
+}
+
+export type LokalizacjaMapy = LokalizacjaMagazynowa & {
+  kod: string
+  typ: TypLokalizacjiMagazynowej
+  polozenieNaMapie: ProstokatMapy
 }
 
 // Egzemplarz ma stabilną tożsamość przy przenoszeniu między lokalizacjami.

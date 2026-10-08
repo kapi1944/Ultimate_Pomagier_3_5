@@ -1,8 +1,10 @@
 import { useState } from 'react'
-import { podsekcjeZakupow, type WidokZakupow as TypWidokuZakupow } from '../../aplikacja/nawigacja/konfiguracjaZakupow'
+import { podsekcjeMagazynu, podsekcjeZakupow, trasyZakupow, type WidokZakupow as TypWidokuZakupow } from '../../aplikacja/nawigacja/konfiguracjaZakupow'
+import { useKontekstUzytkownika } from '../../aplikacja/logowanie/useKontekstUzytkownika'
 import { czyZapotrzebowanieZakupoweJestAktywne } from '../zamkniete/pulpit/logika/zapotrzebowaniaZakupowe'
 import { pobierzStanZakupow } from './uslugi/stanZakupow'
 import WidokStanowMagazynowych from './magazyn/WidokStanowMagazynowych'
+import WidokMapyMagazynu from './magazyn/WidokMapyMagazynu'
 import './zakupy.css'
 
 export default function WidokZakupow({ widok, ustawWidok }: {
@@ -10,7 +12,8 @@ export default function WidokZakupow({ widok, ustawWidok }: {
   ustawWidok: (widok: TypWidokuZakupow) => void
 }) {
   const [stan] = useState(pobierzStanZakupow)
-  const podsekcja = podsekcjeZakupow.find((podsekcja) => podsekcja.widok === widok)!
+  const { zalogowanyUzytkownik } = useKontekstUzytkownika()
+  const podsekcja = trasyZakupow.find((podsekcja) => podsekcja.widok === widok)!
   const aktywneZapotrzebowania = stan.zapotrzebowania.filter((zapotrzebowanie) => czyZapotrzebowanieZakupoweJestAktywne(zapotrzebowanie.status))
 
   return (
@@ -26,6 +29,9 @@ export default function WidokZakupow({ widok, ustawWidok }: {
           </button>
         ))}
       </nav>
+      {(widok === 'zakupy_magazyn' || widok === 'zakupy_mapa_magazynu') && <nav className="zakupy__nawigacja" aria-label="Widoki magazynu">
+        {podsekcjeMagazynu.map((pozycja) => <button key={pozycja.widok} type="button" aria-current={widok === pozycja.widok ? 'page' : undefined} onClick={() => ustawWidok(pozycja.widok)}>{pozycja.etykieta}</button>)}
+      </nav>}
       <div className="zakupy__panel">
         {widok === 'zakupy_pulpit' ? (
           <>
@@ -52,7 +58,7 @@ export default function WidokZakupow({ widok, ustawWidok }: {
               </ul>
             ) : <p>Nie zgłoszono jeszcze zapotrzebowań.</p>}
           </>
-        ) : widok === 'zakupy_magazyn' ? <WidokStanowMagazynowych dane={stan} /> : (
+        ) : widok === 'zakupy_magazyn' ? <WidokStanowMagazynowych dane={stan} /> : widok === 'zakupy_mapa_magazynu' ? <WidokMapyMagazynu dane={stan} uzytkownik={zalogowanyUzytkownik} /> : (
           <>
             <h2>Obszar w przygotowaniu</h2>
             <p>Obsługa tego obszaru będzie dostępna w kolejnym etapie rozwoju modułu ZAKUPY.</p>
