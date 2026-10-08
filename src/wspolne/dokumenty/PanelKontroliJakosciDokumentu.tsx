@@ -128,8 +128,8 @@ export default function PanelKontroliJakosciDokumentu({
           {!problemy.length && <p>Gotowe do eksportu PDF. DOCX użyje tej samej struktury blokowej.</p>}
 
           {pokazDiagnostykeParsera && diagnostykaParsera.length > 0 && (
-            <section>
-              <h3>Diagnostyka parsera</h3>
+            <details>
+              <summary>Diagnostyka parsera</summary>
               <ul>
                 {diagnostykaParsera.map((komunikat) => (
                   <li className="panel-jakosci-dokumentu__problem panel-jakosci-dokumentu__problem--informacja" key={komunikat}>
@@ -137,7 +137,7 @@ export default function PanelKontroliJakosciDokumentu({
                   </li>
                 ))}
               </ul>
-            </section>
+            </details>
           )}
         </div>
       )}

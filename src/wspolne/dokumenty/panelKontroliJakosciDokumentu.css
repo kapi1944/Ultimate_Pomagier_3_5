@@ -46,6 +46,17 @@
   padding-left: 18px;
 }
 
+.panel-jakosci-dokumentu summary {
+  color: var(--ui-tekst);
+  font-size: 0.9rem;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.panel-jakosci-dokumentu details[open] summary {
+  margin-bottom: 6px;
+}
+
 .panel-jakosci-dokumentu__przycisk {
   min-height: 38px;
   border: 1px solid color-mix(in srgb, var(--ui-akcent) 35%, transparent);
