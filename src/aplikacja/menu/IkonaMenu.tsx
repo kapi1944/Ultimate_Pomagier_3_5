@@ -1,4 +1,5 @@
 export type TypIkonyMenu =
+  | 'zakupy'
   | 'pulpit'
   | 'szkolenia'
   | 'dokumenty'
@@ -19,6 +20,7 @@ export type TypIkonyMenu =
   | 'ustawienia'
 
 const sciezki: Record<TypIkonyMenu, string[]> = {
+  zakupy: ['M3 3h2l3 12h10l3-9H6', 'M9 20h.01', 'M18 20h.01'],
   pulpit: ['M4 4h6v6H4z', 'M14 4h6v6h-6z', 'M4 14h6v6H4z', 'M14 14h6v6h-6z'],
   szkolenia: ['M4 19.5V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v14.5', 'M4 17h16', 'M8 7h8', 'M8 11h6'],
   dokumenty: ['M6 2h8l4 4v16H6z', 'M14 2v5h5', 'M9 12h6', 'M9 16h6'],

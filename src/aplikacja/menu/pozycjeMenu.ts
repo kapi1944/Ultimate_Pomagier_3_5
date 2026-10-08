@@ -1,3 +1,4 @@
+import { podsekcjeZakupow } from '../nawigacja/konfiguracjaZakupow'
 import type { WidokNawigacji } from '../nawigacja/typyNawigacji'
 import { pobierzKonfiguracjePodmenuGeneratorow, pozycjeRejestruDokumentow } from '../nawigacja/konfiguracjaGeneratorow'
 
@@ -69,6 +70,12 @@ export const pozycjeMenu: PozycjaMenu[] = [
     dzieci: [
       { id: 'poprawiacz_prezentacji', widok: 'poprawiacz_prezentacji', etykieta: 'Poprawiacz prezentacji' },
     ],
+  },
+  {
+    id: 'zakupy',
+    etykieta: 'ZAKUPY',
+    czyPrzelaczaPodmenu: true,
+    dzieci: podsekcjeZakupow.map(({ widok, etykieta }) => ({ id: widok, widok, etykieta })),
   },
   {
     id: 'kartoteki',

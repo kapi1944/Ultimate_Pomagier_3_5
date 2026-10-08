@@ -1,3 +1,5 @@
+import { czyWidokZakupow, podsekcjeZakupow, pobierzSciezkeZakupow, pobierzWidokZakupowZeSciezki } from '../nawigacja/konfiguracjaZakupow'
+import WidokZakupow from '../../moduly/zakupy/WidokZakupow'
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import WidokUstawien from '../ustawienia/WidokUstawien'
 import {
@@ -59,6 +61,7 @@ type OpcjeZmianyWidoku = {
 type UstawWidok = (widok: WidokNawigacji, opcje?: OpcjeZmianyWidoku) => void
 
 const dostepneWidoki: WidokNawigacji[] = [
+  ...podsekcjeZakupow.map((podsekcja) => podsekcja.widok),
   'profil_uzytkownika',
   'pulpit',
   'szkolenia-zamkniete',
@@ -113,7 +116,7 @@ function czyWidokNawigacji(wartosc: string | null): wartosc is WidokNawigacji {
 function pobierzPoczatkowyWidok(): WidokNawigacji {
   try {
     if (/^\/profil(?:\/[^/]+)?$/.test(window.location.pathname)) return 'profil_uzytkownika'
-    const widokZeSciezki = pobierzWidokNarzedziaZeSciezki(window.location.pathname) ?? pobierzWidokGeneratoraZeSciezki(window.location.pathname)
+    const widokZeSciezki = pobierzWidokZakupowZeSciezki(window.location.pathname) ?? pobierzWidokNarzedziaZeSciezki(window.location.pathname) ?? pobierzWidokGeneratoraZeSciezki(window.location.pathname)
 
     if (widokZeSciezki) {
       return widokZeSciezki
@@ -192,6 +195,7 @@ function renderujWidok(
   otworzDokumentyPulpitu: () => void,
   otworzPaczkePulpitu: () => void,
 ): ReactNode {
+  if (czyWidokZakupow(widok)) return <WidokZakupow key={widok} widok={widok} ustawWidok={ustawAktywnyWidok} />
   switch (widok) {
     case 'profil_uzytkownika':
       return <WidokProfiluUzytkownika key={uzytkownikIdProfilu ?? 'wlasny'} ustawCzyMaNiezapisaneZmiany={ustawCzyProfilMaNiezapisaneZmiany} uzytkownikId={uzytkownikIdProfilu} wybierzProfil={wybierzProfil} />
@@ -331,7 +335,7 @@ export default function UkladAplikacji() {
       ustawWersjeFormularzaSzczegolow((obecna) => obecna + 1)
     }
 
-    const sciezka = widok === 'profil_uzytkownika' ? opcje.uzytkownikId ? `/profil/${encodeURIComponent(opcje.uzytkownikId)}` : '/profil' : pobierzSciezkeNarzedzia(widok) ?? pobierzSciezkeGeneratora(widok) ?? '/'
+    const sciezka = widok === 'profil_uzytkownika' ? opcje.uzytkownikId ? `/profil/${encodeURIComponent(opcje.uzytkownikId)}` : '/profil' : pobierzSciezkeZakupow(widok) ?? pobierzSciezkeNarzedzia(widok) ?? pobierzSciezkeGeneratora(widok) ?? '/'
 
     if (window.location.pathname !== sciezka) {
       window.history.pushState({ widok }, '', sciezka)
@@ -478,7 +482,7 @@ export default function UkladAplikacji() {
   useEffect(() => {
     function obsluzPowrotPrzegladarki() {
       const stanHistorii = window.history.state as { widok?: string } | null
-      const widokZeSciezki = /^\/profil(?:\/[^/]+)?$/.test(window.location.pathname) ? 'profil_uzytkownika' : pobierzWidokNarzedziaZeSciezki(window.location.pathname) ?? pobierzWidokGeneratoraZeSciezki(window.location.pathname)
+      const widokZeSciezki = /^\/profil(?:\/[^/]+)?$/.test(window.location.pathname) ? 'profil_uzytkownika' : pobierzWidokZakupowZeSciezki(window.location.pathname) ?? pobierzWidokNarzedziaZeSciezki(window.location.pathname) ?? pobierzWidokGeneratoraZeSciezki(window.location.pathname)
       const widok = widokZeSciezki ?? stanHistorii?.widok
       const poprawnyWidok = widok ?? null
 
@@ -487,7 +491,7 @@ export default function UkladAplikacji() {
       }
 
       if (poprawnyWidok !== aktywnyWidok && czyDokumentMaNiezapisaneZmiany()) {
-        const sciezkaBiezacegoWidoku = pobierzSciezkeNarzedzia(aktywnyWidok) ?? pobierzSciezkeGeneratora(aktywnyWidok) ?? '/'
+        const sciezkaBiezacegoWidoku = pobierzSciezkeZakupow(aktywnyWidok) ?? pobierzSciezkeNarzedzia(aktywnyWidok) ?? pobierzSciezkeGeneratora(aktywnyWidok) ?? '/'
         window.history.pushState({ widok: aktywnyWidok }, '', sciezkaBiezacegoWidoku)
         ustawWidokDoPotwierdzenia(poprawnyWidok)
         return

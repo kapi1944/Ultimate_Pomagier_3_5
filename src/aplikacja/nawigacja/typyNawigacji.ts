@@ -1,4 +1,7 @@
+import type { WidokZakupow } from './konfiguracjaZakupow'
+
 export type WidokNawigacji =
+  | WidokZakupow
   | 'profil_uzytkownika'
   | 'pulpit'
   | 'szkolenia-zamkniete'
