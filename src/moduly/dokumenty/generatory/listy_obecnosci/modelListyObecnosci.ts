@@ -102,10 +102,11 @@ export function zmienWygladTytuluListy(dane: DaneListyObecnosci, pole: 'rozmiarC
   }) }
 }
 
-export function zmienOdstepyBlokuListy(dane: DaneListyObecnosci, id: string, pole: 'wysokoscMm' | 'marginesWewnetrznyMm', wartosc: number): DaneListyObecnosci {
+export function zmienOdstepyBlokuListy(dane: DaneListyObecnosci, id: string, pole: 'wysokoscMm' | 'marginesWewnetrznyMm' | 'rozmiarCzcionkiPt', wartosc: number): DaneListyObecnosci {
   if (!Number.isFinite(wartosc) || !['lista-szkolenie', 'lista-miejsce', 'lista-tytul'].includes(id)) return dane
   return { ...dane, blokiSwobodne: dane.blokiSwobodne.map((blok) => {
     if (blok.id !== id || blok.typ !== 'tekst') return blok
+    if (pole === 'rozmiarCzcionkiPt') return { ...blok, dane: { ...blok.dane, rozmiarCzcionkiPt: Math.min(20, Math.max(8, wartosc)) } }
     if (pole === 'wysokoscMm') return { ...blok, wysokoscMm: Math.min(30, Math.max(4, wartosc)) }
     return { ...blok, dane: { ...blok.dane, marginesWewnetrznyMm: Math.min(5, Math.max(0, wartosc)) } }
   }) }

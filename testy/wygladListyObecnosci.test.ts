@@ -123,7 +123,7 @@ const htmlTytulu = renderToStaticMarkup(createElement(Renderer, { dane: tytulZmi
 assert.ok(htmlTytulu.includes('font-size:2.016cqw'))
 assert.ok(htmlTytulu.includes(`width:${190 * 100 / 210}%`))
 const { default: KontrolkiTytulu } = await import('../src/moduly/dokumenty/generatory/listy_obecnosci/UstawieniaTytuluListy.tsx')
-assert.equal((renderToStaticMarkup(createElement(KontrolkiTytulu, { dane, ustawDane: () => {} })).match(/type="range"/g) ?? []).length, 8)
+assert.equal((renderToStaticMarkup(createElement(KontrolkiTytulu, { dane, ustawDane: () => {} })).match(/type="range"/g) ?? []).length, 10)
 const szablonTytulu = zapiszKopieUkladuSwobodnychBlokow({ nazwa: 'Test tytułu listy', typDokumentu: 'Lista obecności', organizator: 'SEMPER', autor: 'Test', bloki: tytulZmieniony.blokiSwobodne })
 assert.deepEqual(pobierzSzablonDokumentuPoId(szablonTytulu.id)?.dokumentBlokowy.blokiSwobodne, tytulZmieniony.blokiSwobodne)
 
@@ -157,9 +157,35 @@ for (const id of ['lista-szkolenie', 'lista-miejsce', 'lista-tytul']) {
 assert.equal(zmienWygladTytuluListy(dane, 'szerokoscMm', 999).blokiSwobodne.find((blok) => blok.id === 'lista-szkolenie')!.szerokoscMm, 200)
 assert.equal(zmienOdstepyBlokuListy(dane, 'lista-tytul', 'wysokoscMm', NaN), dane)
 const kontrolkiOdstepow = renderToStaticMarkup(createElement(KontrolkiTytulu, { dane, ustawDane: () => {} }))
-assert.ok(kontrolkiOdstepow.includes('Szerokość tytułu szkolenia'))
+assert.ok(kontrolkiOdstepow.includes('↔️ Szerokość bloku'))
 assert.ok(!kontrolkiOdstepow.includes('Symetryczne marginesy'))
 const bezPaddingu = zmienOdstepyBlokuListy(zmienOdstepyBlokuListy(dane, 'lista-szkolenie', 'wysokoscMm', 7), 'lista-szkolenie', 'marginesWewnetrznyMm', 0)
 const htmlOdstepow = renderToStaticMarkup(createElement(Renderer, { dane: bezPaddingu }))
 assert.ok(htmlOdstepow.includes('padding:0cqw'))
 assert.ok(htmlOdstepow.includes('height:' + (7 * 100 / 297) + '%'))
+
+for (const id of ['lista-tytul', 'lista-szkolenie', 'lista-miejsce']) {
+  for (const [wartosc, oczekiwana] of [[12.5, 12.5], [0, 8], [100, 20]]) {
+    const zmiana = zmienOdstepyBlokuListy(dane, id, 'rozmiarCzcionkiPt', wartosc)
+    const blok = zmiana.blokiSwobodne.find((pozycja) => pozycja.id === id)!
+    assert.ok(blok.typ === 'tekst')
+    assert.equal(blok.dane.rozmiarCzcionkiPt, oczekiwana)
+    assert.deepEqual(zmiana.blokiSwobodne.filter((pozycja) => pozycja.id !== id), dane.blokiSwobodne.filter((pozycja) => pozycja.id !== id))
+    assert.deepEqual(deserializujDaneListyObecnosci(serializujDaneListyObecnosci(zmiana)).blokiSwobodne, normalizujBlokiSwobodneDokumentu(zmiana.blokiSwobodne))
+  }
+}
+assert.equal(zmienOdstepyBlokuListy(dane, 'lista-tytul', 'rozmiarCzcionkiPt', NaN), dane)
+const grupyKontrolek = [...kontrolkiOdstepow.matchAll(/<legend>(.*?)<\/legend>(.*?)(?=<\/fieldset>)/gs)]
+assert.deepEqual(grupyKontrolek.map((grupa) => grupa[1]), ['Nagłówek:', 'Tytuł:', 'Termin i miejsce:'])
+for (const [indeks, grupa] of grupyKontrolek.entries()) {
+  assert.deepEqual([...grupa[2].matchAll(/<label[^>]*>(.*?)<\/label>/g)].map((etykieta) => etykieta[1]), [
+    '🔤 Rozmiar czcionki', '↕️ Wysokość bloku', ...(indeks === 1 ? ['↔️ Szerokość bloku'] : []), '⤵️ Padding bloku',
+  ])
+}
+const htmlKonturow = renderToStaticMarkup(createElement(Renderer, { dane, czyPokazacKontury: true }))
+assert.ok(!html.includes('data-kontur-bloku'))
+assert.equal((htmlKonturow.match(/data-kontur-bloku=/g) ?? []).length, dane.blokiSwobodne.length)
+assert.ok(htmlKonturow.includes('class="generator-list-obecnosci__kontury" data-pomin-w-eksporcie="true" aria-hidden="true"'))
+const { PanelEdycjiSwobodnychBlokow } = await import('../src/wspolne/dokumenty/EdytorSwobodnychBlokow.tsx')
+const panelEdycji = renderToStaticMarkup(createElement(PanelEdycjiSwobodnychBlokow, { bloki: dane.blokiSwobodne, blokiSzablonu: dane.blokiSwobodne, liczbaStron: 1, zaznaczonyBlokId: null, trybEdycjiSzablonu: true, onDodajObraz: async () => '', onZmienBloki: () => {}, onZmienTrybEdycjiSzablonu: () => {} }))
+assert.match(panelEdycji, /Edytuj układ szablonu<input[^>]*role="switch"[^>]*checked/)

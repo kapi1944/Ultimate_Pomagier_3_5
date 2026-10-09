@@ -14,6 +14,24 @@
 .edytor-blokow__pasek-akcji { display: flex; flex-wrap: wrap; gap: .45rem; }
 .edytor-blokow__przelacznik, .edytor-blokow__przelaczniki label { display: flex !important; align-items: center; gap: .4rem; }
 .edytor-blokow__przelacznik input, .edytor-blokow__przelaczniki input { width: auto; }
+.edytor-blokow__przelacznik { justify-content: space-between; min-height: 40px; cursor: pointer; }
+.edytor-blokow__przelacznik input[role="switch"] {
+  appearance: none;
+  flex: 0 0 42px;
+  width: 42px;
+  height: 24px;
+  margin: 0;
+  padding: 3px;
+  border: 1px solid var(--ui-tekst-drugi);
+  border-radius: 999px;
+  background: var(--ui-pole);
+  cursor: pointer;
+}
+.edytor-blokow__przelacznik input[role="switch"]::before { content: ''; display: block; width: 16px; height: 16px; border-radius: 50%; background: var(--ui-tekst-drugi); transition: transform .15s; }
+.edytor-blokow__przelacznik input[role="switch"]:checked { background: var(--ui-akcent); border-color: var(--ui-akcent); }
+.edytor-blokow__przelacznik input[role="switch"]:checked::before { transform: translateX(18px); background: var(--ui-tekst-na-akcencie); }
+.edytor-blokow__przelacznik input[role="switch"]:focus-visible { outline: 2px solid var(--ui-akcent); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { .edytor-blokow__przelacznik input[role="switch"]::before { transition: none; } }
 .edytor-blokow__wlasciwosci { display: grid; gap: .7rem; }
 .edytor-blokow__siatka-liczb { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .55rem; }
 .edytor-blokow__przelaczniki { display: flex; flex-wrap: wrap; gap: .65rem; }

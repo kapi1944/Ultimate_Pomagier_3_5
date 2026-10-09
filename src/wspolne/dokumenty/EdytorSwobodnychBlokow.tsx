@@ -168,7 +168,7 @@ export function PanelEdycjiSwobodnychBlokow({ bloki, zaznaczonyBlokId, blokiSzab
       <button type="button" onClick={() => { if (window.confirm('Przywrócić cały układ szablonu i usunąć własne bloki?')) onZmienBloki(blokiSzablonu.map((pozycja) => ({ ...pozycja }))) }}>Resetuj cały układ</button>
     </div>
     {bladObrazu && <p role="alert">{bladObrazu}</p>}
-    <label className="edytor-blokow__przelacznik"><input checked={trybEdycjiSzablonu} onChange={(zdarzenie) => onZmienTrybEdycjiSzablonu(zdarzenie.target.checked)} type="checkbox" /> Edytuj układ szablonu</label>
+    <label className="edytor-blokow__przelacznik">Edytuj układ szablonu<input checked={trybEdycjiSzablonu} onChange={(zdarzenie) => onZmienTrybEdycjiSzablonu(zdarzenie.target.checked)} type="checkbox" role="switch" /></label>
     {!blok ? <p>Kliknij blok na podglądzie, aby edytować jego właściwości.</p> : blok.pochodzenie === 'szablon' && !trybEdycjiSzablonu ? <p>To element szablonu. Włącz „Edytuj układ szablonu”, aby zmienić jego właściwości lub odblokować pozycję.</p> : <div className="edytor-blokow__wlasciwosci">
       <h3>{blok.nazwa ?? (blok.typ === 'tekst' ? 'Blok tekstowy' : 'Blok obrazu')}</h3>
       <label>Nazwa<input value={blok.nazwa ?? ''} onChange={(zdarzenie) => zmienBlok((obecny) => ({ ...obecny, nazwa: zdarzenie.target.value }))} /></label>

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { pobierzLogoOrganizatora } from '../../../../wspolne/dokumenty/logoOrganizatora'
 import { pobierzBladPrzepelnieniaListy, pobierzStylTabeliListy } from './wygladTabeliListy'
 import { EdytowalnaWarstwaSwobodnychBlokow } from '../../../../wspolne/dokumenty/EdytorSwobodnychBlokow'
+import { czyBlokWidocznyNaStronie } from '../../../../wspolne/dokumenty/modelSwobodnychBlokow'
 import RendererSwobodnychBlokow from '../../../../wspolne/dokumenty/RendererSwobodnychBlokow'
 import { etykietyKolumnListyObecnosci, podzielListeObecnosciNaStrony, type DaneListyObecnosci, type KolumnaListyObecnosci, type UczestnikListyObecnosci } from './modelListyObecnosci'
 
@@ -32,7 +33,7 @@ function PodpisyOdpowiedzialnych({ dane }: { dane: DaneListyObecnosci }) {
   return <footer className="lista-obecnosci-a4__podpisy">{dane.czyPokazacPodpisTrenera && <span>{dane.trener && <strong>{dane.trener}<br /></strong>}Podpis trenera</span>}{dane.czyPokazacPodpisOrganizatora && <span>Podpis organizatora</span>}</footer>
 }
 
-export default function RendererListyObecnosci({ dane, zasobyObrazow, zaznaczonyBlokId = null, trybEdycjiSzablonu = false, onZaznaczBlok, onZmienBlok }: { dane: DaneListyObecnosci; zasobyObrazow?: Record<string, string | undefined>; zaznaczonyBlokId?: string | null; trybEdycjiSzablonu?: boolean; onZaznaczBlok?: (id: string | null) => void; onZmienBlok?: (blok: DaneListyObecnosci['blokiSwobodne'][number]) => void }) {
+export default function RendererListyObecnosci({ dane, czyPokazacKontury = false, zasobyObrazow, zaznaczonyBlokId = null, trybEdycjiSzablonu = false, onZaznaczBlok, onZmienBlok }: { dane: DaneListyObecnosci; czyPokazacKontury?: boolean; zasobyObrazow?: Record<string, string | undefined>; zaznaczonyBlokId?: string | null; trybEdycjiSzablonu?: boolean; onZaznaczBlok?: (id: string | null) => void; onZmienBlok?: (blok: DaneListyObecnosci['blokiSwobodne'][number]) => void }) {
   const dokumentRef = useRef<HTMLDivElement>(null)
   const [bladPrzepelnienia, ustawBladPrzepelnienia] = useState<string | null>(null)
   useEffect(() => {
@@ -50,6 +51,7 @@ export default function RendererListyObecnosci({ dane, zasobyObrazow, zaznaczony
   const kontekst = { dane: { ...dane, miejsceITermin: [dane.miejsce, zakresDat].filter(Boolean).join(', ') }, zasobyObrazow: { logo_organizatora: pobierzLogoOrganizatora(dane.organizator), ...zasobyObrazow } }
   return <div className="lista-obecnosci-a4__dokument" ref={dokumentRef}>{bladPrzepelnienia && <p role="alert" data-pomin-w-eksporcie>{bladPrzepelnienia}</p>}{strony.map((strona, indeksStrony) => <section className="lista-obecnosci-a4" data-strona-dokumentu key={`${strona.dataPodpisu ?? 'wszystkie'}-${indeksStrony}`}>
     {indeksStrony === 0 && <NaglowekListy />}<RendererSwobodnychBlokow bloki={dane.blokiSwobodne} numerStrony={indeksStrony + 1} kontekst={kontekst} trybRenderowania="roboczy" />{onZaznaczBlok && onZmienBlok && <EdytowalnaWarstwaSwobodnychBlokow bloki={dane.blokiSwobodne} numerStrony={indeksStrony + 1} zaznaczonyBlokId={zaznaczonyBlokId} trybEdycjiSzablonu={trybEdycjiSzablonu} onZaznacz={onZaznaczBlok} onZmienBlok={onZmienBlok} />}
+    {czyPokazacKontury && <div className="generator-list-obecnosci__kontury" data-pomin-w-eksporcie aria-hidden="true">{dane.blokiSwobodne.filter((blok) => czyBlokWidocznyNaStronie(blok, indeksStrony + 1)).map((blok) => <div key={blok.id} data-kontur-bloku={blok.id} style={{ left: (blok.xMm * 100 / 210) + '%', top: (blok.yMm * 100 / 297) + '%', width: (blok.szerokoscMm * 100 / 210) + '%', height: (blok.wysokoscMm * 100 / 297) + '%' }} />)}</div>}
     {indeksStrony > 0 && <header className="lista-obecnosci-a4__naglowek-kontynuacji"><strong>Lista obecności — {dane.tytulSzkolenia}</strong>{strona.dataPodpisu && <span>{strona.dataPodpisu}</span>}</header>}
     <TabelaListy dane={{ ...dane, daty: strona.datyPodpisow }} dataPodpisu={strona.dataPodpisu} indeksPierwszegoWiersza={strona.indeksPierwszegoWiersza} uczestnicy={strona.uczestnicy} /><PodpisyOdpowiedzialnych dane={dane} />
   </section>)}</div>

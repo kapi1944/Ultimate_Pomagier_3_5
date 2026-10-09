@@ -28,13 +28,9 @@ import WidokChecklistPaczek from '../../moduly/dokumenty/generatory/checklisty_p
 import WidokListyObecnosciZDokumentu from '../../moduly/dokumenty/generatory/listy_obecnosci/WidokListyObecnosciZDokumentu'
 import { WidokProgramowSzkolen } from '../../moduly/dokumenty/generatory/programy_szkolen'
 import {
-  otworzKopieRoboczaProgramu,
-  pobierzKopieRoboczeProgramu,
-  usunKopieRoboczaProgramu,
   wyczyscAktywnaKopieProgramu,
   ustawAktywnaKopieProgramu,
 } from '../../moduly/dokumenty/generatory/programy_szkolen/magazynKopiiRoboczychProgramu'
-import WidokKopiiRoboczychGeneratora from '../../wspolne/dokumenty/WidokKopiiRoboczychGeneratora'
 import { czyDokumentMaNiezapisaneZmiany, zapiszDokumentPrzedWyjsciem } from '../../moduly/dokumenty/wspolne/strzeznikNiezapisanegoDokumentu'
 import WidokReplikatoraDokumentow from '../../moduly/dokumenty/replikator_dokumentow/WidokReplikatoraDokumentow'
 import WidokSzkolenOtwartych from '../../moduly/otwarte/WidokSzkolenOtwartych'
@@ -269,18 +265,7 @@ function renderujWidok(
     case 'programy_szkolen':
       return <WidokProgramowSzkolen key={`${wersjaProgramu}-${pobierzIdProgramuZeSciezki() ?? 'nowy'}`} dokumentIdZTrasy={pobierzIdProgramuZeSciezki()} />
     case 'programy_szkolen_kopie_robocze':
-      return (
-        <WidokKopiiRoboczychGeneratora
-          typGeneratora="programy_szkolen"
-          tytul="Programy szkoleń"
-          pobierzKopie={pobierzKopieRoboczeProgramu}
-          otworzKopie={(kopia) => {
-            otworzKopieRoboczaProgramu(kopia)
-            ustawAktywnyWidok('programy_szkolen', { zachowajKopieProgramu: true })
-          }}
-          usunKopie={usunKopieRoboczaProgramu}
-        />
-      )
+      return <WidokKopiiRoboczychDokumentow tytul="Kopie robocze — Programy szkoleń" opis="Robocze programy szkoleń ze wspólnego rejestru dokumentów." typyStale={['PROGRAM_SZKOLENIA']} otworzDokument={otworzDokument} />
     case 'programy_szkolen_kosz':
       return <WidokWszystkichDokumentow czyKosz opis="Usunięte programy szkoleń." otworzDokument={otworzDokument} tytul="Kosz — Programy szkoleń" typyStale={['PROGRAM_SZKOLENIA']} />
     case 'kartoteki':

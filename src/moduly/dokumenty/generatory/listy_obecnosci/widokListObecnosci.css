@@ -399,3 +399,30 @@
 .generator-list-obecnosci__regulacja { display: flex; align-items: center; gap: 8px; }
 .generator-list-obecnosci__regulacja input { flex: 1; min-width: 0; }
 .generator-list-obecnosci__regulacja output { white-space: nowrap; }
+
+.generator-list-obecnosci__regulacja button {
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--ui-akcent) 45%, transparent);
+  border-radius: 10px;
+  background: var(--ui-panel);
+  color: var(--ui-tekst);
+  font: inherit;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.generator-list-obecnosci__regulacja button:hover:not(:disabled) {
+  background: var(--ui-akcent);
+  color: var(--ui-tekst-na-akcencie);
+}
+
+.generator-list-obecnosci__regulacja button:disabled { opacity: .4; cursor: default; }
+.generator-list-obecnosci__regulacja button:focus-visible { outline: 2px solid var(--ui-akcent); outline-offset: 2px; }
+.generator-list-obecnosci__ustawienia-bloku { display: grid; gap: 12px; min-width: 0; margin: 0; padding: 12px 0; border: 0; }
+.generator-list-obecnosci__ustawienia-bloku legend { font-weight: 700; }
+.generator-list-obecnosci__kontury { position: absolute; inset: 0; z-index: 999; pointer-events: none; }
+.generator-list-obecnosci__kontury > div { position: absolute; outline: 1px dashed #2563eb; }
+@media print { .generator-list-obecnosci__kontury { display: none !important; } }

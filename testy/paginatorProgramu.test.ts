@@ -356,8 +356,10 @@ test('ochrona punktów przenosi moduł także z pierwszej strony o mniejszej poj
 })
 
 test('ustawienie ochrony punktów zachowuje zapis i zgodność starszych dokumentów', () => {
-  assert.equal(normalizujProgramSzkolenia({}).ustawienia.czyNieDzielicPunktowGlownych, false)
+  assert.equal(normalizujProgramSzkolenia({}).ustawienia.czyNieDzielicPunktowGlownych, true)
   const model = normalizujProgramSzkolenia({ ustawienia: { czyNieDzielicPunktowGlownych: true } })
   assert.equal(normalizujProgramSzkolenia(JSON.parse(JSON.stringify(model))).ustawienia.czyNieDzielicPunktowGlownych, true)
-  assert.equal(normalizujProgramSzkolenia({ ustawienia: { czyNieDzielicPunktowGlownych: 'false' } }).ustawienia.czyNieDzielicPunktowGlownych, false)
+  assert.equal(normalizujProgramSzkolenia({ ustawienia: { czyNieDzielicPunktowGlownych: 'false' } }).ustawienia.czyNieDzielicPunktowGlownych, true)
+  const wylaczonyModel = normalizujProgramSzkolenia({ ustawienia: { czyNieDzielicPunktowGlownych: false } })
+  assert.equal(normalizujProgramSzkolenia(JSON.parse(JSON.stringify(wylaczonyModel))).ustawienia.czyNieDzielicPunktowGlownych, false)
 })

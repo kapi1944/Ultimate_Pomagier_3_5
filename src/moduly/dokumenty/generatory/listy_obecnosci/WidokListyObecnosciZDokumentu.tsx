@@ -62,6 +62,7 @@ function EdytorListyObecnosci({ dokumentId }: { dokumentId: string }) {
   const [dane, ustawDane] = useState<DaneListyObecnosci>(() => dokument
     ? dokument.daneDokumentu.listaObecnosci ? deserializujDaneListyObecnosci(JSON.stringify(dokument.daneDokumentu.listaObecnosci)) : utworzDaneListyObecnosciZIntegracji(dokument.daneDokumentu.daneZrodlowe, dokument.daneDokumentu.korektyReczne)
     : { ...utworzDomyslneDaneListyObecnosci(), tytulSzkolenia: '', uczestnicy: [] })
+  const [czyPokazacKontury, ustawCzyPokazacKontury] = useState(false)
   const [komunikat, ustawKomunikat] = useState('')
   const obszarPodgladuRef = useRef<HTMLElement>(null)
   const stanFormularza = { dane, tytulDokumentu }
@@ -112,10 +113,10 @@ function EdytorListyObecnosci({ dokumentId }: { dokumentId: string }) {
 
   return <ObszarZPanelemGeneratora idPanelu="panel-edycji-listy-obecnosci" kluczPrzypiecia="ultimate-pomagier.panel-generatora.listy-obecnosci.przypiety" kluczWysuwania="ultimate-pomagier.panel-generatora.listy-obecnosci.wysuwanie" tytulPanelu="Edycja Listy obecności">
     <UkladGeneratoraDokumentu akcje={akcje} className="generator-list-obecnosci" komunikat={komunikat} opis="Dokument roboczy utworzony ze Szczegółów organizacyjnych." tytul="Lista obecności">
-      <PanelBocznyGeneratora><UstawieniaUkladuListy dane={dane} ustawDane={ustawDane} /></PanelBocznyGeneratora>
+      <PanelBocznyGeneratora><UstawieniaUkladuListy dane={dane} ustawDane={ustawDane} czyPokazacKontury={czyPokazacKontury} ustawCzyPokazacKontury={ustawCzyPokazacKontury} /></PanelBocznyGeneratora>
       <UkladFormularzaIPodgladu>
         <PanelGeneratoraDokumentu tytul="Edycja" wariant="edycja"><FormularzEdycjiListy dane={dane} prefiksId="formularz-edycji-listy" tytulDokumentu={tytulDokumentu} ustawDane={ustawDane} ustawTytulDokumentu={ustawTytulDokumentu} /></PanelGeneratoraDokumentu>
-        <PanelGeneratoraDokumentu className="generator-list-obecnosci__podglad" ref={obszarPodgladuRef} tytul="Podgląd A4" wariant="podglad"><RendererListyObecnosci dane={dane} /></PanelGeneratoraDokumentu>
+        <PanelGeneratoraDokumentu className="generator-list-obecnosci__podglad" ref={obszarPodgladuRef} tytul="Podgląd A4" wariant="podglad"><RendererListyObecnosci czyPokazacKontury={czyPokazacKontury} dane={dane} /></PanelGeneratoraDokumentu>
       </UkladFormularzaIPodgladu>
     </UkladGeneratoraDokumentu>
   </ObszarZPanelemGeneratora>

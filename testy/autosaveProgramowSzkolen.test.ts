@@ -13,7 +13,9 @@ import {
 } from '../src/moduly/dokumenty/generatory/programy_szkolen/magazynKopiiRoboczychProgramu.ts'
 import { czyDokumentMaNiezapisaneZmiany, ustawObslugeNiezapisanegoDokumentu } from '../src/moduly/dokumenty/wspolne/strzeznikNiezapisanegoDokumentu.ts'
 import { czyStanDokumentuZmieniony, utworzOdciskStanuDokumentu } from '../src/moduly/dokumenty/wspolne/useStanDokumentu.ts'
-import { repozytoriumWspolnychDokumentow } from '../src/wspolne/dokumenty/rejestrDokumentow.ts'
+import { pobierzStanRejestruDokumentow, repozytoriumWspolnychDokumentow, zapiszStanRejestruDokumentow } from '../src/wspolne/dokumenty/rejestrDokumentow.ts'
+import { filtrujDokumenty, sortujDokumenty } from '../src/wspolne/dokumenty/filtryDokumentow.ts'
+import { pobierzProgramPoId } from '../src/moduly/dokumenty/generatory/programy_szkolen/rejestrProgramowSzkolen.ts'
 
 const magazyn = new Map<string, string>()
 globalThis.localStorage = { getItem: (klucz: string) => magazyn.get(klucz) ?? null, setItem: (klucz: string, wartosc: string) => magazyn.set(klucz, wartosc), removeItem: (klucz: string) => magazyn.delete(klucz), clear: () => magazyn.clear(), key: () => null, length: 0 } as Storage
@@ -52,6 +54,37 @@ test('nowa kopia ma inne ID i pozostawia starą bez zmian', () => {
   const druga = zapiszJawnaKopieProgramu({ idAktywnejKopii: pierwsza.id, tryb: 'utworz_nowa', tytul: 'Nowa kopia', statusBiznesowy: 'robocza', daneDokumentu: dane('Nowa treść'), metadane: metadane() })
   assert.notEqual(druga.id, pierwsza.id)
   assert.equal(pobierzKopieRoboczeProgramu().find((kopia) => kopia.id === pierwsza.id)?.daneDokumentu.trescProgramu, 'Treść programu')
+})
+
+test('aktualizacja starszej kopii jest widoczna na wspólnej liście według daty modyfikacji i odczytuje zapisane dane', () => {
+  magazyn.clear()
+  const pierwsza = zapiszPierwsza()
+  const starszaData = '2026-07-22T09:15:23.000Z'
+  const druga = zapiszJawnaKopieProgramu({ tryb: 'zapisz', tytul: 'Drugi program', statusBiznesowy: 'robocza', daneDokumentu: dane(), metadane: metadane() })
+  const zapis = pobierzStanRejestruDokumentow()
+  for (const dokument of zapis.dokumenty) {
+    dokument.utworzono = starszaData
+    dokument.zmodyfikowano = starszaData
+    dokument.zaktualizowano = starszaData
+  }
+  zapiszStanRejestruDokumentow(zapis)
+
+  const aktualizacja = zapiszJawnaKopieProgramu({ idAktywnejKopii: pierwsza.id, tryb: 'aktualizuj', tytul: 'Program po korekcie', statusBiznesowy: 'zatwierdzona', daneDokumentu: dane('Dzisiejsza korekta'), metadane: metadane() })
+  const wyniki = sortujDokumenty(filtrujDokumenty(repozytoriumWspolnychDokumentow.pobierzWszystkie(), { typ: 'PROGRAM_SZKOLENIA', status: 'ROBOCZY', czyZarchiwizowany: false, czyUsunietyMiekko: false }), 'ZMODYFIKOWANO_MALEJACO')
+  assert.deepEqual(wyniki.map((dokument) => dokument.id), [pierwsza.id, druga.id])
+  assert.equal(wyniki[0].utworzono, starszaData)
+  assert.equal(wyniki[0].zmodyfikowano, aktualizacja.zmodyfikowano)
+  assert.notEqual(wyniki[0].zmodyfikowano, starszaData)
+  assert.equal(pobierzProgramPoId(wyniki[0].id)?.daneDokumentu.trescProgramu, 'Dzisiejsza korekta')
+  assert.ok(pobierzHistorieProgramu(pierwsza.id).some((wpis) => wpis.typOperacji === 'aktualizacja_kopii' && wpis.migawkaDokumentu.trescProgramu === 'Dzisiejsza korekta'))
+})
+
+test('kopie Programów używają wspólnej listy i otwierania dokumentów', () => {
+  const aplikacja = odczytajZrodlo('../src/aplikacja/layout/UkladAplikacji.tsx')
+  const widokKopii = aplikacja.split("case 'programy_szkolen_kopie_robocze':")[1].split("case 'programy_szkolen_kosz':")[0]
+  assert.match(widokKopii, /WidokKopiiRoboczychDokumentow/)
+  assert.match(widokKopii, /typyStale=\{\['PROGRAM_SZKOLENIA'\]\}/)
+  assert.match(widokKopii, /otworzDokument=\{otworzDokument\}/)
 })
 
 test('pusty stan po wyczyszczeniu pozostaje wyłącznie autosave', () => {
