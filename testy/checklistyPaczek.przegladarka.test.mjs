@@ -8,6 +8,42 @@ const wymagaj = createRequire(import.meta.url)
 const { chromium } = wymagaj(process.env.POMAGIER_PLAYWRIGHT || 'playwright')
 const adres = process.env.POMAGIER_ADRES || 'http://localhost:5173'
 
+test('checklisty: bezpośrednie wejście przy quota zachowuje formularz, shell i istniejący dokument', { timeout: 30000 }, async () => {
+  const przegladarka = await chromium.launch({ channel: 'chrome', headless: true })
+  try {
+    const kontekst = await przegladarka.newContext()
+    const strona = await kontekst.newPage()
+    const bledy = []
+    strona.on('pageerror', (blad) => bledy.push(blad.stack || blad.message))
+    await strona.goto(`${adres}/dokumenty/checklisty-paczek`)
+    await strona.getByRole('button', { name: 'Zaloguj', exact: true }).click()
+    await strona.getByLabel('Tytuł szkolenia', { exact: true }).fill('Istniejąca checklista przed quota')
+    await strona.getByRole('button', { name: 'Zapisz jako roboczą', exact: true }).click()
+    const adresIstniejacej = strona.url()
+    // Odmowa zwykłego JSON odtwarza przyczynę awarii montowania; kompresja może się zmieścić.
+    await strona.addInitScript(() => {
+      const zapisz = Storage.prototype.setItem
+      Storage.prototype.setItem = function (klucz, wartosc) {
+        if (klucz === 'ultimatePomagier.rejestrDokumentow.v1' && JSON.parse(wartosc).wersja !== 4) throw new DOMException('Test quota przy otwarciu', 'QuotaExceededError')
+        return zapisz.call(this, klucz, wartosc)
+      }
+    })
+    await strona.goto(`${adres}/dokumenty/checklisty-paczek`)
+    await strona.getByLabel('Tytuł szkolenia', { exact: true }).waitFor({ timeout: 5000 }).catch((blad) => {
+      throw new Error(`Generator nie otworzył się po quota: ${bledy.join('\n')}`, { cause: blad })
+    })
+    assert.equal(await strona.getByLabel('Tytuł szkolenia', { exact: true }).inputValue(), '')
+    assert.equal(await strona.getByRole('button', { name: 'Otwórz menu', exact: true }).isVisible(), true)
+    assert.equal(await strona.locator('#wydruk-checklisty').isVisible(), true)
+    assert.equal(await strona.evaluate(() => JSON.parse(localStorage.getItem('ultimatePomagier.rejestrDokumentow.v1')).wersja), 4)
+    await strona.reload()
+    await strona.getByLabel('Tytuł szkolenia', { exact: true }).waitFor()
+    await strona.goto(adresIstniejacej)
+    assert.equal(await strona.getByLabel('Tytuł szkolenia', { exact: true }).inputValue(), 'Istniejąca checklista przed quota')
+    assert.deepEqual(bledy, [], 'Nieoczekiwany wyjątek przy montowaniu generatora')
+  } finally { await przegladarka.close() }
+})
+
 test('checklisty: routing, formularz, zapis, stare dane, eksport i izolacja awarii', { timeout: 180000 }, async () => {
   const przegladarka = await chromium.launch({ channel: 'chrome', headless: true })
   try {
