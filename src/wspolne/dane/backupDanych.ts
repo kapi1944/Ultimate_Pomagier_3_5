@@ -5,6 +5,7 @@ import {
   type StanRejestruDokumentow,
 } from '../dokumenty/rejestrDokumentow'
 import { KLUCZ_ZASOBOW_OBRAZOW_DOKUMENTU } from '../dokumenty/zasobyObrazowDokumentu'
+import { odczytajZapisRejestru } from '../dokumenty/serializacjaRejestruDokumentow'
 
 export type KategoriaBackupu = 'DOKUMENTY' | 'SZCZEGOLY_ORGANIZACYJNE' | 'PROGRAMY' | 'PULPIT_I_ZADANIA' | 'KARTOTEKI' | 'USTAWIENIA' | 'WSZYSTKO'
 export type RodzajKopiiLokalnej = 'AUTOMATYCZNA' | 'PRZED_OPERACJA'
@@ -54,7 +55,7 @@ export function pobierzKluczeKategorii(kategoria: KategoriaBackupu): string[] {
 
 function stabilnyTekst(dane: Record<string, string>) { return Object.keys(dane).sort().map((klucz) => `${klucz.length}:${klucz}${dane[klucz].length}:${dane[klucz]}`).join('|') }
 function sumaKontrolna(dane: Record<string, string>) { let suma = 2166136261; for (const znak of stabilnyTekst(dane)) { suma ^= znak.charCodeAt(0); suma = Math.imul(suma, 16777619) } return (suma >>> 0).toString(16).padStart(8, '0') }
-function liczbaRekordow(wartosc: string) { try { const odczyt = JSON.parse(wartosc) as unknown; if (Array.isArray(odczyt)) return odczyt.length; if (odczyt && typeof odczyt === 'object' && Array.isArray((odczyt as { dokumenty?: unknown[] }).dokumenty)) return (odczyt as { dokumenty: unknown[] }).dokumenty.length; return 1 } catch { return 1 } }
+function liczbaRekordow(wartosc: string, czyRejestr = false) { try { const odczyt = czyRejestr ? odczytajZapisRejestru(wartosc) : JSON.parse(wartosc) as unknown; if (Array.isArray(odczyt)) return odczyt.length; if (odczyt && typeof odczyt === 'object' && Array.isArray((odczyt as { dokumenty?: unknown[] }).dokumenty)) return (odczyt as { dokumenty: unknown[] }).dokumenty.length; return 1 } catch { return 1 } }
 
 function czyDaneHistoriiDotyczaProgramu(dane: unknown) {
   return Boolean(dane && typeof dane === 'object' && (dane as { generatorId?: unknown }).generatorId === 'programy_szkolen')
@@ -95,7 +96,7 @@ export function utworzBackup(kategorie: KategoriaBackupu[] = ['WSZYSTKO'], czyPo
   wybrane.forEach((kategoria) => {
     const klucze = pobierzKluczeKategorii(kategoria).filter((klucz) => localStorage.getItem(klucz) !== null)
     sekcje[nazwaSekcji(kategoria)] = klucze
-    liczba[nazwaSekcji(kategoria)] = klucze.reduce((suma, klucz) => suma + liczbaRekordow(localStorage.getItem(klucz)!), 0)
+    liczba[nazwaSekcji(kategoria)] = klucze.reduce((suma, klucz) => suma + liczbaRekordow(localStorage.getItem(klucz)!, klucz === kluczRejestruDokumentow), 0)
     klucze.forEach((klucz) => { dane[klucz] = localStorage.getItem(klucz)! })
     if (!czyPelny && kategoria === 'PROGRAMY' && localStorage.getItem(kluczRejestruDokumentow) !== null) {
       const rejestrProgramow = utworzStanRejestruTylkoProgramow(pobierzStanRejestruDokumentowBezZapisu())

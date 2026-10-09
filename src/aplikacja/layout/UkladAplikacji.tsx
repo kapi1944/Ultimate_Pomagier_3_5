@@ -11,7 +11,8 @@ import MenuBoczne from '../menu/MenuBoczne'
 import NaglowekAplikacji from './NaglowekAplikacji'
 import { useKontekstUzytkownika } from '../logowanie/useKontekstUzytkownika'
 import type { WidokNawigacji } from '../nawigacja/typyNawigacji'
-import { pobierzSciezkeGeneratora, pobierzWidokGeneratoraZeSciezki } from '../nawigacja/konfiguracjaGeneratorow'
+import { konfiguracjePodmenuGeneratorow, pobierzSciezkeGeneratora, pobierzWidokGeneratoraZeSciezki } from '../nawigacja/konfiguracjaGeneratorow'
+import GranicaBleduGeneratora from '../../moduly/dokumenty/wspolne/GranicaBleduGeneratora'
 import { pobierzSciezkeNarzedzia, pobierzWidokNarzedziaZeSciezki } from '../nawigacja/konfiguracjaNarzedzi'
 import WidokNarzedzi from '../../moduly/narzedzia/WidokNarzedzi'
 import WidokPoprawiaczaPrezentacji from '../../moduly/narzedzia/poprawiacz_prezentacji/WidokPoprawiaczaPrezentacji'
@@ -492,12 +493,14 @@ export default function UkladAplikacji() {
     return () => window.removeEventListener('popstate', obsluzPowrotPrzegladarki)
   }, [aktywnyWidok])
 
+  const nazwaGeneratora = konfiguracjePodmenuGeneratorow.find((konfiguracja) => konfiguracja.pozycje[0]?.widok === aktywnyWidok)?.etykieta
+  const widok = renderujWidok(aktywnyWidok, zmienZakladkeKartotek, ustawWidok, wersjaProgramu, wersjaFormularzaSzczegolow, otworzDokument, uzytkownikIdProfilu, (uzytkownikId) => otworzProfil(uzytkownikId), ustawCzyProfilMaNiezapisaneZmiany, () => ustawWidok('zamkniete_szczegoly_organizacyjne_lista'), () => ustawWidok('dokumenty_wszystkie'), () => ustawWidok('checklisty_paczek'))
   return (
     <div className={`uklad-aplikacji${stanMenu.czyPrzypiete && stanMenu.czyOtwarte ? ' uklad-aplikacji--menu-przypiete' : ''}`}>
       <MenuBoczne aktywnyWidok={aktywnyWidok} poZmianieStanuMenu={zglosStanMenu} ustawAktywnyWidok={ustawWidok} />
       <div className="uklad-aplikacji__kolumna-glowna">
         <NaglowekAplikacji otworzProfil={() => otworzProfil()} wyloguj={obsluzWylogowanie} />
-        <main className="uklad-aplikacji__obszar-roboczy">{renderujWidok(aktywnyWidok, zmienZakladkeKartotek, ustawWidok, wersjaProgramu, wersjaFormularzaSzczegolow, otworzDokument, uzytkownikIdProfilu, (uzytkownikId) => otworzProfil(uzytkownikId), ustawCzyProfilMaNiezapisaneZmiany, () => ustawWidok('zamkniete_szczegoly_organizacyjne_lista'), () => ustawWidok('dokumenty_wszystkie'), () => ustawWidok('checklisty_paczek'))}</main>
+        <main className="uklad-aplikacji__obszar-roboczy">{nazwaGeneratora ? <GranicaBleduGeneratora key={`${aktywnyWidok}-${window.location.pathname}`} nazwaGeneratora={nazwaGeneratora} wrocDoDokumentow={() => ustawWidok('dokumenty_wszystkie')}>{widok}</GranicaBleduGeneratora> : widok}</main>
       </div>
       {(widokDoPotwierdzenia || czyWylogowanieDoPotwierdzenia) && (
         <section className="program-panel-roboczy program-szkolen__komunikat" role="dialog" aria-modal="true" aria-label="Niezapisane zmiany">

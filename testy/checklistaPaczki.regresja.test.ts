@@ -400,7 +400,7 @@ test('eksport i druk samodzielnego dokumentu nie wymagają finalizacji ani opis�
   const widok = readFileSync(new URL('../src/moduly/dokumenty/generatory/checklisty_paczek/WidokChecklistPaczek.tsx', import.meta.url), 'utf8')
   const druk = widok.slice(widok.indexOf('function Druk('), widok.indexOf('export default function'))
   assert.doesNotMatch(druk, /Brak szkolenia|Nie znaleziono szczegółów|trainingId/)
-  assert.match(widok, /czyMoznaEksportowac=\{\(\) => czyMoznaEksportowacCheckliste\(dane\)\}/)
+  assert.match(widok, /czyMoznaEksportowac=\{\(\) => !daneDoPonowienia && czyMoznaEksportowacCheckliste\(dane\)\}/)
 })
 
 

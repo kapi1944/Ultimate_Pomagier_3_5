@@ -100,7 +100,7 @@ export function useStanDokumentu<Dane>({
   }
 }
 
-export function useOchronaNiezapisanegoDokumentu(czyNiezapisaneZmiany: boolean, zapiszPrzedWyjsciem: () => void) {
+export function useOchronaNiezapisanegoDokumentu(czyNiezapisaneZmiany: boolean, zapiszPrzedWyjsciem: () => void | boolean) {
   const czyNiezapisaneZmianyRef = useRef(czyNiezapisaneZmiany)
   const zapiszPrzedWyjsciemRef = useRef(zapiszPrzedWyjsciem)
 

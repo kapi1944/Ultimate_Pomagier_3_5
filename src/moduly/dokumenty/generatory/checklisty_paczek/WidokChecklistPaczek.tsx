@@ -11,13 +11,13 @@ import { pobierzSzablonyChecklistPaczek, zapiszNowySzablonChecklisty } from './s
 import { utworzRecznaChecklistePaczki, powiazChecklisteZeSzkoleniem, odlaczChecklisteOdSzkolenia, dodajZalacznikChecklisty, otworzPonownieCheckliste, pobierzChecklistePaczki, pobierzSzczegolyDoChecklisty, ustawStatusChecklisty, zarejestrujWydrukChecklisty, zapiszChecklistePaczki, type DaneZrodlaChecklisty } from './rejestrChecklistPaczek'
 import { ObszarZPanelemGeneratora, PanelBocznyGeneratora, PanelGeneratoraDokumentu, PasekAkcjiGeneratora, PrzyciskPaneluGeneratora, UkladFormularzaIPodgladu } from '../../wspolne/UkladGeneratoraDokumentu'
 import StatusZapisuDokumentu from '../../wspolne/StatusZapisuDokumentu'
-import { useStanDokumentu } from '../../wspolne/useStanDokumentu'
+import { useOchronaNiezapisanegoDokumentu, useStanDokumentu } from '../../wspolne/useStanDokumentu'
 import { pobierzUzytkownika } from '../../../../kartoteki/uzytkownicy/magazynUzytkownikow'
 import { pobierzNazweWyswietlanaUzytkownika } from '../../../../kartoteki/uzytkownicy/typyUzytkownikow'
 import './widokChecklistPaczek.css'
 
 type Wlasciwosci = { dokumentIdZTrasy: string | null }
-type Zapis = (dane: DaneChecklistyPaczki, opis?: string) => void
+type Zapis = (dane: DaneChecklistyPaczki, opis?: string) => boolean
 export const instrukcjaStartowa = 'Przygotuj Checklistę ręcznie lub powiąż ją ze szkoleniem.'
 const dni = (dane: DaneChecklistyPaczki) => new Set(pobierzDaneSzkoleniaChecklisty(dane).terminy).size
 const otworz = (id: string) => { window.history.pushState({}, '', `/dokumenty/checklisty-paczek/${encodeURIComponent(id)}`); window.dispatchEvent(new PopStateEvent('popstate')) }
@@ -100,6 +100,7 @@ function Druk({ obszar, dane, zasoby, blokId, tryb, ustawBlok, zmienBlok }: { ob
 export default function WidokChecklistPaczek({ dokumentIdZTrasy }: Wlasciwosci) {
   const [dokumentId, ustawDokumentId] = useState(dokumentIdZTrasy)
   const [trybZrodla, ustawTrybZrodla] = useState<'reczny' | 'powiazany'>('reczny')
+  const [niezapisaneDane, ustawNiezapisaneDane] = useState<{ id: string; dane: DaneChecklistyPaczki } | null>(null)
   const tworzenieRozpoczete = useRef(false)
   useEffect(() => {
     const odczytajTrase = () => {
@@ -120,10 +121,21 @@ export default function WidokChecklistPaczek({ dokumentIdZTrasy }: Wlasciwosci) 
     return true
   }
   const zapisz: Zapis = (dane, opis) => {
-    if (!dokument) return
+    if (!dokument) return false
     stan.rozpocznijZapis()
-    potwierdzZapis(zapiszChecklistePaczki(dokument.id, dane, aktorId, opis))
+    ustawNiezapisaneDane({ id: dokument.id, dane })
+    try {
+      if (potwierdzZapis(zapiszChecklistePaczki(dokument.id, dane, aktorId, opis))) {
+        ustawNiezapisaneDane(null)
+        return true
+      }
+    } catch {
+      stan.oznaczBladZapisu()
+    }
+    return false
   }
+  const daneDoPonowienia = niezapisaneDane?.id === dokumentId ? niezapisaneDane.dane : null
+  useOchronaNiezapisanegoDokumentu(Boolean(daneDoPonowienia), () => daneDoPonowienia ? zapisz(daneDoPonowienia) : true)
   const oznaczJakoZapisany = stan.oznaczJakoZapisany
   useEffect(() => {
     const otwarta = dokumentId ? pobierzChecklistePaczki(dokumentId) : null
@@ -138,8 +150,8 @@ export default function WidokChecklistPaczek({ dokumentIdZTrasy }: Wlasciwosci) 
     otworz(nowa.id)
   }, [dokumentId, aktorId])
   if (!dokument) return <section className="widok checklista-paczki"><h1>Nowa checklista paczki</h1><p>{dokumentId ? 'Nie znaleziono checklisty.' : 'Otwieranie formularza…'}</p></section>
-  const dane = dokument.daneDokumentu; const daneSzkolenia = pobierzDaneSzkoleniaChecklisty(dane); const zablokowana = dane.statusChecklisty === 'ZARCHIWIZOWANA'; const finalizacja = czyMoznaFinalizowacCheckliste(dane); const nazwa = { typDokumentu: 'CHECKLISTA_PACZKI' as const, terminy: daneSzkolenia.terminy, klient: dane.klient, tytulSzkolenia: daneSzkolenia.tytulSzkolenia, organizator: daneSzkolenia.organizator, miejsce: daneSzkolenia.miejsce, grupa: daneSzkolenia.nazwaGrupy, dataUtworzenia: dokument.utworzono, wersja: dokument.wersja }
-  return <ObszarZPanelemGeneratora idPanelu="panel-ukladu-checklisty" kluczPrzypiecia="ultimate-pomagier.panel-generatora.checklisty-paczek.przypiety" kluczWysuwania="ultimate-pomagier.panel-generatora.checklisty-paczek.wysuwanie" tytulPanelu="Edytuj układ"><section className="widok checklista-paczki"><header><h1>Checklista paczek</h1><p>Status: {dane.statusChecklisty}</p><PasekAkcjiGeneratora><PrzyciskPaneluGeneratora>Edytuj układ</PrzyciskPaneluGeneratora><StatusZapisuDokumentu stan={stan.stanZapisu} /><AkcjeEksportuPdf obszarDokumentu={podglad} czyMoznaEksportowac={() => czyMoznaEksportowacCheckliste(dane)} daneNazwyEksportu={nazwa} nazwaPliku={zbudujNazweEksportowanegoDokumentu(nazwa)} przygotujEksport={() => { const wynik = zarejestrujWydrukChecklisty(dokument.id, aktorId); if (!wynik) throw new Error('Nie udało się zapisać wydruku.'); stan.oznaczJakoZapisany(wynik.daneDokumentu); odswiez() }} /></PasekAkcjiGeneratora></header>{dane.czyDaneZrodloweNowsze && <p role="alert">Dane źródłowe zmieniły się po ostatnim wydruku.</p>}<UkladFormularzaIPodgladu><PanelGeneratoraDokumentu wariant="edycja"><section className="checklista-paczki__karta"><h2>Dane Checklisty</h2>
+  const dane = daneDoPonowienia ?? dokument.daneDokumentu; const daneSzkolenia = pobierzDaneSzkoleniaChecklisty(dane); const zablokowana = dane.statusChecklisty === 'ZARCHIWIZOWANA'; const finalizacja = czyMoznaFinalizowacCheckliste(dane); const nazwa = { typDokumentu: 'CHECKLISTA_PACZKI' as const, terminy: daneSzkolenia.terminy, klient: dane.klient, tytulSzkolenia: daneSzkolenia.tytulSzkolenia, organizator: daneSzkolenia.organizator, miejsce: daneSzkolenia.miejsce, grupa: daneSzkolenia.nazwaGrupy, dataUtworzenia: dokument.utworzono, wersja: dokument.wersja }
+  return <ObszarZPanelemGeneratora idPanelu="panel-ukladu-checklisty" kluczPrzypiecia="ultimate-pomagier.panel-generatora.checklisty-paczek.przypiety" kluczWysuwania="ultimate-pomagier.panel-generatora.checklisty-paczek.wysuwanie" tytulPanelu="Edytuj układ"><section className="widok checklista-paczki"><header><h1>Checklista paczek</h1><p>Status: {dane.statusChecklisty}</p><PasekAkcjiGeneratora><PrzyciskPaneluGeneratora>Edytuj układ</PrzyciskPaneluGeneratora><StatusZapisuDokumentu stan={stan.stanZapisu} /><AkcjeEksportuPdf pobierzBladEksportu={() => 'Najpierw ponów zapis zmian checklisty.'} obszarDokumentu={podglad} czyMoznaEksportowac={() => !daneDoPonowienia && czyMoznaEksportowacCheckliste(dane)} daneNazwyEksportu={nazwa} nazwaPliku={zbudujNazweEksportowanegoDokumentu(nazwa)} przygotujEksport={() => { const wynik = zarejestrujWydrukChecklisty(dokument.id, aktorId); if (!wynik) throw new Error('Nie udało się zapisać wydruku.'); stan.oznaczJakoZapisany(wynik.daneDokumentu); odswiez() }} /></PasekAkcjiGeneratora></header>{daneDoPonowienia && <div role="alert"><p>Nie udało się zapisać zmian. Wpisane dane pozostają w formularzu. Magazyn przeglądarki może być pełny lub niedostępny. Przed zamknięciem widoku ponów zapis.</p><button type="button" onClick={() => zapisz(daneDoPonowienia)}>Ponów zapis</button></div>}{dane.czyDaneZrodloweNowsze && <p role="alert">Dane źródłowe zmieniły się po ostatnim wydruku.</p>}<UkladFormularzaIPodgladu><PanelGeneratoraDokumentu wariant="edycja"><section className="checklista-paczki__karta"><h2>Dane Checklisty</h2>
 <label>Źródło danych<select disabled={zablokowana} value={dane.szczegolyOrganizacyjneId ? 'powiazany' : trybZrodla} onChange={(e) => { if (e.target.value === 'reczny' && dane.szczegolyOrganizacyjneId) { potwierdzZapis(odlaczChecklisteOdSzkolenia(dokument.id, aktorId)) } ustawTrybZrodla(e.target.value === 'powiazany' ? 'powiazany' : 'reczny') }}><option value="reczny">Uzupełnij ręcznie</option><option value="powiazany">Wybierz istniejące szkolenie</option></select></label>
 {(trybZrodla === 'powiazany' || dane.szczegolyOrganizacyjneId) && <><p>Powiązane szkolenie: {dane.migawkaZrodla?.tytulSzkolenia || '—'}</p><label>Szkolenie / Szczegóły organizacyjne<select disabled={zablokowana} value={szczegolyId} onChange={(e) => { ustawSzczegoly(e.target.value); ustawGrupe('') }}><option value="">Wybierz szkolenie</option>{szczegoly.map((x) => <option key={x.id} value={x.id}>{x.nazwa}</option>)}</select></label><label>Grupa szkoleniowa<select disabled={zablokowana || !wybrane} value={grupaId} onChange={(e) => ustawGrupe(e.target.value)}><option value="">Wybierz grupę</option>{wybrane?.grupy.map((x) => <option key={x.id} value={x.id}>{x.nazwa}</option>)}</select></label><p>Powiązanie uzupełnia puste pola. Wpisane dane i pozycje pozostają zachowane.</p><button disabled={zablokowana || !wybrane || !grupaId} type="button" onClick={() => { if (wybrane) potwierdzZapis(powiazChecklisteZeSzkoleniem(dokument.id, zbudujKontekstZeSzczegolow(wybrane.zrodloKontekstu), grupaId, pobierzDaneZrodlowe(wybrane), aktorId)) }}>Powiąż ze szkoleniem</button></>}
 {dane.szczegolyOrganizacyjneId && <button disabled={zablokowana} type="button" onClick={() => { if (potwierdzZapis(odlaczChecklisteOdSzkolenia(dokument.id, aktorId))) ustawTrybZrodla('reczny') }}>Odłącz od szkolenia</button>}

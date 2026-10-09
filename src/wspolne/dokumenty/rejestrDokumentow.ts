@@ -1,4 +1,5 @@
 import { czyDokumentMaNowszeDaneZrodlowe, statusyDokumentow, typyDokumentow, utworzNowyDokument, walidujDokument, type Dokument } from './modelDokumentu'
+import { czyBrakMiejscaWMagazynie, odczytajZapisRejestru, skompresujRejestr } from './serializacjaRejestruDokumentow'
 
 export const kluczRejestruDokumentow = 'ultimatePomagier.rejestrDokumentow.v1'
 export const kluczKopiiBezpieczenstwaRejestruDokumentow = 'ultimatePomagier.rejestrDokumentow.kopia-bezpieczenstwa'
@@ -94,12 +95,24 @@ function przeksztalcDoV3(odczyt: Record<string, unknown>): StanRejestruDokumento
   return stan
 }
 
-function zapiszStan(stan: StanRejestruDokumentow) { walidujStan(stan); localStorage.setItem(kluczRejestruDokumentow, JSON.stringify(stan)) }
+function zapiszStan(stan: StanRejestruDokumentow) {
+  walidujStan(stan)
+  const zapis = JSON.stringify(stan)
+  try {
+    localStorage.setItem(kluczRejestruDokumentow, zapis)
+  } catch (blad) {
+    if (!czyBrakMiejscaWMagazynie(blad)) throw blad
+    const skompresowany = skompresujRejestr(zapis)
+    if (skompresowany.length >= zapis.length) throw blad
+    // Nie usuwamy starego zapisu: setItem jest atomowe również przy braku miejsca.
+    localStorage.setItem(kluczRejestruDokumentow, skompresowany)
+  }
+}
 export function pobierzStanRejestruDokumentowBezZapisu(): StanRejestruDokumentow {
   const zapis = localStorage.getItem(kluczRejestruDokumentow)
   if (zapis === null) return pustyStan()
   let odczyt: unknown
-  try { odczyt = JSON.parse(zapis) as unknown } catch { throw new Error('Rejestr dokumentów zawiera uszkodzony JSON.') }
+  try { odczyt = odczytajZapisRejestru(zapis) } catch { throw new Error('Rejestr dokumentów zawiera uszkodzony JSON lub skompresowany zapis.') }
   if (!czyObiekt(odczyt)) throw new Error('Rejestr dokumentów ma nieobsługiwany schemat.')
   const wersja = typeof odczyt.wersja === 'number' ? odczyt.wersja : 0
   if (wersja > wersjaRejestruDokumentow) throw new Error('Rejestr dokumentów ma nowszą, nieobsługiwaną wersję.')
@@ -109,7 +122,7 @@ export function pobierzStanRejestruDokumentow(): StanRejestruDokumentow {
   const zapis = localStorage.getItem(kluczRejestruDokumentow)
   const stan = pobierzStanRejestruDokumentowBezZapisu()
   if (zapis === null) return stan
-  const odczyt = JSON.parse(zapis) as Record<string, unknown>
+  const odczyt = odczytajZapisRejestru(zapis) as Record<string, unknown>
   const wersja = typeof odczyt.wersja === 'number' ? odczyt.wersja : 0
   if (wersja < wersjaRejestruDokumentow) { localStorage.setItem(kluczKopiiBezpieczenstwaRejestruDokumentow, zapis); zapiszStan(stan) }
   return stan
