@@ -17,6 +17,7 @@ export type UczestnikListyObecnosci = {
 export type DaneListyObecnosci = {
   wersjaSchematu: 2
   wygladTabeli: WygladTabeliListy
+  odstepPodTerminemMm?: number
   szczegolyId?: string
   grupaId?: string
   trener?: string
@@ -237,6 +238,8 @@ export function deserializujDaneListyObecnosci(tekst: string | null): DaneListyO
     return {
       wersjaSchematu: 2,
       wygladTabeli: normalizujWygladTabeliListy(dane.wygladTabeli),
+      ...(typeof dane.odstepPodTerminemMm === 'number' && Number.isFinite(dane.odstepPodTerminemMm)
+        ? { odstepPodTerminemMm: Math.min(30, Math.max(0, dane.odstepPodTerminemMm)) } : {}),
       szczegolyId: pobierzTekst(dane, 'szczegolyId'),
       grupaId: pobierzTekst(dane, 'grupaId'),
       trener: pobierzTekst(dane, 'trener'),
@@ -274,7 +277,7 @@ export function pobierzLiczbeWierszyNaStronieListyObecnosci(dane: DaneListyObecn
   const dotychczasowyLimit = dane.czyPokazacPodpisTrenera || dane.czyPokazacPodpisOrganizatora ? 24 : 28
   const wyglad = normalizujWygladTabeliListy(dane.wygladTabeli)
   const rezerwaNaglowkaMm = Math.max(0, wyglad.rozmiarNaglowkowPt - domyslnyWygladTabeliListy.rozmiarNaglowkowPt) * 25.4 / 72 * 1.15 * 2
-  return Math.max(1, Math.floor((dotychczasowyLimit * domyslnyWygladTabeliListy.wysokoscWierszaMm - rezerwaNaglowkaMm) / wyglad.wysokoscWierszaMm + 1e-9))
+  return Math.max(1, Math.floor((dotychczasowyLimit * domyslnyWygladTabeliListy.wysokoscWierszaMm - rezerwaNaglowkaMm - Math.max(0, pobierzWysokoscNaglowkaListy(dane) - 60.8)) / wyglad.wysokoscWierszaMm + 1e-9))
 }
 
 export function pobierzWierszeListyObecnosci(dane: DaneListyObecnosci): UczestnikListyObecnosci[] {
@@ -336,4 +339,19 @@ export function pobierzBladEksportuListy(dane: DaneListyObecnosci): string | nul
   if (!dane.uczestnicy.length) return 'Dodaj uczestników albo wybierz tryb „Pusta lista do ręcznego wypełnienia”.'
   if (dane.uczestnicy.some((uczestnik) => !uczestnik.imieINazwisko.trim())) return 'Uzupełnij imiona i nazwiska uczestników.'
   return null
+}
+
+export function pobierzOdstepPodTerminemListy(dane: DaneListyObecnosci): number {
+  if (typeof dane.odstepPodTerminemMm === 'number' && Number.isFinite(dane.odstepPodTerminemMm)) return Math.min(30, Math.max(0, dane.odstepPodTerminemMm))
+  const blok = dane.blokiSwobodne.find((pozycja) => pozycja.id === 'lista-miejsce')
+  return Math.max(0, 70.8 - (blok ? blok.yMm + blok.wysokoscMm : 64))
+}
+
+export function pobierzWysokoscNaglowkaListy(dane: DaneListyObecnosci): number {
+  // Starsze dokumenty zachowują dotychczasową pozycję tabeli do pierwszej regulacji odstępu.
+  if (dane.odstepPodTerminemMm === undefined) return 60.8
+  const dolNaglowka = Math.max(10, ...dane.blokiSwobodne
+    .filter((blok) => blok.widoczny && ['lista-logo', 'lista-tytul', 'lista-szkolenie', 'lista-miejsce'].includes(blok.id))
+    .map((blok) => blok.yMm + blok.wysokoscMm))
+  return Math.max(0, dolNaglowka - 10 + pobierzOdstepPodTerminemListy(dane))
 }

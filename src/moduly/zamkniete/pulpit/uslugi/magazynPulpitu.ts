@@ -1,3 +1,7 @@
+import { czyJestPracownikiemWewnetrznym } from '../../../../kartoteki/uzytkownicy/typyUzytkownikow'
+import { normalizujDodatkiZakupu, walidujNoweZapotrzebowanieZakupowe, czyPoprawnyLinkProduktu } from '../logika/zapotrzebowaniaZakupowe'
+import { czyJestZamawiaczem } from '../../../../kartoteki/uzytkownicy/uprawnienia'
+import type { Uzytkownik } from '../../../../kartoteki/uzytkownicy/typyUzytkownikow'
 import type { RolaUzytkownika } from '../../../../kartoteki/uzytkownicy/typyUzytkownikow'
 import type { JednostkaPrzypomnienia, MiniaturaZadaniaPulpitu, PrzypomnienieZadania, StanPulpitu, StatusZapotrzebowaniaZakupowego, ZadaniePulpitu, ZapotrzebowanieZakupowe } from '../modele/pulpit'
 import { normalizujKadrMiniatury } from '../logika/miniaturyZadan'
@@ -137,7 +141,7 @@ export function normalizujZapotrzebowanieZakupowe(wartosc: unknown): Zapotrzebow
   const utworzonePrzezId = tekst(dane.utworzonePrzezId)
   const utworzonoAt = tekst(dane.utworzonoAt)
   if (!id || !nazwa || !Number.isFinite(ilosc) || ilosc <= 0 || !status || !utworzonePrzezId || !utworzonoAt) return null
-  return { id, nazwa, ilosc, status, uwagi: tekst(dane.uwagi) || undefined, utworzonePrzezId, utworzonoAt }
+  return { id, nazwa, ilosc, status, ...normalizujDodatkiZakupu(dane), uwagi: tekst(dane.uwagi) || undefined, utworzonePrzezId, utworzonoAt }
 }
 export function pobierzStanPulpitu(): StanPulpitu {
   try {
@@ -245,4 +249,17 @@ export function zapiszZapotrzebowanieZakupowe(zapotrzebowanie: ZapotrzebowanieZa
   const stan = pobierzStanPulpitu()
   const istnieje = stan.zapotrzebowaniaZakupowe.some((obecne) => obecne.id === zapotrzebowanie.id)
   return zapiszStanPulpitu({ ...stan, zapotrzebowaniaZakupowe: istnieje ? stan.zapotrzebowaniaZakupowe.map((obecne) => obecne.id === zapotrzebowanie.id ? zapotrzebowanie : obecne) : [...stan.zapotrzebowaniaZakupowe, zapotrzebowanie] })
+}
+
+export function pobierzLinkiProduktu(zapotrzebowanie: ZapotrzebowanieZakupowe, uzytkownik: Uzytkownik | null | undefined) {
+  return czyJestZamawiaczem(uzytkownik) ? zapotrzebowanie.linkiProduktow ?? [] : []
+}
+
+export function zapiszZakupPrzezUzytkownika(zapotrzebowanie: ZapotrzebowanieZakupowe, uzytkownik: Uzytkownik | null | undefined) {
+  if (!czyJestPracownikiemWewnetrznym(uzytkownik) || walidujNoweZapotrzebowanieZakupowe(zapotrzebowanie.nazwa, zapotrzebowanie.ilosc)) return false
+  if (czyJestZamawiaczem(uzytkownik) && zapotrzebowanie.linkiProduktow?.some((link) => !czyPoprawnyLinkProduktu(link))) return false
+  const dodatki = normalizujDodatkiZakupu({ zalaczniki: zapotrzebowanie.zalaczniki })
+  if (dodatki.zalaczniki.length !== (zapotrzebowanie.zalaczniki?.length ?? 0)) return false
+  const obecne = pobierzStanPulpitu().zapotrzebowaniaZakupowe.find((zakup) => zakup.id === zapotrzebowanie.id)
+  return zapiszZapotrzebowanieZakupowe({ ...zapotrzebowanie, linkiProduktow: czyJestZamawiaczem(uzytkownik) ? zapotrzebowanie.linkiProduktow : obecne?.linkiProduktow ?? [] })
 }

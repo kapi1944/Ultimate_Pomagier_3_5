@@ -261,12 +261,12 @@ export function ograniczBlokDoStrony(blok: BlokSwobodnyDokumentu, szerokoscStron
   }
 }
 
-export function przesunBlokSwobodny(blok: BlokSwobodnyDokumentu, przesuniecieX: number, przesuniecieY: number, progPrzyciaganiaMm = 2, szerokoscStronyMm = SZEROKOSC_STRONY_A4_MM, wysokoscStronyMm = WYSOKOSC_STRONY_A4_MM): WynikGeometriiBloku {
+export function przesunBlokSwobodny(blok: BlokSwobodnyDokumentu, przesuniecieX: number, przesuniecieY: number, progPrzyciaganiaMm = 2, szerokoscStronyMm = SZEROKOSC_STRONY_A4_MM, wysokoscStronyMm = WYSOKOSC_STRONY_A4_MM, marginesPoziomyMm = 0, marginesPionowyMm = 0): WynikGeometriiBloku {
   let wynik = ograniczBlokDoStrony({ ...blok, xMm: blok.xMm + przesuniecieX, yMm: blok.yMm + przesuniecieY }, szerokoscStronyMm, wysokoscStronyMm)
   const pionowe = [wynik.xMm, wynik.xMm + wynik.szerokoscMm / 2, wynik.xMm + wynik.szerokoscMm]
   const poziome = [wynik.yMm, wynik.yMm + wynik.wysokoscMm / 2, wynik.yMm + wynik.wysokoscMm]
-  const przyciagniecieX = znajdzPrzyciagniecie(pionowe, [0, szerokoscStronyMm / 2, szerokoscStronyMm], progPrzyciaganiaMm)
-  const przyciagniecieY = znajdzPrzyciagniecie(poziome, [0, wysokoscStronyMm / 2, wysokoscStronyMm], progPrzyciaganiaMm)
+  const przyciagniecieX = znajdzPrzyciagniecie(pionowe, [0, marginesPoziomyMm, szerokoscStronyMm / 2, szerokoscStronyMm - marginesPoziomyMm, szerokoscStronyMm], progPrzyciaganiaMm)
+  const przyciagniecieY = znajdzPrzyciagniecie(poziome, [0, marginesPionowyMm, wysokoscStronyMm / 2, wysokoscStronyMm - marginesPionowyMm, wysokoscStronyMm], progPrzyciaganiaMm)
   if (przyciagniecieX) wynik = ograniczBlokDoStrony({ ...wynik, xMm: wynik.xMm + przyciagniecieX.roznica }, szerokoscStronyMm, wysokoscStronyMm)
   if (przyciagniecieY) wynik = ograniczBlokDoStrony({ ...wynik, yMm: wynik.yMm + przyciagniecieY.roznica }, szerokoscStronyMm, wysokoscStronyMm)
   return { blok: wynik, prowadnice: { pionowa: przyciagniecieX?.cel, pozioma: przyciagniecieY?.cel } }
@@ -324,4 +324,27 @@ export function pobierzZrodloObrazuBloku(blok: BlokObrazuSwobodny, kontekst: Kon
   return blok.dane.zrodlo.rodzaj === 'adres'
     ? blok.dane.zrodlo.adres
     : kontekst.zasobyObrazow?.[blok.dane.zrodlo.klucz] ?? ''
+}
+
+export type KierunekRozciaganiaBloku = 'lg' | 'g' | 'pg' | 'p' | 'pd' | 'd' | 'ld' | 'l'
+
+export function rozciagnijBlokSwobodny(blok: BlokSwobodnyDokumentu, kierunek: KierunekRozciaganiaBloku, roznicaX: number, roznicaY: number, zachowajProporcje = false, szerokoscStronyMm = SZEROKOSC_STRONY_A4_MM, wysokoscStronyMm = WYSOKOSC_STRONY_A4_MM): BlokSwobodnyDokumentu {
+  const lewo = kierunek.includes('l')
+  const gora = kierunek.includes('g')
+  const poziomo = lewo || kierunek.includes('p')
+  const pionowo = gora || kierunek.includes('d')
+  const maksymalnaSzerokosc = lewo ? blok.xMm + blok.szerokoscMm : szerokoscStronyMm - blok.xMm
+  const maksymalnaWysokosc = gora ? blok.yMm + blok.wysokoscMm : wysokoscStronyMm - blok.yMm
+  let szerokoscMm = ogranicz(blok.szerokoscMm + (poziomo ? roznicaX * (lewo ? -1 : 1) : 0), 4, maksymalnaSzerokosc)
+  let wysokoscMm = ogranicz(blok.wysokoscMm + (pionowo ? roznicaY * (gora ? -1 : 1) : 0), 4, maksymalnaWysokosc)
+  if (zachowajProporcje) {
+    const proporcja = blok.szerokoscMm / blok.wysokoscMm
+    if (!poziomo || (pionowo && Math.abs(roznicaY / blok.wysokoscMm) > Math.abs(roznicaX / blok.szerokoscMm))) szerokoscMm = wysokoscMm * proporcja
+    szerokoscMm = ogranicz(szerokoscMm, Math.max(4, 4 * proporcja), Math.min(maksymalnaSzerokosc, maksymalnaWysokosc * proporcja))
+    wysokoscMm = szerokoscMm / proporcja
+  }
+  return ograniczBlokDoStrony({ ...blok, szerokoscMm, wysokoscMm,
+    xMm: lewo ? blok.xMm + blok.szerokoscMm - szerokoscMm : blok.xMm,
+    yMm: gora ? blok.yMm + blok.wysokoscMm - wysokoscMm : blok.yMm,
+  }, szerokoscStronyMm, wysokoscStronyMm)
 }

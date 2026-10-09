@@ -37,7 +37,7 @@ function wczytajObraz(daneUrl: string) {
 }
 
 async function przygotujDaneObrazu(plik: File) {
-  const daneUrl = await odczytajPlikJakoDataUrl(plik)
+  const daneUrl = /\.ai$/i.test(plik.name) ? await odczytajGrafikeIllustratora(plik) : await odczytajPlikJakoDataUrl(plik)
   const obraz = await wczytajObraz(daneUrl)
   let skala = Math.min(1, MAKSYMALNY_BOK_OBRAZU / Math.max(obraz.naturalWidth, obraz.naturalHeight))
   if (skala === 1 && daneUrl.length <= 2_500_000) return daneUrl
@@ -63,7 +63,7 @@ async function obliczKlucz(daneUrl: string) {
 }
 
 export async function zapiszZasobObrazuDokumentu(plik: File) {
-  if (!['image/png', 'image/jpeg', 'image/webp'].includes(plik.type)) throw new Error('Dozwolone są obrazy PNG, JPEG i WebP.')
+  if (!['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'].includes(plik.type) && !/\.ai$/i.test(plik.name)) throw new Error('Dozwolone są obrazy PNG, JPEG, SVG, WebP i AI zgodne z PDF.')
   if (plik.size > MAKSYMALNY_ROZMIAR_PLIKU) throw new Error('Obraz może mieć maksymalnie 8 MB.')
   const daneUrl = await przygotujDaneObrazu(plik)
   const klucz = await obliczKlucz(daneUrl)
@@ -77,4 +77,27 @@ export async function zapiszZasobObrazuDokumentu(plik: File) {
 
 export function pobierzMapeZasobowObrazowDokumentu() {
   return Object.fromEntries(Object.entries(odczytajZasoby()).map(([klucz, zasob]) => [klucz, zasob.daneUrl]))
+}
+
+async function odczytajGrafikeIllustratora(plik: File): Promise<string> {
+  const dane = new Uint8Array(await plik.arrayBuffer())
+  if (!new TextDecoder().decode(dane.slice(0, 1024)).includes('%PDF-')) throw new Error('Ten plik AI nie ma zawartości zgodnej z PDF. Zapisz go w Illustratorze z opcją zgodności z PDF lub wyeksportuj do SVG/PNG.')
+  const biblioteka = await import('pdfjs-dist/legacy/build/pdf.mjs')
+  if (!biblioteka.GlobalWorkerOptions.workerSrc) biblioteka.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/legacy/build/pdf.worker.min.mjs', import.meta.url).toString()
+  const zadanie = biblioteka.getDocument({ data: dane })
+  try {
+    const dokument = await zadanie.promise
+    const strona = await dokument.getPage(1)
+    const rozmiar = strona.getViewport({ scale: 1 })
+    const widok = strona.getViewport({ scale: MAKSYMALNY_BOK_OBRAZU / Math.max(rozmiar.width, rozmiar.height) })
+    const plotno = document.createElement('canvas')
+    plotno.width = Math.ceil(widok.width)
+    plotno.height = Math.ceil(widok.height)
+    const kontekst = plotno.getContext('2d')
+    if (!kontekst) throw new Error('Nie udało się przygotować grafiki AI.')
+    await strona.render({ canvasContext: kontekst, canvas: plotno, viewport: widok, background: 'rgba(0,0,0,0)' }).promise
+    return plotno.toDataURL('image/png')
+  } finally {
+    await zadanie.destroy()
+  }
 }

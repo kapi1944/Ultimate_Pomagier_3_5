@@ -8,7 +8,8 @@ import {
   ograniczBlokDoStrony,
   przesunBlokSwobodny,
   przywrocBlokSzablonu,
-  zmienRozmiarBlokuSwobodnego,
+  rozciagnijBlokSwobodny,
+  type KierunekRozciaganiaBloku,
   type BlokSwobodnyDokumentu,
   type ProwadniceBloku,
 } from './modelSwobodnychBlokow'
@@ -21,12 +22,15 @@ type WlasciwosciWarstwy = {
   trybEdycjiSzablonu: boolean
   onZaznacz: (id: string | null) => void
   onZmienBlok: (blok: BlokSwobodnyDokumentu) => void
+  marginesPoziomyMm?: number
+  marginesPionowyMm?: number
   szerokoscStronyMm?: number
   wysokoscStronyMm?: number
 }
 
 type GestBloku = {
   rodzaj: 'przesuwanie' | 'rozmiar'
+  kierunek?: KierunekRozciaganiaBloku
   blok: BlokSwobodnyDokumentu
   xPoczatkowe: number
   yPoczatkowe: number
@@ -38,11 +42,11 @@ function czyMoznaPrzesuwac(blok: BlokSwobodnyDokumentu, trybEdycjiSzablonu: bool
   return !blok.zablokowany && (blok.pochodzenie !== 'szablon' || trybEdycjiSzablonu)
 }
 
-export function EdytowalnaWarstwaSwobodnychBlokow({ bloki, numerStrony, zaznaczonyBlokId, trybEdycjiSzablonu, onZaznacz, onZmienBlok, szerokoscStronyMm = SZEROKOSC_STRONY_A4_MM, wysokoscStronyMm = WYSOKOSC_STRONY_A4_MM }: WlasciwosciWarstwy) {
+export function EdytowalnaWarstwaSwobodnychBlokow({ bloki, numerStrony, zaznaczonyBlokId, trybEdycjiSzablonu, onZaznacz, onZmienBlok, marginesPoziomyMm = 0, marginesPionowyMm = 0, szerokoscStronyMm = SZEROKOSC_STRONY_A4_MM, wysokoscStronyMm = WYSOKOSC_STRONY_A4_MM }: WlasciwosciWarstwy) {
   const [gest, ustawGest] = useState<GestBloku | null>(null)
   const [prowadnice, ustawProwadnice] = useState<ProwadniceBloku>({})
 
-  function rozpocznijGest(zdarzenie: ZdarzenieWskaznika<HTMLElement>, blok: BlokSwobodnyDokumentu, rodzaj: GestBloku['rodzaj']) {
+  function rozpocznijGest(zdarzenie: ZdarzenieWskaznika<HTMLElement>, blok: BlokSwobodnyDokumentu, rodzaj: GestBloku['rodzaj'], kierunek?: KierunekRozciaganiaBloku) {
     zdarzenie.preventDefault()
     zdarzenie.stopPropagation()
     onZaznacz(blok.id)
@@ -50,7 +54,7 @@ export function EdytowalnaWarstwaSwobodnychBlokow({ bloki, numerStrony, zaznaczo
     const strona = zdarzenie.currentTarget.closest('[data-strona-dokumentu]')?.getBoundingClientRect()
     if (!strona) return
     zdarzenie.currentTarget.setPointerCapture(zdarzenie.pointerId)
-    ustawGest({ rodzaj, blok, xPoczatkowe: zdarzenie.clientX, yPoczatkowe: zdarzenie.clientY, szerokoscStronyPx: strona.width, wysokoscStronyPx: strona.height })
+    ustawGest({ rodzaj, kierunek, blok, xPoczatkowe: zdarzenie.clientX, yPoczatkowe: zdarzenie.clientY, szerokoscStronyPx: strona.width, wysokoscStronyPx: strona.height })
   }
 
   function aktualizujGest(zdarzenie: ZdarzenieWskaznika<HTMLElement>) {
@@ -59,13 +63,13 @@ export function EdytowalnaWarstwaSwobodnychBlokow({ bloki, numerStrony, zaznaczo
     const roznicaX = (zdarzenie.clientX - gest.xPoczatkowe) * szerokoscStronyMm / gest.szerokoscStronyPx
     const roznicaY = (zdarzenie.clientY - gest.yPoczatkowe) * wysokoscStronyMm / gest.wysokoscStronyPx
     if (gest.rodzaj === 'przesuwanie') {
-      const wynik = przesunBlokSwobodny(gest.blok, roznicaX, roznicaY, 2, szerokoscStronyMm, wysokoscStronyMm)
+      const wynik = przesunBlokSwobodny(gest.blok, roznicaX, roznicaY, 2, szerokoscStronyMm, wysokoscStronyMm, marginesPoziomyMm, marginesPionowyMm)
       ustawProwadnice(wynik.prowadnice)
       onZmienBlok(wynik.blok)
       return
     }
     const zachowajProporcje = zdarzenie.shiftKey || (gest.blok.typ === 'obraz' && gest.blok.dane.zachowajProporcje)
-    onZmienBlok(zmienRozmiarBlokuSwobodnego(gest.blok, gest.blok.szerokoscMm + roznicaX, gest.blok.wysokoscMm + roznicaY, zachowajProporcje, szerokoscStronyMm, wysokoscStronyMm))
+    onZmienBlok(rozciagnijBlokSwobodny(gest.blok, gest.kierunek ?? 'pd', roznicaX, roznicaY, zachowajProporcje, szerokoscStronyMm, wysokoscStronyMm))
   }
 
   function zakonczGest() {
@@ -101,11 +105,12 @@ export function EdytowalnaWarstwaSwobodnychBlokow({ bloki, numerStrony, zaznaczo
         onPointerDown={(zdarzenie) => rozpocznijGest(zdarzenie, blok, 'przesuwanie')}
         onPointerMove={aktualizujGest}
         onPointerUp={zakonczGest}
+        onPointerCancel={zakonczGest}
         role="button"
         style={{ left: `${blok.xMm * 100 / szerokoscStronyMm}%`, top: `${blok.yMm * 100 / wysokoscStronyMm}%`, width: `${blok.szerokoscMm * 100 / szerokoscStronyMm}%`, height: `${blok.wysokoscMm * 100 / wysokoscStronyMm}%`, zIndex: blok.indeksWarstwy + 1000 }}
         tabIndex={0}
       >
-        {zaznaczony && edytowalny && <span aria-hidden="true" className="edytor-blokow__uchwyt" onPointerDown={(zdarzenie) => rozpocznijGest(zdarzenie, blok, 'rozmiar')} onPointerMove={aktualizujGest} onPointerUp={zakonczGest} />}
+        {zaznaczony && edytowalny && (['lg', 'g', 'pg', 'p', 'pd', 'd', 'ld', 'l'] as const).map((kierunek) => <span key={kierunek} aria-hidden="true" className={`edytor-blokow__uchwyt edytor-blokow__uchwyt--${kierunek}`} onPointerDown={(zdarzenie) => rozpocznijGest(zdarzenie, blok, 'rozmiar', kierunek)} onPointerMove={aktualizujGest} onPointerUp={zakonczGest} onPointerCancel={zakonczGest} />)}
       </div>
     })}
     {prowadnice.pionowa !== undefined && <span className="edytor-blokow__prowadnica edytor-blokow__prowadnica--pionowa" style={{ left: `${prowadnice.pionowa * 100 / szerokoscStronyMm}%` }} />}
@@ -121,6 +126,8 @@ type WlasciwosciPanelu = {
   onZmienTrybEdycjiSzablonu: (wartosc: boolean) => void
   onZmienBloki: (bloki: BlokSwobodnyDokumentu[]) => void
   onDodajObraz?: (plik: File) => Promise<string>
+  onZaznacz?: (id: string | null) => void
+  czyPokazacReset?: boolean
   liczbaStron?: number
   szerokoscStronyMm?: number
   wysokoscStronyMm?: number
@@ -130,7 +137,7 @@ function utworzIdBloku() {
   return globalThis.crypto?.randomUUID?.() ?? `blok-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 }
 
-export function PanelEdycjiSwobodnychBlokow({ bloki, zaznaczonyBlokId, blokiSzablonu, trybEdycjiSzablonu, onZmienTrybEdycjiSzablonu, onZmienBloki, onDodajObraz, liczbaStron, szerokoscStronyMm = SZEROKOSC_STRONY_A4_MM, wysokoscStronyMm = WYSOKOSC_STRONY_A4_MM }: WlasciwosciPanelu) {
+export function PanelEdycjiSwobodnychBlokow({ bloki, zaznaczonyBlokId, blokiSzablonu, trybEdycjiSzablonu, onZmienTrybEdycjiSzablonu, onZmienBloki, onDodajObraz, onZaznacz, czyPokazacReset = true, liczbaStron, szerokoscStronyMm = SZEROKOSC_STRONY_A4_MM, wysokoscStronyMm = WYSOKOSC_STRONY_A4_MM }: WlasciwosciPanelu) {
   const blok = useMemo(() => bloki.find((pozycja) => pozycja.id === zaznaczonyBlokId) ?? null, [bloki, zaznaczonyBlokId])
   const polePlikuRef = useRef<HTMLInputElement>(null)
   const [bladObrazu, ustawBladObrazu] = useState<string | null>(null)
@@ -155,6 +162,7 @@ export function PanelEdycjiSwobodnychBlokow({ bloki, zaznaczonyBlokId, blokiSzab
         dane: { zrodlo: { rodzaj: 'zasob_uzytkownika', klucz }, tekstAlternatywny: plik.name, zachowajProporcje: true, trybDopasowania: 'contain' },
       }
       onZmienBloki([...bloki, nowyBlok])
+      onZaznacz?.(nowyBlok.id)
     } catch (blad) {
       ustawBladObrazu(blad instanceof Error ? blad.message : 'Nie udało się dodać obrazu.')
     }
@@ -163,12 +171,17 @@ export function PanelEdycjiSwobodnychBlokow({ bloki, zaznaczonyBlokId, blokiSzab
 
   return <section className="edytor-blokow__panel" aria-label="Edytor bloków dokumentu">
     <div className="edytor-blokow__pasek-akcji">
-      <button type="button" onClick={() => onZmienBloki([...bloki, { id: utworzIdBloku(), typ: 'tekst', rola: 'pole_tekstowe', nazwa: 'Własny tekst', pochodzenie: 'uzytkownik', zablokowany: false, xMm: 20, yMm: 40, szerokoscMm: 80, wysokoscMm: 15, przypisanieDoStrony: { rodzaj: 'strona', numer: 1 }, widoczny: true, indeksWarstwy: 20, dane: { zrodlo: { rodzaj: 'statyczne', tekst: 'Własny napis' }, rozmiarCzcionkiPt: 10, gruboscCzcionki: 400, rodzinaCzcionki: 'Arial', wyrownanie: 'lewo', interlinia: 1.2, kolor: '#111827', marginesWewnetrznyMm: 1 } }])}>Dodaj tekst</button>
-      {onDodajObraz && <><button type="button" onClick={() => polePlikuRef.current?.click()}>Dodaj obraz</button><input accept="image/png,image/jpeg,image/webp" className="edytor-blokow__pole-pliku" onChange={(zdarzenie) => void wczytajObraz(zdarzenie)} ref={polePlikuRef} type="file" /></>}
-      <button type="button" onClick={() => { if (window.confirm('Przywrócić cały układ szablonu i usunąć własne bloki?')) onZmienBloki(blokiSzablonu.map((pozycja) => ({ ...pozycja }))) }}>Resetuj cały układ</button>
+      <button type="button" onClick={() => { const id = utworzIdBloku(); onZmienBloki([...bloki, { id, typ: 'tekst', rola: 'pole_tekstowe', nazwa: 'Własny tekst', pochodzenie: 'uzytkownik', zablokowany: false, xMm: 20, yMm: 40, szerokoscMm: 80, wysokoscMm: 15, przypisanieDoStrony: { rodzaj: 'strona', numer: 1 }, widoczny: true, indeksWarstwy: 20, dane: { zrodlo: { rodzaj: 'statyczne', tekst: 'Własny napis' }, rozmiarCzcionkiPt: 10, gruboscCzcionki: 400, rodzinaCzcionki: 'Arial', wyrownanie: 'lewo', interlinia: 1.2, kolor: '#111827', marginesWewnetrznyMm: 1 } }]); onZaznacz?.(id) }}>Dodaj tekst</button>
+      {onDodajObraz && <><button type="button" onClick={() => polePlikuRef.current?.click()}>Dodaj obraz</button><input accept=".png,.jpg,.jpeg,.svg,.ai,.webp" className="edytor-blokow__pole-pliku" onChange={(zdarzenie) => void wczytajObraz(zdarzenie)} ref={polePlikuRef} type="file" /></>}
+      {czyPokazacReset && <button type="button" onClick={() => { if (window.confirm('Przywrócić cały układ szablonu i usunąć własne bloki?')) onZmienBloki(blokiSzablonu.map((pozycja) => ({ ...pozycja }))) }}>Resetuj cały układ</button>}
     </div>
+    {onZaznacz && <div className="edytor-blokow__lista">{bloki.map((pozycja) => <div className="edytor-blokow__wiersz" key={pozycja.id}>
+      <button type="button" aria-pressed={pozycja.id === zaznaczonyBlokId} onClick={() => onZaznacz(pozycja.id)}>{pozycja.nazwa ?? (pozycja.typ === 'tekst' ? 'Tekst' : 'Obraz')}</button>
+      <label className="edytor-blokow__przelacznik"><input aria-label={`Widoczność: ${pozycja.nazwa ?? 'blok'}`} role="switch" type="checkbox" checked={pozycja.widoczny} onChange={(zdarzenie) => onZmienBloki(bloki.map((obecny) => obecny.id === pozycja.id ? { ...obecny, widoczny: zdarzenie.target.checked } : obecny))} /></label>
+      {pozycja.pochodzenie !== 'szablon' && <button className="edytor-blokow__usun" type="button" aria-label={`Usuń blok: ${pozycja.nazwa ?? 'blok'}`} onClick={() => { onZmienBloki(bloki.filter((obecny) => obecny.id !== pozycja.id)); if (zaznaczonyBlokId === pozycja.id) onZaznacz(null) }}>×</button>}
+    </div>)}</div>}
     {bladObrazu && <p role="alert">{bladObrazu}</p>}
-    <label className="edytor-blokow__przelacznik">Edytuj układ szablonu<input checked={trybEdycjiSzablonu} onChange={(zdarzenie) => onZmienTrybEdycjiSzablonu(zdarzenie.target.checked)} type="checkbox" role="switch" /></label>
+    {blokiSzablonu.length > 0 && <label className="edytor-blokow__przelacznik">Edytuj układ szablonu<input checked={trybEdycjiSzablonu} onChange={(zdarzenie) => onZmienTrybEdycjiSzablonu(zdarzenie.target.checked)} type="checkbox" role="switch" /></label>}
     {!blok ? <p>Kliknij blok na podglądzie, aby edytować jego właściwości.</p> : blok.pochodzenie === 'szablon' && !trybEdycjiSzablonu ? <p>To element szablonu. Włącz „Edytuj układ szablonu”, aby zmienić jego właściwości lub odblokować pozycję.</p> : <div className="edytor-blokow__wlasciwosci">
       <h3>{blok.nazwa ?? (blok.typ === 'tekst' ? 'Blok tekstowy' : 'Blok obrazu')}</h3>
       <label>Nazwa<input value={blok.nazwa ?? ''} onChange={(zdarzenie) => zmienBlok((obecny) => ({ ...obecny, nazwa: zdarzenie.target.value }))} /></label>

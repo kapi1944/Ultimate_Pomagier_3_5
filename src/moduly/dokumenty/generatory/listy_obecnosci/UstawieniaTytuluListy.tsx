@@ -1,8 +1,10 @@
 import { useId, type Dispatch, type SetStateAction } from 'react'
-import { zmienOdstepyBlokuListy, zmienWygladTytuluListy, type DaneListyObecnosci } from './modelListyObecnosci'
+import { pobierzOdstepPodTerminemListy, zmienOdstepyBlokuListy, zmienWygladTytuluListy, type DaneListyObecnosci } from './modelListyObecnosci'
 
 export default function UstawieniaTytuluListy({ dane, ustawDane }: { dane: DaneListyObecnosci; ustawDane: Dispatch<SetStateAction<DaneListyObecnosci>> }) {
   const prefiks = useId()
+  const odstep = pobierzOdstepPodTerminemListy(dane)
+  const zmienOdstep = (wartosc: number) => ustawDane((obecne) => ({ ...obecne, odstepPodTerminemMm: Math.min(30, Math.max(0, wartosc)) }))
   return <>
     {([['lista-tytul', 'Nagłówek'], ['lista-szkolenie', 'Tytuł'], ['lista-miejsce', 'Termin i miejsce']] as const).map(([id, nazwa]) => {
       const blok = dane.blokiSwobodne.find((pozycja) => pozycja.id === id)
@@ -33,6 +35,15 @@ export default function UstawieniaTytuluListy({ dane, ustawDane }: { dane: DaneL
         })}
       </fieldset>
     })}
+    <div>
+      <label htmlFor={prefiks + '-odstep-tabeli'}>Odstęp pod terminem i miejscem — do tabeli</label>
+      <div className="generator-list-obecnosci__regulacja">
+        <button type="button" aria-label="Zmniejsz odstęp do tabeli" disabled={odstep <= 0} onClick={() => zmienOdstep(odstep - .5)}>−</button>
+        <input id={prefiks + '-odstep-tabeli'} type="range" min="0" max="30" step="0.5" value={odstep} onChange={(zdarzenie) => zmienOdstep(Number(zdarzenie.target.value))} />
+        <output htmlFor={prefiks + '-odstep-tabeli'}>{odstep.toLocaleString('pl-PL', { maximumFractionDigits: 1 })} mm</output>
+        <button type="button" aria-label="Zwiększ odstęp do tabeli" disabled={odstep >= 30} onClick={() => zmienOdstep(odstep + .5)}>+</button>
+      </div>
+    </div>
     <p className="generator-list-obecnosci__opis">Przesunięcie suwaka szerokości w prawo poszerza wyśrodkowany tytuł. Wysokość bloku reguluje pustą przestrzeń pod tekstem, a padding odstęp wewnętrzny z każdej strony. Sprawdź, czy cały tekst mieści się w bloku. Pozycje pozostałych bloków nie przesuwają się automatycznie.</p>
   </>
 }

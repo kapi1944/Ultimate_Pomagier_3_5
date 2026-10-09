@@ -25,3 +25,7 @@ export function czyMozeEdytowacProfil(zalogowanyUzytkownik: Uzytkownik | null | 
   if (czyJestArchitektem(zalogowanyUzytkownik)) return true
   return czyJestAdministratorem(zalogowanyUzytkownik) && !czyJestArchitektem(edytowanyUzytkownik)
 }
+
+export function czyJestZamawiaczem(uzytkownik: Uzytkownik | null | undefined) {
+  return czyJestPracownikiemWewnetrznym(uzytkownik) && (uzytkownik?.id === 'administrator-kacper-madej' || uzytkownik?.id === 'pracownik-pawel-kwiecinski')
+}

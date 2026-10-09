@@ -870,6 +870,10 @@ const styleProgramuSzkolenia = `
   margin-top: 0;
 }
 
+.program-dotychczasowy__strona .program-kartka-a4__stopka > strong {
+  font-size: 0.8rem;
+}
+
 .program-strony__oczekiwanie,
 .program-strony__problemy {
   width: var(--program-szerokosc-strony);
@@ -1240,7 +1244,12 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
   }
 
   function zmienBlokiSwobodne(blokiSwobodne: NonNullable<UstawieniaProgramu['blokiSwobodne']>) {
-    zmienUstawienie('blokiSwobodne', blokiSwobodne)
+    ustawDaneProgramu((aktualne) => ({
+      ...aktualne,
+      logotypProgramu: aktualne.ustawienia.blokiSwobodne?.some((blok) => blok.id === ID_LOGOTYPU_PROGRAMU)
+        && !blokiSwobodne.some((blok) => blok.id === ID_LOGOTYPU_PROGRAMU) ? '' : aktualne.logotypProgramu,
+      ustawienia: { ...aktualne.ustawienia, blokiSwobodne },
+    }))
   }
 
   function zmienSzerokoscLogotypu(szerokoscLogotypu: number) {
@@ -1532,6 +1541,8 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
           blokiSwobodne: ustawZrodloLogotypuProgramu(aktualne.ustawienia.blokiSwobodne ?? [], { rodzaj: 'zasob_uzytkownika', klucz }),
         },
       }))
+      ustawZaznaczonyBlokId(ID_LOGOTYPU_PROGRAMU)
+      ustawTrybRenderowania('roboczy')
       ustawKomunikat(`Dodano logotyp z pliku: ${plik.name}.`)
     } catch (blad) {
       ustawKomunikat(blad instanceof Error ? blad.message : 'Nie udało się odczytać pliku logotypu.')
@@ -1553,6 +1564,8 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
         blokiSwobodne: ustawZrodloLogotypuProgramu(aktualne.ustawienia.blokiSwobodne ?? [], { rodzaj: 'adres', adres: link }),
       },
     }))
+    ustawZaznaczonyBlokId(ID_LOGOTYPU_PROGRAMU)
+    ustawTrybRenderowania('roboczy')
     ustawKomunikat('Dodano logotyp z linku.')
   }
 
@@ -1641,15 +1654,7 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
         <div className="program-panel-roboczy program-szkolen__panel">
           <PanelBocznyGeneratora className="program-szkolen__sekcja program-szkolen__sekcja--ustawienia">
             <div className="program-szkolen__siatka">
-              <PanelEdycjiSwobodnychBlokow
-                bloki={ustawienia.blokiSwobodne ?? []}
-                blokiSzablonu={[]}
-                zaznaczonyBlokId={zaznaczonyBlokId}
-                trybEdycjiSzablonu={trybEdycjiSzablonu}
-                onDodajObraz={dodajObrazDoDokumentu}
-                onZmienBloki={zmienBlokiSwobodne}
-                onZmienTrybEdycjiSzablonu={ustawTrybEdycjiSzablonu}
-              />
+
               <div className="program-szkolen__separator" />
               <label className="program-szkolen__etykieta">
                 <span><input checked={trybRenderowania === 'roboczy'} onChange={(zdarzenie) => ustawTrybRenderowania(zdarzenie.target.checked ? 'roboczy' : 'finalny')} type="checkbox" /> Podgląd roboczy</span>
@@ -1920,13 +1925,25 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
 
           <section className="program-szkolen__sekcja program-szkolen__sekcja--logotypy">
             <h2>LOGOTYPY</h2>
+              <PanelEdycjiSwobodnychBlokow
+                onZaznacz={(id) => { ustawZaznaczonyBlokId(id); if (id) ustawTrybRenderowania('roboczy') }}
+                czyPokazacReset={false}
+                bloki={ustawienia.blokiSwobodne ?? []}
+                blokiSzablonu={[]}
+                zaznaczonyBlokId={zaznaczonyBlokId}
+                trybEdycjiSzablonu={trybEdycjiSzablonu}
+                onDodajObraz={dodajObrazDoDokumentu}
+                onZmienBloki={zmienBlokiSwobodne}
+                onZmienTrybEdycjiSzablonu={ustawTrybEdycjiSzablonu}
+              />
+            <div className="program-szkolen__separator" />
             <div className="program-szkolen__siatka">
               <div className="program-szkolen__siatka program-szkolen__siatka--logotypy">
                 <div className="program-szkolen__blok-logotypu">
                   <label className="program-szkolen__etykieta">
                     Logotyp z pliku graficznego
                     <input
-                      accept="image/*"
+                      accept=".png,.jpg,.jpeg,.svg,.ai,.webp"
                       className="program-szkolen__pole"
                       onChange={(zdarzenie) => importujLogotypZPliku(zdarzenie.target.files?.[0])}
                       type="file"

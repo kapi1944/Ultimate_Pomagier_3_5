@@ -520,11 +520,11 @@
 .pulpit-kafelek--zakupy em { color: #bae6fd; font-size: .8rem; font-style: normal; font-weight: 700; }
 .pulpit-drawer__naglowek { display: flex; align-items: start; justify-content: space-between; gap: 12px; padding-right: 28px; }
 .pulpit-drawer__naglowek p { margin: 5px 0 0; color: var(--ui-tekst-drugi); }
-.pulpit-zapotrzebowania { display: grid; gap: 12px; }
-.pulpit-zapotrzebowanie { display: grid; gap: 7px; padding: 14px; border: 1px solid rgba(125, 211, 252, .35); border-radius: 8px; background: #06243a; }
+.pulpit-zapotrzebowania { display: grid; gap: 7px; }
+.pulpit-zapotrzebowanie { display: grid; gap: 4px; padding: 9px 10px; border: 1px solid rgba(125, 211, 252, .35); border-radius: 8px; background: #06243a; }
 .pulpit-zapotrzebowanie h3, .pulpit-zapotrzebowanie p { margin: 0; }
 .pulpit-zapotrzebowanie p { color: #cbe8f8; }
-.pulpit-zapotrzebowanie__akcje { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.pulpit-zapotrzebowanie__akcje { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
 .pulpit-formularz-zakupu { display: grid; gap: 14px; }
 .pulpit-formularz-zakupu label { display: grid; gap: 5px; color: var(--ui-tekst-drugi); font-size: .9rem; }
 .pulpit-formularz-zakupu textarea { box-sizing: border-box; width: 100%; min-height: 90px; border: 1px solid color-mix(in srgb, var(--ui-akcent) 45%, transparent); border-radius: 6px; background: var(--ui-pole); color: var(--ui-tekst); font: inherit; padding: 7px; resize: vertical; }
@@ -804,3 +804,18 @@ html[data-ui-pokaz-plomien-asap="false"] .pulpit-deadline__plomien {
     grid-template-columns: 1fr;
   }
 }
+
+.pulpit-zakup__naglowek { font-size: .75rem; }
+.pulpit-zakup__naglowek { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.pulpit-zapotrzebowanie__akcje button { padding: 4px 6px; font-size: .72rem; }
+.pulpit-zapotrzebowanie .pulpit-zakup__podglad { display: grid; gap: 4px; width: 100%; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; font: inherit; cursor: pointer; }
+.pulpit-zakup__podglad > span { font-size: .75rem; }
+.pulpit-zakup__podglad > strong { font-size: .95rem; }
+.pulpit-zakup__ilosc { font-size: 1.15rem; color: var(--ui-tekst-drugi); }
+.pulpit-modal--zakup > div { max-height: calc(100dvh - 40px); overflow-y: auto; overflow-wrap: anywhere; }
+.pulpit-zakup__link { display: flex; gap: 6px; margin-bottom: 6px; }
+.pulpit-zakup__link input { min-width: 0; flex: 1; }
+.pulpit-zakup__zalaczniki { display: grid; gap: 8px; list-style: none; padding: 0; }
+.pulpit-zakup__zalaczniki li { display: flex; align-items: center; gap: 8px; overflow-wrap: anywhere; }
+.pulpit-zakup__zalaczniki img { display: block; max-width: 180px; max-height: 120px; object-fit: contain; }
+.pulpit-zakup__uwagi { white-space: pre-wrap; }

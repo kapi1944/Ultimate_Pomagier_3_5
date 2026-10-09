@@ -65,6 +65,8 @@ export type StanPulpitu = {
 
 export type StatusZapotrzebowaniaZakupowego = 'ZGLOSZONE' | 'DO_ZAKUPU' | 'W_REALIZACJI' | 'KUPIONE' | 'ANULOWANE' | 'ZAMKNIETE' | 'ARCHIWALNE'
 
+export type ZalacznikZakupu = { id: string; nazwa: string; daneUrl: string }
+
 export type ZapotrzebowanieZakupowe = {
   id: string
   nazwa: string
@@ -73,6 +75,8 @@ export type ZapotrzebowanieZakupowe = {
   uwagi?: string
   utworzonePrzezId: string
   utworzonoAt: string
+  linkiProduktow?: string[]
+  zalaczniki?: ZalacznikZakupu[]
 }
 
 export type PaczkaPulpitu = {

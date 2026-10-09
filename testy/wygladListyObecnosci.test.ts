@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url'
 import ts from 'typescript'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { zmienOdstepyBlokuListy, zmienWygladTytuluListy, deserializujDaneListyObecnosci, podzielListeObecnosciNaStrony, serializujDaneListyObecnosci, utworzDomyslneDaneListyObecnosci } from '../src/moduly/dokumenty/generatory/listy_obecnosci/modelListyObecnosci.ts'
+import { pobierzWysokoscNaglowkaListy, pobierzOdstepPodTerminemListy, pobierzLiczbeWierszyNaStronieListyObecnosci, zmienOdstepyBlokuListy, zmienWygladTytuluListy, deserializujDaneListyObecnosci, podzielListeObecnosciNaStrony, serializujDaneListyObecnosci, utworzDomyslneDaneListyObecnosci } from '../src/moduly/dokumenty/generatory/listy_obecnosci/modelListyObecnosci.ts'
 import { domyslnyWygladTabeliListy, minimalnaWysokoscWierszaMm, normalizujWygladTabeliListy, pobierzBladPrzepelnieniaListy, pobierzStylTabeliListy, przesunWygladTabeliListy, zmienWygladTabeliListy } from '../src/moduly/dokumenty/generatory/listy_obecnosci/wygladTabeliListy.ts'
 import { pobierzLogoOrganizatora } from '../src/wspolne/dokumenty/logoOrganizatora.ts'
 import { pobierzSzablonDokumentuPoId, zapiszKopieUkladuSwobodnychBlokow } from '../src/wspolne/dokumenty/szablonyDokumentow.ts'
@@ -123,7 +123,7 @@ const htmlTytulu = renderToStaticMarkup(createElement(Renderer, { dane: tytulZmi
 assert.ok(htmlTytulu.includes('font-size:2.016cqw'))
 assert.ok(htmlTytulu.includes(`width:${190 * 100 / 210}%`))
 const { default: KontrolkiTytulu } = await import('../src/moduly/dokumenty/generatory/listy_obecnosci/UstawieniaTytuluListy.tsx')
-assert.equal((renderToStaticMarkup(createElement(KontrolkiTytulu, { dane, ustawDane: () => {} })).match(/type="range"/g) ?? []).length, 10)
+assert.equal((renderToStaticMarkup(createElement(KontrolkiTytulu, { dane, ustawDane: () => {} })).match(/type="range"/g) ?? []).length, 11)
 const szablonTytulu = zapiszKopieUkladuSwobodnychBlokow({ nazwa: 'Test tytułu listy', typDokumentu: 'Lista obecności', organizator: 'SEMPER', autor: 'Test', bloki: tytulZmieniony.blokiSwobodne })
 assert.deepEqual(pobierzSzablonDokumentuPoId(szablonTytulu.id)?.dokumentBlokowy.blokiSwobodne, tytulZmieniony.blokiSwobodne)
 
@@ -189,3 +189,19 @@ assert.ok(htmlKonturow.includes('class="generator-list-obecnosci__kontury" data-
 const { PanelEdycjiSwobodnychBlokow } = await import('../src/wspolne/dokumenty/EdytorSwobodnychBlokow.tsx')
 const panelEdycji = renderToStaticMarkup(createElement(PanelEdycjiSwobodnychBlokow, { bloki: dane.blokiSwobodne, blokiSzablonu: dane.blokiSwobodne, liczbaStron: 1, zaznaczonyBlokId: null, trybEdycjiSzablonu: true, onDodajObraz: async () => '', onZmienBloki: () => {}, onZmienTrybEdycjiSzablonu: () => {} }))
 assert.match(panelEdycji, /Edytuj układ szablonu<input[^>]*role="switch"[^>]*checked/)
+
+const listaBezOdstepu = { ...domyslne, odstepPodTerminemMm: 0 }
+assert.equal(pobierzWysokoscNaglowkaListy(domyslne), 60.8)
+assert.equal(pobierzWysokoscNaglowkaListy(listaBezOdstepu), 54)
+assert.equal(pobierzOdstepPodTerminemListy(listaBezOdstepu), 0)
+const listaZOdstepem = { ...domyslne, odstepPodTerminemMm: 2 }
+assert.equal(pobierzWysokoscNaglowkaListy(listaZOdstepem), 56)
+assert.equal(deserializujDaneListyObecnosci(serializujDaneListyObecnosci(listaZOdstepem)).odstepPodTerminemMm, 2)
+assert.equal(deserializujDaneListyObecnosci(serializujDaneListyObecnosci(listaBezOdstepu)).odstepPodTerminemMm, 0)
+assert.equal(deserializujDaneListyObecnosci(JSON.stringify({ ...domyslne, odstepPodTerminemMm: -5 })).odstepPodTerminemMm, 0)
+assert.equal(deserializujDaneListyObecnosci(JSON.stringify({ ...domyslne, odstepPodTerminemMm: 99 })).odstepPodTerminemMm, 30)
+assert.equal(deserializujDaneListyObecnosci(JSON.stringify({ ...domyslne, odstepPodTerminemMm: 'błąd' })).odstepPodTerminemMm, undefined)
+assert.ok(pobierzLiczbeWierszyNaStronieListyObecnosci({ ...domyslne, odstepPodTerminemMm: 30 }) < pobierzLiczbeWierszyNaStronieListyObecnosci(domyslne))
+const htmlMalegoOdstepu = renderToStaticMarkup(createElement(Renderer, { dane: listaZOdstepem }))
+assert.ok(htmlMalegoOdstepu.includes('min-height:' + (56 / 1.9) + 'cqw'))
+assert.ok(renderToStaticMarkup(createElement(KontrolkiTytulu, { dane: listaZOdstepem, ustawDane: () => {} })).includes('Odstęp pod terminem i miejscem'))

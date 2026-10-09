@@ -582,8 +582,9 @@ const zapotrzebowanie = (zmiany: Partial<ZapotrzebowanieZakupowe> = {}): Zapotrz
 test('kafelek ZAKUPY i formularz sa obecne w widoku Pulpitu', () => {
   const widok = readFileSync('src/moduly/zamkniete/pulpit/WidokPulpitu.tsx', 'utf8')
   assert.match(widok, /ZAKUPY/)
-  assert.match(widok, /pulpit-zakup-nazwa/)
-  assert.match(widok, /zapiszZapotrzebowanieZakupowe/)
+  const formularz = readFileSync('src/moduly/zamkniete/pulpit/FormularzZakupu.tsx', 'utf8')
+  assert.match(formularz, /pulpit-zakup-nazwa/)
+  assert.match(widok, /zapiszZakupPrzezUzytkownika/)
   assert.doesNotMatch(widok, /liczbaZakupow\s*=/)
 })
 

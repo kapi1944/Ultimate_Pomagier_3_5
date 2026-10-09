@@ -1,3 +1,4 @@
+import { zapiszZasobObrazuDokumentu } from '../src/wspolne/dokumenty/zasobyObrazowDokumentu.ts'
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
@@ -8,6 +9,7 @@ import {
   pobierzTekstBloku,
   pobierzZrodloObrazuBloku,
   przesunBlokSwobodny,
+  rozciagnijBlokSwobodny,
   serializujKonfiguracjeSwobodnychBlokow,
   zmienRozmiarBlokuSwobodnego,
 } from '../src/wspolne/dokumenty/modelSwobodnychBlokow.ts'
@@ -111,4 +113,31 @@ test('konfiguracja ma wersje schematu, czyta zapis legacy i duplikuje bez dziele
 test('normalizacja nadaje powielonym identyfikatorom stabilne unikalne wartosci', () => {
   const zDuplikatem = normalizujBlokiSwobodneDokumentu([bloki[0], bloki[0], { ...bloki[0], id: 'dodatkowy-naglowek-2' }])
   assert.deepEqual(zDuplikatem.map((blok) => blok.id), ['dodatkowy-naglowek', 'dodatkowy-naglowek-2', 'dodatkowy-naglowek-2-2'])
+})
+
+test('rozciąganie lewego górnego narożnika zachowuje przeciwny narożnik', () => {
+  const blok = bloki[0]
+  const wynik = rozciagnijBlokSwobodny(blok, 'lg', 8, 3)
+  assert.equal(wynik.xMm, 28)
+  assert.equal(wynik.yMm, 33)
+  assert.equal(wynik.xMm + wynik.szerokoscMm, blok.xMm + blok.szerokoscMm)
+  assert.equal(wynik.yMm + wynik.wysokoscMm, blok.yMm + blok.wysokoscMm)
+})
+test('rozciąganie krawędzi pionowej obrazu zachowuje proporcje i granice strony', () => {
+  const blok = bloki[1]
+  const wynik = rozciagnijBlokSwobodny(blok, 'd', 0, 1000, true)
+  assert.ok(Math.abs(wynik.szerokoscMm / wynik.wysokoscMm - blok.szerokoscMm / blok.wysokoscMm) < .001)
+  assert.ok(wynik.xMm + wynik.szerokoscMm <= 210)
+  assert.ok(wynik.yMm + wynik.wysokoscMm <= 297)
+  assert.equal(wynik.xMm, blok.xMm)
+})
+test('krawędź i środek bloku przyciągają się do marginesu strony', () => {
+  const blok = { ...bloki[0], xMm: 11, szerokoscMm: 8 }
+  assert.equal(przesunBlokSwobodny(blok, 0, 0, 2, 210, 297, 10, 14).blok.xMm, 10)
+  assert.equal(przesunBlokSwobodny({ ...blok, xMm: 7 }, 0, 0, 2, 210, 297, 10, 14).blok.xMm, 6)
+})
+
+test('starszy format AI zwraca wskazówkę konwersji bez zapisu danych', async () => {
+  const plik = new File(['%!PS-Adobe-3.0'], 'logotyp.ai', { type: 'application/postscript' })
+  await assert.rejects(zapiszZasobObrazuDokumentu(plik), /zgodności z PDF lub wyeksportuj do SVG\/PNG/)
 })
