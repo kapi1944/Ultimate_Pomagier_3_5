@@ -262,6 +262,54 @@ const styleProgramuSzkolenia = `
   font-weight: 700;
 }
 
+.program-szkolen__wiersz-przelacznika {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.program-szkolen .program-szkolen__przelacznik {
+  appearance: none;
+  position: relative;
+  flex: 0 0 38px;
+  width: 38px;
+  height: 22px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--ui-tekst) 45%, transparent);
+  border-radius: 999px;
+  background: var(--ui-pole);
+  cursor: pointer;
+}
+
+.program-szkolen__przelacznik::before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--ui-tekst);
+}
+
+.program-szkolen .program-szkolen__przelacznik:checked {
+  border-color: var(--ui-akcent);
+  background: var(--ui-akcent);
+}
+
+.program-szkolen__przelacznik:checked::before {
+  transform: translateX(16px);
+  background: var(--ui-pole);
+}
+
+.program-szkolen__przelacznik:focus-visible {
+  outline: 2px solid var(--ui-akcent);
+  outline-offset: 3px;
+}
+
 .program-szkolen__etykieta--poziom {
   grid-template-columns: 1fr 108px;
   align-items: center;
@@ -1719,10 +1767,12 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
               <div className="program-szkolen__srodtytul">Treść programu</div>
 
               <label className="program-szkolen__etykieta">
-                <span>
+                <span className="program-szkolen__wiersz-przelacznika">
                   <input
+                    className="program-szkolen__przelacznik"
                     checked={ustawienia.formatowanieSkryptowe}
                     onChange={(zdarzenie) => zmienUstawienie('formatowanieSkryptowe', zdarzenie.target.checked)}
+                    role="switch"
                     type="checkbox"
                   />{' '}
                   Formatowanie skryptowe
@@ -1730,12 +1780,14 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
               </label>
 
               <label className="program-szkolen__etykieta">
-                <span>
+                <span className="program-szkolen__wiersz-przelacznika">
                   <input
+                    className="program-szkolen__przelacznik"
                     checked={ustawienia.czyPogrubiacNaglowkiListyProgramu}
                     onChange={(zdarzenie) =>
                       zmienUstawienie('czyPogrubiacNaglowkiListyProgramu', zdarzenie.target.checked)
                     }
+                    role="switch"
                     type="checkbox"
                   />{' '}
                   Pogrubiaj nagłówki listy programu
@@ -1747,9 +1799,10 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
               </label>
 
               <label className="program-szkolen__etykieta">
-                <span>
+                <span className="program-szkolen__wiersz-przelacznika">
                   <input
                     aria-label="Nie dziel punktów głównych między stronami"
+                    className="program-szkolen__przelacznik"
                     checked={ustawienia.czyNieDzielicPunktowGlownych}
                     onChange={(zdarzenie) => zmienUstawienie('czyNieDzielicPunktowGlownych', zdarzenie.target.checked)}
                     role="switch"
