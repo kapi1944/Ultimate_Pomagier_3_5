@@ -1,3 +1,4 @@
+import { pobierzTrenerowZKartoteki } from '../../../../kartoteki/trenerzyKartoteki'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   pobierzLokalizacjeZMagazynu,
@@ -15,7 +16,7 @@ import {
 import { zbudujBledyDanychKlienta, pobierzEfektywneStatusyPolOdbiorcy } from '../logikaDanychOdbiorcy'
 import { dodajGrupeDoListy, przetworzUsuniecieGrupy } from '../logikaGrupSzkoleniowych'
 import { zbudujBledyDynamicznychPolGrupy } from '../logikaPolDynamicznych'
-import { polaWymaganePoImporcie, trenerzyKartotekiStartowi } from '../stale'
+import { polaWymaganePoImporcie } from '../stale'
 import { czyKontoMozeWidziecKopie, pobierzAktywneKontoSzczegolow } from '../uzytkownicySzczegolow'
 import type {
   AutosaveSzczegolow,
@@ -56,7 +57,6 @@ import { parsujMailaSzczegolow } from '../uslugi/parserMailaSzczegolow'
 import { czyKontoMozeEdytowacSzczegoly } from '../uzytkownicySzczegolow'
 import { pobierzIdPola } from '../komponenty/identyfikatoryPol'
 
-const kluczTrenerowKartoteki = 'ultimate-pomagier.kartoteki.trenerzy'
 
 const etykietySekcji: Record<KluczSekcjiSzczegolow, string> = {
   podstawoweInformacje: 'Podstawowe informacje',
@@ -283,28 +283,7 @@ function normalizujAdresatow(adresaci?: Partial<DaneAdresatow>): DaneAdresatow {
   }
 }
 
-function pobierzTrenerowZKartoteki(): TrenerKartoteki[] {
-  try {
-    const zapis = localStorage.getItem(kluczTrenerowKartoteki)
-    const dane = zapis ? JSON.parse(zapis) : null
 
-    if (!Array.isArray(dane)) {
-      return trenerzyKartotekiStartowi
-    }
-
-    return dane
-      .filter((trener) => trener?.status !== 'Nieaktywny')
-      .map((trener) => ({
-        id: String(trener.id),
-        imieNazwisko: `${trener.imie ?? ''} ${trener.nazwisko ?? ''}`.trim() || String(trener.imieNazwisko ?? ''),
-        telefon: String(trener.telefon ?? ''),
-        email: String(trener.email ?? ''),
-      }))
-      .filter((trener) => trener.imieNazwisko)
-  } catch {
-    return trenerzyKartotekiStartowi
-  }
-}
 
 function pobierzStanPoczatkowy() {
   const wersja = pobierzAktualnaWersjeRobocza()

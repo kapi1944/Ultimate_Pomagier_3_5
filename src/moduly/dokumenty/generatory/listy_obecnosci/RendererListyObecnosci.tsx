@@ -4,7 +4,7 @@ import { pobierzBladPrzepelnieniaListy, pobierzStylTabeliListy } from './wygladT
 import { EdytowalnaWarstwaSwobodnychBlokow } from '../../../../wspolne/dokumenty/EdytorSwobodnychBlokow'
 import { czyBlokWidocznyNaStronie } from '../../../../wspolne/dokumenty/modelSwobodnychBlokow'
 import RendererSwobodnychBlokow from '../../../../wspolne/dokumenty/RendererSwobodnychBlokow'
-import { pobierzWysokoscNaglowkaListy, etykietyKolumnListyObecnosci, podzielListeObecnosciNaStrony, type DaneListyObecnosci, type KolumnaListyObecnosci, type UczestnikListyObecnosci } from './modelListyObecnosci'
+import { dopasujNaglowekListy, pobierzWysokoscNaglowkaListy, etykietyKolumnListyObecnosci, podzielListeObecnosciNaStrony, type DaneListyObecnosci, type KolumnaListyObecnosci, type UczestnikListyObecnosci } from './modelListyObecnosci'
 
 function NaglowekListy({ dane }: { dane: DaneListyObecnosci }) { return <header style={{ minHeight: `${pobierzWysokoscNaglowkaListy(dane) / 1.9}cqw` }} className="lista-obecnosci-a4__naglowek" aria-label="Nagłówek listy obecności" /> }
 
@@ -33,7 +33,8 @@ function PodpisyOdpowiedzialnych({ dane }: { dane: DaneListyObecnosci }) {
   return <footer className="lista-obecnosci-a4__podpisy">{dane.czyPokazacPodpisTrenera && <span>{dane.trener && <strong>{dane.trener}<br /></strong>}Podpis trenera</span>}{dane.czyPokazacPodpisOrganizatora && <span>Podpis organizatora</span>}</footer>
 }
 
-export default function RendererListyObecnosci({ dane, czyPokazacKontury = false, zasobyObrazow, zaznaczonyBlokId = null, trybEdycjiSzablonu = false, onZaznaczBlok, onZmienBlok }: { dane: DaneListyObecnosci; czyPokazacKontury?: boolean; zasobyObrazow?: Record<string, string | undefined>; zaznaczonyBlokId?: string | null; trybEdycjiSzablonu?: boolean; onZaznaczBlok?: (id: string | null) => void; onZmienBlok?: (blok: DaneListyObecnosci['blokiSwobodne'][number]) => void }) {
+export default function RendererListyObecnosci({ dane: daneZrodlowe, czyPokazacKontury = false, zasobyObrazow, zaznaczonyBlokId = null, trybEdycjiSzablonu = false, onZaznaczBlok, onZmienBlok }: { dane: DaneListyObecnosci; czyPokazacKontury?: boolean; zasobyObrazow?: Record<string, string | undefined>; zaznaczonyBlokId?: string | null; trybEdycjiSzablonu?: boolean; onZaznaczBlok?: (id: string | null) => void; onZmienBlok?: (blok: DaneListyObecnosci['blokiSwobodne'][number]) => void }) {
+  const dane = dopasujNaglowekListy(daneZrodlowe)
   const dokumentRef = useRef<HTMLDivElement>(null)
   const [bladPrzepelnienia, ustawBladPrzepelnienia] = useState<string | null>(null)
   useEffect(() => {

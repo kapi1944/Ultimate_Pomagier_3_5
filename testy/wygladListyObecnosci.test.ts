@@ -17,6 +17,8 @@ import { repozytoriumWspolnychDokumentow } from '../src/wspolne/dokumenty/rejest
 registerHooks({
   resolve(sciezka, kontekst, dalej) {
     if (sciezka.startsWith('.') && kontekst.parentURL) {
+      const indeks = new URL(`${sciezka}/index.ts`, kontekst.parentURL)
+      if (existsSync(indeks)) return { url: indeks.href, shortCircuit: true }
       const adres = new URL(`${sciezka}.tsx`, kontekst.parentURL)
       if (existsSync(adres)) return { url: adres.href, shortCircuit: true }
     }
@@ -123,7 +125,7 @@ const htmlTytulu = renderToStaticMarkup(createElement(Renderer, { dane: tytulZmi
 assert.ok(htmlTytulu.includes('font-size:2.016cqw'))
 assert.ok(htmlTytulu.includes(`width:${190 * 100 / 210}%`))
 const { default: KontrolkiTytulu } = await import('../src/moduly/dokumenty/generatory/listy_obecnosci/UstawieniaTytuluListy.tsx')
-assert.equal((renderToStaticMarkup(createElement(KontrolkiTytulu, { dane, ustawDane: () => {} })).match(/type="range"/g) ?? []).length, 11)
+assert.equal((renderToStaticMarkup(createElement(KontrolkiTytulu, { dane, ustawDane: () => {} })).match(/type="range"/g) ?? []).length, 12)
 const szablonTytulu = zapiszKopieUkladuSwobodnychBlokow({ nazwa: 'Test tytułu listy', typDokumentu: 'Lista obecności', organizator: 'SEMPER', autor: 'Test', bloki: tytulZmieniony.blokiSwobodne })
 assert.deepEqual(pobierzSzablonDokumentuPoId(szablonTytulu.id)?.dokumentBlokowy.blokiSwobodne, tytulZmieniony.blokiSwobodne)
 
@@ -179,7 +181,7 @@ const grupyKontrolek = [...kontrolkiOdstepow.matchAll(/<legend>(.*?)<\/legend>(.
 assert.deepEqual(grupyKontrolek.map((grupa) => grupa[1]), ['Nagłówek:', 'Tytuł:', 'Termin i miejsce:'])
 for (const [indeks, grupa] of grupyKontrolek.entries()) {
   assert.deepEqual([...grupa[2].matchAll(/<label[^>]*>(.*?)<\/label>/g)].map((etykieta) => etykieta[1]), [
-    '🔤 Rozmiar czcionki', '↕️ Wysokość bloku', ...(indeks === 1 ? ['↔️ Szerokość bloku'] : []), '⤵️ Padding bloku',
+    '🔤 Rozmiar czcionki', '↕️ Wysokość bloku', ...(indeks <= 1 ? ['↔️ Szerokość bloku'] : []), '⤵️ Padding bloku',
   ])
 }
 const htmlKonturow = renderToStaticMarkup(createElement(Renderer, { dane, czyPokazacKontury: true }))
@@ -191,11 +193,11 @@ const panelEdycji = renderToStaticMarkup(createElement(PanelEdycjiSwobodnychBlok
 assert.match(panelEdycji, /Edytuj układ szablonu<input[^>]*role="switch"[^>]*checked/)
 
 const listaBezOdstepu = { ...domyslne, odstepPodTerminemMm: 0 }
-assert.equal(pobierzWysokoscNaglowkaListy(domyslne), 60.8)
-assert.equal(pobierzWysokoscNaglowkaListy(listaBezOdstepu), 54)
+assert.equal(pobierzWysokoscNaglowkaListy(domyslne), 62.8)
+assert.equal(pobierzWysokoscNaglowkaListy(listaBezOdstepu), 56)
 assert.equal(pobierzOdstepPodTerminemListy(listaBezOdstepu), 0)
 const listaZOdstepem = { ...domyslne, odstepPodTerminemMm: 2 }
-assert.equal(pobierzWysokoscNaglowkaListy(listaZOdstepem), 56)
+assert.equal(pobierzWysokoscNaglowkaListy(listaZOdstepem), 58)
 assert.equal(deserializujDaneListyObecnosci(serializujDaneListyObecnosci(listaZOdstepem)).odstepPodTerminemMm, 2)
 assert.equal(deserializujDaneListyObecnosci(serializujDaneListyObecnosci(listaBezOdstepu)).odstepPodTerminemMm, 0)
 assert.equal(deserializujDaneListyObecnosci(JSON.stringify({ ...domyslne, odstepPodTerminemMm: -5 })).odstepPodTerminemMm, 0)
@@ -203,5 +205,32 @@ assert.equal(deserializujDaneListyObecnosci(JSON.stringify({ ...domyslne, odstep
 assert.equal(deserializujDaneListyObecnosci(JSON.stringify({ ...domyslne, odstepPodTerminemMm: 'błąd' })).odstepPodTerminemMm, undefined)
 assert.ok(pobierzLiczbeWierszyNaStronieListyObecnosci({ ...domyslne, odstepPodTerminemMm: 30 }) < pobierzLiczbeWierszyNaStronieListyObecnosci(domyslne))
 const htmlMalegoOdstepu = renderToStaticMarkup(createElement(Renderer, { dane: listaZOdstepem }))
-assert.ok(htmlMalegoOdstepu.includes('min-height:' + (56 / 1.9) + 'cqw'))
+assert.ok(htmlMalegoOdstepu.includes('min-height:' + (58 / 1.9) + 'cqw'))
 assert.ok(renderToStaticMarkup(createElement(KontrolkiTytulu, { dane: listaZOdstepem, ustawDane: () => {} })).includes('Odstęp pod terminem i miejscem'))
+
+const { pobierzTrenerowZKartoteki } = await import('../src/kartoteki/trenerzyKartoteki.ts')
+const kluczTrenerow = 'ultimate-pomagier.kartoteki.trenerzy'
+magazyn.set(kluczTrenerow, JSON.stringify([
+  { id: 'aktywny', imie: 'Anna', nazwisko: 'Nowak', status: 'Aktywny' },
+  { id: 'nieaktywny', imie: 'Jan', nazwisko: 'Kowalski', status: 'Nieaktywny' },
+]))
+assert.deepEqual(pobierzTrenerowZKartoteki().map((trener) => trener.imieNazwisko), ['Anna Nowak'])
+const { FormularzListyObecnosci } = await import('../src/moduly/dokumenty/generatory/listy_obecnosci/WidokListObecnosci.tsx')
+const formularzTrenera = renderToStaticMarkup(createElement(FormularzListyObecnosci, { dane: { ...dane, trener: 'Wpisany ręcznie' }, prefiksId: 'test-listy', ustawDane: () => {} }))
+assert.match(formularzTrenera, /list="test-listy-trenerzy"/)
+assert.match(formularzTrenera, /<option value="Anna Nowak"/)
+assert.ok(!formularzTrenera.includes('Jan Kowalski'))
+assert.match(formularzTrenera, /value="Wpisany ręcznie"/)
+magazyn.set(kluczTrenerow, 'niepoprawny JSON')
+assert.ok(pobierzTrenerowZKartoteki().length > 0)
+magazyn.delete(kluczTrenerow)
+
+const { dopasujNaglowekListy } = await import('../src/moduly/dokumenty/generatory/listy_obecnosci/modelListyObecnosci.ts')
+const dlugiNaglowek = dopasujNaglowekListy({ ...domyslne, tytulSzkolenia: 'Cyfrowe i zrównoważone zarządzanie dostawcami oraz jakością dostaw w związku z planowanym wdrożeniem oprogramowania do automatyzacji procesów zakupowych' })
+const tytulSzkolenia = dlugiNaglowek.blokiSwobodne.find((blok) => blok.id === 'lista-szkolenie')!
+const miejsceITermin = dlugiNaglowek.blokiSwobodne.find((blok) => blok.id === 'lista-miejsce')!
+assert.ok(tytulSzkolenia.wysokoscMm > 14)
+assert.ok(miejsceITermin.yMm >= tytulSzkolenia.yMm + tytulSzkolenia.wysokoscMm + 2)
+assert.ok(pobierzWysokoscNaglowkaListy(dlugiNaglowek) + 10 > miejsceITermin.yMm + miejsceITermin.wysokoscMm)
+assert.deepEqual(dopasujNaglowekListy(dlugiNaglowek), dlugiNaglowek)
+assert.equal(domyslne.blokiSwobodne.find((blok) => blok.id === 'lista-szkolenie')!.wysokoscMm, 14)

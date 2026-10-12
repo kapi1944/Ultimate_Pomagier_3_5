@@ -12,7 +12,7 @@ export default function UstawieniaTytuluListy({ dane, ustawDane }: { dane: DaneL
       const kontrolki = [
         { pole: 'rozmiarCzcionkiPt', etykieta: '🔤 Rozmiar czcionki', wartosc: blok.dane.rozmiarCzcionkiPt, minimum: 8, maksimum: 20, jednostka: 'pt' },
         { pole: 'wysokoscMm', etykieta: '↕️ Wysokość bloku', wartosc: blok.wysokoscMm, minimum: 4, maksimum: 30, jednostka: 'mm' },
-        ...(id === 'lista-szkolenie' ? [{ pole: 'szerokoscMm' as const, etykieta: '↔️ Szerokość bloku', wartosc: blok.szerokoscMm, minimum: 100, maksimum: 200, jednostka: 'mm' }] : []),
+        ...(['lista-szkolenie', 'lista-tytul'].includes(id) ? [{ pole: 'szerokoscMm' as const, etykieta: '↔️ Szerokość bloku', wartosc: blok.szerokoscMm, minimum: id === 'lista-tytul' ? 40 : 100, maksimum: 200, jednostka: 'mm' }] : []),
         { pole: 'marginesWewnetrznyMm', etykieta: '⤵️ Padding bloku', wartosc: blok.dane.marginesWewnetrznyMm ?? 0, minimum: 0, maksimum: 5, jednostka: 'mm' },
       ] as const
       return <fieldset className="generator-list-obecnosci__ustawienia-bloku" key={id}>
@@ -21,7 +21,9 @@ export default function UstawieniaTytuluListy({ dane, ustawDane }: { dane: DaneL
           const krok = pole === 'szerokoscMm' ? 1 : 0.5
           const identyfikator = prefiks + '-' + id + '-' + pole
           const zmien = (nowaWartosc: number) => ustawDane((obecne) => pole === 'szerokoscMm'
-            ? zmienWygladTytuluListy(obecne, pole, nowaWartosc)
+            ? id === 'lista-tytul'
+              ? { ...obecne, blokiSwobodne: obecne.blokiSwobodne.map((blok) => blok.id === id ? { ...blok, xMm: (210 - nowaWartosc) / 2, szerokoscMm: nowaWartosc } : blok) }
+              : zmienWygladTytuluListy(obecne, pole, nowaWartosc)
             : zmienOdstepyBlokuListy(obecne, id, pole, nowaWartosc))
           return <div key={pole}>
             <label htmlFor={identyfikator}>{etykieta}</label>
@@ -44,6 +46,6 @@ export default function UstawieniaTytuluListy({ dane, ustawDane }: { dane: DaneL
         <button type="button" aria-label="Zwiększ odstęp do tabeli" disabled={odstep >= 30} onClick={() => zmienOdstep(odstep + .5)}>+</button>
       </div>
     </div>
-    <p className="generator-list-obecnosci__opis">Przesunięcie suwaka szerokości w prawo poszerza wyśrodkowany tytuł. Wysokość bloku reguluje pustą przestrzeń pod tekstem, a padding odstęp wewnętrzny z każdej strony. Sprawdź, czy cały tekst mieści się w bloku. Pozycje pozostałych bloków nie przesuwają się automatycznie.</p>
+    <p className="generator-list-obecnosci__opis">Przesunięcie suwaka szerokości w prawo poszerza wyśrodkowany tytuł. Wysokość bloku reguluje pustą przestrzeń pod tekstem, a padding odstęp wewnętrzny z każdej strony. Wysokość automatycznie rośnie, gdy tekst wymaga więcej miejsca. Kolejne bloki oraz tabela przesuwają się w dół, zachowując odstępy.</p>
   </>
 }

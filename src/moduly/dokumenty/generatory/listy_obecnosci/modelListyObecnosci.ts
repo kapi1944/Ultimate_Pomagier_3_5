@@ -1,3 +1,4 @@
+import { pobierzTekstBloku } from '../../../../wspolne/dokumenty/modelSwobodnychBlokow'
 import { domyslnyWygladTabeliListy, normalizujWygladTabeliListy, type WygladTabeliListy } from './wygladTabeliListy'
 import type { DaneListyObecnosciZIntegracji, KorektyReczneListyObecnosci } from '../../../../wspolne/integracje/szczegolyDoDokumentow'
 import { WERSJA_SCHEMATU_SWOBODNYCH_BLOKOW, normalizujBlokiSwobodneDokumentu, type BlokSwobodnyDokumentu } from '../../../../wspolne/dokumenty/modelSwobodnychBlokow'
@@ -87,7 +88,7 @@ export function utworzBlokiSzablonuListyObecnosci(): BlokSwobodnyDokumentu[] {
   const podstawa = (id: string, nazwa: string, xMm: number, yMm: number, szerokoscMm: number, wysokoscMm: number) => ({ id, nazwa, rola: 'element_staly_szablonu' as const, pochodzenie: 'szablon' as const, zablokowany: false, xMm, yMm, szerokoscMm, wysokoscMm, przypisanieDoStrony: { rodzaj: 'pierwsza' as const }, widoczny: true, indeksWarstwy: 8 })
   return [
     { ...podstawa('lista-logo', 'Logo organizatora', 10, 8, 42, 20), rola: 'logo' as const, typ: 'obraz' as const, dane: { zrodlo: { rodzaj: 'zasob_organizatora' as const, klucz: 'logo_organizatora' }, tekstAlternatywny: 'Logo organizatora', zachowajProporcje: true, trybDopasowania: 'contain' as const } },
-    { ...podstawa('lista-tytul', 'Tytuł dokumentu', 48, 22, 114, 12), typ: 'tekst' as const, dane: { zrodlo: { rodzaj: 'statyczne' as const, tekst: 'Lista obecności' }, rozmiarCzcionkiPt: 15, gruboscCzcionki: 700 as const, rodzinaCzcionki: 'Arial', wyrownanie: 'srodek' as const, interlinia: 1.1, podkreslenie: true, marginesWewnetrznyMm: 1 } },
+    { ...podstawa('lista-tytul', 'Tytuł dokumentu', 75, 22, 60, 12), typ: 'tekst' as const, dane: { zrodlo: { rodzaj: 'statyczne' as const, tekst: 'Lista obecności' }, rozmiarCzcionkiPt: 15, gruboscCzcionki: 700 as const, rodzinaCzcionki: 'Arial', wyrownanie: 'srodek' as const, interlinia: 1.1, podkreslenie: true, marginesWewnetrznyMm: 1 } },
     { ...podstawa('lista-szkolenie', 'Tytuł szkolenia', 25, 38, 160, 14), typ: 'tekst' as const, dane: { zrodlo: { rodzaj: 'pole_danych' as const, sciezka: 'tytulSzkolenia', tekstZastepczy: 'Tytuł szkolenia' }, rozmiarCzcionkiPt: 15, gruboscCzcionki: 700 as const, rodzinaCzcionki: 'Arial', wyrownanie: 'srodek' as const, interlinia: 1.1, kolor: '#c80000', marginesWewnetrznyMm: 1 } },
     { ...podstawa('lista-miejsce', 'Miejsce i termin', 25, 52, 160, 12), typ: 'tekst' as const, dane: { zrodlo: { rodzaj: 'pole_danych' as const, sciezka: 'miejsceITermin', tekstZastepczy: 'Miejsce i termin' }, rozmiarCzcionkiPt: 12, gruboscCzcionki: 400 as const, rodzinaCzcionki: 'Arial', wyrownanie: 'srodek' as const, interlinia: 1.1, marginesWewnetrznyMm: 1 } },
   ]
@@ -347,11 +348,42 @@ export function pobierzOdstepPodTerminemListy(dane: DaneListyObecnosci): number 
   return Math.max(0, 70.8 - (blok ? blok.yMm + blok.wysokoscMm : 64))
 }
 
+
+export function dopasujNaglowekListy(dane: DaneListyObecnosci): DaneListyObecnosci {
+  const zakresDat = dane.daty.length > 1 ? `${dane.daty[0]} do ${dane.daty.at(-1)}` : dane.daty[0] ?? ''
+  const kontekst = { dane: { ...dane, miejsceITermin: [dane.miejsce, zakresDat].filter(Boolean).join(', ') } }
+  let dolPoprzedniego = 0
+  const dopasowane = new Map<string, DaneListyObecnosci['blokiSwobodne'][number]>()
+  for (const id of ['lista-tytul', 'lista-szkolenie', 'lista-miejsce']) {
+    const blok = dane.blokiSwobodne.find((pozycja) => pozycja.id === id)
+    if (!blok || !blok.widoczny || blok.typ !== 'tekst') continue
+    const tekst = pobierzTekstBloku(blok, kontekst)
+    const padding = blok.dane.marginesWewnetrznyMm ?? 0
+    let wysokoscTekstu: number
+    if (typeof document !== 'undefined') {
+      const pomiar = document.createElement('div')
+      Object.assign(pomiar.style, { position: 'absolute', visibility: 'hidden', pointerEvents: 'none', width: `${Math.max(1, blok.szerokoscMm - 2 * padding) * 4}px`, fontFamily: blok.dane.rodzinaCzcionki, fontSize: `${blok.dane.rozmiarCzcionkiPt * 0.3528 * 4}px`, fontWeight: String(blok.dane.gruboscCzcionki), fontStyle: blok.dane.kursywa ? 'italic' : 'normal', lineHeight: String(blok.dane.interlinia), whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', padding: '0', margin: '0', border: '0' })
+      pomiar.textContent = tekst
+      document.body.appendChild(pomiar)
+      wysokoscTekstu = pomiar.getBoundingClientRect().height / 4
+      pomiar.remove()
+    } else {
+      const znakiWWierszu = Math.max(1, Math.floor((blok.szerokoscMm - 2 * padding) / (blok.dane.rozmiarCzcionkiPt * 0.3528 * 0.65)))
+      wysokoscTekstu = tekst.split('\n').reduce((suma, wiersz) => suma + Math.max(1, Math.ceil(wiersz.length / znakiWWierszu)), 0) * blok.dane.rozmiarCzcionkiPt * 0.3528 * blok.dane.interlinia
+    }
+    const wysokoscMm = Math.max(blok.wysokoscMm, wysokoscTekstu + 2 * padding + 0.5)
+    const yMm = Math.max(blok.yMm, dolPoprzedniego ? dolPoprzedniego + 2 : 0)
+    dopasowane.set(id, { ...blok, yMm, wysokoscMm })
+    dolPoprzedniego = yMm + wysokoscMm
+  }
+  return { ...dane, odstepPodTerminemMm: pobierzOdstepPodTerminemListy(dane), blokiSwobodne: dane.blokiSwobodne.map((blok) => dopasowane.get(blok.id) ?? blok) }
+}
+
 export function pobierzWysokoscNaglowkaListy(dane: DaneListyObecnosci): number {
-  // Starsze dokumenty zachowują dotychczasową pozycję tabeli do pierwszej regulacji odstępu.
-  if (dane.odstepPodTerminemMm === undefined) return 60.8
+  const odstep = pobierzOdstepPodTerminemListy(dane)
+  dane = dopasujNaglowekListy(dane)
   const dolNaglowka = Math.max(10, ...dane.blokiSwobodne
     .filter((blok) => blok.widoczny && ['lista-logo', 'lista-tytul', 'lista-szkolenie', 'lista-miejsce'].includes(blok.id))
     .map((blok) => blok.yMm + blok.wysokoscMm))
-  return Math.max(0, dolNaglowka - 10 + pobierzOdstepPodTerminemListy(dane))
+  return Math.max(0, dolNaglowka - 10 + odstep)
 }

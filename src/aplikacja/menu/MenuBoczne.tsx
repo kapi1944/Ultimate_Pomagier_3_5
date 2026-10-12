@@ -63,7 +63,7 @@ export default function MenuBoczne({
   const uzytkownikId = zalogowanyUzytkownik?.id ?? 'anonim'
   const preferencjePoczatkowe = useMemo(() => pobierzPreferencjeDrzewaMenu(uzytkownikId), [uzytkownikId])
   const [czyMenuPrzypiete, ustawCzyMenuPrzypiete] = useState(pobierzPoczatkowePrzypiecieMenu)
-  const [czyMenuOtwarte, ustawCzyMenuOtwarte] = useState(czyMenuPrzypiete)
+  const [czyMenuOtwarte, ustawCzyMenuOtwarte] = useState(false)
   const [czyWysuwanieZKrawedziWlaczone, ustawCzyWysuwanieZKrawedziWlaczone] = useState(
     pobierzPoczatkoweWysuwanieZKrawedzi,
   )

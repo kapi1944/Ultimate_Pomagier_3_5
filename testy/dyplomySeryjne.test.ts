@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { parsujListeUczestnikow, polaczUczestnikowPoNazwie, sprawdzDaneDyplomu, zbudujDaneSeryjnychDyplomow } from '../src/moduly/dokumenty/generatory/dyplomy/modelSeryjnychDyplomow.ts'
 import { zbudujNazweEksportowanegoDokumentu } from '../src/wspolne/dokumenty/nazwyDokumentow.ts'
 import type { KontekstDokumentuSzkolenia } from '../src/wspolne/integracje/szczegolyDoDokumentow/index.ts'
+import { importujPlikDyplomu, parsujTekstDyplomu } from '../src/moduly/dokumenty/generatory/dyplomy/importDyplomu.ts'
 
 const kontekst: KontekstDokumentuSzkolenia = {
   zrodlo: { szczegolyOrganizacyjneId: 'szczegoly-1', wersjaSzczegolowId: null, zmodyfikowano: '2026-09-04', odciskDanych: 'test' },
@@ -51,3 +52,35 @@ const imiennicy = [{ ...uczestnicyIndywidualni[0] }, { ...uczestnicyIndywidualni
 assert.deepEqual(polaczUczestnikowPoNazwie(['Anna Kowalska', 'Anna Kowalska'], imiennicy, utworz), imiennicy)
 assert.equal(new Set(polaczUczestnikowPoNazwie(['Anna Kowalska', 'Anna Kowalska'], imiennicy, utworz).map((uczestnik) => uczestnik.id)).size, 2)
 assert.deepEqual(zbudujDaneSeryjnychDyplomow({ ...kontekst, grupy: [{ ...kontekst.grupy[0], uczestnicy: [kontekst.grupy[0].uczestnicy[0], kontekst.grupy[0].uczestnicy[0]] }] }, 'grupa-1')?.uczestnicy, ['Anna Kowalska'])
+
+const tekstDyplomu = `Centrum Organizacji Szkoleń i Konferencji SEMPER
+Ekspert merytoryczny: Grzegorz Kryjom
+Serdecznie gratulujemy i życzymy dalszych sukcesów!
+Nr z rejestru: 88754867/114293/2026 Borowa, 13-10-2026
+Niniejszym zaświadcza się, że
+Pan/Pani Anna Balon
+ukończył/a szkolenie:
+"Cyfrowe i zrównoważone zarządzanie dostawcami oraz
+jakością dostaw w związku z planowanym wdrożeniem
+oprogramowania do automatyzacji procesów zakupowych"
+zrealizowane w terminie: od 12-10-2026 do 13-10-2026
+w wymiarze 16 h zegarowych.
+Miejsce szkolenia: Borowa.`
+const wynikImportu = parsujTekstDyplomu(tekstDyplomu)
+assert.deepEqual(wynikImportu.pola, {
+  imieNazwisko: 'Anna Balon', numerRejestru: '88754867/114293/2026',
+  tytulSzkolenia: 'Cyfrowe i zrównoważone zarządzanie dostawcami oraz jakością dostaw w związku z planowanym wdrożeniem oprogramowania do automatyzacji procesów zakupowych',
+  wybraneDaty: ['2026-10-12', '2026-10-13'], liczbaGodzin: '16', rodzajGodzin: 'zegarowych',
+  miejsceSzkolenia: 'Borowa', trybSzkolenia: 'stacjonarne', trener: 'Grzegorz Kryjom', motywKoloru: 'semper',
+})
+assert.ok(wynikImportu.ostrzezenia[0].includes('Typ dokumentu'))
+assert.equal(parsujTekstDyplomu(`CERTYFIKAT ${tekstDyplomu}`).pola.trybTytulu, 'certyfikat')
+assert.equal(parsujTekstDyplomu(tekstDyplomu.replace('Borowa.', 'Szkolenie online.')).pola.trybSzkolenia, 'online')
+assert.equal(parsujTekstDyplomu(tekstDyplomu.replace('12-10-2026 do 13-10-2026', '31-02-2026 do 13-10-2026')).pola.wybraneDaty, undefined)
+assert.deepEqual(parsujTekstDyplomu(tekstDyplomu.replace('12-10-2026 do 13-10-2026', '12-10-2026 do 14-10-2026')).pola.wybraneDaty, ['2026-10-12', '2026-10-13', '2026-10-14'])
+assert.deepEqual(parsujTekstDyplomu(tekstDyplomu.replace('od 12-10-2026 do 13-10-2026', '12.10.2026 i 14.10.2026')).pola.wybraneDaty, ['2026-10-12', '2026-10-14'])
+assert.throws(() => parsujTekstDyplomu('Nierozpoznany dokument'), /Nie rozpoznano/)
+assert.throws(() => parsujTekstDyplomu(`${tekstDyplomu}\n${tekstDyplomu}`), /kilka dyplomów/)
+assert.deepEqual((await importujPlikDyplomu(new File([tekstDyplomu], 'dyplom.txt'))).pola, wynikImportu.pola)
+await assert.rejects(() => importujPlikDyplomu(new File([''], 'dyplom.png')), /PDF albo TXT/)
+console.log('OK: import dyplomu rozpoznaje dane, zakres dat i braki bez zgadywania')

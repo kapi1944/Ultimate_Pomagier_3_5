@@ -4,7 +4,7 @@ export const geometriaStronyProgramu = {
   szerokoscMm: 210,
   wysokoscMm: 297,
   marginesDrukuMm: 0,
-  odstepGornyMm: 14,
+  odstepGornyMm: 7,
   odstepPoziomyMm: 15,
   wysokoscStopkiMm: 29,
   wysokoscNaglowkaModeluMm: 28,

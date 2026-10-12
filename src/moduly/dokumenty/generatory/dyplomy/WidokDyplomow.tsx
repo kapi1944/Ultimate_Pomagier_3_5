@@ -17,6 +17,8 @@ import StatusZapisuDokumentu from '../../wspolne/StatusZapisuDokumentu'
 import { useOchronaNiezapisanegoDokumentu, useStanDokumentu } from '../../wspolne/useStanDokumentu'
 import { parsujListeUczestnikow, polaczUczestnikowPoNazwie, sprawdzDaneDyplomu, zbudujDaneSeryjnychDyplomow } from './modelSeryjnychDyplomow'
 import { pobierzLogoOrganizatora } from '../../../../wspolne/dokumenty/logoOrganizatora'
+import { etykietyImportuDyplomu, importujPlikDyplomu } from './importDyplomu'
+import type { DaneImportuDyplomu, WynikImportuDyplomu } from './importDyplomu'
 import './widokDyplomow.css'
 
 type TrybSzkolenia = 'stacjonarne' | 'online'
@@ -956,6 +958,10 @@ function StronaDyplomu({ dane, uczestnik }: { dane: ZapisDyplomow; uczestnik: Uc
 export default function WidokDyplomow() {
   const [dane, ustawDane] = useState<ZapisDyplomow>(wczytajZapisDyplomow)
   const [komunikat, ustawKomunikat] = useState('Szkic zapisywany lokalnie.')
+  const [importDyplomu, ustawImportDyplomu] = useState<(WynikImportuDyplomu & { nazwaPliku: string }) | null>(null)
+  const [wybranePolaImportu, ustawWybranePolaImportu] = useState<Array<keyof DaneImportuDyplomu>>([])
+  const [czyTrwaImport, ustawCzyTrwaImport] = useState(false)
+  const plikDyplomuRef = useRef<HTMLInputElement>(null)
   const [nazwaNowegoDodatku, ustawNazweNowegoDodatku] = useState('')
   const [tekstNowegoDodatku, ustawTekstNowegoDodatku] = useState('')
   const [idWybranegoDodatkuGornego, ustawIdWybranegoDodatkuGornego] = useState('')
@@ -1234,6 +1240,66 @@ export default function WidokDyplomow() {
     }))
   }
 
+  async function wczytajDyplomZPliku(zdarzenie: ChangeEvent<HTMLInputElement>) {
+    const plik = zdarzenie.target.files?.[0]
+    zdarzenie.target.value = ''
+    if (!plik) return
+    ustawCzyTrwaImport(true)
+    ustawImportDyplomu(null)
+    try {
+      const wynik = await importujPlikDyplomu(plik)
+      ustawImportDyplomu({ ...wynik, nazwaPliku: plik.name })
+      ustawWybranePolaImportu(Object.keys(wynik.pola) as Array<keyof DaneImportuDyplomu>)
+      ustawKomunikat('Odczytano dyplom. Sprawdź rozpoznane dane i zatwierdź wybrane pola.')
+    } catch (blad) {
+      ustawKomunikat(blad instanceof Error ? `Nie udało się zaimportować dyplomu: ${blad.message}` : 'Nie udało się zaimportować dyplomu. Dane formularza zachowano.')
+    } finally {
+      ustawCzyTrwaImport(false)
+    }
+  }
+
+  function zastosujImportDyplomu() {
+    if (!importDyplomu) return
+    const pola = importDyplomu.pola
+    const czyWybrane = (pole: keyof DaneImportuDyplomu) => wybranePolaImportu.includes(pole) && pola[pole] !== undefined
+    ustawDane((aktualne) => {
+      const zmiany: Partial<ZapisDyplomow> = {}
+      if (czyWybrane('imieNazwisko') || czyWybrane('tytulSzkolenia') || czyWybrane('wybraneDaty')) {
+        zmiany.szczegolyOrganizacyjneId = null
+        zmiany.grupaId = null
+      }
+      for (const pole of ['tytulSzkolenia', 'liczbaGodzin', 'miejsceSzkolenia', 'trener'] as const) {
+        if (czyWybrane(pole)) zmiany[pole] = pola[pole]
+      }
+      if (czyWybrane('trybSzkolenia')) zmiany.trybSzkolenia = pola.trybSzkolenia
+      if (czyWybrane('trybTytulu')) zmiany.trybTytulu = pola.trybTytulu
+      if (czyWybrane('wybraneDaty') && pola.wybraneDaty) {
+        zmiany.wybraneDaty = pola.wybraneDaty
+        zmiany.miesiacKalendarza = pola.wybraneDaty[0].slice(0, 7)
+      }
+      if (czyWybrane('rodzajGodzin') && pola.rodzajGodzin) {
+        zmiany.rodzajGodzin = rodzajeGodzin.find((rodzaj) => rodzaj === pola.rodzajGodzin) ?? 'niestandardowych'
+        zmiany.niestandardowyRodzajGodzin = zmiany.rodzajGodzin === 'niestandardowych' ? pola.rodzajGodzin : ''
+      }
+      if (czyWybrane('motywKoloru') && pola.motywKoloru) {
+        zmiany.motywKoloru = pola.motywKoloru
+        zmiany.kolorMotywu = koloryFirmoweDyplomu[pola.motywKoloru]
+        zmiany.wariantSzablonu = 'CRM'
+      }
+      if (czyWybrane('imieNazwisko') && pola.imieNazwisko) {
+        const uczestnik = aktualne.uczestnicy.find((pozycja) => pozycja.imieNazwisko === pola.imieNazwisko)
+          ?? { ...utworzUczestnika(pola.imieNazwisko, 0, aktualne), numerRejestru: '' }
+        zmiany.uczestnicy = [{ ...uczestnik, ...(czyWybrane('numerRejestru') ? { numerRejestru: pola.numerRejestru } : {}) }]
+        zmiany.uczestnicyTekst = pola.imieNazwisko
+        if (czyWybrane('numerRejestru')) zmiany.poczatkowyNumerRejestru = pola.numerRejestru
+      }
+      return { ...aktualne, ...zmiany }
+    })
+    ustawIndeksUczestnikaPierwszejStrony(0)
+    ustawImportDyplomu(null)
+    ustawKomunikat(`Zastosowano wybrane dane z pliku ${importDyplomu.nazwaPliku}. Sprawdź checklistę przed eksportem.`)
+  }
+
   async function importujUczestnikowZPliku(zdarzenie: ChangeEvent<HTMLInputElement>) {
     const plik = zdarzenie.target.files?.[0]
 
@@ -1490,6 +1556,10 @@ export default function WidokDyplomow() {
 
         <div className="dyplomy__akcje">
           <StatusZapisuDokumentu stan={stanDokumentu.stanZapisu} />
+          <input ref={plikDyplomuRef} type="file" accept=".pdf,.txt,application/pdf,text/plain" hidden onChange={wczytajDyplomZPliku} />
+          <button className="dyplomy__przycisk" type="button" disabled={czyTrwaImport} onClick={() => plikDyplomuRef.current?.click()}>
+            {czyTrwaImport ? 'Odczytywanie dyplomu…' : 'Importuj dyplom PDF / TXT'}
+          </button>
           <PrzyciskPaneluGeneratora className="dyplomy__przycisk">
             Ustawienia dyplomu
           </PrzyciskPaneluGeneratora>
@@ -1515,6 +1585,25 @@ export default function WidokDyplomow() {
       <div className="dyplomy__komunikat" aria-live="polite">
         {komunikat}
       </div>
+
+      {importDyplomu && (
+        <section className="dyplomy__sekcja" aria-label="Dane dyplomu do zatwierdzenia">
+          <h2>Import: {importDyplomu.nazwaPliku}</h2>
+          <p>Sprawdź wartości odczytane z pliku. Zaznaczone pola zastąpią obecne dane. Import uczestnika zastąpi listę jednym uczestnikiem z dyplomu. Import uczestnika, tytułu lub terminu odłączy wybraną grupę i szczegóły organizacyjne.</p>
+          {importDyplomu.ostrzezenia.map((ostrzezenie) => <p key={ostrzezenie}>{ostrzezenie}</p>)}
+          {(Object.keys(importDyplomu.pola) as Array<keyof DaneImportuDyplomu>).map((pole) => (
+            <label className="dyplomy__pole" key={pole}>
+              <span><input type="checkbox" checked={wybranePolaImportu.includes(pole)}
+                disabled={pole === 'numerRejestru' && !wybranePolaImportu.includes('imieNazwisko')}
+                onChange={(zdarzenie) => ustawWybranePolaImportu((obecne) => zdarzenie.target.checked ? [...obecne, pole] : obecne.filter((wybrane) => wybrane !== pole && (pole !== 'imieNazwisko' || wybrane !== 'numerRejestru')))} /> {etykietyImportuDyplomu[pole]}: {Array.isArray(importDyplomu.pola[pole]) ? importDyplomu.pola[pole].join(', ') : importDyplomu.pola[pole]}</span>
+            </label>
+          ))}
+          <div className="dyplomy__akcje">
+            <button className="dyplomy__przycisk" type="button" disabled={!wybranePolaImportu.length} onClick={zastosujImportDyplomu}>Zastosuj wybrane dane</button>
+            <button className="dyplomy__przycisk" type="button" onClick={() => ustawImportDyplomu(null)}>Anuluj import</button>
+          </div>
+        </section>
+      )}
 
       <UkladFormularzaIPodgladu className="dyplomy__uklad">
         <div className="dyplomy__panel-pracy">
