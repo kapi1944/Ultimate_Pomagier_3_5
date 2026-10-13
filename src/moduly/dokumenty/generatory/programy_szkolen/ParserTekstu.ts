@@ -542,13 +542,13 @@ export function parsujTekstProgramu(tresc: string, opcje: { czyScalacKontynuacje
     licznikModulow += 1
     aktualnyModul = {
       id: utworzId('modul', licznikModulow),
-      indeksWierszaZrodlowego: tytul === 'Zakres tematyczny' ? undefined : aktualnyWiersz?.indeks,
+      indeksWierszaZrodlowego: tytul ? aktualnyWiersz?.indeks : undefined,
       tytul: tytul.trim(),
       podpunkty: [],
       typ: rozpoznajTypElementu(tytul),
       czyNiepewne,
-      oznaczenie: tytul === 'Zakres tematyczny' ? undefined : rozpoznajOznaczenieProgramu(aktualnyWiersz?.tresc ?? '')?.oznaczenie,
-      ustawienieOznaczenia: tytul === 'Zakres tematyczny' ? undefined : opcje.ustawieniaWierszy?.[aktualnyWiersz?.indeks ?? -1],
+      oznaczenie: tytul ? rozpoznajOznaczenieProgramu(aktualnyWiersz?.tresc ?? '')?.oznaczenie : undefined,
+      ustawienieOznaczenia: tytul ? opcje.ustawieniaWierszy?.[aktualnyWiersz?.indeks ?? -1] : undefined,
     }
     zrodloAktualnegoModulu = zrodlo
     aktualnyDzien?.moduly.push(aktualnyModul)
@@ -557,7 +557,7 @@ export function parsujTekstProgramu(tresc: string, opcje: { czyScalacKontynuacje
 
   function dodajPodpunkt(trescPodpunktu: string, poziom: number, czyNiepewne = false, rodzaj: RodzajOstatniegoElementu = 'podpunkt') {
     if (!aktualnyModul) {
-      dodajModul('Zakres tematyczny', 'techniczny')
+      dodajModul('', 'techniczny')
     }
 
     licznikPodpunktow += 1

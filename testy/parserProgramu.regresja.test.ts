@@ -14,6 +14,17 @@ function sprawdz(nazwa: string, testRegresji: () => void) {
   console.log(`OK: ${nazwa}`)
 }
 
+sprawdz('punkty bez tytułu modułu nie otrzymują automatycznego nagłówka', () => {
+  const program = parsujTekstProgramu(`Dzień 1 – Tworzenie i analiza umów
+• Otwarcie szkolenia
+• Przedstawienie celów i agendy`)
+
+  assert.equal(program.dni[0].moduly[0].tytul, '')
+  assert.equal(program.dni[0].moduly[0].indeksWierszaZrodlowego, undefined)
+  assert.equal(policzPunkty(program), 2)
+  assert.equal(JSON.stringify(program.dokumentBlokowy).includes('Zakres tematyczny'), false)
+})
+
 sprawdz('program 1-dniowy bez nagłówka dnia i z ramkową separacją modułów zachowuje moduły', () => {
   const program = parsujTekstProgramu(`
 Program szkolenia
