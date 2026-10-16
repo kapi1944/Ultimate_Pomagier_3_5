@@ -32,23 +32,45 @@ export function parsujListeUczestnikow(wartosc: string) {
   return [...new Set(wartosc.split(/\r?\n/).map((wiersz) => wiersz.split(/\t|;/)[0].trim()).filter(Boolean))]
 }
 
-export function polaczUczestnikowPoNazwie<Uczestnik extends { imieNazwisko: string }>(
+export function czyUczestnikDoDruku(uczestnik: { imieNazwisko: string; czyPustyDyplom?: boolean }) {
+  return uczestnik.czyPustyDyplom === true || Boolean(uczestnik.imieNazwisko.trim())
+}
+
+export function ograniczPrzesuniecieLogotypu(wartosc: unknown) {
+  return typeof wartosc === 'number' && Number.isFinite(wartosc)
+    ? Math.min(15, Math.max(-5, Math.round(wartosc * 10) / 10)) : 0
+}
+
+export function dodajPusteDyplomy<Uczestnik extends { imieNazwisko: string; czyPustyDyplom?: boolean }>(
+  obecni: Uczestnik[], liczba: number, utworz: (nazwa: string, indeks: number) => Uczestnik,
+) {
+  if (!Number.isSafeInteger(liczba) || liczba <= 0) {
+    throw new Error('Podaj dodatnią, całkowitą liczbę pustych dyplomów.')
+  }
+
+  return [...obecni, ...Array.from({ length: liczba }, (_, indeks) => ({
+    ...utworz('', obecni.length + indeks), czyPustyDyplom: true,
+  }))]
+}
+
+export function polaczUczestnikowPoNazwie<Uczestnik extends { imieNazwisko: string; czyPustyDyplom?: boolean }>(
   nazwy: string[], obecni: Uczestnik[], utworz: (nazwa: string, indeks: number) => Uczestnik,
 ) {
   const dostepni = [...obecni]
-  return nazwy.map((nazwa, indeks) => {
+  const imienni = nazwy.map((nazwa, indeks) => {
     const indeksObecnego = dostepni.findIndex((uczestnik) => uczestnik.imieNazwisko === nazwa)
     return indeksObecnego >= 0 ? dostepni.splice(indeksObecnego, 1)[0] : utworz(nazwa, indeks)
   })
+  return [...imienni, ...dostepni.filter((uczestnik) => uczestnik.czyPustyDyplom === true)]
 }
 
 export function sprawdzDaneDyplomu(dane: {
-  uczestnicy: Array<{ imieNazwisko: string; numerRejestru: string }>
+  uczestnicy: Array<{ imieNazwisko: string; numerRejestru: string; czyPustyDyplom?: boolean }>
   tytulSzkolenia: string; wybraneDaty: string[]; liczbaGodzin: string
   trener: string; trybSzkolenia: 'online' | 'stacjonarne'; miejsceSzkolenia: string
 }) {
   const problemy: string[] = []
-  const uczestnicy = dane.uczestnicy.filter((uczestnik) => uczestnik.imieNazwisko.trim())
+  const uczestnicy = dane.uczestnicy.filter(czyUczestnikDoDruku)
 
   if (!uczestnicy.length) {
     problemy.push('dodaj co najmniej jednego uczestnika')

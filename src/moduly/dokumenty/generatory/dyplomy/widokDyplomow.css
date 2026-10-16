@@ -97,6 +97,82 @@
   top: 18px;
 }
 
+.dyplomy__panel-ustawien .generator-panel-ustawien__naglowek {
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dyplomy__panel-ustawien .generator-panel-ustawien__akcje {
+  justify-content: flex-start;
+}
+
+.dyplomy__panel-ustawien .dyplomy__zrodlo-szkolenia,
+.dyplomy__ustawienia-sekcja {
+  margin: 0 0 20px;
+  padding: 0 0 20px;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--ui-akcent) 22%, transparent);
+  border-radius: 0;
+  background: transparent;
+}
+
+.dyplomy__ustawienia-sekcja h2 {
+  margin: 0 0 14px;
+  color: var(--ui-tekst);
+  font-size: 0.94rem;
+}
+
+.dyplomy__ustawienia-pola,
+.dyplomy__panel-ustawien .dyplomy__siatka {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+}
+
+.dyplomy__panel-ustawien label.dyplomy__pole {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.dyplomy__panel-ustawien label.dyplomy__pole--checkbox {
+  display: flex;
+  flex-direction: row-reverse;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--ui-akcent) 12%, transparent);
+}
+
+.dyplomy__panel-ustawien .dyplomy__pole--checkbox input {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
+
+.dyplomy__panel-ustawien .dyplomy__wybor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+}
+
+.dyplomy__panel-ustawien .dyplomy__wybor button {
+  padding: 8px 6px;
+  font-size: 0.82rem;
+}
+
+.dyplomy__panel-ustawien textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.dyplomy__panel-ustawien input[type="range"] {
+  min-height: 32px;
+  padding: 8px 0;
+}
+
 .dyplomy__sekcja {
   min-width: 0;
   border: 1px solid color-mix(in srgb, var(--ui-akcent) 25%, transparent);
@@ -508,6 +584,32 @@
   gap: 12px;
 }
 
+.dyplomy input.dyplomy__przelacznik {
+  appearance: none;
+  flex-shrink: 0;
+  width: 38px;
+  height: 22px;
+  padding: 2px;
+  border: 1px solid var(--ui-tekst-drugi);
+  border-radius: 12px;
+  background: var(--ui-pole);
+  cursor: pointer;
+}
+
+.dyplomy__przelacznik::before {
+  content: '';
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--ui-tekst-drugi);
+}
+
+.dyplomy input.dyplomy__przelacznik:checked { background: var(--ui-akcent); }
+.dyplomy__przelacznik:checked::before { transform: translateX(16px); background: var(--ui-tekst-na-akcencie); }
+.dyplomy__przelacznik:focus-visible { outline: 2px solid var(--ui-akcent); outline-offset: 3px; }
+.dyplomy input.dyplomy__przelacznik:disabled { opacity: 0.5; cursor: not-allowed; }
+
 .dyplomy__logotyp-panel {
   display: grid;
   gap: 10px;
@@ -671,7 +773,7 @@
 }
 
 .dyplom-kartka__dodatek--dol {
-  bottom: 1.2%;
+  bottom: var(--pozycja-dodatku-dolnego, 1.2%);
   width: var(--szerokosc-dodatku-dolnego, 61.6%);
 }
 
@@ -819,6 +921,13 @@
   line-height: 1.1;
 }
 
+.dyplom-kartka__miejsce-na-nazwisko {
+  display: inline-block;
+  width: 60%;
+  height: 4cqw;
+  border-bottom: 0.15cqw solid currentColor;
+}
+
 .dyplom-kartka__ukonczenie {
   margin-bottom: 22px;
   color: var(--semper-tekst);
@@ -881,13 +990,17 @@
   left: 39.2%;
   width: 21.6%;
   height: 22%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .dyplom-kartka__logo-semper img {
   display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
 }
 
 .dyplom-kartka__organizator {
@@ -898,6 +1011,25 @@
   color: var(--semper-tekst);
   font-size: 1.6176cqw;
   line-height: 1.2;
+}
+
+.dyplom-kartka__organizator-z-podpisem {
+  position: absolute;
+  top: 0;
+  left: 15%;
+  width: 70%;
+  height: 70%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dyplom-kartka__organizator-z-podpisem img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
 }
 
 .dyplom-kartka__organizator strong {

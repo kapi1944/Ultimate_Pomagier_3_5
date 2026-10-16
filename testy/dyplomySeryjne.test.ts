@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { parsujListeUczestnikow, polaczUczestnikowPoNazwie, sprawdzDaneDyplomu, zbudujDaneSeryjnychDyplomow } from '../src/moduly/dokumenty/generatory/dyplomy/modelSeryjnychDyplomow.ts'
+import { czyUczestnikDoDruku, dodajPusteDyplomy, ograniczPrzesuniecieLogotypu, parsujListeUczestnikow, polaczUczestnikowPoNazwie, sprawdzDaneDyplomu, zbudujDaneSeryjnychDyplomow } from '../src/moduly/dokumenty/generatory/dyplomy/modelSeryjnychDyplomow.ts'
 import { zbudujNazweEksportowanegoDokumentu } from '../src/wspolne/dokumenty/nazwyDokumentow.ts'
 import type { KontekstDokumentuSzkolenia } from '../src/wspolne/integracje/szczegolyDoDokumentow/index.ts'
 import { importujPlikDyplomu, parsujTekstDyplomu } from '../src/moduly/dokumenty/generatory/dyplomy/importDyplomu.ts'
@@ -41,6 +41,28 @@ assert.deepEqual(polaczUczestnikowPoNazwie([], uczestnicyIndywidualni, utworz), 
 assert.deepEqual(polaczUczestnikowPoNazwie(['Anna Kowalska'], uczestnicyIndywidualni, utworz), [uczestnicyIndywidualni[0]])
 const kompletne = { uczestnicy: uczestnicyIndywidualni, tytulSzkolenia: 'Zażółć gęślą jaźń', wybraneDaty: ['2026-10-01'], liczbaGodzin: '8', trener: 'Trener', trybSzkolenia: 'online' as const, miejsceSzkolenia: '' }
 assert.deepEqual(sprawdzDaneDyplomu(kompletne), [])
+const zPustymi = dodajPusteDyplomy(uczestnicyIndywidualni, 12, (nazwa, indeks) => ({ ...utworz(nazwa, indeks), numerRejestru: `A/${indeks + 1}` }))
+assert.equal(zPustymi.length, 14)
+assert.equal(new Set(zPustymi.map((uczestnik) => uczestnik.id)).size, 14)
+assert.deepEqual(zPustymi.slice(0, 2), uczestnicyIndywidualni)
+assert.equal(zPustymi[2].numerRejestru, 'A/3')
+assert.equal(zPustymi[13].numerRejestru, 'A/14')
+assert.ok(zPustymi.slice(2).every((uczestnik) => uczestnik.imieNazwisko === '' && uczestnik.czyPustyDyplom))
+assert.equal(zPustymi.filter(czyUczestnikDoDruku).length, 14)
+assert.deepEqual(sprawdzDaneDyplomu({ ...kompletne, uczestnicy: zPustymi.slice(2) }), [])
+assert.ok(sprawdzDaneDyplomu({ ...kompletne, uczestnicy: [{ ...zPustymi[2], numerRejestru: '' }] }).includes('uzupełnij numer rejestru dla 1 uczestnika'))
+assert.equal(czyUczestnikDoDruku({ imieNazwisko: '' }), false)
+assert.deepEqual(polaczUczestnikowPoNazwie(['Anna Kowalska'], zPustymi, utworz), [zPustymi[0], ...zPustymi.slice(2)])
+assert.deepEqual(polaczUczestnikowPoNazwie([], zPustymi, utworz), zPustymi.slice(2))
+assert.deepEqual(JSON.parse(JSON.stringify(zPustymi)), zPustymi)
+assert.equal(dodajPusteDyplomy([], 120, utworz).length, 120)
+for (const liczba of [0, -1, 1.5, NaN, Infinity]) assert.throws(() => dodajPusteDyplomy([], liczba, utworz), /całkowitą/)
+assert.equal(ograniczPrzesuniecieLogotypu(undefined), 0)
+assert.equal(ograniczPrzesuniecieLogotypu(null), 0)
+assert.equal(ograniczPrzesuniecieLogotypu(NaN), 0)
+assert.equal(ograniczPrzesuniecieLogotypu(-10), -5)
+assert.equal(ograniczPrzesuniecieLogotypu(20), 15)
+assert.equal(ograniczPrzesuniecieLogotypu(2.34), 2.3)
 assert.ok(sprawdzDaneDyplomu({ ...kompletne, uczestnicy: [] }).includes('dodaj co najmniej jednego uczestnika'))
 assert.ok(sprawdzDaneDyplomu({ ...kompletne, liczbaGodzin: 'abc' }).includes('uzupełnij liczbę godzin'))
 assert.ok(sprawdzDaneDyplomu({ ...kompletne, uczestnicy: [{ ...uczestnicyIndywidualni[0], numerRejestru: '' }] }).includes('uzupełnij numer rejestru dla 1 uczestnika'))

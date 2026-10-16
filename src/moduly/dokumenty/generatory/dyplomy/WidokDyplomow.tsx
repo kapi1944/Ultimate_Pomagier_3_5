@@ -15,7 +15,7 @@ import {
 } from '../../wspolne/UkladGeneratoraDokumentu'
 import StatusZapisuDokumentu from '../../wspolne/StatusZapisuDokumentu'
 import { useOchronaNiezapisanegoDokumentu, useStanDokumentu } from '../../wspolne/useStanDokumentu'
-import { parsujListeUczestnikow, polaczUczestnikowPoNazwie, sprawdzDaneDyplomu, zbudujDaneSeryjnychDyplomow } from './modelSeryjnychDyplomow'
+import { czyUczestnikDoDruku, dodajPusteDyplomy, ograniczPrzesuniecieLogotypu, parsujListeUczestnikow, polaczUczestnikowPoNazwie, sprawdzDaneDyplomu, zbudujDaneSeryjnychDyplomow } from './modelSeryjnychDyplomow'
 import { pobierzLogoOrganizatora } from '../../../../wspolne/dokumenty/logoOrganizatora'
 import { etykietyImportuDyplomu, importujPlikDyplomu } from './importDyplomu'
 import type { DaneImportuDyplomu, WynikImportuDyplomu } from './importDyplomu'
@@ -75,6 +75,7 @@ type DodatekDyplomu = {
 type UczestnikDyplomu = {
   id: string
   imieNazwisko: string
+  czyPustyDyplom?: boolean
   numerRejestru: string
   idDodatkuGornego: string
   idDodatkuDolnego: string
@@ -91,6 +92,8 @@ type ZapisDyplomow = DaneNumeracji & {
   czcionkaTypu: string
   czcionkaDyplomu: string
   czyPogrubionyTyp: boolean
+  czyPogrubionyDodatekGorny: boolean
+  czyPogrubionyDodatekDolny: boolean
   motywKoloru: MotywKoloruDyplomu
   wariantSzablonu: WariantSzablonuDyplomu
   kolorMotywu: string
@@ -113,8 +116,11 @@ type ZapisDyplomow = DaneNumeracji & {
   czyPokazacDodatekGorny: boolean
   czyPokazacDodatekDolny: boolean
   czyPokazacDrugaStrone: boolean
+  czyGotowyPodpisOrganizatora: boolean
   marginesDodatkuGornego: number
   marginesDodatkuDolnego: number
+  przesuniecieLogotypuGornego: number
+  przesuniecieLogotypuDolnego: number
   tloSzablonu: string
   drugaStronaAktywna: boolean
   trescDrugiejStrony: string
@@ -306,6 +312,8 @@ function pobierzStylMotywuDyplomu(
     | 'szerokoscDodatkuDolnego'
     | 'marginesDodatkuGornego'
     | 'marginesDodatkuDolnego'
+    | 'przesuniecieLogotypuGornego'
+    | 'przesuniecieLogotypuDolnego'
   >,
   dodatki: { czyDodatekGorny?: boolean; czyDodatekDolny?: boolean } = {},
 ): CSSProperties {
@@ -321,7 +329,8 @@ function pobierzStylMotywuDyplomu(
     '--szerokosc-dodatku-gornego': pobierzSzerokoscDodatku(dane.szerokoscDodatkuGornego),
     '--szerokosc-dodatku-dolnego': pobierzSzerokoscDodatku(dane.szerokoscDodatkuDolnego),
     '--przesuniecie-naglowka': ustawieniaNaglowka.przesuniecieNaglowka,
-    '--pozycja-dodatku-gornego': ustawieniaNaglowka.pozycjaDodatku,
+    '--pozycja-dodatku-gornego': `calc(${ustawieniaNaglowka.pozycjaDodatku} - ${ograniczPrzesuniecieLogotypu(dane.przesuniecieLogotypuGornego)}%)`,
+    '--pozycja-dodatku-dolnego': `${1.2 + ograniczPrzesuniecieLogotypu(dane.przesuniecieLogotypuDolnego)}%`,
     '--przesuniecie-stopki': przesuniecieStopki,
     '--przesuniecie-dodatku-gornego': `${przesuniecieDodatkuGornego}%`,
     '--przesuniecie-dodatku-dolnego': `${przesuniecieDodatkuDolnego}%`,
@@ -489,11 +498,18 @@ function zbudujFragmentyNumeru(wartosc: string, indeksZmiennegoBloku: number | n
   return fragmenty
 }
 
-function utworzUczestnika(imieNazwisko: string, indeks: number, dane: DaneNumeracji): UczestnikDyplomu {
+function utworzUczestnika(imieNazwisko: string, indeks: number, dane: DaneNumeracji, zajeteNumery = new Set<string>()): UczestnikDyplomu {
+  let numerRejestru = zbudujNumerRejestru(dane, indeks)
+  while (numerRejestru && zajeteNumery.has(numerRejestru)) {
+    const kolejnyNumer = zbudujNumerRejestru(dane, ++indeks)
+    if (kolejnyNumer === numerRejestru) break
+    numerRejestru = kolejnyNumer
+  }
+  zajeteNumery.add(numerRejestru)
   return {
     id: utworzId('uczestnik'),
     imieNazwisko,
-    numerRejestru: zbudujNumerRejestru(dane, indeks),
+    numerRejestru,
     idDodatkuGornego: '',
     idDodatkuDolnego: '',
     drugaStrona: true,
@@ -501,7 +517,8 @@ function utworzUczestnika(imieNazwisko: string, indeks: number, dane: DaneNumera
 }
 
 function polaczUczestnikow(nazwy: string[], obecni: UczestnikDyplomu[], dane: DaneNumeracji) {
-  return polaczUczestnikowPoNazwie(nazwy, obecni, (nazwa, indeks) => utworzUczestnika(nazwa, indeks, dane))
+  const zajeteNumery = new Set(obecni.map((uczestnik) => uczestnik.numerRejestru))
+  return polaczUczestnikowPoNazwie(nazwy, obecni, (nazwa, indeks) => utworzUczestnika(nazwa, indeks, dane, zajeteNumery))
 }
 
 function utworzDomyslnyZapis(): ZapisDyplomow {
@@ -516,6 +533,8 @@ function utworzDomyslnyZapis(): ZapisDyplomow {
     czcionkaTypu: 'Bradley Hand ITC',
     czcionkaDyplomu: 'Calibri',
     czyPogrubionyTyp: false,
+    czyPogrubionyDodatekGorny: true,
+    czyPogrubionyDodatekDolny: true,
     motywKoloru: 'semper',
     wariantSzablonu: 'CRM',
     kolorMotywu: koloryFirmoweDyplomu.semper,
@@ -538,8 +557,11 @@ function utworzDomyslnyZapis(): ZapisDyplomow {
     czyPokazacDodatekGorny: true,
     czyPokazacDodatekDolny: true,
     czyPokazacDrugaStrone: true,
+    czyGotowyPodpisOrganizatora: false,
     marginesDodatkuGornego: 9.2,
     marginesDodatkuDolnego: 7.6,
+    przesuniecieLogotypuGornego: 0,
+    przesuniecieLogotypuDolnego: 0,
     tloSzablonu: '',
     drugaStronaAktywna: false,
     trescDrugiejStrony: '',
@@ -574,6 +596,8 @@ function wczytajZapisDyplomow(): ZapisDyplomow {
       ...daneNumeracji,
       uczestnicyTekst,
       uczestnicy: uczestnicyZListy,
+      przesuniecieLogotypuGornego: ograniczPrzesuniecieLogotypu(dane.przesuniecieLogotypuGornego),
+      przesuniecieLogotypuDolnego: ograniczPrzesuniecieLogotypu(dane.przesuniecieLogotypuDolnego),
       dodatki: Array.isArray(dane.dodatki) ? dane.dodatki : [],
       motywKoloru: mapujMotywKoloruDyplomu(dane.motywKoloru),
       wariantSzablonu: dane.wariantSzablonu === 'IIST_BLUE_PASY' ? 'IIST_BLUE_PASY' : 'CRM',
@@ -581,6 +605,8 @@ function wczytajZapisDyplomow(): ZapisDyplomow {
       grupaId: typeof dane.grupaId === 'string' ? dane.grupaId : null,
       kolorMotywu: czyKolorHex(dane.kolorMotywu ?? '') ? String(dane.kolorMotywu) : domyslnyZapis.kolorMotywu,
       czyPogrubionyTyp: dane.czyPogrubionyTyp ?? domyslnyZapis.czyPogrubionyTyp,
+      czyPogrubionyDodatekGorny: typeof dane.czyPogrubionyDodatekGorny === 'boolean' ? dane.czyPogrubionyDodatekGorny : domyslnyZapis.czyPogrubionyDodatekGorny,
+      czyPogrubionyDodatekDolny: typeof dane.czyPogrubionyDodatekDolny === 'boolean' ? dane.czyPogrubionyDodatekDolny : domyslnyZapis.czyPogrubionyDodatekDolny,
       czcionkaTypu: dane.czcionkaTypu?.trim() || domyslnyZapis.czcionkaTypu,
       czcionkaDyplomu: dane.czcionkaDyplomu?.trim() || domyslnyZapis.czcionkaDyplomu,
       rodzajGodzin: mapujRodzajGodzin(dane.rodzajGodzin),
@@ -596,6 +622,7 @@ function wczytajZapisDyplomow(): ZapisDyplomow {
       czyPokazacDodatekGorny: dane.czyPokazacDodatekGorny ?? domyslnyZapis.czyPokazacDodatekGorny,
       czyPokazacDodatekDolny: dane.czyPokazacDodatekDolny ?? domyslnyZapis.czyPokazacDodatekDolny,
       czyPokazacDrugaStrone: dane.czyPokazacDrugaStrone ?? domyslnyZapis.czyPokazacDrugaStrone,
+      czyGotowyPodpisOrganizatora: dane.czyGotowyPodpisOrganizatora === true,
       marginesDodatkuGornego: ograniczMarginesDodatku(
         dane.marginesDodatkuGornego,
         domyslnyZapis.marginesDodatkuGornego,
@@ -820,7 +847,7 @@ function pobierzDodatek(dodatki: DodatekDyplomu[], idDodatku: string) {
   return dodatki.find((dodatek) => dodatek.id === idDodatku)
 }
 
-function RenderujDodatek({ dodatek, polozenie }: { dodatek?: DodatekDyplomu; polozenie: PolozenieDodatku }) {
+function RenderujDodatek({ dodatek, polozenie, czyPogrubiony }: { dodatek?: DodatekDyplomu; polozenie: PolozenieDodatku; czyPogrubiony: boolean }) {
   if (!dodatek) {
     return null
   }
@@ -830,7 +857,7 @@ function RenderujDodatek({ dodatek, polozenie }: { dodatek?: DodatekDyplomu; pol
       {dodatek.typ === 'grafika' && dodatek.daneUrl ? (
         <img alt={dodatek.nazwa} src={dodatek.daneUrl} />
       ) : (
-        <div className="dyplom-kartka__dodatek-tekst">{dodatek.tekst}</div>
+        <div className="dyplom-kartka__dodatek-tekst" style={{ fontWeight: czyPogrubiony ? 700 : 400 }}>{dodatek.tekst}</div>
       )}
     </div>
   )
@@ -842,7 +869,7 @@ function StronaDrugaDyplomu({ dane, uczestnik }: { dane: ZapisDyplomow; uczestni
       <div className="dyplom-kartka__warstwa">
         <header className="dyplom-kartka__naglowek-drugiej">
           <span>{pobierzTekstTytulu(dane.trybTytulu)}</span>
-          <strong>{uczestnik.imieNazwisko || 'Uczestnik'}</strong>
+          {uczestnik.czyPustyDyplom ? <span aria-label="Miejsce na imię i nazwisko" className="dyplom-kartka__miejsce-na-nazwisko" /> : <strong>{uczestnik.imieNazwisko || 'Uczestnik'}</strong>}
         </header>
 
         <main className="dyplom-kartka__tresc-drugiej">
@@ -891,7 +918,7 @@ function StronaDyplomu({ dane, uczestnik }: { dane: ZapisDyplomow; uczestnik: Uc
           {pobierzTekstZnakuWodnego(dane.trybTytulu)}
         </div>
 
-        <RenderujDodatek dodatek={dodatekGorny} polozenie="gora" />
+        <RenderujDodatek dodatek={dodatekGorny} polozenie="gora" czyPogrubiony={dane.czyPogrubionyDodatekGorny} />
 
         <div className="dyplom-kartka__naglowek-ozdobny">
           <div className="dyplom-kartka__typ">{pobierzTekstTytulu(dane.trybTytulu)}</div>
@@ -903,7 +930,7 @@ function StronaDyplomu({ dane, uczestnik }: { dane: ZapisDyplomow; uczestnik: Uc
           <div className="dyplom-kartka__wstep">Niniejszym zaświadcza się, że</div>
           <div className="dyplom-kartka__osoba">
             <span>Pan/Pani</span>
-            <strong>{uczestnik.imieNazwisko || 'Imię i nazwisko'}</strong>
+            {uczestnik.czyPustyDyplom ? <span aria-label="Miejsce na imię i nazwisko" className="dyplom-kartka__miejsce-na-nazwisko" /> : <strong>{uczestnik.imieNazwisko || 'Imię i nazwisko'}</strong>}
           </div>
           <div className="dyplom-kartka__ukonczenie">{pobierzZdanieUkonczenia(dane.trybTytulu)}</div>
           <div className="dyplom-kartka__tytul" style={{ fontSize: `${dane.rozmiarTytulu / 6.8}cqw` }}>
@@ -919,6 +946,11 @@ function StronaDyplomu({ dane, uczestnik }: { dane: ZapisDyplomow; uczestnik: Uc
         </main>
 
         <footer className="dyplom-kartka__stopka">
+          {dane.czyGotowyPodpisOrganizatora && dane.motywKoloru !== 'iist' ? (
+            <div className="dyplom-kartka__organizator-z-podpisem">
+              <img alt="SEMPER — dane organizatora z gotowym podpisem" src="/wzorce-generatorow/organizator-semper-z-podpisem.png" />
+            </div>
+          ) : <>
           <div className="dyplom-kartka__logo-semper">
             <img alt={dane.motywKoloru === 'iist' ? 'IIST' : 'SEMPER'} src={pobierzLogoOrganizatora(dane.motywKoloru === 'iist' ? 'IIST' : 'SEMPER')} />
           </div>
@@ -941,6 +973,7 @@ function StronaDyplomu({ dane, uczestnik }: { dane: ZapisDyplomow; uczestnik: Uc
               <span>NIP 7772616176</span>
             </>}
           </div>
+          </>}
           <div className="dyplom-kartka__linia-kropkowana">........................................................</div>
           <div className="dyplom-kartka__ekspert">
             Ekspert merytoryczny: {dane.trener || '....................................'}
@@ -949,7 +982,7 @@ function StronaDyplomu({ dane, uczestnik }: { dane: ZapisDyplomow; uczestnik: Uc
             Serdecznie gratulujemy i życzymy dalszych sukcesów!
           </div>
         </footer>
-        <RenderujDodatek dodatek={dodatekDolny} polozenie="dol" />
+        <RenderujDodatek dodatek={dodatekDolny} polozenie="dol" czyPogrubiony={dane.czyPogrubionyDodatekDolny} />
       </div>
     </article>
   )
@@ -957,6 +990,7 @@ function StronaDyplomu({ dane, uczestnik }: { dane: ZapisDyplomow; uczestnik: Uc
 
 export default function WidokDyplomow() {
   const [dane, ustawDane] = useState<ZapisDyplomow>(wczytajZapisDyplomow)
+  const [liczbaPustychDyplomow, ustawLiczbePustychDyplomow] = useState('1')
   const [komunikat, ustawKomunikat] = useState('Szkic zapisywany lokalnie.')
   const [importDyplomu, ustawImportDyplomu] = useState<(WynikImportuDyplomu & { nazwaPliku: string }) | null>(null)
   const [wybranePolaImportu, ustawWybranePolaImportu] = useState<Array<keyof DaneImportuDyplomu>>([])
@@ -974,7 +1008,7 @@ export default function WidokDyplomow() {
   const szczegolyDoGeneratora = useMemo(() => pobierzSzczegolyDoGeneratorow(), [])
   const wybraneSzczegoly = szczegolyDoGeneratora.find((pozycja) => pozycja.id === dane.szczegolyOrganizacyjneId) ?? null
   const uczestnicyDoDruku = useMemo(
-    () => dane.uczestnicy.filter((uczestnik) => uczestnik.imieNazwisko.trim()),
+    () => dane.uczestnicy.filter(czyUczestnikDoDruku),
     [dane.uczestnicy],
   )
   const indeksPierwszejStrony = uczestnicyDoDruku.length
@@ -1184,6 +1218,26 @@ export default function WidokDyplomow() {
     }))
   }
 
+  function dodajPusteDyplomyDoListy() {
+    const liczba = Number(liczbaPustychDyplomow)
+    if (!Number.isSafeInteger(liczba) || liczba <= 0) {
+      ustawKomunikat('Podaj dodatnią, całkowitą liczbę pustych dyplomów.')
+      return
+    }
+    ustawDane((aktualne) => {
+      const zajeteNumery = new Set(aktualne.uczestnicy.map((uczestnik) => uczestnik.numerRejestru))
+      return {
+        ...aktualne,
+        uczestnicy: dodajPusteDyplomy(aktualne.uczestnicy, liczba, (nazwa, indeks) => ({
+          ...utworzUczestnika(nazwa, indeks, aktualne, zajeteNumery),
+          idDodatkuGornego: idWybranegoDodatkuGornego,
+          idDodatkuDolnego: idWybranegoDodatkuDolnego,
+        })),
+      }
+    })
+    ustawKomunikat(`Dodano puste dyplomy: ${liczba}.`)
+  }
+
   function zmienTekstUczestnikow(wartosc: string) {
     ustawDane((aktualne) => ({
       ...aktualne,
@@ -1202,7 +1256,7 @@ export default function WidokDyplomow() {
         ...aktualne,
         uczestnicy,
         uczestnicyTekst: czyAktualizowacListe
-          ? uczestnicy.map((uczestnik) => uczestnik.imieNazwisko).join('\n')
+          ? uczestnicy.filter((uczestnik) => !uczestnik.czyPustyDyplom).map((uczestnik) => uczestnik.imieNazwisko).join('\n')
           : aktualne.uczestnicyTekst,
       }
     })
@@ -1215,7 +1269,7 @@ export default function WidokDyplomow() {
       return {
         ...aktualne,
         uczestnicy,
-        uczestnicyTekst: uczestnicy.map((uczestnik) => uczestnik.imieNazwisko).join('\n'),
+        uczestnicyTekst: uczestnicy.filter((uczestnik) => !uczestnik.czyPustyDyplom).map((uczestnik) => uczestnik.imieNazwisko).join('\n'),
       }
     })
   }
@@ -1518,6 +1572,8 @@ export default function WidokDyplomow() {
       czcionkaTypu: domyslnyZapis.czcionkaTypu,
       czcionkaDyplomu: domyslnyZapis.czcionkaDyplomu,
       czyPogrubionyTyp: domyslnyZapis.czyPogrubionyTyp,
+      czyPogrubionyDodatekGorny: domyslnyZapis.czyPogrubionyDodatekGorny,
+      czyPogrubionyDodatekDolny: domyslnyZapis.czyPogrubionyDodatekDolny,
       szerokoscDodatkuGornego: domyslnyZapis.szerokoscDodatkuGornego,
       szerokoscDodatkuDolnego: domyslnyZapis.szerokoscDodatkuDolnego,
       marginesDodatkuGornego: domyslnyZapis.marginesDodatkuGornego,
@@ -1617,116 +1673,15 @@ export default function WidokDyplomow() {
                 <label className="dyplomy__pole"><span>Grupa szkoleniowa</span><select disabled={!wybraneSzczegoly} value={dane.grupaId ?? ''} onChange={(zdarzenie) => zastosujGrupeSzkoleniowa(zdarzenie.target.value)}><option value="">Wybierz grupę</option>{wybraneSzczegoly?.grupy.map((grupa) => <option key={grupa.id} value={grupa.id}>{grupa.nazwa} · {grupa.liczbaUczestnikow} osób</option>)}</select></label>
               </div>
             </section>
-            <div className="dyplomy__siatka dyplomy__siatka--trzy">
-              <div className="dyplomy__pole dyplomy__pole--pelne">
-                <span>Typ widocznego tytułu</span>
-                <div className="dyplomy__wybor">
-                  {trybyTytulu.map((trybTytulu) => (
-                    <button
-                      className={`dyplomy__przycisk-wyboru${
-                        dane.trybTytulu === trybTytulu ? ' dyplomy__przycisk-wyboru--aktywny' : ''
-                      }`}
-                      key={trybTytulu}
-                      onClick={() => zmienPole('trybTytulu', trybTytulu)}
-                      type="button"
-                    >
-                      {pobierzEtykieteTrybu(trybTytulu)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <label className="dyplomy__pole">
-                <span>Czcionka nagłówka</span>
-                <input list="dyplomy-czcionki-typu" onChange={(zdarzenie) => zmienPole('czcionkaTypu', zdarzenie.target.value)} type="text" value={dane.czcionkaTypu} />
-                <datalist id="dyplomy-czcionki-typu">
-                  <option value="Bradley Hand ITC" />
-                  <option value="Ink Free" />
-                  <option value="Segoe Print" />
-                  <option value="Segoe Script" />
-                  <option value="Comic Sans MS" />
-                </datalist>
-              </label>
-
-              <label className="dyplomy__pole">
-                <span>Czcionka dyplomu</span>
-                <input list="dyplomy-czcionki-dyplomu" onChange={(zdarzenie) => zmienPole('czcionkaDyplomu', zdarzenie.target.value)} type="text" value={dane.czcionkaDyplomu} />
-                <datalist id="dyplomy-czcionki-dyplomu">
-                  <option value="Calibri" />
-                  <option value="Arial" />
-                  <option value="Aptos" />
-                  <option value="Georgia" />
-                  <option value="Times New Roman" />
-                </datalist>
-              </label>
-
-              <label className="dyplomy__pole dyplomy__pole--checkbox">
-                <input checked={dane.czyPogrubionyTyp} onChange={(zdarzenie) => zmienPole('czyPogrubionyTyp', zdarzenie.target.checked)} type="checkbox" />
-                <span>Pogrubiony nagłówek</span>
-              </label>
-
-              <label className="dyplomy__pole">
-                <span>Motyw dyplomu</span>
-                <select
-                  onChange={(zdarzenie) => zmienMotywKoloru(zdarzenie.target.value as MotywKoloruDyplomu)}
-                  value={dane.motywKoloru}
-                >
-                  <option value="semper">SEMPER czerwony</option>
-                  <option value="iist">IIST niebieski</option>
-                  <option value="dowolny">Dowolny</option>
-                </select>
-              </label>
-
-              <label className="dyplomy__pole">
-                <span>Szablon dokumentu</span>
-                <select value={dane.wariantSzablonu} onChange={(zdarzenie) => zmienPole('wariantSzablonu', zdarzenie.target.value === 'IIST_BLUE_PASY' ? 'IIST_BLUE_PASY' : 'CRM')}>
-                  <option value="CRM">Firmowy CRM</option>
-                  <option disabled={dane.motywKoloru !== 'iist'} value="IIST_BLUE_PASY">IIST blue pasy</option>
-                </select>
-              </label>
-
-              {dane.motywKoloru === 'dowolny' && (
-                <>
-                  <label className="dyplomy__pole">
-                    <span>Kolor z palety</span>
-                    <input
-                      onChange={(zdarzenie) => zmienKolorMotywu(zdarzenie.target.value)}
-                      className="dyplomy__pole-koloru"
-                      style={{ backgroundColor: czyKolorHex(dane.kolorMotywu) ? dane.kolorMotywu : koloryFirmoweDyplomu.semper }}
-                      type="color"
-                      value={czyKolorHex(dane.kolorMotywu) ? dane.kolorMotywu : koloryFirmoweDyplomu.semper}
-                    />
-                  </label>
-
-                  <label className="dyplomy__pole">
-                    <span>Kolor HEX</span>
-                    <input
-                      onChange={(zdarzenie) => zmienKolorMotywu(zdarzenie.target.value)}
-                      placeholder="#c5000b"
-                      type="text"
-                      value={dane.kolorMotywu}
-                    />
-                  </label>
-                </>
-              )}
-
+            <section className="dyplomy__ustawienia-sekcja">
+              <h2>Treść dyplomu</h2>
+              <div className="dyplomy__ustawienia-pola">
               <label className="dyplomy__pole dyplomy__pole--pelne">
                 <span>Tytuł szkolenia</span>
                 <textarea
                   onChange={(zdarzenie) => zmienPole('tytulSzkolenia', zdarzenie.target.value)}
                   rows={3}
                   value={dane.tytulSzkolenia}
-                />
-              </label>
-
-              <label className="dyplomy__pole">
-                <span>Rozmiar tytułu: {dane.rozmiarTytulu}px</span>
-                <input
-                  max={34}
-                  min={18}
-                  onChange={(zdarzenie) => zmienPole('rozmiarTytulu', Number(zdarzenie.target.value))}
-                  type="range"
-                  value={dane.rozmiarTytulu}
                 />
               </label>
 
@@ -1809,7 +1764,130 @@ export default function WidokDyplomow() {
                   />
                 </label>
               )}
-            </div>
+              </div>
+            </section>
+
+            <section className="dyplomy__ustawienia-sekcja">
+              <h2>Wygląd dokumentu</h2>
+              <div className="dyplomy__ustawienia-pola">
+              <div className="dyplomy__pole dyplomy__pole--pelne">
+                <span>Typ widocznego tytułu</span>
+                <div className="dyplomy__wybor">
+                  {trybyTytulu.map((trybTytulu) => (
+                    <button
+                      className={`dyplomy__przycisk-wyboru${
+                        dane.trybTytulu === trybTytulu ? ' dyplomy__przycisk-wyboru--aktywny' : ''
+                      }`}
+                      key={trybTytulu}
+                      onClick={() => zmienPole('trybTytulu', trybTytulu)}
+                      type="button"
+                    >
+                      {pobierzEtykieteTrybu(trybTytulu)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <label className="dyplomy__pole">
+                <span>Motyw dyplomu</span>
+                <select
+                  onChange={(zdarzenie) => zmienMotywKoloru(zdarzenie.target.value as MotywKoloruDyplomu)}
+                  value={dane.motywKoloru}
+                >
+                  <option value="semper">SEMPER czerwony</option>
+                  <option value="iist">IIST niebieski</option>
+                  <option value="dowolny">Dowolny</option>
+                </select>
+              </label>
+
+              <label className="dyplomy__pole">
+                <span>Szablon dokumentu</span>
+                <select value={dane.wariantSzablonu} onChange={(zdarzenie) => zmienPole('wariantSzablonu', zdarzenie.target.value === 'IIST_BLUE_PASY' ? 'IIST_BLUE_PASY' : 'CRM')}>
+                  <option value="CRM">Firmowy CRM</option>
+                  <option disabled={dane.motywKoloru !== 'iist'} value="IIST_BLUE_PASY">IIST blue pasy</option>
+                </select>
+              </label>
+
+              {dane.motywKoloru === 'dowolny' && (
+                <>
+                  <label className="dyplomy__pole">
+                    <span>Kolor z palety</span>
+                    <input
+                      onChange={(zdarzenie) => zmienKolorMotywu(zdarzenie.target.value)}
+                      className="dyplomy__pole-koloru"
+                      style={{ backgroundColor: czyKolorHex(dane.kolorMotywu) ? dane.kolorMotywu : koloryFirmoweDyplomu.semper }}
+                      type="color"
+                      value={czyKolorHex(dane.kolorMotywu) ? dane.kolorMotywu : koloryFirmoweDyplomu.semper}
+                    />
+                  </label>
+
+                  <label className="dyplomy__pole">
+                    <span>Kolor HEX</span>
+                    <input
+                      onChange={(zdarzenie) => zmienKolorMotywu(zdarzenie.target.value)}
+                      placeholder="#c5000b"
+                      type="text"
+                      value={dane.kolorMotywu}
+                    />
+                  </label>
+                </>
+              )}
+              </div>
+            </section>
+
+            <section className="dyplomy__ustawienia-sekcja">
+              <h2>Czcionki i pogrubienia</h2>
+              <div className="dyplomy__ustawienia-pola">
+              <label className="dyplomy__pole">
+                <span>Czcionka nagłówka</span>
+                <input list="dyplomy-czcionki-typu" onChange={(zdarzenie) => zmienPole('czcionkaTypu', zdarzenie.target.value)} type="text" value={dane.czcionkaTypu} />
+                <datalist id="dyplomy-czcionki-typu">
+                  <option value="Bradley Hand ITC" />
+                  <option value="Ink Free" />
+                  <option value="Segoe Print" />
+                  <option value="Segoe Script" />
+                  <option value="Comic Sans MS" />
+                </datalist>
+              </label>
+
+              <label className="dyplomy__pole">
+                <span>Czcionka dyplomu</span>
+                <input list="dyplomy-czcionki-dyplomu" onChange={(zdarzenie) => zmienPole('czcionkaDyplomu', zdarzenie.target.value)} type="text" value={dane.czcionkaDyplomu} />
+                <datalist id="dyplomy-czcionki-dyplomu">
+                  <option value="Calibri" />
+                  <option value="Arial" />
+                  <option value="Aptos" />
+                  <option value="Georgia" />
+                  <option value="Times New Roman" />
+                </datalist>
+              </label>
+
+              <label className="dyplomy__pole dyplomy__pole--checkbox">
+                <input className="dyplomy__przelacznik" role="switch" checked={dane.czyPogrubionyTyp} onChange={(zdarzenie) => zmienPole('czyPogrubionyTyp', zdarzenie.target.checked)} type="checkbox" />
+                <span>Pogrubiony nagłówek</span>
+              </label>
+
+              <label className="dyplomy__pole dyplomy__pole--checkbox">
+                <input className="dyplomy__przelacznik" role="switch" type="checkbox" checked={dane.czyPogrubionyDodatekGorny} onChange={(zdarzenie) => zmienPole('czyPogrubionyDodatekGorny', zdarzenie.target.checked)} />
+                <span>Pogrubiony tekst górnych dodatków</span>
+              </label>
+              <label className="dyplomy__pole dyplomy__pole--checkbox">
+                <input className="dyplomy__przelacznik" role="switch" type="checkbox" checked={dane.czyPogrubionyDodatekDolny} onChange={(zdarzenie) => zmienPole('czyPogrubionyDodatekDolny', zdarzenie.target.checked)} />
+                <span>Pogrubiony tekst dolnych dodatków</span>
+              </label>
+
+              <label className="dyplomy__pole">
+                <span>Rozmiar tytułu: {dane.rozmiarTytulu}px</span>
+                <input
+                  max={34}
+                  min={18}
+                  onChange={(zdarzenie) => zmienPole('rozmiarTytulu', Number(zdarzenie.target.value))}
+                  type="range"
+                  value={dane.rozmiarTytulu}
+                />
+              </label>
+              </div>
+            </section>
 
             <section className="dyplomy__checklista" aria-live="polite">
               <h3>Checklista danych</h3>
@@ -1823,6 +1901,140 @@ export default function WidokDyplomow() {
               </ul>
             </section>
           </PanelBocznyGeneratora>
+
+          <section className="dyplomy__narzedzia-podgladu" aria-label="Dodatki i widoczność podglądu">
+            <div className="dyplomy__widocznosc-podgladu">
+              <label className="dyplomy__pole dyplomy__pole--checkbox">
+                <input
+                  checked={dane.czyPokazacDodatekGorny}
+                  onChange={(zdarzenie) => zmienPole('czyPokazacDodatekGorny', zdarzenie.target.checked)}
+                  type="checkbox"
+                />
+                <span>Pokaż górne dodatki</span>
+              </label>
+              <label className="dyplomy__pole dyplomy__pole--checkbox">
+                <input
+                  checked={dane.czyPokazacDodatekDolny}
+                  onChange={(zdarzenie) => zmienPole('czyPokazacDodatekDolny', zdarzenie.target.checked)}
+                  type="checkbox"
+                />
+                <span>Pokaż dolne dodatki</span>
+              </label>
+              <label className="dyplomy__pole dyplomy__pole--checkbox">
+                <input
+                  checked={dane.czyPokazacDrugaStrone}
+                  onChange={(zdarzenie) => zmienPole('czyPokazacDrugaStrone', zdarzenie.target.checked)}
+                  type="checkbox"
+                />
+                <span>Pokaż drugą stronę</span>
+              </label>
+            </div>
+
+            <label className="dyplomy__pole dyplomy__pole--checkbox">
+              <input
+                className="dyplomy__przelacznik"
+                type="checkbox"
+                role="switch"
+                checked={dane.motywKoloru !== 'iist' && dane.czyGotowyPodpisOrganizatora}
+                disabled={dane.motywKoloru === 'iist'}
+                onChange={(zdarzenie) => zmienPole('czyGotowyPodpisOrganizatora', zdarzenie.target.checked)}
+              />
+              <span>Gotowy podpis organizatora (SEMPER)</span>
+            </label>
+
+            <label className="dyplomy__pole">
+              <span>Dodaj grafiki</span>
+              <input accept="image/*" multiple onChange={importujDodatkiGraficzne} type="file" />
+            </label>
+
+            <div className="dyplomy__logotypy">
+              <div className="dyplomy__logotyp-panel">
+                <strong className="dyplomy__logotyp-naglowek">↑ Górny Logotyp ↑</strong>
+                <label className="dyplomy__pole">
+                  <span>Wybierz górny logotyp</span>
+                  <select onChange={(zdarzenie) => ustawIdWybranegoDodatkuGornego(zdarzenie.target.value)} value={idWybranegoDodatkuGornego}>
+                    <option value="">Wybierz dodatek dla góry</option>
+                    {dane.dodatki.map((dodatek) => (
+                      <option key={dodatek.id} value={dodatek.id}>
+                        {dodatek.nazwa}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="dyplomy__pole">
+                  <span>Szerokość: {dane.szerokoscDodatkuGornego}%</span>
+                  <input
+                    max={100}
+                    min={10}
+                    onChange={(zdarzenie) => zmienPole('szerokoscDodatkuGornego', Number(zdarzenie.target.value))}
+                    type="range"
+                    value={dane.szerokoscDodatkuGornego}
+                  />
+                </label>
+                <label className="dyplomy__pole">
+                  <span>Przesunięcie górnego logo w górę: {dane.przesuniecieLogotypuGornego}%</span>
+                  <input type="range" min={-5} max={15} step={0.1} value={dane.przesuniecieLogotypuGornego} onChange={(zdarzenie) => zmienPole('przesuniecieLogotypuGornego', Number(zdarzenie.target.value))} />
+                </label>
+                <label className="dyplomy__pole">
+                  <span>Odstęp nagłówka: {dane.marginesDodatkuGornego}%</span>
+                  <input
+                    max={24}
+                    min={0}
+                    onChange={(zdarzenie) => zmienPole('marginesDodatkuGornego', Number(zdarzenie.target.value))}
+                    step={0.1}
+                    type="range"
+                    value={dane.marginesDodatkuGornego}
+                  />
+                </label>
+                <button className="dyplomy__przycisk" onClick={() => dodajWybranyDodatekWszystkim('gora')} type="button">
+                  + Dodaj wszystkim
+                </button>
+              </div>
+
+              <div className="dyplomy__logotyp-panel">
+                <strong className="dyplomy__logotyp-naglowek">↓ Dolny Logotyp ↓</strong>
+                <label className="dyplomy__pole">
+                  <span>Wybierz dolny logotyp</span>
+                  <select onChange={(zdarzenie) => ustawIdWybranegoDodatkuDolnego(zdarzenie.target.value)} value={idWybranegoDodatkuDolnego}>
+                    <option value="">Wybierz dodatek dla dołu</option>
+                    {dane.dodatki.map((dodatek) => (
+                      <option key={dodatek.id} value={dodatek.id}>
+                        {dodatek.nazwa}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="dyplomy__pole">
+                  <span>Szerokość: {dane.szerokoscDodatkuDolnego}%</span>
+                  <input
+                    max={100}
+                    min={10}
+                    onChange={(zdarzenie) => zmienPole('szerokoscDodatkuDolnego', Number(zdarzenie.target.value))}
+                    type="range"
+                    value={dane.szerokoscDodatkuDolnego}
+                  />
+                </label>
+                <label className="dyplomy__pole">
+                  <span>Przesunięcie dolnego logo w górę: {dane.przesuniecieLogotypuDolnego}%</span>
+                  <input type="range" min={-5} max={15} step={0.1} value={dane.przesuniecieLogotypuDolnego} onChange={(zdarzenie) => zmienPole('przesuniecieLogotypuDolnego', Number(zdarzenie.target.value))} />
+                </label>
+                <label className="dyplomy__pole">
+                  <span>Odstęp stopki: {dane.marginesDodatkuDolnego}%</span>
+                  <input
+                    max={24}
+                    min={0}
+                    onChange={(zdarzenie) => zmienPole('marginesDodatkuDolnego', Number(zdarzenie.target.value))}
+                    step={0.1}
+                    type="range"
+                    value={dane.marginesDodatkuDolnego}
+                  />
+                </label>
+                <button className="dyplomy__przycisk" onClick={() => dodajWybranyDodatekWszystkim('dol')} type="button">
+                  + Dodaj wszystkim
+                </button>
+              </div>
+            </div>
+          </section>
 
           <section className="dyplomy__sekcja">
             <h2>Termin</h2>
@@ -1919,6 +2131,14 @@ export default function WidokDyplomow() {
           <section className="dyplomy__sekcja">
             <h2>Uczestnicy</h2>
             <div className="dyplomy__siatka dyplomy__siatka--dwie">
+              <label className="dyplomy__pole">
+                <span>Liczba pustych dyplomów</span>
+                <input type="number" min={1} step={1} value={liczbaPustychDyplomow} onChange={(zdarzenie) => ustawLiczbePustychDyplomow(zdarzenie.target.value)} />
+              </label>
+              <button className="dyplomy__przycisk" type="button" onClick={dodajPusteDyplomyDoListy}>+ Dodaj puste dyplomy</button>
+            </div>
+            <p>Puste dyplomy mają linię na ręczne wpisanie imienia i nazwiska oraz własny numer rejestru.</p>
+            <div className="dyplomy__siatka dyplomy__siatka--dwie">
               <label className="dyplomy__pole dyplomy__pole--pelne">
                 <span>Lista uczestników</span>
                 <textarea
@@ -1955,9 +2175,11 @@ export default function WidokDyplomow() {
                         <td>
                           <input
                             onChange={(zdarzenie) =>
-                              zmienUczestnika(uczestnik.id, { imieNazwisko: zdarzenie.target.value }, true)
+                              zmienUczestnika(uczestnik.id, { imieNazwisko: zdarzenie.target.value, czyPustyDyplom: !zdarzenie.target.value.trim() }, true)
                             }
                             type="text"
+                            aria-label={`Imię i nazwisko uczestnika ${indeks + 1}`}
+                            placeholder={uczestnik.czyPustyDyplom ? 'Do uzupełnienia ręcznie' : undefined}
                             value={uczestnik.imieNazwisko}
                           />
                         </td>
@@ -2148,120 +2370,6 @@ export default function WidokDyplomow() {
             ) : (
               <p>Gotowe do druku lub zapisu jako PDF.</p>
             )}
-          </section>
-
-          <section className="dyplomy__narzedzia-podgladu" aria-label="Dodatki i widoczność podglądu">
-            <div className="dyplomy__widocznosc-podgladu">
-              <label className="dyplomy__pole dyplomy__pole--checkbox">
-                <input
-                  checked={dane.czyPokazacDodatekGorny}
-                  onChange={(zdarzenie) => zmienPole('czyPokazacDodatekGorny', zdarzenie.target.checked)}
-                  type="checkbox"
-                />
-                <span>Pokaż górne dodatki</span>
-              </label>
-              <label className="dyplomy__pole dyplomy__pole--checkbox">
-                <input
-                  checked={dane.czyPokazacDodatekDolny}
-                  onChange={(zdarzenie) => zmienPole('czyPokazacDodatekDolny', zdarzenie.target.checked)}
-                  type="checkbox"
-                />
-                <span>Pokaż dolne dodatki</span>
-              </label>
-              <label className="dyplomy__pole dyplomy__pole--checkbox">
-                <input
-                  checked={dane.czyPokazacDrugaStrone}
-                  onChange={(zdarzenie) => zmienPole('czyPokazacDrugaStrone', zdarzenie.target.checked)}
-                  type="checkbox"
-                />
-                <span>Pokaż drugą stronę</span>
-              </label>
-            </div>
-
-            <label className="dyplomy__pole">
-              <span>Dodaj grafiki</span>
-              <input accept="image/*" multiple onChange={importujDodatkiGraficzne} type="file" />
-            </label>
-
-            <div className="dyplomy__logotypy">
-              <div className="dyplomy__logotyp-panel">
-                <strong className="dyplomy__logotyp-naglowek">↑ Górny Logotyp ↑</strong>
-                <label className="dyplomy__pole">
-                  <span>Wybierz górny logotyp</span>
-                  <select onChange={(zdarzenie) => ustawIdWybranegoDodatkuGornego(zdarzenie.target.value)} value={idWybranegoDodatkuGornego}>
-                    <option value="">Wybierz dodatek dla góry</option>
-                    {dane.dodatki.map((dodatek) => (
-                      <option key={dodatek.id} value={dodatek.id}>
-                        {dodatek.nazwa}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="dyplomy__pole">
-                  <span>Szerokość: {dane.szerokoscDodatkuGornego}%</span>
-                  <input
-                    max={100}
-                    min={10}
-                    onChange={(zdarzenie) => zmienPole('szerokoscDodatkuGornego', Number(zdarzenie.target.value))}
-                    type="range"
-                    value={dane.szerokoscDodatkuGornego}
-                  />
-                </label>
-                <label className="dyplomy__pole">
-                  <span>Odstęp nagłówka: {dane.marginesDodatkuGornego}%</span>
-                  <input
-                    max={24}
-                    min={0}
-                    onChange={(zdarzenie) => zmienPole('marginesDodatkuGornego', Number(zdarzenie.target.value))}
-                    step={0.1}
-                    type="range"
-                    value={dane.marginesDodatkuGornego}
-                  />
-                </label>
-                <button className="dyplomy__przycisk" onClick={() => dodajWybranyDodatekWszystkim('gora')} type="button">
-                  + Dodaj wszystkim
-                </button>
-              </div>
-
-              <div className="dyplomy__logotyp-panel">
-                <strong className="dyplomy__logotyp-naglowek">↓ Dolny Logotyp ↓</strong>
-                <label className="dyplomy__pole">
-                  <span>Wybierz dolny logotyp</span>
-                  <select onChange={(zdarzenie) => ustawIdWybranegoDodatkuDolnego(zdarzenie.target.value)} value={idWybranegoDodatkuDolnego}>
-                    <option value="">Wybierz dodatek dla dołu</option>
-                    {dane.dodatki.map((dodatek) => (
-                      <option key={dodatek.id} value={dodatek.id}>
-                        {dodatek.nazwa}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="dyplomy__pole">
-                  <span>Szerokość: {dane.szerokoscDodatkuDolnego}%</span>
-                  <input
-                    max={100}
-                    min={10}
-                    onChange={(zdarzenie) => zmienPole('szerokoscDodatkuDolnego', Number(zdarzenie.target.value))}
-                    type="range"
-                    value={dane.szerokoscDodatkuDolnego}
-                  />
-                </label>
-                <label className="dyplomy__pole">
-                  <span>Odstęp stopki: {dane.marginesDodatkuDolnego}%</span>
-                  <input
-                    max={24}
-                    min={0}
-                    onChange={(zdarzenie) => zmienPole('marginesDodatkuDolnego', Number(zdarzenie.target.value))}
-                    step={0.1}
-                    type="range"
-                    value={dane.marginesDodatkuDolnego}
-                  />
-                </label>
-                <button className="dyplomy__przycisk" onClick={() => dodajWybranyDodatekWszystkim('dol')} type="button">
-                  + Dodaj wszystkim
-                </button>
-              </div>
-            </div>
           </section>
 
           {czyKontrolaPodgladuDostepna && (
