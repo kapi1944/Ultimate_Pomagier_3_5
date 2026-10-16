@@ -8,7 +8,6 @@
   justify-content: space-between;
   border-bottom: 1px solid var(--ui-obramowanie);
   background: var(--ui-tlo);
-  backdrop-filter: blur(10px);
   padding: 7px 24px;
 }
 
@@ -21,8 +20,8 @@
 .naglowek-aplikacji__dane strong { overflow: hidden; max-width: 180px; text-overflow: ellipsis; white-space: nowrap; }
 .naglowek-aplikacji__przycisk { border: 1px solid var(--ui-obramowanie); border-radius: 5px; padding: 6px 9px; }
 .naglowek-aplikacji__przycisk:hover { background: var(--ui-akcent-mocny); }
-.naglowek-aplikacji__przycisk--wyloguj { border-color: rgba(248, 113, 113, 0.65); color: #fecaca; }
-.naglowek-aplikacji__avatar:focus-visible, .naglowek-aplikacji__dane:focus-visible, .naglowek-aplikacji__przycisk:focus-visible { outline: 2px solid #fef08a; outline-offset: 2px; }
+.naglowek-aplikacji__przycisk--wyloguj { border-color: var(--ui-error); color: var(--ui-error); }
+.naglowek-aplikacji__avatar:focus-visible, .naglowek-aplikacji__dane:focus-visible, .naglowek-aplikacji__przycisk:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
 
 @media (max-width: 760px) {
   .naglowek-aplikacji { min-height: 64px; padding: 7px 12px 7px 58px; }

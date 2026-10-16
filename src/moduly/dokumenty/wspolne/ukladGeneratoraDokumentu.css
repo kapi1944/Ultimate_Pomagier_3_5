@@ -70,9 +70,11 @@
   white-space: nowrap;
 }
 
-.generator-dokumentu__status-zapisu--niezapisane,
+.generator-dokumentu__status-zapisu--niezapisane { color: var(--ui-draft); }
+.generator-dokumentu__status-zapisu--zapisano { color: var(--ui-success); }
+.generator-dokumentu__status-zapisu--zapisywanie { color: var(--ui-info); }
 .generator-dokumentu__status-zapisu--blad {
-  color: var(--ui-akcent);
+  color: var(--ui-error);
 }
 
 .generator-dokumentu__panel {

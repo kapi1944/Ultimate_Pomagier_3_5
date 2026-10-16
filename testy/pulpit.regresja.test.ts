@@ -745,7 +745,7 @@ test('system ustawień aplikacji ma bezpieczne wartości domyślne i ogranicza z
     },
   })
 
-  assert.equal(ustawienia.wyglad.paleta, 'DOMYSLNA')
+  assert.equal(ustawienia.wyglad.paleta, 'EMERALD_DARK')
   assert.equal(ustawienia.wyglad.promienKart, 32)
   assert.equal(ustawienia.wyglad.promienPol, 0)
   assert.equal(ustawienia.wyglad.czasPrzejsciaMs, 600)

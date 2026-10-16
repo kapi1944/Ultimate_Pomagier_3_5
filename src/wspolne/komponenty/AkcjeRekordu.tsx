@@ -1,4 +1,5 @@
 import './akcjeRekordu.css'
+import { Przycisk } from './ElementyInterfejsu'
 
 type TypAkcjiRekordu = 'podglad' | 'edycja' | 'duplikuj' | 'usun'
 
@@ -22,9 +23,9 @@ function IkonaAkcjiRekordu({ typ }: { typ: TypAkcjiRekordu }) {
 
 export function AkcjeRekordu({ podglad, edytuj, duplikuj, usun }: WlasciwosciAkcjiRekordu) {
   return <div className="akcje-rekordu">
-    <button className="akcje-rekordu__przycisk" type="button" onClick={podglad}><IkonaAkcjiRekordu typ="podglad" />Podglad</button>
-    <button className="akcje-rekordu__przycisk" type="button" onClick={edytuj}><IkonaAkcjiRekordu typ="edycja" />Edytuj</button>
-    <button className="akcje-rekordu__przycisk" type="button" onClick={duplikuj}><IkonaAkcjiRekordu typ="duplikuj" />Duplikuj</button>
-    <button className="akcje-rekordu__przycisk akcje-rekordu__przycisk--usun" type="button" onClick={usun}><IkonaAkcjiRekordu typ="usun" />Usun</button>
+    <Przycisk className="akcje-rekordu__przycisk" onClick={podglad}><IkonaAkcjiRekordu typ="podglad" />Podglad</Przycisk>
+    <Przycisk className="akcje-rekordu__przycisk" onClick={edytuj}><IkonaAkcjiRekordu typ="edycja" />Edytuj</Przycisk>
+    <Przycisk className="akcje-rekordu__przycisk" onClick={duplikuj}><IkonaAkcjiRekordu typ="duplikuj" />Duplikuj</Przycisk>
+    <Przycisk className="akcje-rekordu__przycisk akcje-rekordu__przycisk--usun" onClick={usun}><IkonaAkcjiRekordu typ="usun" />Usun</Przycisk>
   </div>
 }

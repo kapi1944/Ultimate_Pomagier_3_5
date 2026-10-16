@@ -1,0 +1,24 @@
+.ui-karta, .ui-panel { background: var(--ui-panel); color: var(--ui-tekst); border: 1px solid var(--ui-obramowanie); border-radius: var(--ui-promien-karty); padding: var(--ui-odstep-4); box-shadow: var(--ui-cien); }
+.ui-karta { display: grid; gap: var(--ui-odstep-3); min-width: 0; font-size: var(--ui-tekst-podstawowy); }
+.ui-karta h3, .ui-panel h3 { margin: 0; font-size: var(--ui-tekst-naglowek); }
+.ui-przycisk, .ui-zakladki [role="tab"] { min-height: 44px; border: 1px solid var(--ui-obramowanie); border-radius: var(--ui-promien-pola); background: var(--ui-powierzchnia); color: var(--ui-tekst); padding: var(--ui-odstep-2) var(--ui-odstep-3); font: inherit; cursor: pointer; transition: background var(--ui-transition-ms), box-shadow var(--ui-transition-ms); }
+.ui-przycisk:hover:not(:disabled), .ui-zakladki [role="tab"]:hover, .ui-zakladki [aria-selected="true"] { background: var(--ui-akcent-mocny); border-color: var(--ui-akcent); box-shadow: 0 0 0 1px var(--ui-akcent); }
+.ui-przycisk:disabled { cursor: not-allowed; opacity: .6; }
+.ui-pole { display: grid; gap: var(--ui-odstep-2); }
+.ui-pole input { width: 100%; min-height: 44px; padding: var(--ui-odstep-2); border: 1px solid var(--ui-obramowanie); border-radius: var(--ui-promien-pola); background: var(--ui-pole); color: var(--ui-tekst); font: inherit; }
+[data-status="success"] { --ui-status: var(--ui-success); --ui-status-tlo: var(--ui-success-tlo); }
+[data-status="warning"] { --ui-status: var(--ui-warning); --ui-status-tlo: var(--ui-warning-tlo); }
+[data-status="error"] { --ui-status: var(--ui-error); --ui-status-tlo: var(--ui-error-tlo); }
+[data-status="info"] { --ui-status: var(--ui-info); --ui-status-tlo: var(--ui-info-tlo); }
+[data-status="draft"] { --ui-status: var(--ui-draft); --ui-status-tlo: var(--ui-draft-tlo); }
+.ui-odznaka, .ui-komunikat { color: var(--ui-status); background: var(--ui-status-tlo); border: 1px solid var(--ui-status); border-radius: var(--ui-promien-pola); padding: var(--ui-odstep-2); overflow-wrap: anywhere; }
+.ui-odznaka { display: inline-block; font-size: var(--ui-tekst-maly); }
+.ui-pole [data-status] { color: var(--ui-status); }
+.ui-zakladki [role="tablist"], .ui-galeria__statusy { display: flex; flex-wrap: wrap; gap: var(--ui-odstep-2); }
+.ui-zakladki [role="tabpanel"] { padding-block: var(--ui-odstep-3); }
+.ui-pusty-stan { padding: var(--ui-odstep-4); border: 1px dashed var(--ui-obramowanie); color: var(--ui-tekst-drugi); }
+.ui-panel { position: fixed; inset: 0 0 0 auto; margin: 0; width: min(440px, 100%); max-width: 100%; height: 100dvh; max-height: 100dvh; overflow: auto; }
+.ui-panel::backdrop { background: #0009; }
+.ui-panel > * + * { margin-top: var(--ui-odstep-4); }
+.ui-galeria { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: var(--ui-odstep-4); }
+.ui-galeria__motyw { padding: var(--ui-odstep-3); background: var(--ui-tlo-gradient); border-radius: var(--ui-promien-karty); min-width: 0; }

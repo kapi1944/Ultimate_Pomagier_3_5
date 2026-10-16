@@ -22,9 +22,10 @@
 }
 
 .ustawienia__niezapisane {
-  border: 1px solid #facc15;
+  border: 1px solid var(--ui-draft);
   border-radius: 999px;
-  color: #fef9c3;
+  color: var(--ui-draft);
+  background: var(--ui-draft-tlo);
   font-size: .8rem;
   font-weight: 800;
   padding: 5px 10px;
@@ -194,7 +195,7 @@
   justify-content: flex-end;
   border: 1px solid var(--ui-obramowanie);
   border-radius: var(--ui-promien-karty);
-  background: color-mix(in srgb, var(--ui-panel) 94%, transparent);
+  background: var(--ui-panel);
   padding: 10px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, .3);
 }

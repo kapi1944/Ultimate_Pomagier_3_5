@@ -26,6 +26,7 @@ import { czyNalezyPrzypomniecOPelnymBackupu, odczytajKopieLokalna, pobierzListeK
 import { analizujMigracjeStarszychDokumentow, wykonajMigracjeStarszychDokumentow, type RaportMigracjiStarszychDokumentow } from '../../wspolne/dokumenty/migracjaStarszychDokumentow'
 import { pobierzStanRejestruDokumentow } from '../../wspolne/dokumenty/rejestrDokumentow'
 import './widokUstawien.css'
+import { GaleriaKomponentow } from '../../wspolne/komponenty/GaleriaKomponentow'
 
 const kluczPrzypieciaPaneluJakosci = 'ultimatePomagier.panelJakosciPrzypiety'
 const kluczWysuwaniaPaneluJakosci = 'ultimatePomagier.panelJakosciWysuwanieZKrawedzi'
@@ -41,6 +42,9 @@ type ZakladkaUstawien =
   | 'DANE'
 
 const etykietyPalet: Record<PaletaInterfejsu, string> = {
+  EMERALD_DARK: 'Emerald Dark',
+  SOFT_GREY: 'Soft Grey',
+  DARK_GRAY: 'Dark Gray',
   DOMYSLNA: 'Domyślna',
   CRM: 'CRM',
   DDP: 'DDP',
@@ -562,7 +566,7 @@ export default function WidokUstawien() {
           </section>
         </fieldset>
 
-        <PodgladUstawien />
+        <PodgladUstawien pokazGalerie />
       </>}
 
       {aktywnaZakladka === 'NAWIGACJA' && <>
@@ -807,10 +811,11 @@ export default function WidokUstawien() {
   )
 }
 
-function PodgladUstawien() {
+function PodgladUstawien({ pokazGalerie = false }: { pokazGalerie?: boolean }) {
   return (
     <section className="ustawienia__karta">
       <h2>Podgląd na żywo</h2>
+      {pokazGalerie && <GaleriaKomponentow />}
 
       <div className="ustawienia-podglad">
         <article className="ustawienia-podglad__karta">

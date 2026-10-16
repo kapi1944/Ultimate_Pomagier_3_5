@@ -1,4 +1,7 @@
 export const paletyInterfejsu = [
+  'EMERALD_DARK',
+  'SOFT_GREY',
+  'DARK_GRAY',
   'DOMYSLNA',
   'CRM',
   'DDP',
@@ -76,7 +79,7 @@ export type UstawieniaAplikacji = {
 export const domyslneUstawieniaAplikacji: UstawieniaAplikacji = {
   wersja: 1,
   wyglad: {
-    paleta: 'DOMYSLNA',
+    paleta: 'EMERALD_DARK',
     gestosc: 'STANDARDOWA',
     promienKart: 10,
     promienPol: 6,

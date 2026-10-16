@@ -1,0 +1,87 @@
+:root, [data-ui-paleta] {
+  --ui-success: #86efac;
+  --ui-success-tlo: #123322;
+  --ui-warning: #fde68a;
+  --ui-warning-tlo: #392d12;
+  --ui-error: #fda4af;
+  --ui-error-tlo: #401b25;
+  --ui-info: #93c5fd;
+  --ui-info-tlo: #192e46;
+  --ui-draft: #d8b4fe;
+  --ui-draft-tlo: #322144;
+  --ui-odstep-1: 4px;
+  --ui-odstep-2: 8px;
+  --ui-odstep-3: 12px;
+  --ui-odstep-4: 16px;
+  --ui-odstep-6: 24px;
+  --ui-tekst-maly: .875rem;
+  --ui-tekst-podstawowy: 1rem;
+  --ui-tekst-naglowek: 1.25rem;
+  --ui-cien: 0 8px 24px #0003;
+  --ui-focus: #facc15;
+  --ui-tlo-gradient: var(--ui-tlo);
+}
+
+html:not([data-ui-paleta]), [data-ui-paleta="DOMYSLNA"], [data-ui-paleta="EMERALD_DARK"] {
+  color-scheme: dark;
+  --ui-tlo: #061b15;
+  --ui-tlo-gradient: linear-gradient(135deg, #03110d, #0b3025);
+  --ui-panel: #091f19;
+  --ui-powierzchnia: #102e25;
+  --ui-pole: #071b15;
+  --ui-akcent: #6ee7b7;
+  --ui-akcent-mocny: #18563f;
+  --ui-tekst-na-akcencie: #062018;
+  --ui-tekst: #edf8f3;
+  --ui-tekst-drugi: #afc9bd;
+  --ui-obramowanie: #618c79;
+}
+
+[data-ui-paleta="SOFT_GREY"] {
+  color-scheme: light;
+  --ui-tlo: #e0e3e2;
+  --ui-tlo-gradient: #e0e3e2;
+  --ui-panel: #d4d9d6;
+  --ui-powierzchnia: #c8d0cb;
+  --ui-pole: #e6eae7;
+  --ui-akcent: #125d3e;
+  --ui-akcent-mocny: #b2c8ba;
+  --ui-tekst-na-akcencie: #f0f5f2;
+  --ui-tekst: #202b25;
+  --ui-tekst-drugi: #43574b;
+  --ui-obramowanie: #506357;
+  --ui-focus: #174db0;
+  --ui-success: #14532d;
+  --ui-success-tlo: #c5dfce;
+  --ui-warning: #713f12;
+  --ui-warning-tlo: #ebdbb2;
+  --ui-error: #881337;
+  --ui-error-tlo: #efd0d8;
+  --ui-info: #1e3a8a;
+  --ui-info-tlo: #ccdaef;
+  --ui-draft: #581c87;
+  --ui-draft-tlo: #e2d2ef;
+}
+
+[data-ui-paleta="DARK_GRAY"] {
+  color-scheme: dark;
+  --ui-tlo: #181b1d;
+  --ui-tlo-gradient: #181b1d;
+  --ui-panel: #23282b;
+  --ui-powierzchnia: #30373b;
+  --ui-pole: #1d2225;
+  --ui-akcent: #86efac;
+  --ui-akcent-mocny: #22543b;
+  --ui-tekst-na-akcencie: #092016;
+  --ui-tekst: #f0f4f2;
+  --ui-tekst-drugi: #bbc8c1;
+  --ui-obramowanie: #87958e;
+}
+
+@media screen {
+  body, .uklad-aplikacji, .panel-logowania { background: var(--ui-tlo-gradient); }
+  :where(button, a, input, select, textarea, summary):focus-visible {
+    outline: 3px solid var(--ui-focus);
+    outline-offset: 3px;
+  }
+}
