@@ -515,7 +515,7 @@ test('Pulpit używa jednego szerokiego formularza create edit pod osią czasu', 
   assert.match(widok, /useState<TrybFormularzaZadania>\('create'\)/)
   assert.match(widok, /ustawFormularzZadania\(formularzZZadania\(zadanie\)\)/)
   assert.match(widok, /ustawTrybFormularzaZadania\('edit'\)/)
-  assert.match(widok, /scrollIntoView\(\{ behavior: 'smooth', block: 'start' \}\)/)
+  assert.match(widok, /scrollIntoView\(\{ behavior: zachowaniePrzewijania, block: 'start' \}\)/)
   assert.match(widok, /trybFormularzaZadania === 'edit' \? 'Edytuj zadanie' : 'Dodaj zadanie'/)
   assert.match(widok, /trybFormularzaZadania === 'edit' \? zapiszEdycjeZadania : dodajZadanie/)
   assert.match(widok, /Usuń zadanie/)
@@ -523,7 +523,7 @@ test('Pulpit używa jednego szerokiego formularza create edit pod osią czasu', 
   assert.match(widok, /Anuluj/)
   assert.doesNotMatch(widok, /pulpit-drawer__edycja/)
   assert.doesNotMatch(css, /pulpit-drawer__edycja/)
-  assert.ok(widok.indexOf('pulpit-formularz-zadania__kontener') < widok.indexOf('aria-label="Szczegóły zadania"'))
+  assert.ok(widok.indexOf('pulpit-formularz-zadania__kontener') < widok.indexOf('tytul="Szczegóły zadania"'))
 })
 
 test('anulowanie edycji czyści wybór i przywraca pusty tryb tworzenia bez zapisu', () => {

@@ -819,3 +819,65 @@ html[data-ui-pokaz-plomien-asap="false"] .pulpit-deadline__plomien {
 .pulpit-zakup__zalaczniki li { display: flex; align-items: center; gap: 8px; overflow-wrap: anywhere; }
 .pulpit-zakup__zalaczniki img { display: block; max-width: 180px; max-height: 120px; object-fit: contain; }
 .pulpit-zakup__uwagi { white-space: pre-wrap; }
+
+/* V4 — powierzchnie i semantyka Pulpitu; geometria czasu pozostaje bez zmian. */
+.pulpit { min-width: 0; gap: var(--ui-odstep-6); }
+.pulpit :where(section, article, form, label, fieldset) { min-width: 0; }
+.pulpit .pulpit-kafelki { grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: var(--ui-odstep-4); }
+.pulpit .pulpit-kafelek { position: relative; gap: 12px; min-height: 158px; padding: 20px; border: 1px solid var(--ui-obramowanie); border-top: 3px solid var(--ui-status, var(--ui-obramowanie)); border-radius: var(--ui-promien-karty); background: var(--ui-powierzchnia); color: var(--ui-tekst); box-shadow: var(--ui-cien); }
+.pulpit .pulpit-kafelek strong { font-size: clamp(1.8rem, 3vw, 2.5rem); }
+.pulpit .pulpit-kafelek__naglowek { order: -1; color: var(--ui-tekst); font-size: .8rem; letter-spacing: .025em; }
+.pulpit .pulpit-kafelek__ikona { flex: 0 0 24px; width: 24px; height: 24px; color: var(--ui-status, var(--ui-tekst-drugi)); }
+.pulpit .pulpit-kafelek em { color: var(--ui-info); }
+.pulpit .pulpit-kafelek:hover, .pulpit .pulpit-kafelek--aktywny { background: var(--ui-panel); border-color: var(--ui-status, var(--ui-akcent)); box-shadow: inset 0 0 0 1px var(--ui-status, var(--ui-akcent)); }
+.pulpit .pulpit-sekcja { gap: 20px; padding: clamp(12px, 2vw, 24px); border: 1px solid var(--ui-obramowanie); border-radius: var(--ui-promien-karty); background: var(--ui-panel); box-shadow: var(--ui-cien); }
+.pulpit .pulpit-sekcja__naglowek { flex-wrap: wrap; gap: 16px; border-bottom: 1px solid var(--ui-obramowanie); padding-bottom: 16px; }
+.pulpit h2 { font-size: clamp(1.125rem, 2vw, 1.4rem); }
+.pulpit h3 { font-size: 1rem; }
+.pulpit .pulpit-lista-zadan { grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 16px; }
+.pulpit .pulpit-zadanie, .pulpit .pulpit-paczka, .pulpit .pulpit-zapotrzebowanie { padding: 16px; gap: 12px; border: 1px solid var(--ui-obramowanie); border-radius: var(--ui-promien-karty); background: var(--ui-powierzchnia); color: var(--ui-tekst); }
+.pulpit .pulpit-zadanie--opoznione, .pulpit .pulpit-paczka--opozniona { border-left: 4px solid var(--ui-error); }
+.pulpit .pulpit-zadanie--wykonane { opacity: 1; border-left: 4px solid var(--ui-success); }
+.pulpit .pulpit-zadanie__tresc { min-height: 44px; text-align: left; overflow-wrap: anywhere; }
+.pulpit .pulpit-zapotrzebowanie p { color: var(--ui-tekst-drugi); }
+.pulpit .pulpit-status { color: var(--ui-info); border-color: var(--ui-info); background: var(--ui-info-tlo); padding: 5px 9px; line-height: 1.4; }
+.pulpit .pulpit-status--czerwony { color: var(--ui-error); border-color: var(--ui-error); background: var(--ui-error-tlo); }
+.pulpit .pulpit-status--zielony { color: var(--ui-success); border-color: var(--ui-success); background: var(--ui-success-tlo); }
+.pulpit .pulpit-status--zolty, .pulpit .pulpit-status--asap { color: var(--ui-warning); border-color: var(--ui-warning); background: var(--ui-warning-tlo); }
+.pulpit :is(input, select, textarea) { max-width: 100%; min-width: 0; min-height: 44px; border-color: var(--ui-obramowanie); border-radius: var(--ui-promien-pola); background: var(--ui-pole); color: var(--ui-tekst); }
+.pulpit :is(input[type="checkbox"], input[type="radio"]) { min-height: 20px; width: 20px; accent-color: var(--ui-akcent); }
+.pulpit .ui-przycisk { min-height: 44px; border-color: var(--ui-obramowanie); border-radius: var(--ui-promien-pola); }
+.pulpit :is(button, input, select, textarea, summary):focus-visible { outline: 3px solid var(--ui-focus); outline-offset: 3px; }
+.pulpit .pulpit-przycisk-niebezpieczny { color: var(--ui-error) !important; border-color: var(--ui-error) !important; background: var(--ui-error-tlo); }
+.pulpit .pulpit-formularz-zadania { border: 1px solid var(--ui-obramowanie); border-radius: var(--ui-promien-karty); background: var(--ui-pole); padding: 16px; gap: 16px; }
+.pulpit .pulpit-formularz-zadania__miniatura, .pulpit .pulpit-miniatura-edytor { background: var(--ui-panel); border-color: var(--ui-obramowanie); }
+.pulpit .pulpit-formularz-zadania__niezapisane, .pulpit .pulpit-formularz-zadania__blad { grid-column: 1 / -1; }
+.pulpit .pulpit-formularz-zakupu { padding-top: 12px; gap: 16px; }
+.pulpit .pulpit-formularz-zakupu fieldset { border: 1px solid var(--ui-obramowanie); border-radius: var(--ui-promien-pola); padding: 12px; }
+.pulpit .pulpit-formularz-zakupu__blad { color: var(--ui-error); }
+.pulpit .pulpit-modal__akcje { flex-wrap: wrap; gap: 10px; padding-top: 16px; }
+.pulpit .ui-dialog { overflow-wrap: anywhere; }
+.pulpit .ui-panel { top: var(--ui-wysokosc-naglowka, 0px); bottom: var(--ui-wysokosc-docka, 0px); height: var(--ui-wysokosc-obszaru, 100dvh); max-height: var(--ui-wysokosc-obszaru, 100dvh); width: min(480px, calc(100% - 12px)); }
+.pulpit .ui-panel dl { display: grid; gap: 16px; }
+.pulpit .ui-panel dt { color: var(--ui-tekst-drugi); font-size: .875rem; }
+.pulpit .ui-panel dd { margin: 4px 0 0; overflow-wrap: anywhere; }
+.pulpit-os-czasu__przewijanie { min-width: 0; max-width: 100%; overflow: auto; overscroll-behavior-inline: contain; border: 1px solid var(--ui-obramowanie); border-radius: var(--ui-promien-karty); background: var(--ui-pole); padding: 12px; }
+.pulpit .pulpit-os-czasu { min-width: 720px; padding-bottom: 140px; }
+.pulpit .pulpit-os-czasu__etykiety { font-size: .8rem; }
+.pulpit .pulpit-os-czasu__etykieta-pracy { font-size: .75rem; }
+.pulpit .pulpit-os-czasu__etykieta-teraz { color: var(--ui-warning); border-color: var(--ui-warning); background: var(--ui-warning-tlo); }
+.pulpit .pulpit-os-czasu__wskaznik::after { background: var(--ui-warning); box-shadow: none; }
+.pulpit .pulpit-deadline__etykieta { color: var(--ui-tekst); background: var(--ui-panel); padding: 4px 6px; border: 1px solid var(--ui-obramowanie); border-radius: var(--ui-promien-pola); }
+.pulpit .pulpit-deadline__tooltip { color: var(--ui-tekst); background: var(--ui-panel); border-color: var(--ui-warning); }
+.pulpit .pulpit-os-czasu__miniatura:focus-visible { border-color: var(--ui-focus); }
+.pulpit-terminy { border: 1px solid var(--ui-obramowanie); border-radius: var(--ui-promien-pola); background: var(--ui-powierzchnia); padding: 12px; }
+.pulpit-terminy summary { cursor: pointer; padding: 8px; font-weight: 700; }
+.pulpit-terminy ul { list-style: none; padding: 0; display: grid; gap: 8px; }
+.pulpit-terminy button { width: 100%; text-align: left; overflow-wrap: anywhere; }
+@media (max-width: 760px) { .pulpit .pulpit-nawigacja-daty { grid-column: 1 / -1; justify-content: start; flex-wrap: wrap; } .pulpit .pulpit-nawigacja-daty__dzisiaj { width: auto; } .pulpit .pulpit-sekcja__naglowek--plan { display: flex; } }
+@media (prefers-reduced-motion: reduce) {
+  .pulpit .ui-przycisk, .pulpit .pulpit-os-czasu__miniatura { transition: none; }
+  .pulpit .pulpit-os-czasu__miniatura:hover, .pulpit .pulpit-os-czasu__miniatura:focus-visible { transform: translateX(-50%); }
+  .pulpit .pulpit-os-czasu__miniatura--lewo:hover, .pulpit .pulpit-os-czasu__miniatura--lewo:focus-visible { transform: translateX(0); }
+  .pulpit .pulpit-os-czasu__miniatura--prawo:hover, .pulpit .pulpit-os-czasu__miniatura--prawo:focus-visible { transform: translateX(-100%); }
+}

@@ -27,7 +27,7 @@ export function powierzchniePliku(plik) {
     if (ts.isJsxOpeningElement(wezel) || ts.isJsxSelfClosingElement(wezel)) {
       const znacznik = wezel.tagName.getText(zrodlo)
       const atrybuty = wezel.attributes.properties.map((atrybut) => atrybut.getText(zrodlo)).join(' ')
-      if (['form', 'aside', 'dialog', 'details'].includes(znacznik) || /modal|dialog|zakladk|tabpanel|tablist|panel-|panel__|drawer/i.test(atrybuty)) {
+      if (['form', 'aside', 'dialog', 'details', 'PanelWysuwany', 'OknoDialogowe', 'Zakladki'].includes(znacznik) || /modal|dialog|zakladk|tabpanel|tablist|panel-|panel__|drawer/i.test(atrybuty)) {
         powierzchnie.add(`${znacznik} ${atrybuty}`.replace(/\s+/g, ' ').trim())
       }
     }

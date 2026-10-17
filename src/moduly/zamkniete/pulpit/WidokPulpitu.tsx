@@ -19,6 +19,7 @@ import { czyMoznaEdytowacZadanie, czyMoznaOznaczycZadanieRecznie, czyMoznaWybrac
 import type { JednostkaPrzypomnienia, KadrMiniaturyZadania, PaczkaPulpitu, PrzypomnienieZadania, ZadaniePulpitu, ZapotrzebowanieZakupowe } from './modele/pulpit'
 import { pobierzLinkiProduktu, zapiszZakupPrzezUzytkownika, edytujZadanieRecznePrzezZadaniodawce, oznaczPaczkeJakoWyslana, pobierzStanPulpitu, usunZadanieReczne, zapiszZadanieReczne } from './uslugi/magazynPulpitu'
 import './pulpit.css'
+import { Przycisk, Komunikat, PustyStan, PanelWysuwany, OknoDialogowe } from '../../../wspolne/komponenty/ElementyInterfejsu'
 
 type FiltrPulpitu = 'WSZYSTKIE' | 'DO_ZROBIENIA' | 'PILNE' | 'PACZKI' | 'BLOKADY'
 
@@ -209,14 +210,14 @@ function KartaZadania({ zadanie, teraz, zakresDniaPracy, uzytkownicy, nazwaSzkol
   const status = pobierzEtykieteStatusuZadania(zadanie, teraz, zakresDniaPracy)
   const czyOpoznione = status === 'Opóźnione'
   return <article className={'pulpit-zadanie' + (czyOpoznione ? ' pulpit-zadanie--opoznione' : '') + (zadanie.status === 'WYKONANE' ? ' pulpit-zadanie--wykonane' : '')}>
-    <button className="pulpit-zadanie__tresc" onClick={otworz} type="button">
+    <Przycisk className="pulpit-zadanie__tresc" onClick={otworz} type="button">
       <span className="pulpit-zadanie__etykieta">{zadanie.czyAutomatyczne ? 'Automatyczne' : 'Ręczne'} &middot; {zadanie.typZadania}</span>
       <strong>{zadanie.tytul}</strong>
       {zadanie.opis && <span className="pulpit-zadanie__opis">{zadanie.opis}</span>}
       {zadanie.powiazaneSzkolenieId && <small>Szkolenie: {nazwaSzkolenia ?? 'Szkolenie niedostępne'}</small>}
       <small>Zadaniodawca: {pobierzNazweOsoby(uzytkownicy, zadanie.zadaniodawcaId)}</small>
       <small>Zadaniobiorca: {pobierzNazweOsoby(uzytkownicy, zadanie.zadaniobiorcaId)}</small>
-    </button>
+    </Przycisk>
     <div className="pulpit-zadanie__meta">
       {(zadanie.godzina || czyZadanieDoKoncaDnia(zadanie)) && <span>{etykietaTerminuZadania(zadanie)}</span>}
       <span className={'pulpit-status' + (czyOpoznione ? ' pulpit-status--czerwony' : zadanie.status === 'WYKONANE' ? ' pulpit-status--zielony' : '')}>{status}</span>
@@ -224,9 +225,9 @@ function KartaZadania({ zadanie, teraz, zakresDniaPracy, uzytkownicy, nazwaSzkol
     </div>
     {czyMoznaOznaczycZadanieRecznie(zadanie) && <div className="pulpit-zadanie__akcje">
       {zmienGodzine && !czyZadanieDoKoncaDnia(zadanie) && <label htmlFor={'godzina-' + zadanie.id}>Godzina<input id={'godzina-' + zadanie.id} onChange={(zdarzenie) => zmienGodzine(zdarzenie.target.value)} type="time" value={zadanie.godzina ?? ''} /></label>}
-      {odloz && <button onClick={() => odloz(dataTekstowa(new Date(Date.now() + 86_400_000)))} type="button">Jutro</button>}
-      {odloz && <button onClick={() => odloz(dataTekstowa(new Date(Date.now() + 3 * 86_400_000)))} type="button">Za 3 dni</button>}
-      {wykonaj && <button className="pulpit-przycisk-glowny" onClick={wykonaj} type="button">{'\u2713'} Wykonane</button>}
+      {odloz && <Przycisk onClick={() => odloz(dataTekstowa(new Date(Date.now() + 86_400_000)))} type="button">Jutro</Przycisk>}
+      {odloz && <Przycisk onClick={() => odloz(dataTekstowa(new Date(Date.now() + 3 * 86_400_000)))} type="button">Za 3 dni</Przycisk>}
+      {wykonaj && <Przycisk className="pulpit-przycisk-glowny" onClick={wykonaj} type="button">{'\u2713'} Wykonane</Przycisk>}
     </div>}
   </article>
 }
@@ -242,7 +243,7 @@ function MiniaturaZadaniaNaOsi({ zadanie, zakresDniaPracy, otworz }: { zadanie: 
       ? ' pulpit-os-czasu__miniatura--prawo'
       : ''
 
-  return <button
+  return <Przycisk
     aria-label={'Otwórz zadanie z miniaturą: ' + zadanie.tytul}
     className={'pulpit-os-czasu__miniatura' + klasaKrawedzi}
     onClick={otworz}
@@ -250,7 +251,7 @@ function MiniaturaZadaniaNaOsi({ zadanie, zakresDniaPracy, otworz }: { zadanie: 
     type="button"
   >
     <img alt="" aria-hidden="true" src={zadanie.miniatura.daneUrl} />
-  </button>
+  </Przycisk>
 }
 
 function MarkerDeadline({ zadanie, zakresDniaPracy, uzytkownicy, otworz }: { zadanie: ZadaniePulpitu; zakresDniaPracy: ZakresDniaPracy; uzytkownicy: Uzytkownik[]; otworz: () => void }) {
@@ -289,11 +290,11 @@ function MarkerDeadline({ zadanie, zakresDniaPracy, uzytkownicy, otworz }: { zad
     } as CSSProperties}
   >
     {szerokoscLiniiDoFajrantu > 0 && <span aria-hidden="true" className="pulpit-deadline__linia-do-fajrantu" style={{ width: szerokoscLiniiDoFajrantu + '%' }} />}
-    <button aria-describedby={identyfikatorTooltipa} aria-label={'Deadline: ' + zadanie.tytul + ', ' + etykietaTerminuZadania(zadanie)} className="pulpit-deadline__przycisk" onClick={otworz} type="button">
+    <Przycisk aria-describedby={identyfikatorTooltipa} aria-label={'Deadline: ' + zadanie.tytul + ', ' + etykietaTerminuZadania(zadanie)} className="pulpit-deadline__przycisk" onClick={otworz} type="button">
       {zadanie.priorytet === 'ASAP' && <span aria-hidden="true" className="pulpit-deadline__plomien">{'\u{1F525}'}</span>}
       <span aria-hidden="true" className="pulpit-deadline__romb"><span /></span>
       <span className="pulpit-deadline__etykieta">{czyDoKoncaDnia ? 'DO KOŃCA DNIA' : 'DEADLINE'}: {zadanie.tytul}</span>
-    </button>
+    </Przycisk>
     <span className="pulpit-deadline__tooltip" id={identyfikatorTooltipa} role="tooltip">
       <strong>{zadanie.tytul}</strong>
       <span>Deadline: {formatujDate(zadanie.data)}, {etykietaTerminuZadania(zadanie)}</span>
@@ -409,7 +410,7 @@ function FormularzZadaniaPulpitu({ formularz, ustawFormularz, uzytkownicy, szkol
   }
 
   return <form className="pulpit-formularz-zadania" onPaste={obsluzWklejenie} onSubmit={(zdarzenie) => { zdarzenie.preventDefault(); zapisz() }}>
-    <label className="pulpit-formularz-zadania__nazwa" htmlFor="pulpit-nazwa-zadania">Nazwa zadania<input id="pulpit-nazwa-zadania" onChange={(zdarzenie) => ustawFormularz({ ...formularz, tytul: zdarzenie.target.value })} placeholder="Np. wysłać dokumenty" value={formularz.tytul} /></label>
+    <label className="pulpit-formularz-zadania__nazwa" htmlFor="pulpit-nazwa-zadania">Nazwa zadania<input autoFocus id="pulpit-nazwa-zadania" onChange={(zdarzenie) => ustawFormularz({ ...formularz, tytul: zdarzenie.target.value })} placeholder="Np. wysłać dokumenty" value={formularz.tytul} /></label>
     <label className="pulpit-formularz-zadania__opis" htmlFor="pulpit-opis-zadania">Opis<textarea id="pulpit-opis-zadania" onChange={(zdarzenie) => ustawFormularz({ ...formularz, opis: zdarzenie.target.value })} placeholder="Opcjonalny kontekst zadania" rows={3} value={formularz.opis} /></label>
     <label htmlFor="pulpit-termin-zadania">Termin wykonania<input id="pulpit-termin-zadania" onChange={(zdarzenie) => ustawFormularz({ ...formularz, data: zdarzenie.target.value })} type="date" value={formularz.data} /></label>
     <label htmlFor="pulpit-rodzaj-terminu-zadania">Termin<select id="pulpit-rodzaj-terminu-zadania" onChange={(zdarzenie) => ustawFormularz({ ...formularz, rodzajTerminu: zdarzenie.target.value as FormularzZadania['rodzajTerminu'], godzina: zdarzenie.target.value === 'KONKRETNA_GODZINA' ? formularz.godzina : '' })} value={formularz.rodzajTerminu}><option value="KONKRETNA_GODZINA">Konkretna godzina</option><option value="DO_KONCA_DNIA">Do końca dnia</option><option value="BRAK_GODZINY">Bez przypisanej godziny</option></select></label>
@@ -420,7 +421,7 @@ function FormularzZadaniaPulpitu({ formularz, ustawFormularz, uzytkownicy, szkol
       : tryb === 'edit' && <label htmlFor="pulpit-zadaniodawca">Zadaniodawca<input disabled id="pulpit-zadaniodawca" value={pobierzNazweOsoby(uzytkownicy, formularz.zadaniodawcaId)} /></label>}
     <label htmlFor="pulpit-zadaniobiorca">Zadaniobiorca<select id="pulpit-zadaniobiorca" onChange={(zdarzenie) => ustawFormularz({ ...formularz, zadaniobiorcaId: zdarzenie.target.value })} value={formularz.zadaniobiorcaId}><option value="">Ja &mdash; {pobierzNazweOsoby(uzytkownicy, formularz.zadaniodawcaId)}</option>{uzytkownicy.filter((uzytkownik) => uzytkownik.id !== formularz.zadaniodawcaId).map((uzytkownik) => <option key={uzytkownik.id} value={uzytkownik.id}>{pobierzNazweUzytkownika(uzytkownik)}</option>)}</select></label>
     <label htmlFor="pulpit-powiazanie-zadania">Powiązanie<select id="pulpit-powiazanie-zadania" onChange={(zdarzenie) => ustawFormularz({ ...formularz, szkolenieId: zdarzenie.target.value })} value={formularz.szkolenieId}><option value="">Bez powiązania</option>{szkolenia.map((szczegoly) => <option key={szczegoly.id} value={szczegoly.id}>{szczegoly.nazwa}</option>)}</select></label>
-    {formularz.odlozonoDo && <div className="pulpit-formularz-zadania__odlozenie"><label htmlFor="pulpit-odlozenie-zadania">Odłożone do<input id="pulpit-odlozenie-zadania" onChange={(zdarzenie) => ustawFormularz({ ...formularz, odlozonoDo: zdarzenie.target.value || undefined })} type="date" value={formularz.odlozonoDo} /></label><button onClick={() => ustawFormularz({ ...formularz, odlozonoDo: undefined })} type="button">Usuń odłożenie</button></div>}
+    {formularz.odlozonoDo && <div className="pulpit-formularz-zadania__odlozenie"><label htmlFor="pulpit-odlozenie-zadania">Odłożone do<input id="pulpit-odlozenie-zadania" onChange={(zdarzenie) => ustawFormularz({ ...formularz, odlozonoDo: zdarzenie.target.value || undefined })} type="date" value={formularz.odlozonoDo} /></label><Przycisk onClick={() => ustawFormularz({ ...formularz, odlozonoDo: undefined })} type="button">Usuń odłożenie</Przycisk></div>}
     <div
       aria-busy={czyPrzetwarzanieMiniatury}
       className={'pulpit-formularz-zadania__miniatura' + (czyPrzeciaganieMiniatury ? ' pulpit-formularz-zadania__miniatura--przeciaganie' : '')}
@@ -439,8 +440,8 @@ function FormularzZadaniaPulpitu({ formularz, ustawFormularz, uzytkownicy, szkol
           {czyPrzetwarzanieMiniatury ? 'Przygotowywanie…' : formularz.miniatura ? 'Zmień obraz' : 'Wybierz z dysku'}
           <input accept="image/png,image/jpeg,image/webp" disabled={czyPrzetwarzanieMiniatury} id={identyfikatorPliku} onChange={(zdarzenie) => { void dodajMiniature(zdarzenie.target.files?.[0]); zdarzenie.target.value = '' }} type="file" />
         </label>
-        {formularz.miniatura && <button disabled={czyPrzetwarzanieMiniatury} onClick={rozpocznijEdycjeKadru} type="button">Edytuj miniaturę</button>}
-        {formularz.miniatura && <button disabled={czyPrzetwarzanieMiniatury} onClick={() => { ustawCzyEdycjaKadru(false); ustawMiniaturePrzedEdycja(undefined); ustawFormularz((obecny) => ({ ...obecny, miniatura: undefined })) }} type="button">Usuń miniaturę</button>}
+        {formularz.miniatura && <Przycisk disabled={czyPrzetwarzanieMiniatury} onClick={rozpocznijEdycjeKadru} type="button">Edytuj miniaturę</Przycisk>}
+        {formularz.miniatura && <Przycisk disabled={czyPrzetwarzanieMiniatury} onClick={() => { ustawCzyEdycjaKadru(false); ustawMiniaturePrzedEdycja(undefined); ustawFormularz((obecny) => ({ ...obecny, miniatura: undefined })) }} type="button">Usuń miniaturę</Przycisk>}
       </div>
       {formularz.miniatura && czyEdycjaKadru && <div className="pulpit-miniatura-edytor">
         <div>
@@ -464,36 +465,36 @@ function FormularzZadaniaPulpitu({ formularz, ustawFormularz, uzytkownicy, szkol
           <input disabled={czyPrzetwarzanieMiniatury} max="1" min="-1" onChange={(zdarzenie) => { void zmienKadrMiniatury({ y: Number(zdarzenie.target.value) }) }} step="0.02" type="range" value={formularz.miniatura.kadr.y} />
         </label>
         <div className="pulpit-miniatura-edytor__akcje">
-          <button disabled={czyPrzetwarzanieMiniatury} onClick={() => { void zmienKadrMiniatury({ x: 0, y: 0, zoom: 1, proporcja: '16:9' }) }} type="button">Resetuj</button>
-          <button disabled={czyPrzetwarzanieMiniatury} onClick={anulujEdycjeKadru} type="button">Anuluj</button>
-          <button className="pulpit-przycisk-glowny" disabled={czyPrzetwarzanieMiniatury} onClick={zatwierdzEdycjeKadru} type="button">Zastosuj kadr</button>
+          <Przycisk disabled={czyPrzetwarzanieMiniatury} onClick={() => { void zmienKadrMiniatury({ x: 0, y: 0, zoom: 1, proporcja: '16:9' }) }} type="button">Resetuj</Przycisk>
+          <Przycisk disabled={czyPrzetwarzanieMiniatury} onClick={anulujEdycjeKadru} type="button">Anuluj</Przycisk>
+          <Przycisk className="pulpit-przycisk-glowny" disabled={czyPrzetwarzanieMiniatury} onClick={zatwierdzEdycjeKadru} type="button">Zastosuj kadr</Przycisk>
         </div>
       </div>}
     </div>
-    {bladMiniatury && <p className="pulpit-formularz-zadania__blad" role="alert">{bladMiniatury}</p>}
+    {bladMiniatury && <div className="pulpit-formularz-zadania__blad"><Komunikat status="error">{bladMiniatury}</Komunikat></div>}
     <fieldset className="pulpit-przypomnienia">
       <legend>Przypomnienia</legend>
       {formularz.przypomnienia.map((przypomnienie, indeks) => <div className="pulpit-przypomnienie" key={przypomnienie.id}>
         <label htmlFor={'pulpit-przypomnienie-wartosc-' + indeks}>Wartość<input id={'pulpit-przypomnienie-wartosc-' + indeks} min="1" onChange={(zdarzenie) => zmienPrzypomnienie(przypomnienie.id, { wartosc: Number(zdarzenie.target.value) })} type="number" value={przypomnienie.wartosc} /></label>
         <label htmlFor={'pulpit-przypomnienie-jednostka-' + indeks}>Jednostka<select id={'pulpit-przypomnienie-jednostka-' + indeks} onChange={(zdarzenie) => zmienPrzypomnienie(przypomnienie.id, { jednostka: zdarzenie.target.value as JednostkaPrzypomnienia })} value={przypomnienie.jednostka}><option value="MINUTY">minut przed</option><option value="GODZINY">godzin przed</option><option value="DNI">dni przed</option></select></label>
-        <button onClick={() => ustawFormularz({ ...formularz, przypomnienia: formularz.przypomnienia.filter((obecne) => obecne.id !== przypomnienie.id) })} type="button">Usuń</button>
+        <Przycisk onClick={() => ustawFormularz({ ...formularz, przypomnienia: formularz.przypomnienia.filter((obecne) => obecne.id !== przypomnienie.id) })} type="button">Usuń</Przycisk>
       </div>)}
-      <button onClick={dodajPrzypomnienie} type="button">+ Dodaj przypomnienie</button>
+      <Przycisk onClick={dodajPrzypomnienie} type="button">+ Dodaj przypomnienie</Przycisk>
     </fieldset>
-    {blad && <p className="pulpit-formularz-zadania__blad" role="alert">{blad}</p>}
-    {czyNiezapisaneZmiany && <p className="pulpit-formularz-zadania__niezapisane" role="status">Masz niezapisane zmiany.</p>}
+    {blad && <div className="pulpit-formularz-zadania__blad"><Komunikat status="error">{blad}</Komunikat></div>}
+    {czyNiezapisaneZmiany && <div className="pulpit-formularz-zadania__niezapisane"><Komunikat status="draft">Masz niezapisane zmiany.</Komunikat></div>}
     {tryb === 'edit'
       ? <div className="pulpit-formularz-zadania__akcje">
           <div className="pulpit-formularz-zadania__akcje-domenowe">
-            {usun && <button className="pulpit-przycisk-niebezpieczny" onClick={usun} type="button">Usuń zadanie</button>}
-            {wykonaj && <button className="pulpit-przycisk-glowny" onClick={wykonaj} type="button">{'✓'} Wykonane</button>}
+            {usun && <Przycisk className="pulpit-przycisk-niebezpieczny" onClick={usun} type="button">Usuń zadanie</Przycisk>}
+            {wykonaj && <Przycisk className="pulpit-przycisk-glowny" onClick={wykonaj} type="button">{'✓'} Wykonane</Przycisk>}
           </div>
           <div className="pulpit-formularz-zadania__akcje-zapisu">
-            <button onClick={anuluj} type="button">Anuluj</button>
-            <button className="pulpit-przycisk-glowny pulpit-formularz-zadania__zapisz" disabled={czyPrzetwarzanieMiniatury} type="submit">Zapisz zmiany</button>
+            <Przycisk onClick={anuluj} type="button">Anuluj</Przycisk>
+            <Przycisk className="pulpit-przycisk-glowny pulpit-formularz-zadania__zapisz" disabled={czyPrzetwarzanieMiniatury} type="submit">Zapisz zmiany</Przycisk>
           </div>
         </div>
-      : <button className="pulpit-przycisk-glowny pulpit-formularz-zadania__zapisz" disabled={czyPrzetwarzanieMiniatury} type="submit">Zapisz</button>}
+      : <Przycisk className="pulpit-przycisk-glowny pulpit-formularz-zadania__zapisz" disabled={czyPrzetwarzanieMiniatury} type="submit">Zapisz</Przycisk>}
   </form>
 }
 
@@ -507,6 +508,11 @@ function utworzIdZapotrzebowaniaZakupowego() {
 
 function formatujDateGodzine(data: string) {
   return new Intl.DateTimeFormat('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(data))
+}
+
+function IkonaKafelka({ rodzaj }: { rodzaj: 'zadania' | 'pilne' | 'paczki' | 'blokady' }) {
+  const sciezki = { zadania: 'M4 5h16v16H4z M8 2v6 M16 2v6 M8 12l3 3 5-5', pilne: 'M12 3 2 21h20L12 3Z M12 9v5 M12 17h.01', paczki: 'm3 7 9-4 9 4v12l-9 4-9-4V7Z m0 0 9 4 9-4 M12 11v12', blokady: 'M5 10h14v11H5z M8 10V6a4 4 0 0 1 8 0v4 M12 14v3' }
+  return <svg aria-hidden="true" className="pulpit-kafelek__ikona" viewBox="0 0 24 24" fill="none"><path d={sciezki[rodzaj]} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
 }
 
 function IkonaZakupow() {
@@ -537,6 +543,7 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
   const kontenerFormularzaZadaniaRef = useRef<HTMLDivElement>(null)
   const uzytkownicy = pobierzUzytkownikow()
   const ustawieniaAplikacji = pobierzUstawieniaAplikacji()
+  const zachowaniePrzewijania: ScrollBehavior = ustawieniaAplikacji.dostepnosc.ograniczAnimacje || (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) ? 'auto' : 'smooth'
   const widoczneKafelki = ustawieniaAplikacji.pulpit.widoczneKafelki
   const zakresDniaPracy: ZakresDniaPracy = {
     poczatek: ustawieniaAplikacji.pulpit.poczatekDnia,
@@ -651,7 +658,7 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
     ustawEdytowaneZadanieId(zadanie.id)
     ustawBladFormularzaZadania('')
     ustawCzyFormularzZadaniaOtwarty(true)
-    window.requestAnimationFrame(() => kontenerFormularzaZadaniaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+    window.requestAnimationFrame(() => kontenerFormularzaZadaniaRef.current?.scrollIntoView({ behavior: zachowaniePrzewijania, block: 'start' }))
   }
 
   function anulujEdycjeZadania() {
@@ -881,57 +888,65 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
 
     <section aria-label="Podsumowanie" className="pulpit-kafelki">
       {widoczneKafelki.doZrobienia && (
-        <button
+        <Przycisk
           className={filtr === 'DO_ZROBIENIA' ? 'pulpit-kafelek pulpit-kafelek--aktywny' : 'pulpit-kafelek'}
+          data-status="info"
+          aria-pressed={filtr === 'DO_ZROBIENIA'}
           onClick={() => przelaczFiltr('DO_ZROBIENIA')}
           type="button"
         >
           <strong>{liczniki.doZrobienia}</strong>
-          <span>DO ZROBIENIA</span>
+          <span className="pulpit-kafelek__naglowek"><IkonaKafelka rodzaj="zadania" />DO ZROBIENIA</span>
           <small>na wybrany dzień</small>
-        </button>
+        </Przycisk>
       )}
 
       {widoczneKafelki.pilne && (
-        <button
+        <Przycisk
           className={filtr === 'PILNE' ? 'pulpit-kafelek pulpit-kafelek--aktywny' : 'pulpit-kafelek'}
+          data-status="warning"
+          aria-pressed={filtr === 'PILNE'}
           onClick={() => przelaczFiltr('PILNE')}
           type="button"
         >
           <strong>{liczniki.pilne}</strong>
-          <span>PILNE</span>
+          <span className="pulpit-kafelek__naglowek"><IkonaKafelka rodzaj="pilne" />PILNE</span>
           <small>
             {pilne.filter((zadanie) => czyZadanieOpoznione(zadanie, teraz, zakresDniaPracy)).length} opóźnione
           </small>
-        </button>
+        </Przycisk>
       )}
 
       {widoczneKafelki.paczki && (
-        <button
+        <Przycisk
           className={filtr === 'PACZKI' ? 'pulpit-kafelek pulpit-kafelek--aktywny' : 'pulpit-kafelek'}
+          data-status="info"
+          aria-pressed={filtr === 'PACZKI'}
           onClick={() => przelaczFiltr('PACZKI')}
           type="button"
         >
           <strong>{liczniki.paczki}</strong>
-          <span>PACZKI</span>
+          <span className="pulpit-kafelek__naglowek"><IkonaKafelka rodzaj="paczki" />PACZKI</span>
           <small>w ciągu {liczbaDniWidocznosciPaczki} dni</small>
-        </button>
+        </Przycisk>
       )}
 
       {widoczneKafelki.blokady && (
-        <button
+        <Przycisk
           className={filtr === 'BLOKADY' ? 'pulpit-kafelek pulpit-kafelek--aktywny' : 'pulpit-kafelek'}
+          data-status="error"
+          aria-pressed={filtr === 'BLOKADY'}
           onClick={() => przelaczFiltr('BLOKADY')}
           type="button"
         >
           <strong>{liczniki.blokady}</strong>
-          <span>BLOKADY</span>
+          <span className="pulpit-kafelek__naglowek"><IkonaKafelka rodzaj="blokady" />BLOKADY</span>
           <small>wymagają uwagi</small>
-        </button>
+        </Przycisk>
       )}
 
       {widoczneKafelki.zakupy && (
-        <button
+        <Przycisk
           aria-label={
             'Zakupy: '
             + liczbaAktywnychZapotrzebowanZakupowych
@@ -939,6 +954,7 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
             + odmienRzeczDoZakupu(liczbaAktywnychZapotrzebowanZakupowych)
           }
           className="pulpit-kafelek pulpit-kafelek--zakupy"
+          data-status="info"
           onClick={() => ustawCzyWykazZakupowOtwarty(true)}
           type="button"
         >
@@ -953,7 +969,7 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
             {odmienRzeczDoZakupu(liczbaAktywnychZapotrzebowanZakupowych)}
           </small>
           <em>+ Zgłoś zakup</em>
-        </button>
+        </Przycisk>
       )}
     </section>
 
@@ -961,13 +977,13 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
       <div className="pulpit-sekcja__naglowek pulpit-sekcja__naglowek--plan">
         <div><h2 id="plan-dnia">Plan dnia</h2><p>{formatujDate(data)}</p></div>
         <div className="pulpit-nawigacja-daty">
-          <button className="pulpit-nawigacja-daty__strzalka" aria-label="Poprzedni dzień" onClick={() => ustawDate(przesunDate(data, -1))} type="button">&lsaquo;</button>
-          <button className="pulpit-nawigacja-daty__dzisiaj" onClick={() => ustawDate(dataTekstowa(new Date()))} type="button">Dzisiaj</button>
-          <button className="pulpit-nawigacja-daty__strzalka" aria-label="Następny dzień" onClick={() => ustawDate(przesunDate(data, 1))} type="button">&rsaquo;</button>
+          <Przycisk className="pulpit-nawigacja-daty__strzalka" aria-label="Poprzedni dzień" onClick={() => ustawDate(przesunDate(data, -1))} type="button">&lsaquo;</Przycisk>
+          <Przycisk className="pulpit-nawigacja-daty__dzisiaj" onClick={() => ustawDate(dataTekstowa(new Date()))} type="button">Dzisiaj</Przycisk>
+          <Przycisk className="pulpit-nawigacja-daty__strzalka" aria-label="Następny dzień" onClick={() => ustawDate(przesunDate(data, 1))} type="button">&rsaquo;</Przycisk>
           <input aria-label="Wybierz datę planu" onChange={(zdarzenie) => ustawDate(zdarzenie.target.value)} type="date" value={data} />
         </div>
       </div>
-      <div className="pulpit-os-czasu" aria-label={'Dobowa oś czasu od 00:00 do 23:59; dzień pracy od ' + zakresDniaPracy.poczatek + ' do ' + zakresDniaPracy.koniec}>
+      <div className="pulpit-os-czasu__przewijanie" tabIndex={0} role="region" aria-label="Oś dnia — przewijanie poziome"><div className="pulpit-os-czasu" aria-label={'Dobowa oś czasu od 00:00 do 23:59; dzień pracy od ' + zakresDniaPracy.poczatek + ' do ' + zakresDniaPracy.koniec}>
         <div className="pulpit-os-czasu__miniatury">
           {zadaniaGodzinowe.map((zadanie) => <MiniaturaZadaniaNaOsi key={'miniatura-' + zadanie.id} otworz={() => otworzZadanie(zadanie)} zakresDniaPracy={zakresDniaPracy} zadanie={zadanie} />)}
         </div>
@@ -990,10 +1006,11 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
           <span className="pulpit-os-czasu__etykieta-pracy" style={{ left: graniceDniaPracy.koniec + '%' }}>Koniec pracy {zakresDniaPracy.koniec}</span>
         </div>
         <div className="pulpit-os-czasu__zadania">{zadaniaGodzinowe.map((zadanie) => <MarkerDeadline key={zadanie.id} otworz={() => otworzZadanie(zadanie)} zakresDniaPracy={zakresDniaPracy} uzytkownicy={uzytkownicy} zadanie={zadanie} />)}</div>
-      </div>
+      </div></div>
+      {zadaniaGodzinowe.length > 0 && <details className="pulpit-terminy"><summary>Zadania z terminem ({zadaniaGodzinowe.length})</summary><ul>{zadaniaGodzinowe.map((zadanie) => <li key={zadanie.id}><Przycisk onClick={() => otworzZadanie(zadanie)}>{etykietaTerminuZadania(zadanie)} — {zadanie.tytul}</Przycisk></li>)}</ul></details>}
 
       <div className="pulpit-podsekcja">
-        <div className="pulpit-podsekcja__naglowek"><h3>Do wykonania dzisiaj</h3>{czyObserwowanyJestZalogowanym && trybFormularzaZadania === 'create' && <button onClick={otworzDodawanie} type="button">+ Dodaj zadanie</button>}</div>
+        <div className="pulpit-podsekcja__naglowek"><h3>Do wykonania dzisiaj</h3>{czyObserwowanyJestZalogowanym && trybFormularzaZadania === 'create' && <Przycisk onClick={otworzDodawanie} type="button">+ Dodaj zadanie</Przycisk>}</div>
         {czyFormularzZadaniaOtwarty && (trybFormularzaZadania === 'edit' || czyObserwowanyJestZalogowanym) && <div className="pulpit-formularz-zadania__kontener" ref={kontenerFormularzaZadaniaRef}>
           <h4>{trybFormularzaZadania === 'edit' ? 'Edytuj zadanie' : 'Dodaj zadanie'}</h4>
           <FormularzZadaniaPulpitu
@@ -1020,7 +1037,7 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
             zalogowanyUzytkownik?.rola,
           )
           return <KartaZadania key={zadanie.id} nazwaSzkolenia={pobierzNazweSzkolenia(szkoleniaDostepne, zadanie.powiazaneSzkolenieId)} zadanie={zadanie} teraz={teraz} zakresDniaPracy={zakresDniaPracy} uzytkownicy={uzytkownicy} otworz={() => otworzZadanie(zadanie)} wykonaj={zadanie.czyAutomatyczne || !czyWykonawca ? undefined : () => oznaczWykonane(zadanie)} zmienGodzine={!czyMoznaEdytowacTermin ? undefined : (godzina) => zmienGodzine(zadanie, godzina)} odloz={zadanie.czyTerminKrytyczny || !czyMoznaEdytowacTermin ? undefined : (nowaData) => odlozZadanie(zadanie, nowaData)} />
-        })}</div> : <p className="pulpit-pusty">Brak zadań bez przypisanej godziny.</p>}
+        })}</div> : <PustyStan>Brak zadań bez przypisanej godziny.</PustyStan>}
       </div>
       {zadaniaWykonane.length > 0 && <details className="pulpit-wykonane"><summary>Wykonane ({zadaniaWykonane.length})</summary>{zadaniaWykonane.map((zadanie) => <KartaZadania key={zadanie.id} nazwaSzkolenia={pobierzNazweSzkolenia(szkoleniaDostepne, zadanie.powiazaneSzkolenieId)} zadanie={zadanie} teraz={teraz} zakresDniaPracy={zakresDniaPracy} uzytkownicy={uzytkownicy} otworz={() => otworzZadanie(zadanie)} />)}</details>}
     </section>}
@@ -1032,38 +1049,35 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
         const opozniona = czyPaczkaOpozniona(paczka, teraz)
         return <article className={'pulpit-paczka' + (opozniona ? ' pulpit-paczka--opozniona' : '')} key={paczka.id}>
           <div><span className={'pulpit-status' + (opozniona ? ' pulpit-status--czerwony' : gotowosc.czyGotowa ? ' pulpit-status--zielony' : '')}>{opozniona ? 'OPÓŹNIONA' : gotowosc.czyGotowa ? 'GOTOWA' : pobierzTerminWzglednyPaczki(paczka, teraz)}</span><h3>{paczka.nazwaSzkolenia}</h3><p>{paczka.miasto} &middot; {paczka.terminySzkolenia.map(formatujDate).join(', ') || 'brak terminu'}</p><p>Trener: {paczka.trenerzy.join(', ') || 'brak'}</p><p>Planowana wysyłka: <strong>{formatujDate(paczka.planowanaDataWysylki)} &middot; {pobierzTerminWzglednyPaczki(paczka, teraz)}</strong></p></div>
-          <div className="pulpit-paczka__gotowosc"><strong>{gotowosc.tekst}</strong><span>Gotowość paczki</span>{paczka.brakujaceElementy.length > 0 && <div><b>Brakuje:</b><ul>{paczka.brakujaceElementy.map((brak) => <li key={brak}>{brak}</li>)}</ul></div>}<div className="pulpit-paczka__akcje"><button onClick={() => otworzPaczke?.(paczka.id)} type="button">Otwórz checklistę</button><button className="pulpit-przycisk-glowny" onClick={() => ustawPaczkeDoPotwierdzenia(paczka)} type="button">Oznacz jako wysłaną</button></div></div>
+          <div className="pulpit-paczka__gotowosc"><strong>{gotowosc.tekst}</strong><span>Gotowość paczki</span>{paczka.brakujaceElementy.length > 0 && <div><b>Brakuje:</b><ul>{paczka.brakujaceElementy.map((brak) => <li key={brak}>{brak}</li>)}</ul></div>}<div className="pulpit-paczka__akcje"><Przycisk onClick={() => otworzPaczke?.(paczka.id)} type="button">Otwórz checklistę</Przycisk><Przycisk className="pulpit-przycisk-glowny" onClick={() => ustawPaczkeDoPotwierdzenia(paczka)} type="button">Oznacz jako wysłaną</Przycisk></div></div>
         </article>
-      })}</div> : <p className="pulpit-pusty">Brak paczek w oknie wysyłki.</p>}
+      })}</div> : <PustyStan>Brak paczek w oknie wysyłki.</PustyStan>}
     </section>}
 
-    {czyWykazZakupowOtwarty && <aside aria-label="Aktualne zapotrzebowania zakupowe" className="pulpit-drawer pulpit-drawer--zakupy">
-      <button aria-label={'Zamknij wykaz zakup\u{f3}w'} className="pulpit-drawer__zamknij" onClick={() => ustawCzyWykazZakupowOtwarty(false)} type="button">x</button>
-      <div className="pulpit-drawer__naglowek"><div><h2>Zakupy</h2><p>{'Aktywne zapotrzebowania ca\u{142}ej organizacji.'}</p></div><button className="pulpit-przycisk-glowny" onClick={otworzDodawanieZakupu} type="button">{'+ Zg\u{142}o\u{15b} zakup'}</button></div>
-      {bladZapisuZakupu && <p role="alert">{bladZapisuZakupu}</p>}
+    {czyWykazZakupowOtwarty && <PanelWysuwany otwarty tytul="Aktualne zapotrzebowania zakupowe" zamknij={() => ustawCzyWykazZakupowOtwarty(false)}>
+      <div className="pulpit-drawer__naglowek"><div><h2>Zakupy</h2><p>{'Aktywne zapotrzebowania ca\u{142}ej organizacji.'}</p></div><Przycisk className="pulpit-przycisk-glowny" onClick={otworzDodawanieZakupu} type="button">{'+ Zg\u{142}o\u{15b} zakup'}</Przycisk></div>
+      {bladZapisuZakupu && <Komunikat status="error">{bladZapisuZakupu}</Komunikat>}
       {aktywneZapotrzebowaniaZakupowe.length ? <div className="pulpit-zapotrzebowania">{aktywneZapotrzebowaniaZakupowe.map((zapotrzebowanie) => <article className="pulpit-zapotrzebowanie" key={zapotrzebowanie.id}>
-        <button className="pulpit-zakup__podglad" type="button" onClick={() => ustawWybranyZakup(zapotrzebowanie)}><span className="pulpit-zakup__naglowek"><span className="pulpit-status">{zapotrzebowanie.status === 'ZGLOSZONE' ? 'ZGŁOSZONE' : zapotrzebowanie.status.replaceAll('_', ' ')}</span><time dateTime={zapotrzebowanie.utworzonoAt}>{formatujDateGodzine(zapotrzebowanie.utworzonoAt)}</time></span>
+        <Przycisk className="pulpit-zakup__podglad" type="button" onClick={() => ustawWybranyZakup(zapotrzebowanie)}><span className="pulpit-zakup__naglowek"><span className="pulpit-status">{zapotrzebowanie.status === 'ZGLOSZONE' ? 'ZGŁOSZONE' : zapotrzebowanie.status.replaceAll('_', ' ')}</span><time dateTime={zapotrzebowanie.utworzonoAt}>{formatujDateGodzine(zapotrzebowanie.utworzonoAt)}</time></span>
         <strong><span className="pulpit-zakup__ilosc">{zapotrzebowanie.ilosc}x</span> {zapotrzebowanie.nazwa}</strong>
-        <span>Zgłosił: {pobierzNazweOsoby(uzytkownicy, zapotrzebowanie.utworzonePrzezId)}</span></button>
-        <div className="pulpit-zapotrzebowanie__akcje"><button onClick={() => otworzEdycjeZakupu(zapotrzebowanie)} type="button">✏️ Edytuj</button><button onClick={() => otworzEdycjeZakupu(zapotrzebowanie, true)} type="button">📚 Duplikuj</button><button onClick={() => zmienStatusZapotrzebowaniaZakupowego(zapotrzebowanie, 'KUPIONE')} type="button">✅ Kupione</button><button className="pulpit-przycisk-niebezpieczny" onClick={() => zmienStatusZapotrzebowaniaZakupowego(zapotrzebowanie, 'ANULOWANE')} type="button">❌ Usuń</button></div>
-      </article>)}</div> : <p className="pulpit-pusty">{'Brak aktywnych zapotrzebowa\u{144} zakupowych.'}</p>}
-    </aside>}
+        <span>Zgłosił: {pobierzNazweOsoby(uzytkownicy, zapotrzebowanie.utworzonePrzezId)}</span></Przycisk>
+        <div className="pulpit-zapotrzebowanie__akcje"><Przycisk onClick={() => otworzEdycjeZakupu(zapotrzebowanie)} type="button">✏️ Edytuj</Przycisk><Przycisk onClick={() => otworzEdycjeZakupu(zapotrzebowanie, true)} type="button">📚 Duplikuj</Przycisk><Przycisk onClick={() => zmienStatusZapotrzebowaniaZakupowego(zapotrzebowanie, 'KUPIONE')} type="button">✅ Kupione</Przycisk><Przycisk className="pulpit-przycisk-niebezpieczny" onClick={() => zmienStatusZapotrzebowaniaZakupowego(zapotrzebowanie, 'ANULOWANE')} type="button">❌ Usuń</Przycisk></div>
+      </article>)}</div> : <PustyStan>{'Brak aktywnych zapotrzebowa\u{144} zakupowych.'}</PustyStan>}
+    </PanelWysuwany>}
 
-    {wybranyZakup && <section aria-label="Podgląd zapotrzebowania" aria-modal="true" className="pulpit-modal pulpit-modal--zakup" role="dialog" onKeyDown={(zdarzenie) => { if (zdarzenie.key === 'Escape') ustawWybranyZakup(null) }}><div>
-      <h2>{wybranyZakup.nazwa}</h2><p>Ilość: {wybranyZakup.ilosc}</p><p>Zgłosił: {pobierzNazweOsoby(uzytkownicy, wybranyZakup.utworzonePrzezId)} · {formatujDateGodzine(wybranyZakup.utworzonoAt)}</p>
+    {wybranyZakup && <OknoDialogowe otwarty tytul="Podgląd zapotrzebowania" zamknij={() => ustawWybranyZakup(null)}><div>
+      <h3>{wybranyZakup.nazwa}</h3><p>Ilość: {wybranyZakup.ilosc}</p><p>Zgłosił: {pobierzNazweOsoby(uzytkownicy, wybranyZakup.utworzonePrzezId)} · {formatujDateGodzine(wybranyZakup.utworzonoAt)}</p>
       {wybranyZakup.uwagi && <p className="pulpit-zakup__uwagi">{wybranyZakup.uwagi}</p>}
       {pobierzLinkiProduktu(wybranyZakup, zalogowanyUzytkownik).map((link, indeks) => <p key={indeks}><a href={link} target="_blank" rel="noopener noreferrer">Oferta {indeks + 1}: {link}</a></p>)}
       <ul className="pulpit-zakup__zalaczniki">{wybranyZakup.zalaczniki?.map((zalacznik) => <li key={zalacznik.id}><a href={zalacznik.daneUrl} download={zalacznik.nazwa}>{zalacznik.daneUrl.startsWith('data:image/') && <img src={zalacznik.daneUrl} alt={zalacznik.nazwa} />}{zalacznik.nazwa}</a></li>)}</ul>
-      <div className="pulpit-modal__akcje"><button autoFocus type="button" onClick={() => ustawWybranyZakup(null)}>Zamknij</button><button type="button" onClick={() => otworzEdycjeZakupu(wybranyZakup)}>✏️ Edytuj</button><button type="button" onClick={() => otworzEdycjeZakupu(wybranyZakup, true)}>📚 Duplikuj</button></div>
-    </div></section>}
-    {czyDodawanieZakupu && <section aria-label={'Zg\u{142}oszenie zakupu'} aria-modal="true" className="pulpit-modal pulpit-modal--zakup" role="dialog" onKeyDown={(zdarzenie) => { if (zdarzenie.key === 'Escape') ustawCzyDodawanieZakupu(false) }}><div>
-      <h2>{edytowanyZakup ? 'Edytuj zakup' : 'Zg\u{142}o\u{15b} zakup'}</h2>
+      <div className="pulpit-modal__akcje"><Przycisk type="button" onClick={() => otworzEdycjeZakupu(wybranyZakup)}>✏️ Edytuj</Przycisk><Przycisk type="button" onClick={() => otworzEdycjeZakupu(wybranyZakup, true)}>📚 Duplikuj</Przycisk></div>
+    </div></OknoDialogowe>}
+    {czyDodawanieZakupu && <OknoDialogowe otwarty tytul={edytowanyZakup ? 'Edytuj zakup' : 'Zgłoś zakup'} zamknij={() => ustawCzyDodawanieZakupu(false)}><div>
       <FormularzZakupu czyZamawiacz={czyJestZamawiaczem(zalogowanyUzytkownik)} anuluj={() => ustawCzyDodawanieZakupu(false)} blad={bladFormularzaZakupu} formularz={nowyZakup} ustawFormularz={ustawNowyZakup} zapisz={dodajZapotrzebowanieZakupowe} />
-    </div></section>}
-    {wybraneZadanie && edytowaneZadanieId !== wybraneZadanie.id && <aside aria-label="Szczegóły zadania" className="pulpit-drawer">
-      <button aria-label="Zamknij szczegóły zadania" className="pulpit-drawer__zamknij" onClick={() => ustawWybraneZadanie(null)} type="button">×</button>
+    </div></OknoDialogowe>}
+    {wybraneZadanie && edytowaneZadanieId !== wybraneZadanie.id && <PanelWysuwany otwarty tytul="Szczegóły zadania" zamknij={() => ustawWybraneZadanie(null)}>
       <span className="pulpit-status">{pobierzEtykieteStatusuZadania(wybraneZadanie, teraz)}</span>
-      <h2>{wybraneZadanie.tytul}</h2>
+      <h3>{wybraneZadanie.tytul}</h3>
       {wybraneZadanie.opis && <p>{wybraneZadanie.opis}</p>}
       <dl>
         <div><dt>Termin</dt><dd>{formatujDate(wybraneZadanie.data)}</dd></div>
@@ -1079,25 +1093,24 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
       </dl>
 
       {czyMoznaEdytowacWybrane && <div className="pulpit-drawer__akcje">
-        <button onClick={() => rozpocznijEdycjeZadania(wybraneZadanie)} type="button">Edytuj zadanie</button>
-        {!wybraneZadanie.czyTerminKrytyczny && <button onClick={() => odlozZadanie(wybraneZadanie, przesunDate(wybraneZadanie.data, 1))} type="button">Odłóż o dzień</button>}
+        <Przycisk onClick={() => rozpocznijEdycjeZadania(wybraneZadanie)} type="button">Edytuj zadanie</Przycisk>
+        {!wybraneZadanie.czyTerminKrytyczny && <Przycisk onClick={() => odlozZadanie(wybraneZadanie, przesunDate(wybraneZadanie.data, 1))} type="button">Odłóż o dzień</Przycisk>}
       </div>}
 
       {czyMoznaWykonacWybrane && <div className="pulpit-drawer__akcje">
-        <button className="pulpit-przycisk-glowny" onClick={() => oznaczWykonane(wybraneZadanie)} type="button">{'\u2713'} Wykonane</button>
+        <Przycisk className="pulpit-przycisk-glowny" onClick={() => oznaczWykonane(wybraneZadanie)} type="button">{'\u2713'} Wykonane</Przycisk>
       </div>}
 
-      {czyMoznaUsunacWybrane && <button className="pulpit-przycisk-niebezpieczny" onClick={() => { usunZadanieReczne(wybraneZadanie.id); ustawWybraneZadanie(null); anulujEdycjeZadania(); odswiezStan() }} type="button">Usuń zadanie</button>}
+      {czyMoznaUsunacWybrane && <Przycisk className="pulpit-przycisk-niebezpieczny" onClick={() => { usunZadanieReczne(wybraneZadanie.id); ustawWybraneZadanie(null); anulujEdycjeZadania(); odswiezStan() }} type="button">Usuń zadanie</Przycisk>}
       {wybraneZadanie.powiazaneSzkolenieId && <div className="pulpit-drawer__akcje">
-        {otworzRekordZrodlowy && <button onClick={() => otworzRekordZrodlowy(wybraneZadanie.powiazaneSzkolenieId)} type="button">Przejdź do Szczegółów szkolenia</button>}
-        {otworzDokumenty && <button className="pulpit-przycisk-glowny" onClick={otworzDokumenty} type="button">Otwórz Dokumenty</button>}
+        {otworzRekordZrodlowy && <Przycisk onClick={() => otworzRekordZrodlowy(wybraneZadanie.powiazaneSzkolenieId)} type="button">Przejdź do Szczegółów szkolenia</Przycisk>}
+        {otworzDokumenty && <Przycisk className="pulpit-przycisk-glowny" onClick={otworzDokumenty} type="button">Otwórz Dokumenty</Przycisk>}
       </div>}
-    </aside>}
+    </PanelWysuwany>}
 
-    {paczkaDoPotwierdzenia && <section aria-label="Potwierdzenie wysyłki" aria-modal="true" className="pulpit-modal" role="dialog"><div>
-      <h2>Potwierdź wysyłkę paczki</h2>
+    {paczkaDoPotwierdzenia && <OknoDialogowe otwarty tytul="Potwierdzenie wysyłki" etykietaZamkniecia="Wróć" zamknij={() => ustawPaczkeDoPotwierdzenia(null)}><div>
       {czyWysylkaWymagaDodatkowegoPotwierdzenia(paczkaDoPotwierdzenia) && <p>Paczka nie jest oznaczona jako w pełni gotowa. Nadal brakuje: {paczkaDoPotwierdzenia.brakujaceElementy.join(', ')}. Czy na pewno oznaczyć jako wysłaną?</p>}
-      <div className="pulpit-modal__akcje"><button onClick={() => ustawPaczkeDoPotwierdzenia(null)} type="button">Wróć</button><button className="pulpit-przycisk-glowny" onClick={potwierdzWysylke} type="button">Potwierdzam wysyłkę</button></div>
-    </div></section>}
+      <div className="pulpit-modal__akcje"><Przycisk className="pulpit-przycisk-glowny" onClick={potwierdzWysylke} type="button">Potwierdzam wysyłkę</Przycisk></div>
+    </div></OknoDialogowe>}
   </section>
 }

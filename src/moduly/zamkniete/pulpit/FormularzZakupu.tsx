@@ -1,3 +1,4 @@
+import { Przycisk, Komunikat } from '../../../wspolne/komponenty/ElementyInterfejsu'
 import { maksymalnaLiczbaZalacznikowZakupu, maksymalnyRozmiarZalacznikaZakupu } from './logika/zapotrzebowaniaZakupowe'
 import { useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import type { ZalacznikZakupu } from './modele/pulpit'
@@ -40,13 +41,13 @@ export default function FormularzZakupu({ formularz, ustawFormularz, blad, zapis
     <div><label htmlFor="pulpit-zakup-uwagi">Uwagi</label><textarea id="pulpit-zakup-uwagi" onChange={(zdarzenie) => ustawFormularz({ ...formularz, uwagi: zdarzenie.target.value })} value={formularz.uwagi} /></div>
     {czyZamawiacz && <fieldset><legend>Linki do produktu — tylko dla Zamawiaczy</legend>{formularz.linkiProduktow.map((link, indeks) => <div className="pulpit-zakup__link" key={indeks}>
       <input aria-label={'Link do produktu ' + (indeks + 1)} type="url" placeholder="https://" value={link} onChange={(zdarzenie) => ustawFormularz({ ...formularz, linkiProduktow: formularz.linkiProduktow.map((obecny, pozycja) => pozycja === indeks ? zdarzenie.target.value : obecny) })} />
-      <button type="button" aria-label="Dodaj kolejny link" onClick={() => ustawFormularz({ ...formularz, linkiProduktow: [...formularz.linkiProduktow, ''] })}>+</button>
-      {formularz.linkiProduktow.length > 1 && <button type="button" aria-label={'Usuń link ' + (indeks + 1)} onClick={() => ustawFormularz({ ...formularz, linkiProduktow: formularz.linkiProduktow.filter((_, pozycja) => pozycja !== indeks) })}>×</button>}
+      <Przycisk type="button" aria-label="Dodaj kolejny link" onClick={() => ustawFormularz({ ...formularz, linkiProduktow: [...formularz.linkiProduktow, ''] })}>+</Przycisk>
+      {formularz.linkiProduktow.length > 1 && <Przycisk type="button" aria-label={'Usuń link ' + (indeks + 1)} onClick={() => ustawFormularz({ ...formularz, linkiProduktow: formularz.linkiProduktow.filter((_, pozycja) => pozycja !== indeks) })}>×</Przycisk>}
     </div>)}</fieldset>}
     <label htmlFor="pulpit-zakup-pliki">Załączniki (PNG, JPEG, WebP, PDF; do 1 MB, maks. 5)<input id="pulpit-zakup-pliki" type="file" multiple accept="image/png,image/jpeg,image/webp,application/pdf" disabled={czyWczytywanie} onChange={(zdarzenie) => { void dodajPliki(Array.from(zdarzenie.target.files ?? [])); zdarzenie.target.value = '' }} /></label>
     <p>Możesz wkleić screenshot ze schowka (Ctrl+V) w formularzu.</p>
-    <ul className="pulpit-zakup__zalaczniki">{formularz.zalaczniki.map((zalacznik) => <li key={zalacznik.id}>{zalacznik.daneUrl.startsWith('data:image/') && <img src={zalacznik.daneUrl} alt={zalacznik.nazwa} />}<span>{zalacznik.nazwa}</span><button type="button" disabled={czyWczytywanie} onClick={() => ustawFormularz({ ...formularz, zalaczniki: formularz.zalaczniki.filter((obecny) => obecny.id !== zalacznik.id) })} aria-label={'Usuń załącznik ' + zalacznik.nazwa}>×</button></li>)}</ul>
-    {(blad || bladZalacznikow) && <p className="pulpit-formularz-zakupu__blad" role="alert">{blad || bladZalacznikow}</p>}
-    <div className="pulpit-modal__akcje"><button onClick={anuluj} disabled={czyWczytywanie} type="button">Anuluj</button><button disabled={czyWczytywanie} className="pulpit-przycisk-glowny" type="submit">{czyWczytywanie ? 'Wczytywanie…' : 'Zapisz'}</button></div>
+    <ul className="pulpit-zakup__zalaczniki">{formularz.zalaczniki.map((zalacznik) => <li key={zalacznik.id}>{zalacznik.daneUrl.startsWith('data:image/') && <img src={zalacznik.daneUrl} alt={zalacznik.nazwa} />}<span>{zalacznik.nazwa}</span><Przycisk type="button" disabled={czyWczytywanie} onClick={() => ustawFormularz({ ...formularz, zalaczniki: formularz.zalaczniki.filter((obecny) => obecny.id !== zalacznik.id) })} aria-label={'Usuń załącznik ' + zalacznik.nazwa}>×</Przycisk></li>)}</ul>
+    {(blad || bladZalacznikow) && <div className="pulpit-formularz-zakupu__blad"><Komunikat status="error">{blad || bladZalacznikow}</Komunikat></div>}
+    <div className="pulpit-modal__akcje"><Przycisk onClick={anuluj} disabled={czyWczytywanie} type="button">Anuluj</Przycisk><Przycisk disabled={czyWczytywanie} className="pulpit-przycisk-glowny" type="submit">{czyWczytywanie ? 'Wczytywanie…' : 'Zapisz'}</Przycisk></div>
   </form>
 }

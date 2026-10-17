@@ -2,7 +2,7 @@
   "wersja": 1,
   "baza": "19a9427010ffe758284f658b2f81efead181533a",
   "zadania": {
-    "V4-02": "Powłoka, menu, nagłówek i logowanie",
+    "V4-02": "Powłoka, menu, nagłówek, dock i wspólne dialogi",
     "V4-03": "Ekran logowania i jego stany",
     "V4-04": "Pulpit, zadania, oś czasu, paczki i zakupy",
     "V4-05": "Szkolenia zamknięte i Szczegóły organizacyjne",
@@ -417,6 +417,8 @@
     "src/aplikacja/layout/UkladAplikacji.tsx": {
       "zadanie": "V4-02",
       "powierzchnie": [
+        "OknoDialogowe otwarty zamknij={() => { ustawWidokDoPotwierdzenia(null); ustawCzyWylogowanieDoPotwierdzenia(false) }} tytul=\"Niezapisane zmiany\" etykietaZamkniecia=\"Wróć do edycji\"",
+        "OknoDialogowe otwarty={czyEdytujeDock} zamknij={() => ustawCzyEdytujeDock(false)} tytul=\"Skróty docka\"",
         "WidokKartotek key=\"kartoteki_klienci\" aktywnaZakladkaPoczatkowa=\"klienci\" poZmianieZakladki={zmienZakladkeKartotek}",
         "WidokKartotek key=\"kartoteki_lokalizacje\" aktywnaZakladkaPoczatkowa=\"lokalizacje\" poZmianieZakladki={zmienZakladkeKartotek}",
         "WidokKartotek key=\"kartoteki_szablony_dokumentow\" aktywnaZakladkaPoczatkowa=\"szablony_dokumentow\" poZmianieZakladki={zmienZakladkeKartotek}",
@@ -723,18 +725,17 @@
     "src/moduly/zamkniete/pulpit/WidokPulpitu.tsx": {
       "zadanie": "V4-04",
       "powierzchnie": [
-        "aside aria-label=\"Aktualne zapotrzebowania zakupowe\" className=\"pulpit-drawer pulpit-drawer--zakupy\"",
-        "aside aria-label=\"Szczegóły zadania\" className=\"pulpit-drawer\"",
-        "button aria-label=\"Zamknij szczegóły zadania\" className=\"pulpit-drawer__zamknij\" onClick={() => ustawWybraneZadanie(null)} type=\"button\"",
-        "button aria-label={'Zamknij wykaz zakup\\u{f3}w'} className=\"pulpit-drawer__zamknij\" onClick={() => ustawCzyWykazZakupowOtwarty(false)} type=\"button\"",
+        "OknoDialogowe otwarty tytul=\"Podgląd zapotrzebowania\" zamknij={() => ustawWybranyZakup(null)}",
+        "OknoDialogowe otwarty tytul=\"Potwierdzenie wysyłki\" etykietaZamkniecia=\"Wróć\" zamknij={() => ustawPaczkeDoPotwierdzenia(null)}",
+        "OknoDialogowe otwarty tytul={edytowanyZakup ? 'Edytuj zakup' : 'Zgłoś zakup'} zamknij={() => ustawCzyDodawanieZakupu(false)}",
+        "PanelWysuwany otwarty tytul=\"Aktualne zapotrzebowania zakupowe\" zamknij={() => ustawCzyWykazZakupowOtwarty(false)}",
+        "PanelWysuwany otwarty tytul=\"Szczegóły zadania\" zamknij={() => ustawWybraneZadanie(null)}",
+        "details className=\"pulpit-terminy\"",
         "details className=\"pulpit-wykonane\"",
         "div className=\"pulpit-drawer__akcje\"",
         "div className=\"pulpit-drawer__naglowek\"",
         "div className=\"pulpit-modal__akcje\"",
-        "form className=\"pulpit-formularz-zadania\" onPaste={obsluzWklejenie} onSubmit={(zdarzenie) => { zdarzenie.preventDefault(); zapisz() }}",
-        "section aria-label=\"Podgląd zapotrzebowania\" aria-modal=\"true\" className=\"pulpit-modal pulpit-modal--zakup\" role=\"dialog\" onKeyDown={(zdarzenie) => { if (zdarzenie.key === 'Escape') ustawWybranyZakup(null) }}",
-        "section aria-label=\"Potwierdzenie wysyłki\" aria-modal=\"true\" className=\"pulpit-modal\" role=\"dialog\"",
-        "section aria-label={'Zg\\u{142}oszenie zakupu'} aria-modal=\"true\" className=\"pulpit-modal pulpit-modal--zakup\" role=\"dialog\" onKeyDown={(zdarzenie) => { if (zdarzenie.key === 'Escape') ustawCzyDodawanieZakupu(false) }}"
+        "form className=\"pulpit-formularz-zadania\" onPaste={obsluzWklejenie} onSubmit={(zdarzenie) => { zdarzenie.preventDefault(); zapisz() }}"
       ]
     },
     "src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/KartaGrupySzkoleniowej.tsx": {
@@ -866,6 +867,7 @@
     "src/wspolne/komponenty/ElementyInterfejsu.tsx": {
       "zadanie": "V4-20",
       "powierzchnie": [
+        "OknoDialogowe {...wlasciwosci} wariant=\"panel\" etykietaZamkniecia=\"Zamknij panel\"",
         "dialog ref={panel} className={wariant === 'panel' ? 'ui-panel' : 'ui-dialog'} aria-labelledby={identyfikator} onCancel={(zdarzenie) => { zdarzenie.preventDefault(); zamknij() }}",
         "div className=\"ui-zakladki\"",
         "div role=\"tablist\" aria-label=\"Zakładki\"",
@@ -875,6 +877,7 @@
     "src/wspolne/komponenty/GaleriaKomponentow.tsx": {
       "zadanie": "V4-20",
       "powierzchnie": [
+        "PanelWysuwany otwarty={otwarty} zamknij={() => ustawOtwarty(false)} tytul={`Panel — ${tytul}`}",
         "Zakladki pozycje={['Formularz', 'Pusta lista']} aktywna={zakladka} wybierz={ustawZakladke}"
       ]
     },

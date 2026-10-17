@@ -106,7 +106,7 @@ Właściciel pliku obejmuje wszystkie warunki renderowania, stany pusty/błąd/�
 | --- | --- | --- |
 | `src/App.tsx` | V4-02 | 0 |
 | `src/aplikacja/layout/NaglowekAplikacji.tsx` | V4-02 | 1 |
-| `src/aplikacja/layout/UkladAplikacji.tsx` | V4-02 | 5 |
+| `src/aplikacja/layout/UkladAplikacji.tsx` | V4-02 | 7 |
 | `src/aplikacja/logowanie/KontekstUzytkownika.tsx` | V4-02 | 0 |
 | `src/aplikacja/logowanie/PanelLogowania.tsx` | V4-03 | 9 |
 | `src/aplikacja/menu/IkonaMenu.tsx` | V4-02 | 0 |
@@ -157,7 +157,7 @@ Właściciel pliku obejmuje wszystkie warunki renderowania, stany pusty/błąd/�
 | `src/moduly/zakupy/magazyn/WidokMapyMagazynu.tsx` | V4-23 | 2 |
 | `src/moduly/zakupy/magazyn/WidokStanowMagazynowych.tsx` | V4-23 | 1 |
 | `src/moduly/zamkniete/pulpit/FormularzZakupu.tsx` | V4-04 | 2 |
-| `src/moduly/zamkniete/pulpit/WidokPulpitu.tsx` | V4-04 | 12 |
+| `src/moduly/zamkniete/pulpit/WidokPulpitu.tsx` | V4-04 | 11 |
 | `src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/KartaGrupySzkoleniowej.tsx` | V4-05 | 1 |
 | `src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/KontekstBledowPol.tsx` | V4-05 | 0 |
 | `src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/PanelDokumentowPowiazanych.tsx` | V4-05 | 1 |
@@ -182,8 +182,8 @@ Właściciel pliku obejmuje wszystkie warunki renderowania, stany pusty/błąd/�
 | `src/wspolne/dokumenty/RendererSwobodnychBlokow.tsx` | V4-07 | 0 |
 | `src/wspolne/dokumenty/WidokKopiiRoboczychGeneratora.tsx` | V4-07 | 0 |
 | `src/wspolne/komponenty/AkcjeRekordu.tsx` | V4-07 | 0 |
-| `src/wspolne/komponenty/ElementyInterfejsu.tsx` | V4-20 | 4 |
-| `src/wspolne/komponenty/GaleriaKomponentow.tsx` | V4-20 | 1 |
+| `src/wspolne/komponenty/ElementyInterfejsu.tsx` | V4-20 | 5 |
+| `src/wspolne/komponenty/GaleriaKomponentow.tsx` | V4-20 | 2 |
 | `src/wspolne/telefon/PoleTelefonu.tsx` | V4-07 | 0 |
 
 | `src/aplikacja/layout/DockAplikacji.tsx` | V4-02 | 0 |
@@ -213,3 +213,10 @@ Dock, menu i profil korzystają z centralnego ustawWidok. Zachowano funkcje zapi
 Zgodnie z późniejszym poleceniem użytkownika V4-03 obejmuje PanelLogowania, a V4-04 Pulpit. Dawny zakres szkoleń zamkniętych przypisano do V4-05 obok Szczegółów organizacyjnych. Żaden widok nie traci właściciela.
 
 Wybór kont to natywna grupa radio z kafelkami, istniejącymi avatarami i oznaczeniami ról. Błąd korzysta ze wspólnego komunikatu error, brak kont z pustego stanu i blokady submit. Wywołanie zalogujUzytkownika i mechanizmy sesji pozostają bez zmian. Paleta jest odczytywana z istniejących ustawień także przed logowaniem. Nowe instalacje używają Emerald Dark.
+
+
+## V4-04 — Pulpit
+
+Podsumowania mają ikony i semantyczne obramowania. Zadania, paczki, formularze i priorytety korzystają z tokenów V4; wszystkie przyciski są wspólne. Zastąpiono lokalne modale/drawery wspólnym natywnym dialogiem i panelem z obsługą Escape, modalnością i powrotem fokusu, zachowując dotychczasowe callbacki operacji i warunki uprawnień. Oś przewija się w osobnym regionie, bez rozszerzania strony. Dla zagęszczonych deadline dostępna jest rozwijana lista tych samych zadań. Pozycje i algorytmy czasu oraz kolory identyfikujące zadaniodawcę i zadaniobiorcę pozostają bez zmian.
+
+Plan tygodniowy nie istnieje w obecnym kodzie; zapisano go w docs/v4/backlog.md. Nie dodano kalendarza, modeli, dat ani nowego magazynu.
