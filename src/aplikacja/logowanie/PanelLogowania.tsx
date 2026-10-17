@@ -15,7 +15,7 @@ export default function PanelLogowania({ aktywniUzytkownicy, zalogujUzytkownika 
     ustawBlad('')
   }
   return <main className="panel-logowania"><form className="panel-logowania__formularz" onSubmit={obsluzLogowanie}>
-    <header><img alt="Ultimate Pomagier" className="panel-logowania__logo" src="/logo-ultimate-pomagier.png" /><h1>Ultimate Pomagier 3.0</h1><p>Lokalny tryb demonstracyjny — konto jest wybierane na tym urządzeniu.</p></header>
+    <header><img alt="Ultimate Pomagier" className="panel-logowania__logo" src="/logo-ultimate-pomagier.png" /><h1>Ultimate Pomagier V4</h1><p>Lokalny tryb demonstracyjny — konto jest wybierane na tym urządzeniu.</p></header>
     <label htmlFor="wybor-konta">Aktywne konto</label>
     <select id="wybor-konta" onChange={(zdarzenie) => ustawIdUzytkownika(zdarzenie.target.value)} value={idUzytkownika}>{aktywniUzytkownicy.map((uzytkownik) => <option key={uzytkownik.id} value={uzytkownik.id}>{pobierzNazweWyswietlanaUzytkownika(uzytkownik)} — {etykietyRol[uzytkownik.rola]}</option>)}</select>
     {wybranyUzytkownik && <section aria-label="Dane wybranego użytkownika" className="panel-logowania__profil"><strong>{pobierzNazweWyswietlanaUzytkownika(wybranyUzytkownik)}</strong><span>{etykietyRol[wybranyUzytkownik.rola]} · {etykietyOrganizacji[wybranyUzytkownik.organizacja]}</span><span>{wybranyUzytkownik.odznaki.length ? wybranyUzytkownik.odznaki.map((odznaka) => metadaneOdznak[odznaka].etykieta).join(', ') : 'Brak dodatkowych odznak'}</span></section>}

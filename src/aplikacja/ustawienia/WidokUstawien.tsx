@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react'
 import { useKontekstUzytkownika } from '../logowanie/useKontekstUzytkownika'
 import { pobierzIdRozwijalnychPozycji } from '../menu/pozycjeMenu'
 import {
-  kluczPrzypieciaMenu,
-  kluczWysuwaniaZKrawedzi,
+  pobierzPreferencjePowloki,
+  zapiszPreferencjePowloki,
   pobierzPreferencjeDrzewaMenu,
   zapiszPreferencjeDrzewaMenu,
   zglosZmianePreferencjiMenu,
+  zdarzenieZmianyPreferencjiMenu,
   type TrybWidokuMenu,
 } from '../menu/preferencjeMenu'
 import {
@@ -85,8 +86,17 @@ export default function WidokUstawien() {
   const [zapisaneUstawienia, ustawZapisaneUstawienia] = useState(pobierzUstawieniaAplikacji)
   const [roboczeUstawienia, ustawRoboczeUstawienia] = useState(pobierzUstawieniaAplikacji)
 
-  const [czyPrzypiete, ustawCzyPrzypiete] = useState(() => pobierzBoolean(kluczPrzypieciaMenu, false))
-  const [czyWysuwanie, ustawCzyWysuwanie] = useState(() => pobierzBoolean(kluczWysuwaniaZKrawedzi, true))
+  const [czyPrzypiete, ustawCzyPrzypiete] = useState(() => pobierzPreferencjePowloki(uzytkownikId).przypiete)
+  const [czyWysuwanie, ustawCzyWysuwanie] = useState(() => pobierzPreferencjePowloki(uzytkownikId).wysuwanie)
+  useEffect(() => {
+    function odswiezMenu() {
+      const powloka = pobierzPreferencjePowloki(uzytkownikId)
+      ustawCzyPrzypiete(powloka.przypiete)
+      ustawCzyWysuwanie(powloka.wysuwanie)
+    }
+    window.addEventListener(zdarzenieZmianyPreferencjiMenu, odswiezMenu)
+    return () => window.removeEventListener(zdarzenieZmianyPreferencjiMenu, odswiezMenu)
+  }, [uzytkownikId])
   const [czyPanelJakosciPrzypiety, ustawCzyPanelJakosciPrzypiety] = useState(() => pobierzBoolean(kluczPrzypieciaPaneluJakosci, true))
   const [czyWysuwaniePaneluJakosci, ustawCzyWysuwaniePaneluJakosci] = useState(() => pobierzBoolean(kluczWysuwaniaPaneluJakosci, true))
   const [trybMenu, ustawTrybMenu] = useState<TrybWidokuMenu>(preferencje.tryb)
@@ -176,20 +186,18 @@ export default function WidokUstawien() {
     }))
   }
 
-  function zapiszBoolean(klucz: string, wartosc: boolean) {
-    localStorage.setItem(klucz, String(wartosc))
-    zglosZmianePreferencjiMenu(uzytkownikId)
-    ustawKomunikat('Zapisano ustawienia menu.')
-  }
-
   function zmienPrzypiecie(wartosc: boolean) {
-    ustawCzyPrzypiete(wartosc)
-    zapiszBoolean(kluczPrzypieciaMenu, wartosc)
+    if (zapiszPreferencjePowloki(uzytkownikId, { przypiete: wartosc })) {
+      ustawCzyPrzypiete(wartosc)
+      ustawKomunikat('Zapisano przypięcie menu dla tego użytkownika.')
+    } else ustawKomunikat('Nie udało się zapisać przypięcia menu.')
   }
 
   function zmienWysuwanie(wartosc: boolean) {
-    ustawCzyWysuwanie(wartosc)
-    zapiszBoolean(kluczWysuwaniaZKrawedzi, wartosc)
+    if (zapiszPreferencjePowloki(uzytkownikId, { wysuwanie: wartosc })) {
+      ustawCzyWysuwanie(wartosc)
+      ustawKomunikat('Zapisano rozwijanie menu dla tego użytkownika.')
+    } else ustawKomunikat('Nie udało się zapisać rozwijania menu.')
   }
 
   function zapiszPreferencjePaneluJakosci(klucz: string, wartosc: boolean) {
@@ -426,7 +434,7 @@ export default function WidokUstawien() {
           </label>
 
           <label className="ustawienia__wiersz">
-            <span><strong>Wysuwanie z lewej krawędzi</strong><small>Pozwala otworzyć odpięte menu przez najechanie na krawędź.</small></span>
+            <span><strong>Rozwijanie menu kursorem</strong><small>Rozwija odpięty pasek ikon po najechaniu myszką. Klawiatura i dotyk pozostają dostępne.</small></span>
             <input checked={czyWysuwanie} onChange={(zdarzenie) => zmienWysuwanie(zdarzenie.target.checked)} type="checkbox" />
           </label>
 

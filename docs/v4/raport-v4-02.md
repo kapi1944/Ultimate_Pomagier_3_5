@@ -1,0 +1,15 @@
+# V4-02 — powłoka aplikacji
+
+Baza: 26f5484029764709525eca8074b36954136e05a5, gałąź feat/ultimate-pomagier-v4. Zmiany odzyskano po przerwaniu; status i HEAD potwierdzone ponownie 17.10.2026.
+
+Rail ma 72 px i rozwija się kursorem/fokusem; przypięcie przesuwa treść do pełnej szerokości menu. Na telefonie dostępny jest przycisk i przesłona, Escape oraz zamykanie po wyborze. Preferencje powłoki rozszerzają dotychczasowy rekord menu użytkownika, zachowując globalny fallback legacy i pola drzewa. Dock obsługuje wszystkie 53 istniejące widoki; wybór skrótów, ukrycie i ponowny pokaz są utrwalane per użytkownik. Powtarzające się nazwy kopii i koszy mają pełny kontekst w wyborze skrótów.
+
+Nagłówek pokazuje branding V4, kontekst aktualnej sekcji, rzeczywisty stan przypięcia i dotychczasowe akcje profilu. Main przewija się niezależnie od nagłówka i docka; ResizeObserver ustala granice istniejących paneli fixed. Modalność i fokus zapewnia wspólny natywny dialog, rozwinięty z panelu V4-01. Wszystkie nowe drogi nawigacji korzystają z ustawWidok. Zachowano istniejący adapter zapisu i jego blokadę po błędzie; wylogowanie uwzględnia dokument, a historia przeglądarki także profil. Profil nie oferuje pozornego zapisu przez adapter dokumentu.
+
+Weryfikacja: npm test, npm run lint, npm run build, git diff --check — kod 0. Test v4Powloka sprawdza odczyt legacy bez przepisywania, izolację użytkowników, współistnienie preferencji drzewa/docka, błędny JSON i brak miejsca, kompletność skrótów i kontekstu oraz wykorzystanie istniejącego guarda. Rejestr: 53 widoki, 82 pliki TSX, 115 sygnatur.
+
+Chrome, lokalny origin 127.0.0.1:5174: rail i fokus/hover, przypięcie po reloadzie (menu i lewa granica treści 280 px), dodanie/odpięcie skrótów i reload; niezapisany profil blokuje dock/menu/wylogowanie, Escape zachowuje dane. Przy rzeczywistej szerokości CSS 400 px: dotyk otwiera menu, wybór zamyka, dock jest domyślnie ukryty i można go pokazać. Po pokazaniu dół main jest równy górze docka. Sprawdzono też szerokości CSS 1280 i 1600 px oraz trzy motywy przez style obliczone. Prawy panel generatora mieścił się dokładnie między dołem nagłówka a górą docka. Emulacja print ukryła menu/header/dock, reduced-motion ograniczyła przejścia do 0,000001 s. Nadpisania emulacji przywracane po zakończeniu kontroli.
+
+Ograniczenie: próby zrzutów Chrome zwracały timeout Page.captureScreenshot; nie deklarujemy pełnej wizualnej regresji. Build zgłasza ostrzeżenie rozmiaru paczek. Nie zmieniono rendererów ani danych dokumentów. Brak blokerów implementacji.
+
+Pliki: index.html, package.json; aplikacja/layout: DockAplikacji.tsx, NaglowekAplikacji.tsx, UkladAplikacji.tsx, powlokaV4.css, useMalyEkran.ts; aplikacja/menu: MenuBoczne.tsx, pozycjeMenu.ts, preferencjeMenu.ts; aplikacja/logowanie/PanelLogowania.tsx (branding); aplikacja/ustawienia/WidokUstawien.tsx; wspolne/komponenty: ElementyInterfejsu.tsx, elementyInterfejsu.css; testy/v4Powloka.test.mjs; docs/v4: manifest-widokow.json, rejestr-widokow.md i niniejszy raport. Ścieżki aplikacja/ i wspolne/ znajdują się w src/.

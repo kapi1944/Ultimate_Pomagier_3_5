@@ -126,3 +126,14 @@ export function pobierzSciezkeMenuDlaWidoku(
 
   return []
 }
+
+export function pobierzKontekstNawigacji(widok: WidokNawigacji): string[] {
+  if (widok === 'profil_uzytkownika') return ['Profil użytkownika']
+  if (widok === 'generator-szczegolow') return ['SZKOLENIA ZAMKNIĘTE', 'Generator szczegółów']
+  let poziom = pozycjeMenu
+  return pobierzSciezkeMenuDlaWidoku(widok).flatMap((id) => {
+    const pozycja = poziom.find((wpis) => wpis.id === id)
+    poziom = pozycja?.dzieci ?? []
+    return pozycja ? [pozycja.etykieta] : []
+  })
+}

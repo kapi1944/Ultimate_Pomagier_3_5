@@ -421,8 +421,7 @@
         "WidokKartotek key=\"kartoteki_lokalizacje\" aktywnaZakladkaPoczatkowa=\"lokalizacje\" poZmianieZakladki={zmienZakladkeKartotek}",
         "WidokKartotek key=\"kartoteki_szablony_dokumentow\" aktywnaZakladkaPoczatkowa=\"szablony_dokumentow\" poZmianieZakladki={zmienZakladkeKartotek}",
         "WidokKartotek key=\"kartoteki_trenerzy\" aktywnaZakladkaPoczatkowa=\"trenerzy\" poZmianieZakladki={zmienZakladkeKartotek}",
-        "WidokKartotek poZmianieZakladki={zmienZakladkeKartotek}",
-        "section className=\"program-panel-roboczy program-szkolen__komunikat\" role=\"dialog\" aria-modal=\"true\" aria-label=\"Niezapisane zmiany\""
+        "WidokKartotek poZmianieZakladki={zmienZakladkeKartotek}"
       ]
     },
     "src/aplikacja/logowanie/KontekstUzytkownika.tsx": {
@@ -446,7 +445,7 @@
     "src/aplikacja/menu/MenuBoczne.tsx": {
       "zadanie": "V4-02",
       "powierzchnie": [
-        "aside aria-label=\"Menu główne\" className={`menu-boczne${czyMenuOtwarte ? ' menu-boczne--otwarte' : ''}`} onMouseEnter={otworzMenu} onMouseLeave={schowajMenuJesliOdpiete}"
+        "aside id=\"menu-glowne\" inert={czyMalyEkran && !czyMenuOtwarte} aria-label=\"Menu główne\" className={`menu-boczne${czyRozwiniete ? ' menu-boczne--otwarte' : ''}`} onFocusCapture={otworzMenu} onBlurCapture={(zdarzenie) => { if (!zdarzenie.currentTarget.contains(zdarzenie.relatedTarget)) schowajMenuJesliOdpiete() }} onKeyDown={(zdarzenie) => { if (zdarzenie.key === 'Escape') { zdarzenie.preventDefault(); zamknijMenu() } }} onPointerEnter={(zdarzenie) => { if (zdarzenie.pointerType === 'mouse' && !czyMalyEkran) otworzMenuZKrawedzi() }} onPointerLeave={(zdarzenie) => { if (zdarzenie.pointerType === 'mouse' && !zdarzenie.currentTarget.contains(document.activeElement)) schowajMenuJesliOdpiete() }}"
       ]
     },
     "src/aplikacja/ustawienia/WidokUstawien.tsx": {
@@ -863,7 +862,7 @@
     "src/wspolne/komponenty/ElementyInterfejsu.tsx": {
       "zadanie": "V4-20",
       "powierzchnie": [
-        "dialog ref={panel} className=\"ui-panel\" aria-labelledby={identyfikator} onCancel={(zdarzenie) => { zdarzenie.preventDefault(); zamknij() }}",
+        "dialog ref={panel} className={wariant === 'panel' ? 'ui-panel' : 'ui-dialog'} aria-labelledby={identyfikator} onCancel={(zdarzenie) => { zdarzenie.preventDefault(); zamknij() }}",
         "div className=\"ui-zakladki\"",
         "div role=\"tablist\" aria-label=\"Zakładki\"",
         "div role=\"tabpanel\" tabIndex={0} id={`${identyfikator}-panel`} aria-labelledby={`${identyfikator}-${pozycje.indexOf(aktywna)}`}"
@@ -877,6 +876,10 @@
     },
     "src/wspolne/telefon/PoleTelefonu.tsx": {
       "zadanie": "V4-07",
+      "powierzchnie": []
+    },
+    "src/aplikacja/layout/DockAplikacji.tsx": {
+      "zadanie": "V4-02",
       "powierzchnie": []
     }
   }

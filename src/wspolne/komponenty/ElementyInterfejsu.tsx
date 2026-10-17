@@ -42,7 +42,9 @@ export function Komunikat({ status = 'info', children }: { status?: StatusInterf
   return <div className="ui-komunikat" data-status={status} role={status === 'error' ? 'alert' : 'status'}>{children}</div>
 }
 
-export function PanelWysuwany({ otwarty, zamknij, tytul, children }: { otwarty: boolean; zamknij: () => void; tytul: string; children: ReactNode }) {
+type WlasciwosciDialogu = { otwarty: boolean; zamknij: () => void; tytul: string; children: ReactNode }
+
+export function OknoDialogowe({ otwarty, zamknij, tytul, children, wariant = 'dialog', etykietaZamkniecia = 'Zamknij' }: WlasciwosciDialogu & { wariant?: 'dialog' | 'panel'; etykietaZamkniecia?: string }) {
   const panel = useRef<HTMLDialogElement>(null)
   const identyfikator = useId()
   useEffect(() => {
@@ -55,5 +57,9 @@ export function PanelWysuwany({ otwarty, zamknij, tytul, children }: { otwarty: 
       if (otwarty && poprzedniFokus instanceof HTMLElement) poprzedniFokus.focus()
     }
   }, [otwarty])
-  return <dialog ref={panel} className="ui-panel" aria-labelledby={identyfikator} onCancel={(zdarzenie) => { zdarzenie.preventDefault(); zamknij() }}><h3 id={identyfikator}>{tytul}</h3><Przycisk onClick={zamknij} autoFocus>Zamknij panel</Przycisk>{children}</dialog>
+  return <dialog ref={panel} className={wariant === 'panel' ? 'ui-panel' : 'ui-dialog'} aria-labelledby={identyfikator} onCancel={(zdarzenie) => { zdarzenie.preventDefault(); zamknij() }}><h2 id={identyfikator}>{tytul}</h2><Przycisk onClick={zamknij} autoFocus>{etykietaZamkniecia}</Przycisk>{children}</dialog>
+}
+
+export function PanelWysuwany(wlasciwosci: WlasciwosciDialogu) {
+  return <OknoDialogowe {...wlasciwosci} wariant="panel" etykietaZamkniecia="Zamknij panel" />
 }

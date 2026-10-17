@@ -1,0 +1,81 @@
+@media screen {
+  .uklad-aplikacji {
+    --ui-rail: 72px;
+    --ui-warstwa-sticky: 10;
+    --ui-warstwa-naglowka: 30;
+    --ui-warstwa-panelu: 40;
+    --ui-warstwa-menu: 50;
+    --ui-warstwa-tooltipu: 60;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .uklad-aplikacji .uklad-aplikacji__kolumna-glowna { height: 100%; margin-left: var(--ui-rail); transition: margin-left var(--ui-transition-ms); }
+  .uklad-aplikacji--menu-przypiete .uklad-aplikacji__kolumna-glowna { margin-left: var(--szerokosc-menu-bocznego); }
+  .uklad-aplikacji .uklad-aplikacji__obszar-roboczy { min-height: 0; overflow: auto; overscroll-behavior: contain; padding: var(--ui-page-padding); isolation: isolate; scroll-padding-block: 16px; }
+  .uklad-aplikacji .menu-boczne { z-index: var(--ui-warstwa-menu); width: var(--ui-rail); padding-top: 60px; transform: none; transition: width var(--ui-transition-ms) ease; background: var(--ui-panel); }
+  .uklad-aplikacji .menu-boczne--otwarte { width: var(--szerokosc-menu-bocznego); }
+  .menu-boczne:not(.menu-boczne--otwarte) .menu-boczne__naglowek,
+  .menu-boczne:not(.menu-boczne--otwarte) .menu-boczne__lista--dzieci,
+  .menu-boczne:not(.menu-boczne--otwarte) .menu-boczne__strzalka,
+  .menu-boczne:not(.menu-boczne--otwarte) .menu-boczne__etykieta { display: none; }
+  .menu-boczne:not(.menu-boczne--otwarte) nav > .menu-boczne__lista { padding: 8px; }
+  .menu-boczne:not(.menu-boczne--otwarte) .menu-boczne__przycisk { justify-content: center; padding: 12px !important; min-height: 48px; }
+  .uklad-aplikacji .menu-boczne__hamburger { z-index: calc(var(--ui-warstwa-menu) + 1); width: 44px; height: 44px; top: 8px; left: 14px; }
+  .uklad-aplikacji--menu-przypiete .menu-boczne__hamburger { display: none; }
+  .uklad-aplikacji--menu-przypiete .menu-boczne { padding-top: 8px; }
+  .uklad-aplikacji .menu-boczne button:focus-visible { outline: 3px solid var(--ui-focus); outline-offset: 2px; }
+  .uklad-aplikacji .menu-boczne__przycisk:hover { transform: none; }
+  .menu-boczne__przeslona { position: fixed; inset: 0; z-index: calc(var(--ui-warstwa-menu) - 1); border: 0; background: #0009; }
+  .uklad-aplikacji .naglowek-aplikacji { flex: 0 0 auto; z-index: var(--ui-warstwa-naglowka); gap: 12px; flex-wrap: wrap; background: var(--ui-panel); padding: 10px 16px; }
+  .naglowek-aplikacji__lewa-strefa { flex: 1 1 180px; }
+  .naglowek-aplikacji__marka { color: var(--ui-tekst-drugi); font-size: var(--ui-tekst-maly); }
+  .naglowek-aplikacji__lewa-strefa ol { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; font-size: .875rem; }
+  .naglowek-aplikacji__lewa-strefa li + li::before { content: '/'; margin-right: 6px; color: var(--ui-tekst-drugi); }
+  .naglowek-aplikacji__lewa-strefa li[aria-current] { font-weight: 700; }
+  .naglowek-aplikacji__statusy { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .naglowek-aplikacji__dock-krotki { display: none; }
+  .dock-aplikacji { flex: 0 0 auto; display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 6px 16px max(6px, env(safe-area-inset-bottom)); border-top: 1px solid var(--ui-obramowanie); background: var(--ui-panel); max-height: 30dvh; overflow: auto; z-index: var(--ui-warstwa-naglowka); }
+  .dock-aplikacji nav { display: flex; flex-wrap: wrap; gap: 6px; }
+  .dock-aplikacji .ui-przycisk { display: inline-flex; align-items: center; gap: 6px; font-size: .8rem; }
+  .dock-aplikacji [aria-current="page"] { border-color: var(--ui-akcent); background: var(--ui-akcent-mocny); }
+  .dock-aplikacji__akcje { display: flex; gap: 6px; flex-shrink: 0; }
+  .dock-aplikacji__wybor { display: grid; gap: 8px; }
+  .dock-aplikacji__wybor label { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 6px; border-bottom: 1px solid var(--ui-obramowanie); }
+  .dock-aplikacji__wybor input { width: 20px; height: 20px; accent-color: var(--ui-akcent); }
+  .uklad-aplikacji .szczegoly-sticky { z-index: var(--ui-warstwa-sticky); }
+  .uklad-aplikacji .szczegoly-panel-jakosci { max-height: var(--ui-wysokosc-obszaru, 100dvh); height: var(--ui-wysokosc-obszaru, 100dvh); z-index: var(--ui-warstwa-panelu); }
+  .uklad-aplikacji .generator-panel-ustawien { top: var(--ui-wysokosc-naglowka, 80px); bottom: var(--ui-wysokosc-docka, 0px); height: auto; max-height: var(--ui-wysokosc-obszaru, 100dvh); z-index: var(--ui-warstwa-panelu); }
+  .uklad-aplikacji .generator-z-panelem__strefa-aktywacji { top: var(--ui-wysokosc-naglowka, 80px); bottom: var(--ui-wysokosc-docka, 0px); }
+  .uklad-aplikacji .szczegoly-panel-jakosci__strefa-aktywacji { top: var(--ui-wysokosc-naglowka, 80px); bottom: var(--ui-wysokosc-docka, 0px); }
+  @media (max-width: 1120px) {
+    .uklad-aplikacji .szczegoly-panel-jakosci { top: var(--ui-wysokosc-naglowka, 80px); bottom: var(--ui-wysokosc-docka, 0px); }
+  }
+  @container obszar-roboczy (max-width: 1120px) {
+    .uklad-aplikacji .szczegoly-panel-jakosci { top: var(--ui-wysokosc-naglowka, 80px); bottom: var(--ui-wysokosc-docka, 0px); }
+  }
+  .uklad-aplikacji .pulpit-drawer { top: var(--ui-wysokosc-naglowka, 80px); bottom: var(--ui-wysokosc-docka, 0px); height: auto; z-index: var(--ui-warstwa-panelu); }
+  .uklad-aplikacji .miarka-stanu__tooltip { z-index: var(--ui-warstwa-tooltipu); }
+  .powloka__pomin { position: fixed; top: -120px; left: 90px; z-index: 100; background: var(--ui-panel); color: var(--ui-tekst); border: 2px solid var(--ui-focus); padding: 12px; }
+  .powloka__pomin:focus { top: 8px; }
+  @media (max-width: 760px) {
+    .uklad-aplikacji .uklad-aplikacji__kolumna-glowna { margin-left: 0; }
+    .uklad-aplikacji .menu-boczne { width: min(86vw, var(--szerokosc-menu-bocznego)); transform: translateX(-100%); transition: transform var(--ui-transition-ms); }
+    .uklad-aplikacji .menu-boczne--otwarte { transform: translateX(0); }
+    .uklad-aplikacji .naglowek-aplikacji { padding-left: 66px; gap: 6px; }
+    .naglowek-aplikacji__lewa-strefa { flex-basis: 100%; }
+    .naglowek-aplikacji__statusy .ui-odznaka { display: none; }
+    .naglowek-aplikacji__panel-uzytkownika { display: flex; flex-wrap: wrap; }
+    .naglowek-aplikacji__panel-uzytkownika > .naglowek-aplikacji__przycisk:not(.naglowek-aplikacji__przycisk--wyloguj) { display: none; }
+    .naglowek-aplikacji__dane strong { max-width: 80px; }
+    .naglowek-aplikacji__dock-etykieta { display: none; }
+    .naglowek-aplikacji__dock-krotki { display: inline; }
+    .uklad-aplikacji .dock-aplikacji { flex-wrap: wrap; padding-inline: 8px; }
+    .uklad-aplikacji .uklad-aplikacji__obszar-roboczy { padding: 16px; }
+  }
+}
+
+@media print {
+  .menu-boczne, .menu-boczne__hamburger, .menu-boczne__przeslona, .naglowek-aplikacji, .dock-aplikacji, .powloka__pomin, .ui-dialog, .ui-panel { display: none !important; }
+  .uklad-aplikacji, .uklad-aplikacji__kolumna-glowna, .uklad-aplikacji__obszar-roboczy { height: auto !important; min-height: 0 !important; overflow: visible !important; margin: 0 !important; }
+}

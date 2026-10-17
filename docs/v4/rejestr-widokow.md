@@ -106,7 +106,7 @@ Właściciel pliku obejmuje wszystkie warunki renderowania, stany pusty/błąd/�
 | --- | --- | --- |
 | `src/App.tsx` | V4-02 | 0 |
 | `src/aplikacja/layout/NaglowekAplikacji.tsx` | V4-02 | 1 |
-| `src/aplikacja/layout/UkladAplikacji.tsx` | V4-02 | 6 |
+| `src/aplikacja/layout/UkladAplikacji.tsx` | V4-02 | 5 |
 | `src/aplikacja/logowanie/KontekstUzytkownika.tsx` | V4-02 | 0 |
 | `src/aplikacja/logowanie/PanelLogowania.tsx` | V4-02 | 5 |
 | `src/aplikacja/menu/IkonaMenu.tsx` | V4-02 | 0 |
@@ -186,6 +186,8 @@ Właściciel pliku obejmuje wszystkie warunki renderowania, stany pusty/błąd/�
 | `src/wspolne/komponenty/GaleriaKomponentow.tsx` | V4-20 | 1 |
 | `src/wspolne/telefon/PoleTelefonu.tsx` | V4-07 | 0 |
 
+| `src/aplikacja/layout/DockAplikacji.tsx` | V4-02 | 0 |
+
 ## Ustalenia audytu i zgodność
 
 Istnieje jeden model i magazyn ustawień aplikacji: wersja 1, klucz ultimatePomagier.ustawieniaAplikacji.v1. Migrację niepełnych ustawień realizuje dotychczasowa normalizacja na odczycie/importowaniu; dodanie palet nie wymaga przepisywania klucza ani zmiany schematu. Stare DOMYSLNA pozostaje aliasem zielonego motywu, CRM/DDP/SEMPER/EVENTIS/ARKUSZE_GOOGLE zachowują wartości. Nowe instalacje używają EMERALD_DARK. Nie uruchamia się migracji dokumentów. Równoległe historyczne magazyny opisane w docs/audyty/audyt-magazynow-danych.md pozostają poza zakresem.
@@ -193,3 +195,14 @@ Istnieje jeden model i magazyn ustawień aplikacji: wersja 1, klucz ultimatePoma
 Tokeny rozszerzają istniejące --ui-*; nie powstaje drugi system ustawień ani biblioteka zależności. Galeria jest w istniejącym podglądzie ustawień (zakładka Wygląd), obejmuje jednocześnie trzy motywy. Natywny dialog daje modalność, blokadę fokusu i Escape; komponent przywraca fokus. Zakładki obsługują strzałki, Home i End. Tokeny statusów są niezależne od marki; draft jest fioletowy, error czerwony. Preferencje geometrii, gęstości i ograniczenia animacji nadal obowiązują.
 
 Kolejne etapy muszą zastępować lokalne kolory tokenami stopniowo. V4-01 nie jest potwierdzeniem zgodności WCAG wszystkich starych ekranów: obecne lokalne style niektórych modułów nadal wymagają modernizacji przez przypisanych właścicieli.
+
+
+## V4-02 — powłoka aplikacji
+
+Wdrożono rail 72 px z rozwijaniem kursorem i fokusem, przypinanie per użytkownik, kontekst sekcji w nagłówku i dock z wyborem skrótów wszystkich 53 istniejących widoków. Nowy DockAplikacji należy do V4-02. Wspólny OknoDialogowe rozwija mechanizm panelu z V4-01; używany jest w edycji docka i istniejącym potwierdzeniu opuszczenia formularza.
+
+Preferencje powłoki są opcjonalną sekcją powloka w istniejącym rekordzie menuDrzewo.v1.<użytkownik>. Brak sekcji oznacza odczyt starych globalnych preferencji przypięcia/wysuwania; odczyt nie przepisuje danych. Zapis drzewa zachowuje powłokę i dodatkowe pola rekordu. Domyślna widoczność docka zależy od szerokości ekranu; jawny wybór użytkownika ma pierwszeństwo.
+
+Nagłówek i dock zajmują osobne wiersze układu, a main ma własne przewijanie. Lokalne sticky pozostają w main. ResizeObserver wyznacza rzeczywiste granice main dla istniejących paneli fixed. Warstwy: lokalne sticky 10, nagłówek/dock 30, panele 40, menu 50, tooltipy 60; natywne dialogi korzystają z top layer. CSS zmian geometrii i warstw działa tylko na ekranie; druk ukrywa powłokę.
+
+Dock, menu i profil korzystają z centralnego ustawWidok. Zachowano funkcje zapisu i odrzucenia zmian oraz blokowanie po nieudanym zapisie. Wylogowanie pyta także przy niezapisanym dokumencie, a historia przeglądarki także przy niezapisanym profilu. Dialog profilu nie oferuje zapisu przez adapter dokumentu: użytkownik wraca do edycji albo jawnie odrzuca zmiany.

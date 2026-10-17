@@ -1,6 +1,6 @@
 import { czyWidokZakupow, trasyZakupow, pobierzSciezkeZakupow, pobierzWidokZakupowZeSciezki } from '../nawigacja/konfiguracjaZakupow'
 import WidokZakupow from '../../moduly/zakupy/WidokZakupow'
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import WidokUstawien from '../ustawienia/WidokUstawien'
 import {
   pobierzUstawieniaAplikacji,
@@ -45,6 +45,11 @@ import WidokSzkolenZamknietych from '../../moduly/zamkniete/szkolenia/WidokSzkol
 import { pobierzSciezkeGeneratoraDokumentu } from '../../wspolne/dokumenty/konfiguracjaDokumentow'
 import type { Dokument } from '../../wspolne/dokumenty/modelDokumentu'
 import './ukladAplikacji.css'
+import './powlokaV4.css'
+import DockAplikacji from './DockAplikacji'
+import { useMalyEkran } from './useMalyEkran'
+import { pobierzDostepneSkroty, pobierzPreferencjePowloki, zapiszPreferencjePowloki, zdarzenieZmianyPreferencjiMenu, type PreferencjePowloki } from '../menu/preferencjeMenu'
+import { OknoDialogowe, Przycisk, Komunikat } from '../../wspolne/komponenty/ElementyInterfejsu'
 
 const kluczAktywnegoWidoku = 'ultimate-pomagier-aktywny-widok'
 
@@ -287,7 +292,35 @@ function renderujWidok(
 }
 
 export default function UkladAplikacji() {
-  const { wyloguj } = useKontekstUzytkownika()
+  const { wyloguj, zalogowanyUzytkownik } = useKontekstUzytkownika()
+  const uzytkownikId = zalogowanyUzytkownik?.id ?? 'anonim'
+  const czyMalyEkran = useMalyEkran()
+  const powloka = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const element = powloka.current
+    const obszar = element?.querySelector('main')
+    if (!element || !obszar) return
+    const obserwator = new ResizeObserver(() => {
+      const geometria = obszar.getBoundingClientRect()
+      element.style.setProperty('--ui-wysokosc-naglowka', geometria.top + 'px')
+      element.style.setProperty('--ui-wysokosc-docka', Math.max(0, window.innerHeight - geometria.bottom) + 'px')
+      element.style.setProperty('--ui-wysokosc-obszaru', geometria.height + 'px')
+    })
+    obserwator.observe(obszar)
+    return () => obserwator.disconnect()
+  }, [])
+  const [preferencjePowloki, ustawPreferencjePowloki] = useState(() => pobierzPreferencjePowloki(uzytkownikId))
+  const [czyEdytujeDock, ustawCzyEdytujeDock] = useState(false)
+  const [bladPreferencji, ustawBladPreferencji] = useState('')
+  const czyDockWidoczny = preferencjePowloki.widocznyDock ?? !czyMalyEkran
+  useEffect(() => {
+    function odswiezPreferencje() { ustawPreferencjePowloki(pobierzPreferencjePowloki(uzytkownikId)) }
+    window.addEventListener(zdarzenieZmianyPreferencjiMenu, odswiezPreferencje)
+    return () => window.removeEventListener(zdarzenieZmianyPreferencjiMenu, odswiezPreferencje)
+  }, [uzytkownikId])
+  function zmienPreferencjePowloki(zmiany: Partial<PreferencjePowloki>) {
+    ustawBladPreferencji(zapiszPreferencjePowloki(uzytkownikId, zmiany) ? '' : 'Nie udało się zapisać preferencji. Dotychczasowe ustawienia pozostają aktywne.')
+  }
   const [aktywnyWidok, ustawAktywnyWidok] = useState<WidokNawigacji>(pobierzPoczatkowyWidok)
   const [uzytkownikIdProfilu, ustawUzytkownikIdProfilu] = useState<string | null>(pobierzIdProfiluZeSciezki)
   const [stanMenu, ustawStanMenu] = useState({ czyPrzypiete: false, czyOtwarte: false })
@@ -386,7 +419,7 @@ export default function UkladAplikacji() {
   const zglosStanMenu = useCallback((stan: { czyPrzypiete: boolean; czyOtwarte: boolean }) => { ustawStanMenu((poprzedni) => poprzedni.czyPrzypiete === stan.czyPrzypiete && poprzedni.czyOtwarte === stan.czyOtwarte ? poprzedni : stan) }, [])
   function otworzProfil(uzytkownikId?: string) { ustawWidok('profil_uzytkownika', { uzytkownikId }) }
   function obsluzWylogowanie() {
-    if (czyProfilMaNiezapisaneZmiany) { ustawCzyWylogowanieDoPotwierdzenia(true); return }
+    if (czyProfilMaNiezapisaneZmiany || czyDokumentMaNiezapisaneZmiany()) { ustawCzyWylogowanieDoPotwierdzenia(true); return }
     wyloguj()
   }
 
@@ -477,7 +510,7 @@ export default function UkladAplikacji() {
         return
       }
 
-      if (poprawnyWidok !== aktywnyWidok && czyDokumentMaNiezapisaneZmiany()) {
+      if (poprawnyWidok !== aktywnyWidok && (czyDokumentMaNiezapisaneZmiany() || czyProfilMaNiezapisaneZmiany)) {
         const sciezkaBiezacegoWidoku = pobierzSciezkeZakupow(aktywnyWidok) ?? pobierzSciezkeNarzedzia(aktywnyWidok) ?? pobierzSciezkeGeneratora(aktywnyWidok) ?? '/'
         window.history.pushState({ widok: aktywnyWidok }, '', sciezkaBiezacegoWidoku)
         ustawWidokDoPotwierdzenia(poprawnyWidok)
@@ -491,26 +524,29 @@ export default function UkladAplikacji() {
     window.addEventListener('popstate', obsluzPowrotPrzegladarki)
 
     return () => window.removeEventListener('popstate', obsluzPowrotPrzegladarki)
-  }, [aktywnyWidok])
+  }, [aktywnyWidok, czyProfilMaNiezapisaneZmiany])
 
   const nazwaGeneratora = konfiguracjePodmenuGeneratorow.find((konfiguracja) => konfiguracja.pozycje[0]?.widok === aktywnyWidok)?.etykieta
   const widok = renderujWidok(aktywnyWidok, zmienZakladkeKartotek, ustawWidok, wersjaProgramu, wersjaFormularzaSzczegolow, otworzDokument, uzytkownikIdProfilu, (uzytkownikId) => otworzProfil(uzytkownikId), ustawCzyProfilMaNiezapisaneZmiany, () => ustawWidok('zamkniete_szczegoly_organizacyjne_lista'), () => ustawWidok('dokumenty_wszystkie'), () => ustawWidok('checklisty_paczek'))
   return (
-    <div className={`uklad-aplikacji${stanMenu.czyPrzypiete && stanMenu.czyOtwarte ? ' uklad-aplikacji--menu-przypiete' : ''}`}>
-      <MenuBoczne aktywnyWidok={aktywnyWidok} poZmianieStanuMenu={zglosStanMenu} ustawAktywnyWidok={ustawWidok} />
+    <div ref={powloka} className={`uklad-aplikacji${stanMenu.czyPrzypiete && stanMenu.czyOtwarte ? ' uklad-aplikacji--menu-przypiete' : ''}`}>
+      <a className="powloka__pomin" href="#obszar-roboczy">Przejdź do treści</a>
+      <MenuBoczne key={`${uzytkownikId}-${czyMalyEkran}`} czyMalyEkran={czyMalyEkran} aktywnyWidok={aktywnyWidok} poZmianieStanuMenu={zglosStanMenu} ustawAktywnyWidok={ustawWidok} />
       <div className="uklad-aplikacji__kolumna-glowna">
-        <NaglowekAplikacji otworzProfil={() => otworzProfil()} wyloguj={obsluzWylogowanie} />
-        <main className="uklad-aplikacji__obszar-roboczy">{nazwaGeneratora ? <GranicaBleduGeneratora key={`${aktywnyWidok}-${window.location.pathname}`} nazwaGeneratora={nazwaGeneratora} wrocDoDokumentow={() => ustawWidok('dokumenty_wszystkie')}>{widok}</GranicaBleduGeneratora> : widok}</main>
+        <NaglowekAplikacji aktywnyWidok={aktywnyWidok} czyMenuPrzypiete={stanMenu.czyPrzypiete} czyDockWidoczny={czyDockWidoczny} przelaczDock={() => zmienPreferencjePowloki({ widocznyDock: !czyDockWidoczny })} otworzProfil={() => otworzProfil()} wyloguj={obsluzWylogowanie} />
+        {bladPreferencji && <Komunikat status="error">{bladPreferencji}</Komunikat>}
+        <main id="obszar-roboczy" tabIndex={-1} className="uklad-aplikacji__obszar-roboczy">{nazwaGeneratora ? <GranicaBleduGeneratora key={`${aktywnyWidok}-${window.location.pathname}`} nazwaGeneratora={nazwaGeneratora} wrocDoDokumentow={() => ustawWidok('dokumenty_wszystkie')}>{widok}</GranicaBleduGeneratora> : widok}</main>
+        {czyDockWidoczny && <DockAplikacji skroty={preferencjePowloki.skroty} aktywnyWidok={aktywnyWidok} ustawWidok={ustawWidok} edytuj={() => ustawCzyEdytujeDock(true)} ukryj={() => zmienPreferencjePowloki({ widocznyDock: false })} />}
       </div>
+      <OknoDialogowe otwarty={czyEdytujeDock} zamknij={() => ustawCzyEdytujeDock(false)} tytul="Skróty docka"><p>Wybierz widoki dostępne na dolnym pasku.</p><div className="dock-aplikacji__wybor">{pobierzDostepneSkroty().map(({ widok, opis }) => <label key={widok}><input type="checkbox" checked={preferencjePowloki.skroty.includes(widok)} onChange={(zdarzenie) => zmienPreferencjePowloki({ skroty: zdarzenie.target.checked ? [...preferencjePowloki.skroty, widok] : preferencjePowloki.skroty.filter((skrot) => skrot !== widok) })} />{opis}</label>)}</div>{bladPreferencji && <Komunikat status="error">{bladPreferencji}</Komunikat>}</OknoDialogowe>
       {(widokDoPotwierdzenia || czyWylogowanieDoPotwierdzenia) && (
-        <section className="program-panel-roboczy program-szkolen__komunikat" role="dialog" aria-modal="true" aria-label="Niezapisane zmiany">
-          <strong>Masz niezapisane zmiany {czyWylogowanieDoPotwierdzenia || aktywnyWidok === 'profil_uzytkownika' ? 'profilu' : 'dokumentu'}.</strong>
+        <OknoDialogowe otwarty zamknij={() => { ustawWidokDoPotwierdzenia(null); ustawCzyWylogowanieDoPotwierdzenia(false) }} tytul="Niezapisane zmiany" etykietaZamkniecia="Wróć do edycji">
+          <strong>Masz niezapisane zmiany {aktywnyWidok === 'profil_uzytkownika' ? 'profilu' : 'dokumentu'}.</strong>
           <div className="program-szkolen__akcje">
-            <button type="button" onClick={() => { ustawWidokDoPotwierdzenia(null); ustawCzyWylogowanieDoPotwierdzenia(false) }}>Wróć do edycji</button>
-            {!czyWylogowanieDoPotwierdzenia && <button type="button" onClick={zapiszIWyjdz}>Zapisz i kontynuuj</button>}
-            <button type="button" onClick={wyjdzBezZapisywania}>Odrzuć zmiany</button>
+            {!czyWylogowanieDoPotwierdzenia && aktywnyWidok !== 'profil_uzytkownika' && <Przycisk onClick={zapiszIWyjdz}>Zapisz i kontynuuj</Przycisk>}
+            <Przycisk onClick={wyjdzBezZapisywania}>Odrzuć zmiany</Przycisk>
           </div>
-        </section>
+        </OknoDialogowe>
       )}
     </div>  )
 }

@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { useKontekstUzytkownika } from '../logowanie/useKontekstUzytkownika'
 import type { WidokNawigacji } from '../nawigacja/typyNawigacji'
 import {
@@ -9,36 +9,22 @@ import {
   type PozycjaMenu,
 } from './pozycjeMenu'
 import {
-  kluczPrzypieciaMenu,
-  kluczWysuwaniaZKrawedzi,
+  pobierzPreferencjePowloki,
+  zapiszPreferencjePowloki,
   pobierzPreferencjeDrzewaMenu,
   zapiszPreferencjeDrzewaMenu,
   zdarzenieZmianyPreferencjiMenu,
   type TrybWidokuMenu,
 } from './preferencjeMenu'
+import { Komunikat } from '../../wspolne/komponenty/ElementyInterfejsu'
 import IkonaMenu from './IkonaMenu'
 import { pobierzTypIkonyMenu } from './ikonyPozycjiMenu'
 
 type WlasciwosciMenuBocznego = {
+  czyMalyEkran: boolean
   aktywnyWidok: WidokNawigacji
   ustawAktywnyWidok: (widok: WidokNawigacji) => void
   poZmianieStanuMenu?: (stan: { czyPrzypiete: boolean; czyOtwarte: boolean }) => void
-}
-
-function pobierzPoczatkowePrzypiecieMenu() {
-  try {
-    return localStorage.getItem(kluczPrzypieciaMenu) === 'true'
-  } catch {
-    return false
-  }
-}
-
-function pobierzPoczatkoweWysuwanieZKrawedzi() {
-  try {
-    return localStorage.getItem(kluczWysuwaniaZKrawedzi) !== 'false'
-  } catch {
-    return true
-  }
 }
 
 function pobierzStanAktywnejSciezki(aktywnyWidok: WidokNawigacji) {
@@ -56,23 +42,27 @@ function pobierzIdPanelu(pozycjaId: string) {
 
 export default function MenuBoczne({
   aktywnyWidok,
+  czyMalyEkran,
   ustawAktywnyWidok,
   poZmianieStanuMenu,
 }: WlasciwosciMenuBocznego) {
   const { zalogowanyUzytkownik } = useKontekstUzytkownika()
   const uzytkownikId = zalogowanyUzytkownik?.id ?? 'anonim'
   const preferencjePoczatkowe = useMemo(() => pobierzPreferencjeDrzewaMenu(uzytkownikId), [uzytkownikId])
-  const [czyMenuPrzypiete, ustawCzyMenuPrzypiete] = useState(pobierzPoczatkowePrzypiecieMenu)
+  const [czyMenuPrzypiete, ustawCzyMenuPrzypiete] = useState(() => pobierzPreferencjePowloki(uzytkownikId).przypiete)
   const [czyMenuOtwarte, ustawCzyMenuOtwarte] = useState(false)
   const [czyWysuwanieZKrawedziWlaczone, ustawCzyWysuwanieZKrawedziWlaczone] = useState(
-    pobierzPoczatkoweWysuwanieZKrawedzi,
+    () => pobierzPreferencjePowloki(uzytkownikId).wysuwanie,
   )
   const [trybWidokuMenu, ustawTrybWidokuMenu] = useState<TrybWidokuMenu>(preferencjePoczatkowe.tryb)
   const [stanPodmenu, ustawStanPodmenu] = useState<Record<string, boolean>>({
     ...preferencjePoczatkowe.rozwiniete,
     ...pobierzStanAktywnejSciezki(aktywnyWidok),
   })
-  const czyAutoukrywanieWlaczone = !czyMenuPrzypiete
+  const czyAutoukrywanieWlaczone = !czyMenuPrzypiete || czyMalyEkran
+  const czyRozwiniete = czyMenuOtwarte || (czyMenuPrzypiete && !czyMalyEkran)
+  const przyciskMenu = useRef<HTMLButtonElement>(null)
+  const [bladPreferencji, ustawBladPreferencji] = useState('')
   const idRozwijalnychPozycji = useMemo(() => pobierzIdRozwijalnychPozycji(), [])
 
   useEffect(() => {
@@ -87,22 +77,6 @@ export default function MenuBoczne({
 
     return () => window.clearTimeout(identyfikator)
   }, [aktywnyWidok, uzytkownikId])
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(kluczPrzypieciaMenu, String(czyMenuPrzypiete))
-    } catch {
-      return
-    }
-  }, [czyMenuPrzypiete])
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(kluczWysuwaniaZKrawedzi, String(czyWysuwanieZKrawedziWlaczone))
-    } catch {
-      return
-    }
-  }, [czyWysuwanieZKrawedziWlaczone])
 
   useEffect(() => {
     zapiszPreferencjeDrzewaMenu(uzytkownikId, {
@@ -122,8 +96,8 @@ export default function MenuBoczne({
         ...preferencje.rozwiniete,
         ...pobierzStanAktywnejSciezki(aktywnyWidok),
       })
-      ustawCzyMenuPrzypiete(pobierzPoczatkowePrzypiecieMenu())
-      ustawCzyWysuwanieZKrawedziWlaczone(pobierzPoczatkoweWysuwanieZKrawedzi())
+      ustawCzyMenuPrzypiete(pobierzPreferencjePowloki(uzytkownikId).przypiete)
+      ustawCzyWysuwanieZKrawedziWlaczone(pobierzPreferencjePowloki(uzytkownikId).wysuwanie)
     }
 
     window.addEventListener(zdarzenieZmianyPreferencjiMenu, odswiezPreferencje)
@@ -131,8 +105,8 @@ export default function MenuBoczne({
   }, [aktywnyWidok, uzytkownikId])
 
   useEffect(() => {
-    poZmianieStanuMenu?.({ czyPrzypiete: czyMenuPrzypiete, czyOtwarte: czyMenuOtwarte })
-  }, [czyMenuOtwarte, czyMenuPrzypiete, poZmianieStanuMenu])
+    poZmianieStanuMenu?.({ czyPrzypiete: czyMenuPrzypiete && !czyMalyEkran, czyOtwarte: czyRozwiniete })
+  }, [czyRozwiniete, czyMenuPrzypiete, czyMalyEkran, poZmianieStanuMenu])
 
   function otworzMenu() {
     ustawCzyMenuOtwarte(true)
@@ -146,17 +120,20 @@ export default function MenuBoczne({
     if (czyAutoukrywanieWlaczone) ustawCzyMenuOtwarte(false)
   }
 
-  function ustawTrybAutoukrywania(czyWlaczone: boolean) {
-    ustawCzyMenuPrzypiete(!czyWlaczone)
-    ustawCzyMenuOtwarte(!czyWlaczone)
-  }
-
   function przelaczPrzypiecieMenu() {
-    ustawTrybAutoukrywania(czyMenuPrzypiete)
+    const nowaWartosc = !czyMenuPrzypiete
+    if (!zapiszPreferencjePowloki(uzytkownikId, { przypiete: nowaWartosc })) {
+      ustawBladPreferencji('Nie udało się zapisać przypięcia menu.')
+      return
+    }
+    ustawBladPreferencji('')
+    ustawCzyMenuPrzypiete(nowaWartosc)
+    ustawCzyMenuOtwarte(nowaWartosc)
   }
 
-  function przelaczWysuwanieZKrawedzi() {
-    ustawCzyWysuwanieZKrawedziWlaczone((czyWlaczone) => !czyWlaczone)
+  function zamknijMenu() {
+    ustawCzyMenuOtwarte(false)
+    przyciskMenu.current?.focus()
   }
 
   function przelaczPodmenu(pozycjaPodmenu: PozycjaMenu) {
@@ -198,6 +175,9 @@ export default function MenuBoczne({
         {pozycja.czySeparatorPrzed && <li aria-hidden="true" className="menu-boczne__separator" role="separator" />}
         <li className={klasyElementu} data-poziom={poziom}>
           <button
+            aria-label={pozycja.etykieta}
+            aria-current={czyAktywna ? 'page' : undefined}
+            title={!czyRozwiniete ? pozycja.etykieta : undefined}
             aria-controls={idPanelu}
             aria-expanded={czyRozwijalna ? czyRozwinieta : undefined}
             className={klasyPrzycisku}
@@ -208,7 +188,7 @@ export default function MenuBoczne({
                 return
               }
 
-              if (pozycja.widok) ustawAktywnyWidok(pozycja.widok)
+              if (pozycja.widok) { ustawAktywnyWidok(pozycja.widok); if (czyMalyEkran) zamknijMenu() }
             }}
             style={{ paddingLeft: `${14 + poziom * 18}px` }}
             type="button"
@@ -238,33 +218,38 @@ export default function MenuBoczne({
   return (
     <>
       <button
-        aria-label="Otwórz menu"
-        className={`menu-boczne__hamburger${czyMenuOtwarte ? ' menu-boczne__hamburger--ukryty' : ''}`}
-        onClick={otworzMenu}
+        ref={przyciskMenu}
+        aria-label={czyRozwiniete ? 'Zwiń menu' : 'Otwórz menu'}
+        aria-expanded={czyRozwiniete}
+        aria-controls="menu-glowne"
+        className="menu-boczne__hamburger"
+        onClick={() => ustawCzyMenuOtwarte((otwarte) => !otwarte)}
         type="button"
       >
         ☰
       </button>
-      <div aria-hidden="true" className="menu-boczne__strefa-aktywacji" onMouseEnter={otworzMenuZKrawedzi} />
+      {czyMalyEkran && czyMenuOtwarte && <button type="button" className="menu-boczne__przeslona" aria-label="Zamknij menu" onClick={zamknijMenu} />}
       <aside
+        id="menu-glowne"
+        inert={czyMalyEkran && !czyMenuOtwarte}
         aria-label="Menu główne"
-        className={`menu-boczne${czyMenuOtwarte ? ' menu-boczne--otwarte' : ''}`}
-        onMouseEnter={otworzMenu}
-        onMouseLeave={schowajMenuJesliOdpiete}
+        className={`menu-boczne${czyRozwiniete ? ' menu-boczne--otwarte' : ''}`}
+        onFocusCapture={otworzMenu}
+        onBlurCapture={(zdarzenie) => { if (!zdarzenie.currentTarget.contains(zdarzenie.relatedTarget)) schowajMenuJesliOdpiete() }}
+        onKeyDown={(zdarzenie) => { if (zdarzenie.key === 'Escape') { zdarzenie.preventDefault(); zamknijMenu() } }}
+        onPointerEnter={(zdarzenie) => { if (zdarzenie.pointerType === 'mouse' && !czyMalyEkran) otworzMenuZKrawedzi() }}
+        onPointerLeave={(zdarzenie) => { if (zdarzenie.pointerType === 'mouse' && !zdarzenie.currentTarget.contains(document.activeElement)) schowajMenuJesliOdpiete() }}
       >
         <div className="menu-boczne__naglowek">
           <div className="menu-boczne__akcje">
-            <button className="menu-boczne__przycisk-naglowka" onClick={przelaczWysuwanieZKrawedzi} type="button">
-              ↩ {czyWysuwanieZKrawedziWlaczone ? 'Wyłącz wysuwanie' : 'Włącz wysuwanie'}
-            </button>
-            <button className="menu-boczne__przycisk-naglowka" onClick={przelaczPrzypiecieMenu} type="button">
+            <button className="menu-boczne__przycisk-naglowka" onClick={przelaczPrzypiecieMenu} aria-pressed={czyMenuPrzypiete} type="button">
               📌 {czyMenuPrzypiete ? 'Odepnij Menu' : 'Przypnij Menu'}
             </button>
           </div>
           <div className="menu-boczne__marka">
             <img alt="Ultimate Pomagier" className="menu-boczne__logo" src="/logo-ultimate-pomagier.png" />
-            <strong>Ultimate Pomagier 3.0</strong>
-            <span>V3-01</span>
+            <strong>Ultimate Pomagier V4</strong>
+
           </div>
           <fieldset className="menu-boczne__tryb">
             <legend>Widok menu</legend>
@@ -286,7 +271,8 @@ export default function MenuBoczne({
             </button>
           </fieldset>
         </div>
-        <nav>
+        {bladPreferencji && <Komunikat status="error">{bladPreferencji}</Komunikat>}
+        <nav aria-label="Moduły aplikacji">
           <ul className="menu-boczne__lista">{pozycjeMenu.map((pozycja) => renderujPozycje(pozycja))}</ul>
         </nav>
       </aside>
