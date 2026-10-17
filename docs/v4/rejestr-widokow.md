@@ -7,9 +7,9 @@ Manifest `manifest-widokow.json` jest wersjonowanym przypisaniem zakresów. Test
 ## Przypisanie etapów
 
 - V4-02: Powłoka, menu, nagłówek i logowanie.
-- V4-03: Pulpit i jego formularze oraz panele.
-- V4-04: Szkolenia zamknięte i starszy generator szczegółów.
-- V4-05: Szczegóły organizacyjne, lista, kopie i formularz sekcyjny.
+- V4-03: Ekran logowania i jego stany.
+- V4-04: Pulpit, zadania, oś czasu, paczki i zakupy.
+- V4-05: Szkolenia zamknięte i Szczegóły organizacyjne.
 - V4-06: Szkolenia otwarte.
 - V4-07: Rejestr dokumentów, kopie, kosze i wspólne mechanizmy UI dokumentów.
 - V4-08: Programy szkoleń, import, edytor i podgląd.
@@ -51,7 +51,7 @@ Adres `/` oznacza istniejący fallback nawigacji, a nie nową trasę. Kilka wido
 | `dyplomy_kopie_robocze` | V4-11 | `/dokumenty/dyplomy/kopie-robocze` | tak |
 | `dyplomy_kosz` | V4-11 | `/dokumenty/dyplomy/kosz` | tak |
 | `dyplomy_wszystkie` | V4-11 | `/dokumenty/dyplomy/wszystkie` | tak |
-| `generator-szczegolow` | V4-04 | `/` | kod / nawigacja wewnętrzna |
+| `generator-szczegolow` | V4-05 | `/` | kod / nawigacja wewnętrzna |
 | `karta-na-drzwi` | V4-12 | `/dokumenty/karta-na-drzwi` | tak |
 | `karta_na_drzwi_kopie_robocze` | V4-12 | `/dokumenty/karta-na-drzwi/kopie-robocze` | tak |
 | `karta_na_drzwi_kosz` | V4-12 | `/dokumenty/karta-na-drzwi/kosz` | tak |
@@ -72,10 +72,10 @@ Adres `/` oznacza istniejący fallback nawigacji, a nie nową trasę. Kilka wido
 | `programy_szkolen` | V4-08 | `/dokumenty/programy-szkolen`, `/dokumenty/programy-szkolen/:dokumentId` | tak |
 | `programy_szkolen_kopie_robocze` | V4-08 | `/dokumenty/programy-szkolen/kopie-robocze` | tak |
 | `programy_szkolen_kosz` | V4-08 | `/dokumenty/programy-szkolen/kosz` | tak |
-| `pulpit` | V4-03 | `/` | tak |
+| `pulpit` | V4-04 | `/` | tak |
 | `replikator_dokumentow` | V4-14 | `/` | tak |
 | `szkolenia-otwarte` | V4-06 | `/` | tak |
-| `szkolenia-zamkniete` | V4-04 | `/` | tak |
+| `szkolenia-zamkniete` | V4-05 | `/` | tak |
 | `ustawienia` | V4-20 | `/` | tak |
 | `zakupy_historia` | V4-22 | `/zakupy/historia` | tak |
 | `zakupy_katalog` | V4-22 | `/zakupy/katalog-produktow` | tak |
@@ -108,7 +108,7 @@ Właściciel pliku obejmuje wszystkie warunki renderowania, stany pusty/błąd/�
 | `src/aplikacja/layout/NaglowekAplikacji.tsx` | V4-02 | 1 |
 | `src/aplikacja/layout/UkladAplikacji.tsx` | V4-02 | 5 |
 | `src/aplikacja/logowanie/KontekstUzytkownika.tsx` | V4-02 | 0 |
-| `src/aplikacja/logowanie/PanelLogowania.tsx` | V4-02 | 5 |
+| `src/aplikacja/logowanie/PanelLogowania.tsx` | V4-03 | 9 |
 | `src/aplikacja/menu/IkonaMenu.tsx` | V4-02 | 0 |
 | `src/aplikacja/menu/MenuBoczne.tsx` | V4-02 | 1 |
 | `src/aplikacja/ustawienia/WidokUstawien.tsx` | V4-20 | 5 |
@@ -156,8 +156,8 @@ Właściciel pliku obejmuje wszystkie warunki renderowania, stany pusty/błąd/�
 | `src/moduly/zakupy/magazyn/PlanMagazynu.tsx` | V4-23 | 0 |
 | `src/moduly/zakupy/magazyn/WidokMapyMagazynu.tsx` | V4-23 | 2 |
 | `src/moduly/zakupy/magazyn/WidokStanowMagazynowych.tsx` | V4-23 | 1 |
-| `src/moduly/zamkniete/pulpit/FormularzZakupu.tsx` | V4-03 | 2 |
-| `src/moduly/zamkniete/pulpit/WidokPulpitu.tsx` | V4-03 | 12 |
+| `src/moduly/zamkniete/pulpit/FormularzZakupu.tsx` | V4-04 | 2 |
+| `src/moduly/zamkniete/pulpit/WidokPulpitu.tsx` | V4-04 | 12 |
 | `src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/KartaGrupySzkoleniowej.tsx` | V4-05 | 1 |
 | `src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/KontekstBledowPol.tsx` | V4-05 | 0 |
 | `src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/PanelDokumentowPowiazanych.tsx` | V4-05 | 1 |
@@ -173,8 +173,8 @@ Właściciel pliku obejmuje wszystkie warunki renderowania, stany pusty/błąd/�
 | `src/moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokKopiiRoboczychSzczegolowOrganizacyjnych.tsx` | V4-05 | 0 |
 | `src/moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokListySzczegolowOrganizacyjnych.tsx` | V4-05 | 3 |
 | `src/moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokNowychSzczegolowOrganizacyjnych.tsx` | V4-05 | 7 |
-| `src/moduly/zamkniete/szkolenia/WidokSzkolenZamknietych.tsx` | V4-04 | 0 |
-| `src/moduly/zamkniete/szkolenia/generator_szczegolow/WidokGeneratoraSzczegolow.tsx` | V4-04 | 0 |
+| `src/moduly/zamkniete/szkolenia/WidokSzkolenZamknietych.tsx` | V4-05 | 0 |
+| `src/moduly/zamkniete/szkolenia/generator_szczegolow/WidokGeneratoraSzczegolow.tsx` | V4-05 | 0 |
 | `src/wspolne/dokumenty/AkcjeEksportuPdf.tsx` | V4-07 | 1 |
 | `src/wspolne/dokumenty/EdytorSwobodnychBlokow.tsx` | V4-07 | 1 |
 | `src/wspolne/dokumenty/ElementPomocniczyEdytora.tsx` | V4-07 | 0 |
@@ -206,3 +206,10 @@ Preferencje powłoki są opcjonalną sekcją powloka w istniejącym rekordzie me
 Nagłówek i dock zajmują osobne wiersze układu, a main ma własne przewijanie. Lokalne sticky pozostają w main. ResizeObserver wyznacza rzeczywiste granice main dla istniejących paneli fixed. Warstwy: lokalne sticky 10, nagłówek/dock 30, panele 40, menu 50, tooltipy 60; natywne dialogi korzystają z top layer. CSS zmian geometrii i warstw działa tylko na ekranie; druk ukrywa powłokę.
 
 Dock, menu i profil korzystają z centralnego ustawWidok. Zachowano funkcje zapisu i odrzucenia zmian oraz blokowanie po nieudanym zapisie. Wylogowanie pyta także przy niezapisanym dokumencie, a historia przeglądarki także przy niezapisanym profilu. Dialog profilu nie oferuje zapisu przez adapter dokumentu: użytkownik wraca do edycji albo jawnie odrzuca zmiany.
+
+
+## V4-03 — logowanie
+
+Zgodnie z późniejszym poleceniem użytkownika V4-03 obejmuje PanelLogowania, a V4-04 Pulpit. Dawny zakres szkoleń zamkniętych przypisano do V4-05 obok Szczegółów organizacyjnych. Żaden widok nie traci właściciela.
+
+Wybór kont to natywna grupa radio z kafelkami, istniejącymi avatarami i oznaczeniami ról. Błąd korzysta ze wspólnego komunikatu error, brak kont z pustego stanu i blokady submit. Wywołanie zalogujUzytkownika i mechanizmy sesji pozostają bez zmian. Paleta jest odczytywana z istniejących ustawień także przed logowaniem. Nowe instalacje używają Emerald Dark.

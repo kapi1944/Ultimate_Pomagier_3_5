@@ -1,79 +1,25 @@
-.panel-logowania {
-  display: grid;
-  min-height: 100vh;
-  place-items: center;
-  padding: 24px;
-  background: var(--ui-tlo);
-  color: var(--ui-tekst);
-}
-
-.panel-logowania__formularz {
-  display: grid;
-  width: min(100%, 420px);
-  gap: 16px;
-  border: 1px solid color-mix(in srgb, var(--ui-akcent) 25%, transparent);
-  border-radius: 8px;
-  padding: 28px;
-  background: var(--ui-powierzchnia);
-}
-
-.panel-logowania__formularz h1 {
-  margin: 0 0 8px;
-  font-size: 1.6rem;
-}
-
-.panel-logowania__formularz p {
-  margin: 0;
-  color: var(--ui-tekst-drugi);
-}
-
-.panel-logowania__formularz label {
-  display: grid;
-  gap: 8px;
-  color: var(--ui-tekst);
-  font-weight: 700;
-}
-
-.panel-logowania__formularz select {
-  border: 1px solid color-mix(in srgb, var(--ui-akcent) 35%, transparent);
-  border-radius: 6px;
-  padding: 10px 12px;
-  background: var(--ui-pole);
-  color: var(--ui-tekst);
-  font: inherit;
-}
-
-.panel-logowania__formularz select:focus {
-  outline: 2px solid color-mix(in srgb, var(--ui-akcent) 55%, transparent);
-  outline-offset: 2px;
-}
-
-.panel-logowania__formularz button {
-  border: 1px solid var(--ui-akcent);
-  border-radius: 6px;
-  padding: 10px 14px;
-  background: var(--ui-akcent);
-  color: var(--ui-tekst-na-akcencie);
-  cursor: pointer;
-  font: inherit;
-  font-weight: 700;
-}
-
-.panel-logowania__blad {
-  color: #fecaca;
-}
-
-.panel-logowania__logo {
-  display: block;
-  width: min(100%, 220px);
-  margin-bottom: 16px;
-}
-
-.panel-logowania__profil {
-  display: grid;
-  gap: 4px;
-  padding: 12px;
-  border: 1px solid color-mix(in srgb, var(--ui-akcent) 25%, transparent);
-  border-radius: 6px;
-  background: var(--ui-pole);
-}
+.panel-logowania { display: grid; min-height: 100dvh; place-items: center; padding: clamp(12px, 4vw, 48px); background: var(--ui-tlo-gradient, var(--ui-tlo)); color: var(--ui-tekst); }
+.panel-logowania__formularz { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); width: min(1080px, 100%); min-width: 0; gap: clamp(20px, 4vw, 48px); border: 1px solid var(--ui-obramowanie); border-radius: var(--ui-promien-karty); padding: clamp(16px, 3vw, 36px); background: var(--ui-panel); box-shadow: var(--ui-cien); }
+.panel-logowania__formularz header { display: grid; align-content: start; gap: 24px; min-width: 0; }
+.panel-logowania__formularz h1 { margin: 0; font-size: clamp(1.5rem, 3vw, 2.5rem); line-height: 1.15; overflow-wrap: anywhere; }
+.panel-logowania__formularz p { margin: 0; line-height: 1.6; }
+.panel-logowania__formularz header > p { color: var(--ui-tekst-drugi); }
+.panel-logowania__logo { display: block; width: min(100%, 240px); height: auto; }
+.panel-logowania__wybor { display: grid; align-content: start; gap: 16px; min-width: 0; }
+.panel-logowania fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
+.panel-logowania legend { font-size: var(--ui-tekst-naglowek); font-weight: 700; padding: 0 0 12px; }
+.panel-logowania__konta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); max-height: min(55dvh, 520px); overflow-y: auto; overscroll-behavior: contain; gap: 10px; padding: 4px; }
+.panel-logowania__konto { display: flex; align-items: center; gap: 10px; min-height: 76px; min-width: 0; padding: 12px; border: 1px solid var(--ui-obramowanie); border-radius: var(--ui-promien-pola); background: var(--ui-powierzchnia); cursor: pointer; transition: border-color var(--ui-transition-ms), background var(--ui-transition-ms); }
+.panel-logowania__konto input { flex-shrink: 0; width: 18px; height: 18px; margin: 0; accent-color: var(--ui-akcent); }
+.panel-logowania__konto .avatar-uzytkownika { flex-shrink: 0; width: 32px; height: 32px; }
+.panel-logowania__konto:has(:checked) { border-color: var(--ui-akcent); background: var(--ui-akcent-mocny); box-shadow: inset 3px 0 var(--ui-akcent); }
+.panel-logowania__konto:hover { border-color: var(--ui-akcent); }
+.panel-logowania__konto:has(:focus-visible) { outline: 3px solid var(--ui-focus); outline-offset: 1px; }
+.panel-logowania__nazwa { display: grid; min-width: 0; gap: 6px; overflow-wrap: anywhere; font-size: .875rem; }
+.panel-logowania .odznaka-uzytkownika { display: inline-flex; width: fit-content; border-radius: var(--ui-promien-pola); padding: 3px 6px; color: #fff; font-size: .75rem; font-weight: 700; }
+.panel-logowania__profil { display: grid; gap: 6px; padding: 16px; border: 1px solid var(--ui-obramowanie); border-radius: var(--ui-promien-pola); background: var(--ui-pole); overflow-wrap: anywhere; }
+.panel-logowania__profil span { color: var(--ui-tekst-drugi); font-size: .875rem; }
+.panel-logowania .panel-logowania__zaloguj { width: 100%; background: var(--ui-akcent); color: var(--ui-tekst-na-akcencie); font-weight: 700; }
+.panel-logowania .panel-logowania__zaloguj:hover:not(:disabled) { background: var(--ui-akcent); box-shadow: 0 0 0 2px var(--ui-akcent); }
+@media (max-width: 760px) { .panel-logowania__formularz { grid-template-columns: minmax(0, 1fr); } .panel-logowania__formularz header { gap: 16px; } .panel-logowania__logo { width: 180px; } }
+@media (max-width: 440px) { .panel-logowania__konta { grid-template-columns: minmax(0, 1fr); } }

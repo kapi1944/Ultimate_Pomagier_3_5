@@ -3,9 +3,9 @@
   "baza": "19a9427010ffe758284f658b2f81efead181533a",
   "zadania": {
     "V4-02": "Powłoka, menu, nagłówek i logowanie",
-    "V4-03": "Pulpit i jego formularze oraz panele",
-    "V4-04": "Szkolenia zamknięte i starszy generator szczegółów",
-    "V4-05": "Szczegóły organizacyjne, lista, kopie i formularz sekcyjny",
+    "V4-03": "Ekran logowania i jego stany",
+    "V4-04": "Pulpit, zadania, oś czasu, paczki i zakupy",
+    "V4-05": "Szkolenia zamknięte i Szczegóły organizacyjne",
     "V4-06": "Szkolenia otwarte",
     "V4-07": "Rejestr dokumentów, kopie, kosze i wspólne mechanizmy UI dokumentów",
     "V4-08": "Programy szkoleń, import, edytor i podgląd",
@@ -140,7 +140,7 @@
       "wMenu": true
     },
     "generator-szczegolow": {
-      "zadanie": "V4-04",
+      "zadanie": "V4-05",
       "sciezki": [
         "/"
       ],
@@ -290,7 +290,7 @@
       "wMenu": true
     },
     "pulpit": {
-      "zadanie": "V4-03",
+      "zadanie": "V4-04",
       "sciezki": [
         "/"
       ],
@@ -311,7 +311,7 @@
       "wMenu": true
     },
     "szkolenia-zamkniete": {
-      "zadanie": "V4-04",
+      "zadanie": "V4-05",
       "sciezki": [
         "/"
       ],
@@ -429,13 +429,17 @@
       "powierzchnie": []
     },
     "src/aplikacja/logowanie/PanelLogowania.tsx": {
-      "zadanie": "V4-02",
+      "zadanie": "V4-03",
       "powierzchnie": [
+        "Przycisk className=\"panel-logowania__zaloguj\" type=\"submit\" disabled={!wybranyUzytkownik}",
+        "div className=\"panel-logowania__konta\"",
+        "div className=\"panel-logowania__wybor\"",
         "form className=\"panel-logowania__formularz\" onSubmit={obsluzLogowanie}",
         "img alt=\"Ultimate Pomagier\" className=\"panel-logowania__logo\" src=\"/logo-ultimate-pomagier.png\"",
+        "label className=\"panel-logowania__konto\" key={uzytkownik.id}",
         "main className=\"panel-logowania\"",
-        "p aria-live=\"polite\" className=\"panel-logowania__blad\"",
-        "section aria-label=\"Dane wybranego użytkownika\" className=\"panel-logowania__profil\""
+        "section aria-label=\"Dane wybranego użytkownika\" className=\"panel-logowania__profil\"",
+        "span className=\"panel-logowania__nazwa\""
       ]
     },
     "src/aplikacja/menu/IkonaMenu.tsx": {
@@ -710,14 +714,14 @@
       ]
     },
     "src/moduly/zamkniete/pulpit/FormularzZakupu.tsx": {
-      "zadanie": "V4-03",
+      "zadanie": "V4-04",
       "powierzchnie": [
         "div className=\"pulpit-modal__akcje\"",
         "form className=\"pulpit-formularz-zakupu\" onPaste={(zdarzenie) => { const pliki = Array.from(zdarzenie.clipboardData.items).filter((element) => element.kind === 'file').map((element) => element.getAsFile()).filter((plik): plik is File => plik !== null) if (pliki.length) { zdarzenie.preventDefault(); void dodajPliki(pliki) } }} onSubmit={(zdarzenie) => { zdarzenie.preventDefault(); if (!czyTrwaWczytywanie.current) zapisz() }}"
       ]
     },
     "src/moduly/zamkniete/pulpit/WidokPulpitu.tsx": {
-      "zadanie": "V4-03",
+      "zadanie": "V4-04",
       "powierzchnie": [
         "aside aria-label=\"Aktualne zapotrzebowania zakupowe\" className=\"pulpit-drawer pulpit-drawer--zakupy\"",
         "aside aria-label=\"Szczegóły zadania\" className=\"pulpit-drawer\"",
@@ -810,11 +814,11 @@
       ]
     },
     "src/moduly/zamkniete/szkolenia/WidokSzkolenZamknietych.tsx": {
-      "zadanie": "V4-04",
+      "zadanie": "V4-05",
       "powierzchnie": []
     },
     "src/moduly/zamkniete/szkolenia/generator_szczegolow/WidokGeneratoraSzczegolow.tsx": {
-      "zadanie": "V4-04",
+      "zadanie": "V4-05",
       "powierzchnie": []
     },
     "src/wspolne/dokumenty/AkcjeEksportuPdf.tsx": {
