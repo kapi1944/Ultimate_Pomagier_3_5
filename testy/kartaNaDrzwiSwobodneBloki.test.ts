@@ -68,3 +68,46 @@ assert.ok(!stylKarty.includes('aspect-ratio:var(--szerokosc-karty-mm)'))
 
 const starszyZestawBezBlokow = deserializujDaneKartyNaDrzwi(JSON.stringify({ ...domyslne, wersjaSchematu: 3, ustawieniaSzablonu: { ...domyslne.ustawieniaSzablonu, blokiSwobodne: [] } }))
 assert.ok(starszyZestawBezBlokow.ustawieniaSzablonu.blokiSwobodne.length > 0)
+
+// Odczyt starego zestawu zachowuje ręczną geometrię i rozmiar czcionki.
+const stareUstawienia = utworzUstawieniaBazowegoSzablonu()
+delete stareUstawienia.automatyczneDopasowanieTytulu
+stareUstawienia.blokiSwobodne = stareUstawienia.blokiSwobodne.map((blok) => ({
+  ...blok, xMm: 21.123, yMm: blok.id === 'organizator' ? 177.456 : blok.yMm,
+  ...(blok.typ === 'tekst' ? { dane: { ...blok.dane, rozmiarCzcionkiPt: 19.5 } } : {}),
+}))
+const staryOdczyt = deserializujDaneKartyNaDrzwi(JSON.stringify({ ...domyslne, ustawieniaSzablonu: stareUstawienia }))
+assert.equal(staryOdczyt.ustawieniaSzablonu.automatyczneDopasowanieTytulu, true)
+assert.equal(staryOdczyt.ustawieniaSzablonu.blokiSwobodne.find((blok) => blok.id === 'organizator')?.yMm, 177.456)
+assert.equal(staryOdczyt.ustawieniaSzablonu.blokiSwobodne[0].xMm, 21.123)
+const staryTytul = staryOdczyt.ustawieniaSzablonu.blokiSwobodne.find((blok) => blok.id === 'tytul')
+assert.ok(staryTytul?.typ === 'tekst')
+assert.equal(staryTytul.dane.rozmiarCzcionkiPt, 19.5)
+
+const lokalnyUklad = { blokiSwobodne: stareUstawienia.blokiSwobodne, automatyczneDopasowanieTytulu: false }
+const kartaZUkladem = utworzKarteNaDrzwi({ ukladKarty: lokalnyUklad })
+const kopiaZUkladem = zduplikujKarteNaDrzwi(kartaZUkladem)
+assert.deepEqual(kopiaZUkladem.ukladKarty, kartaZUkladem.ukladKarty)
+assert.notEqual(kopiaZUkladem.ukladKarty?.blokiSwobodne, kartaZUkladem.ukladKarty?.blokiSwobodne)
+kopiaZUkladem.ukladKarty!.blokiSwobodne[0].xMm = 99
+assert.equal(kartaZUkladem.ukladKarty!.blokiSwobodne[0].xMm, 21.123)
+const zapisLokalny = deserializujDaneKartyNaDrzwi(serializujDaneKartyNaDrzwi({ ...domyslne, karty: [kartaZUkladem] }))
+assert.deepEqual(zapisLokalny.karty[0].ukladKarty, kartaZUkladem.ukladKarty)
+assert.equal(zapisLokalny.karty[0].ukladKarty?.automatyczneDopasowanieTytulu, false)
+
+for (const format of ['a4', 'a5', 'a6'] as const) {
+  for (const orientacja of ['pionowa', 'pozioma'] as const) {
+    for (const wariant of ['oryginalny', 'nowoczesny'] as const) {
+      const ustawienia = utworzUstawieniaBazowegoSzablonu(wariant, orientacja, format)
+      const wymiary = pobierzWymiaryKartyNaDrzwi(format, orientacja)
+      const organizator = ustawienia.blokiSwobodne.find((blok) => blok.id === 'organizator')!
+      const tytul = ustawienia.blokiSwobodne.find((blok) => blok.id === 'tytul')!
+      assert.ok(organizator.yMm + organizator.wysokoscMm < wymiary.wysokoscMm - 3)
+      assert.ok(ustawienia.blokiSwobodne.filter((blok) => blok.typ === 'tekst' && blok.id !== 'organizator').every((blok) => blok.yMm + blok.wysokoscMm <= organizator.yMm))
+      assert.ok(Math.abs(tytul.xMm * 2 + tytul.szerokoscMm - wymiary.szerokoscMm) < 0.001)
+    }
+  }
+}
+let liczbaPomiarow = 0
+assert.equal(obliczRozmiarTytuluKarty(1e100, () => { liczbaPomiarow += 1; return false }).rozmiarPt, 14)
+assert.ok(liczbaPomiarow <= 130)

@@ -2,7 +2,7 @@ import { pobierzLogoOrganizatora } from '../../../../wspolne/dokumenty/logoOrgan
 import { EdytowalnaWarstwaSwobodnychBlokow } from '../../../../wspolne/dokumenty/EdytorSwobodnychBlokow'
 import { useLayoutEffect, useMemo, useRef, type CSSProperties } from 'react'
 import RendererSwobodnychBlokow from '../../../../wspolne/dokumenty/RendererSwobodnychBlokow'
-import type { BlokSwobodnyDokumentu } from '../../../../wspolne/dokumenty/modelSwobodnychBlokow'
+import { czyBlokWidocznyNaStronie, type BlokSwobodnyDokumentu } from '../../../../wspolne/dokumenty/modelSwobodnychBlokow'
 import { obliczRozmiarTytuluKarty, pobierzDaneRenderowaniaKarty, pobierzUstawieniaKarty, pobierzWymiaryKartyNaDrzwi, type KartaNaDrzwi, type UstawieniaSzablonuKartyNaDrzwi } from './modelKartyNaDrzwi'
 
 type Wlasciwosci = { karta: KartaNaDrzwi; ustawieniaSzablonu: UstawieniaSzablonuKartyNaDrzwi; zasobyObrazow: Record<string, string | undefined>; zaznaczonyBlokId?: string | null; trybEdycjiSzablonu?: boolean; edytowalny?: boolean; czyStronaDokumentu?: boolean; onZaznaczBlok?: (id: string | null) => void; onZmienBlok?: (blok: BlokSwobodnyDokumentu) => void }
@@ -20,7 +20,7 @@ export default function RendererKartyNaDrzwi({ karta, ustawieniaSzablonu: ustawi
   const ostrzezenieRef = useRef<HTMLParagraphElement>(null)
   const { szerokoscMm: szerokosc, wysokoscMm: wysokosc } = pobierzWymiaryKartyNaDrzwi(ustawieniaSzablonu.format, ustawieniaSzablonu.orientacja)
   const dane = pobierzDaneRenderowaniaKarty(karta, ustawieniaSzablonu.widocznoscPol)
-  const bloki = useMemo(() => (karta.ukladKarty?.blokiSwobodne ?? ustawieniaZestawu.blokiSwobodne).filter((blok) => czyPokazacBlok(blok.id, ustawieniaZestawu)), [karta.ukladKarty, ustawieniaZestawu])
+  const bloki = useMemo(() => (karta.ukladKarty?.blokiSwobodne ?? ustawieniaZestawu.blokiSwobodne).filter((blok) => czyBlokWidocznyNaStronie(blok, 1) && czyPokazacBlok(blok.id, ustawieniaZestawu)), [karta.ukladKarty, ustawieniaZestawu])
   const styleBlokow: Record<string, CSSProperties> = Object.fromEntries(bloki.filter((blok) => blok.typ === 'tekst').map((blok) => [blok.id, blok.typ === 'tekst' ? {
     fontSize: `${blok.dane.rozmiarCzcionkiPt * 100 * 25.4 / 72 / szerokosc}cqw`,
     padding: `${(blok.dane.marginesWewnetrznyMm ?? 0) * 100 / szerokosc}cqw`,
@@ -65,7 +65,7 @@ export default function RendererKartyNaDrzwi({ karta, ustawieniaSzablonu: ustawi
       } finally { kopia.remove() }
     }
     dopasuj()
-    void document.fonts.ready.then(dopasuj)
+    if (document.fonts.status === 'loading') void document.fonts.ready.then(dopasuj)
     return () => { anulowano = true }
   }, [bloki, szerokosc, wysokosc, karta, ustawieniaSzablonu.automatyczneDopasowanieTytulu])
   const logo = pobierzLogoOrganizatora(karta.organizator.toLocaleUpperCase('pl').includes('IIST') ? 'IIST' : 'SEMPER')
