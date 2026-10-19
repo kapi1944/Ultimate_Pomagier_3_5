@@ -1,0 +1,14 @@
+.szkolenia-v4 { display: grid; gap: var(--ui-odstep-6); min-width: 0; overflow-wrap: anywhere; }
+.szkolenia-v4__naglowek { display: flex; align-items: flex-start; flex-wrap: wrap; gap: var(--ui-odstep-4); padding: clamp(16px, 3vw, 32px); border: 1px solid var(--ui-obramowanie); border-radius: var(--ui-promien-karty); background: var(--ui-panel); }
+.szkolenia-v4__naglowek > div { flex: 1 1 320px; min-width: 0; }
+.szkolenia-v4__naglowek > .ui-odznaka { max-width: 100%; }
+.szkolenia-v4 .szkolenia-v4__nadtytul { margin-bottom: var(--ui-odstep-2); color: var(--ui-akcent); font-size: var(--ui-tekst-maly); }
+.szkolenia-v4 h1 { font-size: clamp(1.5rem, 3vw, 2rem); }
+.szkolenia-v4 h2 { margin: 0 0 var(--ui-odstep-3); font-size: var(--ui-tekst-naglowek); }
+.szkolenia-v4__kafelki { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: var(--ui-odstep-4); }
+.szkolenia-v4__kafelki .ui-karta { grid-template-rows: auto auto 1fr auto; align-content: start; }
+.szkolenia-v4__ikona { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex: 0 0 44px; border-radius: var(--ui-promien-pola); color: var(--ui-akcent); background: var(--ui-powierzchnia); border: 1px solid var(--ui-obramowanie); }
+.szkolenia-v4__ikona svg { width: 24px; height: 24px; }
+.szkolenia-v4 .ui-przycisk { width: 100%; min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+.szkolenia-v4 .szkolenia-v4__przycisk-glowny { border-color: var(--ui-akcent); background: var(--ui-akcent-mocny); }
+.szkolenia-v4--otwarte .szkolenia-v4__kafelki .ui-karta { grid-template-rows: auto auto auto 1fr; }

@@ -185,6 +185,10 @@ export default function MenuBoczne({
               if (czyRozwijalna) {
                 przelaczPodmenu(pozycja)
                 if (pozycja.widok === 'narzedzia') ustawAktywnyWidok(pozycja.widok)
+                if (pozycja.widok === 'szkolenia-zamkniete') {
+                  ustawAktywnyWidok(pozycja.widok)
+                  if (czyMalyEkran) zamknijMenu()
+                }
                 return
               }
 

@@ -1,418 +1,485 @@
 {
-  "wersja": 1,
+  "wersja": 2,
   "baza": "19a9427010ffe758284f658b2f81efead181533a",
   "zadania": {
+    "V4-01": "Fundament wizualny, tokeny i rejestr widoków",
     "V4-02": "Powłoka, menu, nagłówek, dock i wspólne dialogi",
     "V4-03": "Ekran logowania i jego stany",
     "V4-04": "Pulpit, zadania, oś czasu, paczki i zakupy",
-    "V4-05": "Szkolenia zamknięte i Szczegóły organizacyjne",
-    "V4-06": "Szkolenia otwarte",
-    "V4-07": "Rejestr dokumentów, kopie, kosze i wspólne mechanizmy UI dokumentów",
-    "V4-08": "Programy szkoleń, import, edytor i podgląd",
-    "V4-09": "Listy obecności",
-    "V4-10": "Ankiety",
-    "V4-11": "Dyplomy",
-    "V4-12": "Karty na drzwi",
-    "V4-13": "Checklisty paczek",
-    "V4-14": "Replikator dokumentów",
-    "V4-15": "Kartoteka trenerów",
-    "V4-16": "Kartoteka klientów",
-    "V4-17": "Kartoteka lokalizacji",
-    "V4-18": "Kartoteka szablonów",
-    "V4-19": "Użytkownicy i profile",
-    "V4-20": "Ustawienia i galeria elementów wspólnych",
-    "V4-21": "Narzędzia i poprawiacz prezentacji",
-    "V4-22": "Zakupy",
-    "V4-23": "Magazyn i mapa magazynu"
+    "V4-05": "Szkolenia zamknięte i otwarte",
+    "V4-06": "Lista i kopie szczegółów organizacyjnych",
+    "V4-07": "Formularz szczegółów organizacyjnych",
+    "V4-08": "Centrum dokumentów, rejestry, kopie i kosze",
+    "V4-09": "Wspólny workspace generatorów",
+    "V4-10": "Generator programów szkoleń",
+    "V4-11": "Generator list obecności",
+    "V4-12": "Generator ankiet",
+    "V4-13": "Generator dyplomów",
+    "V4-14": "Generator kart na drzwi",
+    "V4-15": "Generator checklist paczek",
+    "V4-16": "Replikator dokumentów",
+    "V4-17": "Narzędzia i Poprawiacz prezentacji",
+    "V4-18": "Zakupy",
+    "V4-19": "Magazyn i mapa",
+    "V4-20": "Kartoteki klientów, trenerów i lokalizacji",
+    "V4-21": "Szablony, użytkownicy i profile",
+    "V4-22": "Ustawienia aplikacji",
+    "V4-23": "Audyt końcowy i Release Candidate"
   },
   "widoki": {
     "ankiety": {
-      "zadanie": "V4-10",
+      "zadanie": "V4-12",
       "sciezki": [
         "/dokumenty/ankiety"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "ankiety_kopie_robocze": {
-      "zadanie": "V4-10",
+      "zadanie": "V4-08",
       "sciezki": [
         "/dokumenty/ankiety/kopie-robocze"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "ankiety_kosz": {
-      "zadanie": "V4-10",
+      "zadanie": "V4-08",
       "sciezki": [
         "/dokumenty/ankiety/kosz"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "ankiety_wszystkie": {
-      "zadanie": "V4-10",
+      "zadanie": "V4-08",
       "sciezki": [
         "/dokumenty/ankiety/wszystkie"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "checklisty_paczek": {
-      "zadanie": "V4-13",
+      "zadanie": "V4-15",
       "sciezki": [
         "/dokumenty/checklisty-paczek",
         "/dokumenty/checklisty-paczek/:dokumentId"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "checklisty_paczek_kopie_robocze": {
-      "zadanie": "V4-13",
+      "zadanie": "V4-08",
       "sciezki": [
         "/dokumenty/checklisty-paczek/kopie-robocze"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "checklisty_paczek_kosz": {
-      "zadanie": "V4-13",
+      "zadanie": "V4-08",
       "sciezki": [
         "/dokumenty/checklisty-paczek/kosz"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "checklisty_paczek_wszystkie": {
-      "zadanie": "V4-13",
+      "zadanie": "V4-08",
       "sciezki": [
         "/dokumenty/checklisty-paczek/wszystkie"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "dokumenty": {
-      "zadanie": "V4-07",
+      "zadanie": "V4-08",
       "sciezki": [
         "/"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "dokumenty_kopie_robocze": {
-      "zadanie": "V4-07",
+      "zadanie": "V4-08",
       "sciezki": [
         "/dokumenty/kopie-robocze"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "dokumenty_kosz": {
-      "zadanie": "V4-07",
+      "zadanie": "V4-08",
       "sciezki": [
         "/dokumenty/kosz"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "dokumenty_wszystkie": {
-      "zadanie": "V4-07",
+      "zadanie": "V4-08",
       "sciezki": [
         "/dokumenty/wszystkie"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "dyplomy": {
-      "zadanie": "V4-11",
+      "zadanie": "V4-13",
       "sciezki": [
         "/dokumenty/dyplomy"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "dyplomy_kopie_robocze": {
-      "zadanie": "V4-11",
+      "zadanie": "V4-08",
       "sciezki": [
         "/dokumenty/dyplomy/kopie-robocze"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "dyplomy_kosz": {
-      "zadanie": "V4-11",
+      "zadanie": "V4-08",
       "sciezki": [
         "/dokumenty/dyplomy/kosz"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "dyplomy_wszystkie": {
-      "zadanie": "V4-11",
+      "zadanie": "V4-08",
       "sciezki": [
         "/dokumenty/dyplomy/wszystkie"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "generator-szczegolow": {
-      "zadanie": "V4-05",
+      "zadanie": "V4-07",
       "sciezki": [
         "/"
       ],
-      "wMenu": false
+      "wMenu": false,
+      "ukonczoneEtapy": [],
+      "aliasWidoku": "zamkniete_szczegoly_organizacyjne_nowe"
     },
     "karta-na-drzwi": {
-      "zadanie": "V4-12",
+      "zadanie": "V4-14",
       "sciezki": [
         "/dokumenty/karta-na-drzwi"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "karta_na_drzwi_kopie_robocze": {
-      "zadanie": "V4-12",
+      "zadanie": "V4-08",
       "sciezki": [
         "/dokumenty/karta-na-drzwi/kopie-robocze"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "karta_na_drzwi_kosz": {
-      "zadanie": "V4-12",
+      "zadanie": "V4-08",
       "sciezki": [
         "/dokumenty/karta-na-drzwi/kosz"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "karta_na_drzwi_wszystkie": {
-      "zadanie": "V4-12",
+      "zadanie": "V4-08",
       "sciezki": [
         "/dokumenty/karta-na-drzwi/wszystkie"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "kartoteki": {
-      "zadanie": "V4-15",
+      "zadanie": "V4-20",
       "sciezki": [
         "/"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "kartoteki_klienci": {
-      "zadanie": "V4-16",
+      "zadanie": "V4-20",
       "sciezki": [
         "/"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "kartoteki_lokalizacje": {
-      "zadanie": "V4-17",
+      "zadanie": "V4-20",
       "sciezki": [
         "/"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "kartoteki_szablony_dokumentow": {
-      "zadanie": "V4-18",
+      "zadanie": "V4-21",
       "sciezki": [
         "/"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "kartoteki_trenerzy": {
-      "zadanie": "V4-15",
+      "zadanie": "V4-20",
       "sciezki": [
         "/"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "kartoteki_uzytkownicy": {
-      "zadanie": "V4-19",
+      "zadanie": "V4-21",
       "sciezki": [
         "/"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "listy-obecnosci": {
-      "zadanie": "V4-09",
+      "zadanie": "V4-11",
       "sciezki": [
         "/dokumenty/listy-obecnosci",
         "/dokumenty/listy-obecnosci/:dokumentId"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "listy_obecnosci_kopie_robocze": {
-      "zadanie": "V4-09",
+      "zadanie": "V4-08",
       "sciezki": [
         "/dokumenty/listy-obecnosci/kopie-robocze"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "listy_obecnosci_kosz": {
-      "zadanie": "V4-09",
+      "zadanie": "V4-08",
       "sciezki": [
         "/dokumenty/listy-obecnosci/kosz"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "listy_obecnosci_wszystkie": {
-      "zadanie": "V4-09",
+      "zadanie": "V4-08",
       "sciezki": [
         "/dokumenty/listy-obecnosci/wszystkie"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "narzedzia": {
-      "zadanie": "V4-21",
+      "zadanie": "V4-17",
       "sciezki": [
         "/narzedzia"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "poprawiacz_prezentacji": {
-      "zadanie": "V4-21",
+      "zadanie": "V4-17",
       "sciezki": [
         "/narzedzia/poprawiacz-prezentacji"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "profil_uzytkownika": {
-      "zadanie": "V4-19",
+      "zadanie": "V4-21",
       "sciezki": [
         "/profil",
         "/profil/:uzytkownikId"
       ],
-      "wMenu": false
+      "wMenu": false,
+      "ukonczoneEtapy": []
     },
     "programy_szkolen": {
-      "zadanie": "V4-08",
+      "zadanie": "V4-10",
       "sciezki": [
         "/dokumenty/programy-szkolen",
         "/dokumenty/programy-szkolen/:dokumentId"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "programy_szkolen_kopie_robocze": {
       "zadanie": "V4-08",
       "sciezki": [
         "/dokumenty/programy-szkolen/kopie-robocze"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "programy_szkolen_kosz": {
       "zadanie": "V4-08",
       "sciezki": [
         "/dokumenty/programy-szkolen/kosz"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "pulpit": {
       "zadanie": "V4-04",
       "sciezki": [
         "/"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": [
+        "V4-04"
+      ]
     },
     "replikator_dokumentow": {
-      "zadanie": "V4-14",
+      "zadanie": "V4-16",
       "sciezki": [
         "/"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "szkolenia-otwarte": {
-      "zadanie": "V4-06",
+      "zadanie": "V4-05",
       "sciezki": [
         "/"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": [
+        "V4-05"
+      ]
     },
     "szkolenia-zamkniete": {
       "zadanie": "V4-05",
       "sciezki": [
         "/"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": [
+        "V4-05"
+      ]
     },
     "ustawienia": {
-      "zadanie": "V4-20",
+      "zadanie": "V4-22",
       "sciezki": [
         "/"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "zakupy_historia": {
-      "zadanie": "V4-22",
+      "zadanie": "V4-18",
       "sciezki": [
         "/zakupy/historia"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "zakupy_katalog": {
-      "zadanie": "V4-22",
+      "zadanie": "V4-18",
       "sciezki": [
         "/zakupy/katalog-produktow"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "zakupy_listy": {
-      "zadanie": "V4-22",
+      "zadanie": "V4-18",
       "sciezki": [
         "/zakupy/listy-zakupowe"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "zakupy_magazyn": {
-      "zadanie": "V4-23",
+      "zadanie": "V4-19",
       "sciezki": [
         "/zakupy/magazyn/stan-magazynowy",
         "/zakupy/magazyn"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "zakupy_mapa_magazynu": {
-      "zadanie": "V4-23",
+      "zadanie": "V4-19",
       "sciezki": [
         "/zakupy/magazyn/mapa"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "zakupy_pulpit": {
-      "zadanie": "V4-22",
+      "zadanie": "V4-18",
       "sciezki": [
         "/zakupy"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "zakupy_zamowienia": {
-      "zadanie": "V4-22",
+      "zadanie": "V4-18",
       "sciezki": [
         "/zakupy/zamowienia-i-dostawy"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "zakupy_zapotrzebowania": {
-      "zadanie": "V4-22",
+      "zadanie": "V4-18",
       "sciezki": [
         "/zakupy/zapotrzebowania"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "zamkniete_szczegoly_organizacyjne_kopie_robocze": {
-      "zadanie": "V4-05",
+      "zadanie": "V4-06",
       "sciezki": [
         "/szkolenia-zamkniete/szczegoly-organizacyjne/kopie-robocze"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "zamkniete_szczegoly_organizacyjne_lista": {
-      "zadanie": "V4-05",
+      "zadanie": "V4-06",
       "sciezki": [
         "/szkolenia-zamkniete/szczegoly-organizacyjne"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     },
     "zamkniete_szczegoly_organizacyjne_nowe": {
-      "zadanie": "V4-05",
+      "zadanie": "V4-07",
       "sciezki": [
         "/szkolenia-zamkniete/szczegoly-organizacyjne/nowe"
       ],
-      "wMenu": true
+      "wMenu": true,
+      "ukonczoneEtapy": []
     }
   },
   "pliki": {
     "src/App.tsx": {
       "zadanie": "V4-02",
-      "powierzchnie": []
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/aplikacja/layout/NaglowekAplikacji.tsx": {
       "zadanie": "V4-02",
       "powierzchnie": [
         "section aria-label=\"Panel zalogowanego użytkownika\" className=\"naglowek-aplikacji__panel-uzytkownika\" style={{ borderColor: kolorRoli }}"
-      ]
+      ],
+      "ukonczoneEtapy": [
+        "V4-02"
+      ],
+      "wspoldzieloneZ": []
     },
     "src/aplikacja/layout/UkladAplikacji.tsx": {
       "zadanie": "V4-02",
@@ -424,11 +491,40 @@
         "WidokKartotek key=\"kartoteki_szablony_dokumentow\" aktywnaZakladkaPoczatkowa=\"szablony_dokumentow\" poZmianieZakladki={zmienZakladkeKartotek}",
         "WidokKartotek key=\"kartoteki_trenerzy\" aktywnaZakladkaPoczatkowa=\"trenerzy\" poZmianieZakladki={zmienZakladkeKartotek}",
         "WidokKartotek poZmianieZakladki={zmienZakladkeKartotek}"
+      ],
+      "ukonczoneEtapy": [
+        "V4-02",
+        "V4-05"
+      ],
+      "wspoldzieloneZ": [
+        "V4-03",
+        "V4-04",
+        "V4-05",
+        "V4-06",
+        "V4-07",
+        "V4-08",
+        "V4-09",
+        "V4-10",
+        "V4-11",
+        "V4-12",
+        "V4-13",
+        "V4-14",
+        "V4-15",
+        "V4-16",
+        "V4-17",
+        "V4-18",
+        "V4-19",
+        "V4-20",
+        "V4-21",
+        "V4-22",
+        "V4-23"
       ]
     },
     "src/aplikacja/logowanie/KontekstUzytkownika.tsx": {
       "zadanie": "V4-02",
-      "powierzchnie": []
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/aplikacja/logowanie/PanelLogowania.tsx": {
       "zadanie": "V4-03",
@@ -442,30 +538,73 @@
         "main className=\"panel-logowania\"",
         "section aria-label=\"Dane wybranego użytkownika\" className=\"panel-logowania__profil\"",
         "span className=\"panel-logowania__nazwa\""
-      ]
+      ],
+      "ukonczoneEtapy": [
+        "V4-02",
+        "V4-03"
+      ],
+      "wspoldzieloneZ": []
     },
     "src/aplikacja/menu/IkonaMenu.tsx": {
       "zadanie": "V4-02",
-      "powierzchnie": []
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": [
+        "V4-04",
+        "V4-05",
+        "V4-06",
+        "V4-07",
+        "V4-08",
+        "V4-09",
+        "V4-10",
+        "V4-11",
+        "V4-12",
+        "V4-13",
+        "V4-14",
+        "V4-15",
+        "V4-16",
+        "V4-17",
+        "V4-18",
+        "V4-19",
+        "V4-20",
+        "V4-21",
+        "V4-22",
+        "V4-23"
+      ]
     },
     "src/aplikacja/menu/MenuBoczne.tsx": {
       "zadanie": "V4-02",
       "powierzchnie": [
         "aside id=\"menu-glowne\" inert={czyMalyEkran && !czyMenuOtwarte} aria-label=\"Menu główne\" className={`menu-boczne${czyRozwiniete ? ' menu-boczne--otwarte' : ''}`} onFocusCapture={otworzMenu} onBlurCapture={(zdarzenie) => { if (!zdarzenie.currentTarget.contains(zdarzenie.relatedTarget)) schowajMenuJesliOdpiete() }} onKeyDown={(zdarzenie) => { if (zdarzenie.key === 'Escape') { zdarzenie.preventDefault(); zamknijMenu() } }} onPointerEnter={(zdarzenie) => { if (zdarzenie.pointerType === 'mouse' && !czyMalyEkran) otworzMenuZKrawedzi() }} onPointerLeave={(zdarzenie) => { if (zdarzenie.pointerType === 'mouse' && !zdarzenie.currentTarget.contains(document.activeElement)) schowajMenuJesliOdpiete() }}"
+      ],
+      "ukonczoneEtapy": [
+        "V4-02",
+        "V4-05"
+      ],
+      "wspoldzieloneZ": [
+        "V4-05"
       ]
     },
     "src/aplikacja/ustawienia/WidokUstawien.tsx": {
-      "zadanie": "V4-20",
+      "zadanie": "V4-22",
       "powierzchnie": [
         "button aria-selected={aktywnaZakladka === id} className={aktywnaZakladka === id ? 'ustawienia__zakladka ustawienia__zakladka--aktywna' : 'ustawienia__zakladka'} key={id} onClick={() => ustawAktywnaZakladke(id)} role=\"tab\" type=\"button\"",
         "nav aria-label=\"Kategorie ustawień\" className=\"ustawienia__zakladki\"",
         "window.confirm('Przywrócić tę lokalną kopię? Najpierw powstanie kopia aktualnego stanu.')",
         "window.confirm('Przywrócić wskazany backup? Najpierw powstanie kopia aktualnego stanu.')",
         "window.confirm('Utworzyć backup i rozpocząć migrację starszych danych?')"
+      ],
+      "ukonczoneEtapy": [
+        "V4-01",
+        "V4-02"
+      ],
+      "wspoldzieloneZ": [
+        "V4-01",
+        "V4-02"
       ]
     },
     "src/kartoteki/WidokKartotek.tsx": {
-      "zadanie": "V4-15",
+      "zadanie": "V4-20",
       "powierzchnie": [
         "button aria-current={aktywnaZakladka === zakladka.id ? 'page' : undefined} className={`kartoteki__przycisk${aktywnaZakladka === zakladka.id ? ' kartoteki__przycisk--glowny' : ''}`} key={zakladka.id} type=\"button\" onClick={() => zmienZakladke(zakladka.id)}",
         "form className=\"kartoteki__edycja-trenera\" onSubmit={zapiszTrenera}",
@@ -474,140 +613,214 @@
         "form className=\"kartoteki__panel kartoteki__formularz\" onSubmit={zapiszLokalizacje}",
         "nav className=\"kartoteki__zakladki\" aria-label=\"Kartoteki\"",
         "window.confirm(`Czy na pewno usunąć pozycję: ${nazwaPozycji}?`)"
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": [
+        "V4-21"
       ]
     },
     "src/kartoteki/szablony_dokumentow/WidokSzablonowDokumentow.tsx": {
-      "zadanie": "V4-18",
+      "zadanie": "V4-21",
       "powierzchnie": [
         "window.prompt('Podaj komentarz świadomej aktywacji przy zgodności <= 70%.')"
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": [
+        "V4-20"
       ]
     },
     "src/kartoteki/uzytkownicy/WidokProfiluUzytkownika.tsx": {
-      "zadanie": "V4-19",
+      "zadanie": "V4-21",
       "powierzchnie": [
         "form className=\"profil-uzytkownika__formularz\" onSubmit={zapisz}"
-      ]
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/kartoteki/uzytkownicy/WidokUzytkownikow.tsx": {
-      "zadanie": "V4-19",
+      "zadanie": "V4-21",
       "powierzchnie": [
         "form className=\"uzytkownicy__formularz\" onSubmit={zapiszNowegoUzytkownika}"
-      ]
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/kartoteki/uzytkownicy/komponenty/AvatarUzytkownika.tsx": {
-      "zadanie": "V4-19",
-      "powierzchnie": []
+      "zadanie": "V4-21",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": [
+        "V4-02",
+        "V4-03",
+        "V4-04",
+        "V4-07",
+        "V4-20"
+      ]
     },
     "src/kartoteki/uzytkownicy/komponenty/OdznakaRoli.tsx": {
-      "zadanie": "V4-19",
-      "powierzchnie": []
+      "zadanie": "V4-21",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": [
+        "V4-02",
+        "V4-03",
+        "V4-04",
+        "V4-07",
+        "V4-20"
+      ]
     },
     "src/kartoteki/uzytkownicy/komponenty/OdznakaUzytkownika.tsx": {
-      "zadanie": "V4-19",
-      "powierzchnie": []
+      "zadanie": "V4-21",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": [
+        "V4-02",
+        "V4-03",
+        "V4-04",
+        "V4-07",
+        "V4-20"
+      ]
     },
     "src/main.tsx": {
       "zadanie": "V4-02",
-      "powierzchnie": []
+      "powierzchnie": [],
+      "ukonczoneEtapy": [
+        "V4-01"
+      ],
+      "wspoldzieloneZ": []
     },
     "src/moduly/dokumenty/KartaDokumentuDyplomu.tsx": {
-      "zadanie": "V4-07",
-      "powierzchnie": []
+      "zadanie": "V4-08",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/dokumenty/ListaDokumentow.tsx": {
-      "zadanie": "V4-07",
+      "zadanie": "V4-08",
       "powierzchnie": [
         "form className=\"lista-dokumentow__filtry\" onSubmit={(zdarzenie) => zdarzenie.preventDefault()}",
         "window.confirm(`Trwale usunąć dokument „${dokument.tytul}”? Tej operacji nie można cofnąć.`)"
-      ]
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/dokumenty/WidokKopiiRoboczychDokumentow.tsx": {
-      "zadanie": "V4-07",
-      "powierzchnie": []
+      "zadanie": "V4-08",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/dokumenty/WidokWszystkichDokumentow.tsx": {
-      "zadanie": "V4-07",
-      "powierzchnie": []
+      "zadanie": "V4-08",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/dokumenty/generatory/ankiety/RendererAnkiety.tsx": {
-      "zadanie": "V4-10",
-      "powierzchnie": []
+      "zadanie": "V4-12",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/dokumenty/generatory/ankiety/WidokAnkiet.tsx": {
-      "zadanie": "V4-10",
+      "zadanie": "V4-12",
       "powierzchnie": [
         "ObszarZPanelemGeneratora idPanelu=\"panel-danych-ankiety\" kluczPrzypiecia=\"ultimate-pomagier.panel-generatora.ankiety.przypiety\" kluczWysuwania=\"ultimate-pomagier.panel-generatora.ankiety.wysuwanie\" tytulPanelu=\"Ustawienia układu ankiety\"",
         "details className=\"generator-ankiet__sekcja\" open={domyslnieOtwarta}"
-      ]
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/dokumenty/generatory/checklisty_paczek/WidokChecklistPaczek.tsx": {
-      "zadanie": "V4-13",
+      "zadanie": "V4-15",
       "powierzchnie": [
         "ObszarZPanelemGeneratora idPanelu=\"panel-ukladu-checklisty\" kluczPrzypiecia=\"ultimate-pomagier.panel-generatora.checklisty-paczek.przypiety\" kluczWysuwania=\"ultimate-pomagier.panel-generatora.checklisty-paczek.wysuwanie\" tytulPanelu=\"Edytuj układ\"",
         "details",
         "details className=\"checklista-paczki__karta\"",
         "details className=\"checklista-paczki__paczka\" key={paczka.id} open",
         "details className=\"checklista-paczki__szczegoly-pozycji\""
-      ]
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/dokumenty/generatory/dyplomy/WidokDyplomow.tsx": {
-      "zadanie": "V4-11",
+      "zadanie": "V4-13",
       "powierzchnie": [
         "ObszarZPanelemGeneratora idPanelu=\"panel-ustawien-dyplomu\" kluczPrzypiecia={kluczPrzypieciaPaneluUstawien} kluczWysuwania={kluczWysuwaniaPaneluUstawien} tytulPanelu=\"Ustawienia dyplomu\"",
         "PanelBocznyGeneratora className=\"dyplomy__panel-ustawien\"",
         "aside className=\"dyplomy__podglad\"",
         "div className=\"dyplomy__panel-pracy\""
-      ]
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/dokumenty/generatory/karta_na_drzwi/RendererKartyNaDrzwi.tsx": {
-      "zadanie": "V4-12",
-      "powierzchnie": []
+      "zadanie": "V4-14",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/dokumenty/generatory/karta_na_drzwi/WidokKartNaDrzwi.tsx": {
-      "zadanie": "V4-12",
+      "zadanie": "V4-14",
       "powierzchnie": [
         "ObszarZPanelemGeneratora idPanelu=\"panel-karty-na-drzwi\" kluczPrzypiecia=\"ultimate-pomagier.panel-generatora.karta_na_drzwi.przypiety\" kluczWysuwania=\"ultimate-pomagier.panel-generatora.karta_na_drzwi.wysuwanie\" tytulPanelu=\"Edytuj układ Karty\"",
         "div className=\"karta-na-drzwi__panel-ukladu\"",
         "window.prompt('Nazwa nowego szablonu Karty na drzwi')"
-      ]
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/dokumenty/generatory/listy_obecnosci/RendererListyObecnosci.tsx": {
-      "zadanie": "V4-09",
-      "powierzchnie": []
+      "zadanie": "V4-11",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/dokumenty/generatory/listy_obecnosci/UstawieniaTabeliListy.tsx": {
-      "zadanie": "V4-09",
-      "powierzchnie": []
+      "zadanie": "V4-11",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/dokumenty/generatory/listy_obecnosci/UstawieniaTytuluListy.tsx": {
-      "zadanie": "V4-09",
-      "powierzchnie": []
+      "zadanie": "V4-11",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/dokumenty/generatory/listy_obecnosci/WidokListObecnosci.tsx": {
-      "zadanie": "V4-09",
+      "zadanie": "V4-11",
       "powierzchnie": [
         "ObszarZPanelemGeneratora idPanelu=\"panel-danych-listy-obecnosci\" kluczPrzypiecia=\"ultimate-pomagier.panel-generatora.listy-obecnosci.przypiety\" kluczWysuwania=\"ultimate-pomagier.panel-generatora.listy-obecnosci.wysuwanie\" tytulPanelu=\"Ustawienia Listy obecności\"",
         "details className=\"generator-list-obecnosci__sekcja\" open={domyslnieOtwarta}"
-      ]
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/dokumenty/generatory/listy_obecnosci/WidokListyObecnosciZDokumentu.tsx": {
-      "zadanie": "V4-09",
+      "zadanie": "V4-11",
       "powierzchnie": [
         "ObszarZPanelemGeneratora idPanelu=\"panel-edycji-listy-obecnosci\" kluczPrzypiecia=\"ultimate-pomagier.panel-generatora.listy-obecnosci.przypiety\" kluczWysuwania=\"ultimate-pomagier.panel-generatora.listy-obecnosci.wysuwanie\" tytulPanelu=\"Edycja Listy obecności\""
-      ]
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/dokumenty/generatory/programy_szkolen/RendererPodgladuProgramu.tsx": {
-      "zadanie": "V4-08",
-      "powierzchnie": []
+      "zadanie": "V4-10",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/dokumenty/generatory/programy_szkolen/RendererStronProgramu.tsx": {
-      "zadanie": "V4-08",
+      "zadanie": "V4-10",
       "powierzchnie": [
         "div className=\"program-semper__panel-tytulu\""
-      ]
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/dokumenty/generatory/programy_szkolen/WidokProgramowSzkolen.tsx": {
-      "zadanie": "V4-08",
+      "zadanie": "V4-10",
       "powierzchnie": [
         "ObszarZPanelemGeneratora idPanelu=\"panel-ustawien-programu-szkolenia\" kluczPrzypiecia=\"ultimate-pomagier.panel-generatora.programy-szkolen.przypiety\" kluczWysuwania=\"ultimate-pomagier.panel-generatora.programy-szkolen.wysuwanie\" szerokoscPanelu=\"520px\" tytulPanelu=\"Ustawienia programu szkolenia\"",
         "details",
@@ -618,39 +831,68 @@
         "header className=\"program-panel-roboczy program-szkolen__naglowek\"",
         "section className=\"program-panel-roboczy program-szkolen__komunikat\" role=\"dialog\" aria-modal=\"true\" aria-label=\"Odzyskiwanie niezapisanego draftu\"",
         "window.confirm('Dokument ma b\\u0142\\u0119dy krytyczne. Czy jako Architekt wymuszasz eksport PDF?')"
-      ]
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/dokumenty/generatory/programy_szkolen/komponenty/EdytorProgramuWysiwyg.tsx": {
-      "zadanie": "V4-08",
-      "powierzchnie": []
+      "zadanie": "V4-10",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/dokumenty/replikator_dokumentow/PodgladOryginaluDokumentu.tsx": {
-      "zadanie": "V4-14",
-      "powierzchnie": []
+      "zadanie": "V4-16",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/dokumenty/replikator_dokumentow/RenderujDokumentPomagiera.tsx": {
-      "zadanie": "V4-14",
-      "powierzchnie": []
+      "zadanie": "V4-16",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/dokumenty/replikator_dokumentow/WidokReplikatoraDokumentow.tsx": {
-      "zadanie": "V4-14",
+      "zadanie": "V4-16",
       "powierzchnie": [
         "section className=\"replikator-dokumentow__panel replikator-dokumentow__panel--podglad\"",
         "window.confirm(`Istnieje już szablon o nazwie \"${nazwaWzorca}\". Utworzyć nowy szablon jako \"${nazwaBezKonfliktu}\"? Wybierz Anuluj, aby zapisać jako nową wersję istniejącego szablonu.`)",
         "window.confirm(`Zapisać import jako nową iterację szablonu \"${wybranySzablon.nazwa}\"?`)",
         "window.confirm(`Zapisać wynik jako nową wersję szablonu \"${istniejacySzablon.nazwa}\"?`)"
-      ]
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/dokumenty/wspolne/GranicaBleduGeneratora.tsx": {
-      "zadanie": "V4-07",
-      "powierzchnie": []
+      "zadanie": "V4-09",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": [
+        "V4-02",
+        "V4-10",
+        "V4-11",
+        "V4-12",
+        "V4-13",
+        "V4-14",
+        "V4-15"
+      ]
     },
     "src/moduly/dokumenty/wspolne/StatusZapisuDokumentu.tsx": {
-      "zadanie": "V4-07",
-      "powierzchnie": []
+      "zadanie": "V4-09",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": [
+        "V4-10",
+        "V4-11",
+        "V4-12",
+        "V4-13",
+        "V4-14",
+        "V4-15"
+      ]
     },
     "src/moduly/dokumenty/wspolne/UkladGeneratoraDokumentu.tsx": {
-      "zadanie": "V4-07",
+      "zadanie": "V4-09",
       "powierzchnie": [
         "aside aria-hidden={!czyOtwarty} aria-label={tytul} className={polaczKlasy('generator-panel-ustawien', czyOtwarty && 'generator-panel-ustawien--otwarty', className)} id={id} inert={!czyOtwarty} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}",
         "button aria-label={`Zamknij: ${tytul}`} className=\"generator-panel-ustawien__zamknij\" onClick={zamknij} type=\"button\"",
@@ -660,67 +902,111 @@
         "div className={polaczKlasy( 'generator-z-panelem', czyOtwarty && 'generator-z-panelem--otwarty', czyOtwarty && czyPrzypiety && 'generator-z-panelem--przypiety', className, )} data-panel-przypiety={czyOtwarty && czyPrzypiety} style={styl}",
         "header className=\"generator-panel-ustawien__naglowek\"",
         "section className={polaczKlasy('generator-dokumentu__panel', `generator-dokumentu__panel--${wariant}`, className)} ref={ref}"
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": [
+        "V4-10",
+        "V4-11",
+        "V4-12",
+        "V4-13",
+        "V4-14",
+        "V4-15"
       ]
     },
     "src/moduly/dokumenty/wspolne/WyborZapisanegoUkladu.tsx": {
-      "zadanie": "V4-07",
-      "powierzchnie": []
+      "zadanie": "V4-09",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": [
+        "V4-10",
+        "V4-11",
+        "V4-12",
+        "V4-13",
+        "V4-14",
+        "V4-15"
+      ]
     },
     "src/moduly/narzedzia/WidokNarzedzi.tsx": {
-      "zadanie": "V4-21",
-      "powierzchnie": []
+      "zadanie": "V4-17",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/narzedzia/poprawiacz_prezentacji/PodgladStrukturalny.tsx": {
-      "zadanie": "V4-21",
-      "powierzchnie": []
+      "zadanie": "V4-17",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/narzedzia/poprawiacz_prezentacji/WidokPoprawiaczaPrezentacji.tsx": {
-      "zadanie": "V4-21",
+      "zadanie": "V4-17",
       "powierzchnie": [
         "dialog ref={modal} className=\"poprawiacz-prezentacji__modal\" aria-labelledby=\"poprawiacz-potwierdzenie\" onCancel={() => ustawCzyPotwierdzenie(false)}"
-      ]
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/narzedzia/poprawiacz_prezentacji/analiza/PanelAnalizy.tsx": {
-      "zadanie": "V4-21",
+      "zadanie": "V4-17",
       "powierzchnie": [
         "details"
-      ]
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/otwarte/WidokSzkolenOtwartych.tsx": {
-      "zadanie": "V4-06",
-      "powierzchnie": []
+      "zadanie": "V4-05",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [
+        "V4-05"
+      ],
+      "wspoldzieloneZ": []
     },
     "src/moduly/zakupy/WidokZakupow.tsx": {
-      "zadanie": "V4-22",
-      "powierzchnie": []
+      "zadanie": "V4-18",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/zakupy/magazyn/EdytorLokalizacji.tsx": {
-      "zadanie": "V4-23",
-      "powierzchnie": []
+      "zadanie": "V4-19",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/zakupy/magazyn/PlanMagazynu.tsx": {
-      "zadanie": "V4-23",
-      "powierzchnie": []
+      "zadanie": "V4-19",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/zakupy/magazyn/WidokMapyMagazynu.tsx": {
-      "zadanie": "V4-23",
+      "zadanie": "V4-19",
       "powierzchnie": [
         "aside className=\"mapa-magazynu__szczegoly\" aria-label=\"Szczegóły lokalizacji\"",
         "window.confirm('Odrzucić niezapisane zmiany mapy i wczytać zapisany plan?')"
-      ]
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/zakupy/magazyn/WidokStanowMagazynowych.tsx": {
-      "zadanie": "V4-23",
+      "zadanie": "V4-19",
       "powierzchnie": [
         "details"
-      ]
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/zamkniete/pulpit/FormularzZakupu.tsx": {
       "zadanie": "V4-04",
       "powierzchnie": [
         "div className=\"pulpit-modal__akcje\"",
         "form className=\"pulpit-formularz-zakupu\" onPaste={(zdarzenie) => { const pliki = Array.from(zdarzenie.clipboardData.items).filter((element) => element.kind === 'file').map((element) => element.getAsFile()).filter((plik): plik is File => plik !== null) if (pliki.length) { zdarzenie.preventDefault(); void dodajPliki(pliki) } }} onSubmit={(zdarzenie) => { zdarzenie.preventDefault(); if (!czyTrwaWczytywanie.current) zapisz() }}"
-      ]
+      ],
+      "ukonczoneEtapy": [
+        "V4-04"
+      ],
+      "wspoldzieloneZ": []
     },
     "src/moduly/zamkniete/pulpit/WidokPulpitu.tsx": {
       "zadanie": "V4-04",
@@ -736,74 +1022,127 @@
         "div className=\"pulpit-drawer__naglowek\"",
         "div className=\"pulpit-modal__akcje\"",
         "form className=\"pulpit-formularz-zadania\" onPaste={obsluzWklejenie} onSubmit={(zdarzenie) => { zdarzenie.preventDefault(); zapisz() }}"
-      ]
+      ],
+      "ukonczoneEtapy": [
+        "V4-04"
+      ],
+      "wspoldzieloneZ": []
     },
     "src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/KartaGrupySzkoleniowej.tsx": {
-      "zadanie": "V4-05",
+      "zadanie": "V4-07",
       "powierzchnie": [
         "window.confirm('Usunąć ' + pobierzEtykieteGrupy(indeks) + '? Tej operacji nie można cofnąć.')"
-      ]
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/KontekstBledowPol.tsx": {
-      "zadanie": "V4-05",
-      "powierzchnie": []
+      "zadanie": "V4-07",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/PanelDokumentowPowiazanych.tsx": {
-      "zadanie": "V4-05",
+      "zadanie": "V4-07",
       "powierzchnie": [
         "details className=\"szczegoly-sekcja-dokumentow\""
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": [
+        "V4-08",
+        "V4-10",
+        "V4-11",
+        "V4-12",
+        "V4-13",
+        "V4-14",
+        "V4-15"
       ]
     },
     "src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/PanelPrzygotowaniaDokumentow.tsx": {
-      "zadanie": "V4-05",
-      "powierzchnie": []
+      "zadanie": "V4-07",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": [
+        "V4-08",
+        "V4-10",
+        "V4-11",
+        "V4-12",
+        "V4-13",
+        "V4-14",
+        "V4-15"
+      ]
     },
     "src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/PanelTworzeniaListObecnosci.tsx": {
-      "zadanie": "V4-05",
-      "powierzchnie": []
+      "zadanie": "V4-07",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": [
+        "V4-08",
+        "V4-11"
+      ]
     },
     "src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/PanelWykrytychProblemow.tsx": {
-      "zadanie": "V4-05",
-      "powierzchnie": []
+      "zadanie": "V4-07",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/PasekStickySzczegolow.tsx": {
-      "zadanie": "V4-05",
-      "powierzchnie": []
+      "zadanie": "V4-07",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/PolaSzczegolow.tsx": {
-      "zadanie": "V4-05",
-      "powierzchnie": []
+      "zadanie": "V4-07",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/PoleMinutWczesniejszegoPrzyjazdu.tsx": {
-      "zadanie": "V4-05",
-      "powierzchnie": []
+      "zadanie": "V4-07",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/PoleUczestnikowGrupy.tsx": {
-      "zadanie": "V4-05",
-      "powierzchnie": []
+      "zadanie": "V4-07",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/PrzelacznikTakNie.tsx": {
-      "zadanie": "V4-05",
-      "powierzchnie": []
+      "zadanie": "V4-07",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": [
+        "V4-20"
+      ]
     },
     "src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/SekcjaFormularza.tsx": {
-      "zadanie": "V4-05",
-      "powierzchnie": []
+      "zadanie": "V4-07",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokKopiiRoboczychSzczegolowOrganizacyjnych.tsx": {
-      "zadanie": "V4-05",
-      "powierzchnie": []
+      "zadanie": "V4-06",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokListySzczegolowOrganizacyjnych.tsx": {
-      "zadanie": "V4-05",
+      "zadanie": "V4-06",
       "powierzchnie": [
         "window.confirm('Usunac opublikowane Szczegoly organizacyjne?')",
         "window.prompt('Podaj komentarz cofnięcia statusu:')",
         "window.prompt('Podaj powód ustawienia statusu Niezrealizowane:')"
-      ]
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokNowychSzczegolowOrganizacyjnych.tsx": {
-      "zadanie": "V4-05",
+      "zadanie": "V4-07",
       "powierzchnie": [
         "aside aria-label=\"Panel kontroli jakosci\" className={`szczegoly-panel-jakosci${czyPanelJakosciOtwarty ? ' szczegoly-panel-jakosci--otwarty' : ''}${czyPanelJakosciPrzypiety ? ' szczegoly-panel-jakosci--przypiety' : ''}`} id={idPaneluJakosci} onKeyDown={obsluzKlawiszPaneluJakosci} onMouseEnter={otworzPanelJakosci} onMouseLeave={schowajPanelJakosciJesliOdpiety}",
         "button aria-label={czyPanelJakosciPrzypiety ? 'Odepnij panel kontroli jakosci' : 'Przypnij panel kontroli jakosci'} className=\"szczegoly-panel-jakosci__przycisk\" onClick={przelaczPrzypieciePaneluJakosci} title={czyPanelJakosciPrzypiety ? 'Odepnij panel' : 'Przypnij panel'} type=\"button\"",
@@ -812,34 +1151,69 @@
         "div className=\"szczegoly-panel-jakosci__strefa-aktywacji\" onMouseEnter={otworzPanelJakosciZKrawedzi} aria-hidden=\"true\"",
         "section className={`widok szczegoly-organizacyjne${czyPanelJakosciPrzypiety ? ' szczegoly-organizacyjne--panel-przypiety' : ''}${czyPanelJakosciOtwarty ? ' szczegoly-organizacyjne--panel-otwarty' : ''}`}",
         "window.confirm('Wyczyścić formularz i aktualną kopię roboczą?')"
-      ]
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/moduly/zamkniete/szkolenia/WidokSzkolenZamknietych.tsx": {
       "zadanie": "V4-05",
-      "powierzchnie": []
+      "powierzchnie": [],
+      "ukonczoneEtapy": [
+        "V4-05"
+      ],
+      "wspoldzieloneZ": []
     },
     "src/moduly/zamkniete/szkolenia/generator_szczegolow/WidokGeneratoraSzczegolow.tsx": {
-      "zadanie": "V4-05",
-      "powierzchnie": []
+      "zadanie": "V4-07",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     },
     "src/wspolne/dokumenty/AkcjeEksportuPdf.tsx": {
-      "zadanie": "V4-07",
+      "zadanie": "V4-09",
       "powierzchnie": [
         "div className=\"akcje-eksportu-pdf__nazwa\" role=\"dialog\" aria-label=\"Nazwa eksportowanego pliku\""
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": [
+        "V4-10",
+        "V4-11",
+        "V4-12",
+        "V4-13",
+        "V4-14",
+        "V4-15"
       ]
     },
     "src/wspolne/dokumenty/EdytorSwobodnychBlokow.tsx": {
-      "zadanie": "V4-07",
+      "zadanie": "V4-09",
       "powierzchnie": [
         "window.confirm('Przywrócić cały układ szablonu i usunąć własne bloki?')"
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": [
+        "V4-10",
+        "V4-11",
+        "V4-12",
+        "V4-13",
+        "V4-14",
+        "V4-15"
       ]
     },
     "src/wspolne/dokumenty/ElementPomocniczyEdytora.tsx": {
-      "zadanie": "V4-07",
-      "powierzchnie": []
+      "zadanie": "V4-09",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": [
+        "V4-10",
+        "V4-11",
+        "V4-12",
+        "V4-13",
+        "V4-14",
+        "V4-15"
+      ]
     },
     "src/wspolne/dokumenty/PanelKontroliJakosciDokumentu.tsx": {
-      "zadanie": "V4-07",
+      "zadanie": "V4-09",
       "powierzchnie": [
         "aside className={`panel-jakosci-dokumentu${liczbaBledow ? ' panel-jakosci-dokumentu--blad' : ''}`}",
         "button className=\"panel-jakosci-dokumentu__link\" type=\"button\" onClick={() => onPrzejdzDoProblemu(problem)}",
@@ -850,44 +1224,211 @@
         "li className=\"panel-jakosci-dokumentu__problem panel-jakosci-dokumentu__problem--informacja\" key={komunikat}",
         "li className={`panel-jakosci-dokumentu__problem panel-jakosci-dokumentu__problem--${problem.poziom}`} key={problem.id}",
         "li className={czyZatwierdzony ? 'panel-jakosci-dokumentu__stan--ok' : 'panel-jakosci-dokumentu__stan--ostrzezenie'}"
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": [
+        "V4-10",
+        "V4-11",
+        "V4-12",
+        "V4-13",
+        "V4-14",
+        "V4-15",
+        "V4-16",
+        "V4-21"
       ]
     },
     "src/wspolne/dokumenty/RendererSwobodnychBlokow.tsx": {
-      "zadanie": "V4-07",
-      "powierzchnie": []
+      "zadanie": "V4-09",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": [
+        "V4-10",
+        "V4-11",
+        "V4-12",
+        "V4-13",
+        "V4-14",
+        "V4-15",
+        "V4-16"
+      ]
     },
     "src/wspolne/dokumenty/WidokKopiiRoboczychGeneratora.tsx": {
-      "zadanie": "V4-07",
-      "powierzchnie": []
+      "zadanie": "V4-08",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": [
+        "V4-10",
+        "V4-11",
+        "V4-12",
+        "V4-13",
+        "V4-14",
+        "V4-15"
+      ]
     },
     "src/wspolne/komponenty/AkcjeRekordu.tsx": {
-      "zadanie": "V4-07",
-      "powierzchnie": []
+      "zadanie": "V4-08",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [
+        "V4-01"
+      ],
+      "wspoldzieloneZ": [
+        "V4-06",
+        "V4-20",
+        "V4-21"
+      ]
     },
     "src/wspolne/komponenty/ElementyInterfejsu.tsx": {
-      "zadanie": "V4-20",
+      "zadanie": "V4-22",
       "powierzchnie": [
         "OknoDialogowe {...wlasciwosci} wariant=\"panel\" etykietaZamkniecia=\"Zamknij panel\"",
         "dialog ref={panel} className={wariant === 'panel' ? 'ui-panel' : 'ui-dialog'} aria-labelledby={identyfikator} onCancel={(zdarzenie) => { zdarzenie.preventDefault(); zamknij() }}",
         "div className=\"ui-zakladki\"",
         "div role=\"tablist\" aria-label=\"Zakładki\"",
         "div role=\"tabpanel\" tabIndex={0} id={`${identyfikator}-panel`} aria-labelledby={`${identyfikator}-${pozycje.indexOf(aktywna)}`}"
+      ],
+      "ukonczoneEtapy": [
+        "V4-01",
+        "V4-02"
+      ],
+      "wspoldzieloneZ": [
+        "V4-01",
+        "V4-02",
+        "V4-03",
+        "V4-04",
+        "V4-05",
+        "V4-06",
+        "V4-07",
+        "V4-08",
+        "V4-09",
+        "V4-10",
+        "V4-11",
+        "V4-12",
+        "V4-13",
+        "V4-14",
+        "V4-15",
+        "V4-16",
+        "V4-17",
+        "V4-18",
+        "V4-19",
+        "V4-20",
+        "V4-21",
+        "V4-23"
       ]
     },
     "src/wspolne/komponenty/GaleriaKomponentow.tsx": {
-      "zadanie": "V4-20",
+      "zadanie": "V4-22",
       "powierzchnie": [
         "PanelWysuwany otwarty={otwarty} zamknij={() => ustawOtwarty(false)} tytul={`Panel — ${tytul}`}",
         "Zakladki pozycje={['Formularz', 'Pusta lista']} aktywna={zakladka} wybierz={ustawZakladke}"
+      ],
+      "ukonczoneEtapy": [
+        "V4-01"
+      ],
+      "wspoldzieloneZ": [
+        "V4-01"
       ]
     },
     "src/wspolne/telefon/PoleTelefonu.tsx": {
       "zadanie": "V4-07",
-      "powierzchnie": []
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": [
+        "V4-20",
+        "V4-21"
+      ]
     },
     "src/aplikacja/layout/DockAplikacji.tsx": {
       "zadanie": "V4-02",
-      "powierzchnie": []
+      "powierzchnie": [],
+      "ukonczoneEtapy": [
+        "V4-02"
+      ],
+      "wspoldzieloneZ": []
     }
+  },
+  "realizacjaEtapow": {
+    "V4-01": {
+      "status": "ukonczony",
+      "commit": "26f5484029764709525eca8074b36954136e05a5",
+      "raport": "docs/v4/raport-v4-01.md"
+    },
+    "V4-02": {
+      "status": "ukonczony",
+      "commit": "f9563e6203ecd1bb6990bafa05760e80a2f91a90",
+      "raport": "docs/v4/raport-v4-02.md"
+    },
+    "V4-03": {
+      "status": "ukonczony",
+      "commit": "6f65c804697f301b5f7cef80d00ca9512b88e0dc",
+      "raport": "docs/v4/raport-v4-03.md"
+    },
+    "V4-04": {
+      "status": "ukonczony",
+      "commit": "31dc4e7e2dd8956a7ce5830c46d9b002cb358407",
+      "raport": "docs/v4/raport-v4-04.md"
+    },
+    "V4-05": {
+      "status": "ukonczony",
+      "commit": "niniejszy commit V4-05",
+      "raport": "docs/v4/raport-v4-05.md"
+    },
+    "V4-06": {
+      "status": "planowany"
+    },
+    "V4-07": {
+      "status": "planowany"
+    },
+    "V4-08": {
+      "status": "planowany"
+    },
+    "V4-09": {
+      "status": "planowany"
+    },
+    "V4-10": {
+      "status": "planowany"
+    },
+    "V4-11": {
+      "status": "planowany"
+    },
+    "V4-12": {
+      "status": "planowany"
+    },
+    "V4-13": {
+      "status": "planowany"
+    },
+    "V4-14": {
+      "status": "planowany"
+    },
+    "V4-15": {
+      "status": "planowany"
+    },
+    "V4-16": {
+      "status": "planowany"
+    },
+    "V4-17": {
+      "status": "planowany"
+    },
+    "V4-18": {
+      "status": "planowany"
+    },
+    "V4-19": {
+      "status": "planowany"
+    },
+    "V4-20": {
+      "status": "planowany"
+    },
+    "V4-21": {
+      "status": "planowany"
+    },
+    "V4-22": {
+      "status": "planowany"
+    },
+    "V4-23": {
+      "status": "planowany"
+    }
+  },
+  "zakresyPrzekrojowe": {
+    "V4-01": "Ukończony fundament tokenów i komponentów; nie oznacza ukończenia liftingu widoków korzystających z tych plików.",
+    "V4-09": "Wspólny workspace bez nowego ID widoku; właściciel mechanik UI generatorów, współdzielony z V4-10–15.",
+    "V4-23": "Audyt wszystkich widoków, plików interfejsu i powierzchni manifestu oraz przygotowanie Release Candidate; bez przejmowania właścicieli kodu i widoków."
   }
 }

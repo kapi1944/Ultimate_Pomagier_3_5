@@ -204,7 +204,7 @@ function renderujWidok(
     case 'pulpit':
       return <WidokPulpitu otworzDokumenty={otworzDokumentyPulpitu} otworzPaczke={otworzPaczkePulpitu} otworzRekordZrodlowy={otworzRekordPulpitu} />
     case 'szkolenia-zamkniete':
-      return <WidokSzkolenZamknietych />
+      return <WidokSzkolenZamknietych ustawWidok={ustawAktywnyWidok} />
     case 'generator-szczegolow':
       return <WidokGeneratoraSzczegolow otworzDokument={otworzDokument} />
     case 'zamkniete_szczegoly_organizacyjne_lista':
