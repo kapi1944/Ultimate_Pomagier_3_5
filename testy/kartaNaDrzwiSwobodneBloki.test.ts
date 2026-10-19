@@ -22,7 +22,7 @@ assert.equal(przywrocPoleKartyZeZrodla(lokalna, 'sala').sala, 'Źródłowa sala'
 const duplikat = zduplikujKarteNaDrzwi(karta)
 assert.notEqual(duplikat.id, karta.id)
 assert.deepEqual(uporzadkujKarty([duplikat, karta]).map((pozycja) => pozycja.kolejnosc), [1, 2])
-assert.equal(obliczRozmiarTytuluKarty('x'.repeat(400), 28, 12), 12)
+assert.deepEqual(obliczRozmiarTytuluKarty(28, (rozmiar) => rozmiar <= 18), { rozmiarPt: 18, przepelnienie: false })
 const kartaPol = utworzKarteNaDrzwi({ termin: '2026-10-01', godziny: '09:00–17:00', sala: 'Sala A', miejsce: 'Poznań' })
 const widocznosc = { ...utworzUstawieniaBazowegoSzablonu().widocznoscPol, godziny: false }
 assert.equal(pobierzDaneRenderowaniaKarty(kartaPol, widocznosc).terminGodziny, '2026-10-01')
@@ -39,7 +39,9 @@ const a5NaA4 = pobierzUkladKartNaArkuszuA4('a5', 'pionowa')
 assert.deepEqual(a5NaA4, { szerokoscMm: 297, wysokoscMm: 210, liczbaKolumn: 2, liczbaWierszy: 1, liczbaKart: 2, szerokoscKartyMm: 148, wysokoscKartyMm: 210 })
 const a6NaA4 = pobierzUkladKartNaArkuszuA4('a6', 'pionowa')
 assert.deepEqual(a6NaA4, { szerokoscMm: 210, wysokoscMm: 297, liczbaKolumn: 2, liczbaWierszy: 2, liczbaKart: 4, szerokoscKartyMm: 105, wysokoscKartyMm: 148 })
-assert.equal(obliczRozmiarTytuluKarty('bardzo długi '.repeat(80), 28, 12, 54, { szerokoscMm: 80, wysokoscMm: 20 }), 12)
+assert.deepEqual(obliczRozmiarTytuluKarty(28, () => false), { rozmiarPt: 14, przepelnienie: true })
+assert.deepEqual(obliczRozmiarTytuluKarty(28, (rozmiar) => rozmiar <= 18, false), { rozmiarPt: 28, przepelnienie: true })
+assert.deepEqual(obliczRozmiarTytuluKarty(9, () => true), { rozmiarPt: 9, przepelnienie: false })
 const bezZmianyTresci = { ...domyslne, ustawieniaSzablonu: { ...domyslne.ustawieniaSzablonu, format: 'a5' as const, blokiSwobodne: przeskalujBlokiKartyNaDrzwi(domyslne.ustawieniaSzablonu.blokiSwobodne, 'a4', 'pozioma', 'a5', 'pozioma') } }
 assert.equal(bezZmianyTresci.karty[0].tytulSzkolenia, domyslne.karty[0].tytulSzkolenia)
 
