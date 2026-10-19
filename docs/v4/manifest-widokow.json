@@ -445,7 +445,9 @@
         "/szkolenia-zamkniete/szczegoly-organizacyjne/kopie-robocze"
       ],
       "wMenu": true,
-      "ukonczoneEtapy": []
+      "ukonczoneEtapy": [
+        "V4-06"
+      ]
     },
     "zamkniete_szczegoly_organizacyjne_lista": {
       "zadanie": "V4-06",
@@ -453,7 +455,9 @@
         "/szkolenia-zamkniete/szczegoly-organizacyjne"
       ],
       "wMenu": true,
-      "ukonczoneEtapy": []
+      "ukonczoneEtapy": [
+        "V4-06"
+      ]
     },
     "zamkniete_szczegoly_organizacyjne_nowe": {
       "zadanie": "V4-07",
@@ -1128,7 +1132,9 @@
     "src/moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokKopiiRoboczychSzczegolowOrganizacyjnych.tsx": {
       "zadanie": "V4-06",
       "powierzchnie": [],
-      "ukonczoneEtapy": [],
+      "ukonczoneEtapy": [
+        "V4-06"
+      ],
       "wspoldzieloneZ": []
     },
     "src/moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokListySzczegolowOrganizacyjnych.tsx": {
@@ -1138,7 +1144,9 @@
         "window.prompt('Podaj komentarz cofnięcia statusu:')",
         "window.prompt('Podaj powód ustawienia statusu Niezrealizowane:')"
       ],
-      "ukonczoneEtapy": [],
+      "ukonczoneEtapy": [
+        "V4-06"
+      ],
       "wspoldzieloneZ": []
     },
     "src/moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokNowychSzczegolowOrganizacyjnych.tsx": {
@@ -1268,7 +1276,8 @@
       "zadanie": "V4-08",
       "powierzchnie": [],
       "ukonczoneEtapy": [
-        "V4-01"
+        "V4-01",
+        "V4-06"
       ],
       "wspoldzieloneZ": [
         "V4-06",
@@ -1343,6 +1352,14 @@
         "V4-02"
       ],
       "wspoldzieloneZ": []
+    },
+    "src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/KartaRejestruSzczegolow.tsx": {
+      "zadanie": "V4-06",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [
+        "V4-06"
+      ],
+      "wspoldzieloneZ": []
     }
   },
   "realizacjaEtapow": {
@@ -1368,11 +1385,13 @@
     },
     "V4-05": {
       "status": "ukonczony",
-      "commit": "niniejszy commit V4-05",
+      "commit": "fc457ba122b2cd76fb6ba8e0aa4671a995518971",
       "raport": "docs/v4/raport-v4-05.md"
     },
     "V4-06": {
-      "status": "planowany"
+      "status": "ukonczony",
+      "commit": "niniejszy commit V4-06",
+      "raport": "docs/v4/raport-v4-06.md"
     },
     "V4-07": {
       "status": "planowany"

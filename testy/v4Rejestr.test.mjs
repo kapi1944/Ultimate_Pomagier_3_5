@@ -74,7 +74,7 @@ assert.match(odczytaj('src/moduly/zamkniete/szkolenia/generator_szczegolow/Widok
 assert.deepEqual(Object.keys(manifest.realizacjaEtapow), etapy)
 for (const [indeks, etap] of etapy.entries()) {
   const wykonanie = manifest.realizacjaEtapow[etap]
-  assert.equal(wykonanie.status, indeks < 5 ? 'ukonczony' : 'planowany')
+  assert.equal(wykonanie.status, indeks < 6 ? 'ukonczony' : 'planowany')
   if (wykonanie.status === 'ukonczony') {
     assert.ok(wykonanie.commit)
     assert.ok(odczytaj(wykonanie.raport))

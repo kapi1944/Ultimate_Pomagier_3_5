@@ -6,8 +6,6 @@ import {
   czyKontoMozeZaakceptowacSzczegoly,
   czyKontoArchitekta,
   pobierzAktywneKontoSzczegolow,
-  pobierzKolorTlaOpiekuna,
-  pobierzNazweOpiekuna,
 } from '../uzytkownicySzczegolow'
 import {
   pobierzOpublikowaneSzczegoly,
@@ -19,19 +17,13 @@ import {
 } from '../uslugi/magazynWersjiRoboczych'
 import { statusySzkolenia } from '../stale'
 import { czyMoznaUtworzycAktualizacje, pobierzPrzejscieCofnieciaStatusu } from '../workflowStatusow'
-import './widokNowychSzczegolowOrganizacyjnych.css'
+import { Komunikat, Przycisk, PustyStan } from '../../../../wspolne/komponenty/ElementyInterfejsu'
+import IkonaMenu from '../../../../aplikacja/menu/IkonaMenu'
+import { KartaRejestruSzczegolow } from '../komponenty/KartaRejestruSzczegolow'
+import './rejestrySzczegolowV4.css'
 
 type WlasciwosciWidokuListy = {
   otworzNoweSzczegoly: () => void
-}
-
-function formatujDate(data: string) {
-  return new Date(data).toLocaleString('pl-PL')
-}
-
-function pobierzTrenerow(grupy: { trenerzy: { imieNazwisko: string }[] }[]) {
-  const trenerzy = grupy.flatMap((grupa) => grupa.trenerzy.map((trener) => trener.imieNazwisko).filter(Boolean))
-  return trenerzy.length ? trenerzy.join(', ') : 'Bez trenera'
 }
 
 function czyStatusOczekujacy(status: string) {
@@ -111,67 +103,52 @@ export default function WidokListySzczegolowOrganizacyjnych({ otworzNoweSzczegol
   }
 
   return (
-    <section className="widok szczegoly-organizacyjne">
+    <section className="widok rejestr-szczegolow" aria-labelledby="lista-szczegolow-tytul">
       <div className="szczegoly-obszar-roboczy">
-        <header className="szczegoly-widok-naglowek">
-          <h1>Lista szczegółów organizacyjnych</h1>
+        <header className="rejestr-szczegolow__naglowek">
+          <span className="rejestr-szczegolow__ikona"><IkonaMenu typ="szczegoly" /></span>
+          <div>
+            <h1 id="lista-szczegolow-tytul">Lista szczegółów organizacyjnych</h1>
+            <p>Opublikowane dokumenty, ich wersje i bieżące statusy. Kopie robocze pozostają w osobnym rejestrze.</p>
+          </div>
+          <Przycisk onClick={otworzNoweSzczegoly}>Otwórz formularz szczegółów</Przycisk>
         </header>
 
-        <div className="szczegoly-lista-rekordow">
-        {rekordy.length === 0 && <p className="szczegoly-komunikat">Brak opublikowanych szczegółów organizacyjnych.</p>}
-        {rekordy.map((rekord) => (
-          <article className="szczegoly-rekord" key={rekord.id} style={{ backgroundColor: pobierzKolorTlaOpiekuna(rekord.opiekunId) }}>
-            <div className="szczegoly-rekord__naglowek">
-              <div>
-                <h2>{rekord.dane.tytulSzkolenia || rekord.nazwa}</h2>
-                <p>{rekord.dane.nazwaKlienta || 'Bez klienta'}</p>
+        <div className="rejestr-szczegolow__lista">
+          {rekordy.length === 0 && <PustyStan>Brak opublikowanych szczegółów organizacyjnych. Aby przygotować dokument, otwórz formularz szczegółów.</PustyStan>}
+          {rekordy.map((rekord) => (
+            <KartaRejestruSzczegolow key={rekord.id} rodzaj="opublikowany" rekord={rekord} czyPodglad={podgladRekorduId === rekord.id}>
+              <div className="rejestr-szczegolow__workflow">
+                {czyStatusOczekujacy(rekord.status) && czyKontoMozeZaakceptowacSzczegoly(konto, rekord) && (
+                  <Przycisk onClick={() => zaakceptujSzczegoly(rekord)}>Oznacz jako zaakceptowane</Przycisk>
+                )}
+                {rekord.status === 'ZAAKCEPTOWANE' && czyKontoMozeZaakceptowacSzczegoly(konto, rekord) && (
+                  <Przycisk onClick={() => oznaczJakoGotowe(rekord)}>Oznacz jako gotowe</Przycisk>
+                )}
+                {pobierzPrzejscieCofnieciaStatusu(rekord.status) && czyKontoMozeCofnacStatus(konto, rekord) && (
+                  <Przycisk onClick={() => cofnijStatus(rekord)}>Cofnij status</Przycisk>
+                )}
+                <label className="rejestr-szczegolow__status-szkolenia">
+                  Status szkolenia
+                  <select value={rekord.statusSzkolenia ?? rekord.dane.statusSzkolenia} onChange={(zdarzenie) => ustawStatusSzkolenia(rekord, zdarzenie.target.value)}>
+                    {statusySzkolenia.map((status) => <option key={status} value={status}>{status}</option>)}
+                  </select>
+                </label>
+                {czyMoznaUtworzycAktualizacje(rekord.status) && (
+                  <Przycisk onClick={() => utworzAktualizacje(rekord)}>
+                    {rekord.opiekunId === konto.id || czyKontoArchitekta(konto) ? 'Utwórz aktualizację' : 'Utwórz formularz bez grup'}
+                  </Przycisk>
+                )}
               </div>
-              <strong>{rekord.status}</strong>
-            </div>
-            <div className="szczegoly-rekord__metadane">
-              <span>Organizator: {rekord.dane.organizator}</span>
-              <span>Opiekun: {pobierzNazweOpiekuna(rekord.opiekunId)}</span>
-              <span>Autor: {rekord.autorNazwa}</span>
-              <span>Publikacja: {formatujDate(rekord.dataPublikacji)}</span>
-              <span>Grupy: {rekord.grupy.length}</span>
-              <span>Trenerzy: {pobierzTrenerow(rekord.grupy)}</span>
-              <span>Wersja {rekord.numerWersji}</span>
-              <span>Status szkolenia: {rekord.statusSzkolenia ?? rekord.dane.statusSzkolenia}</span>
-            </div>
-            <div className="szczegoly-rekord__akcje">
-              {czyStatusOczekujacy(rekord.status) && czyKontoMozeZaakceptowacSzczegoly(konto, rekord) && (
-                <button type="button" onClick={() => zaakceptujSzczegoly(rekord)}>
-                  Oznacz jako zaakceptowane
-                </button>
-              )}
-              {rekord.status === 'ZAAKCEPTOWANE' && czyKontoMozeZaakceptowacSzczegoly(konto, rekord) && (
-                <button type="button" onClick={() => oznaczJakoGotowe(rekord)}>
-                  Oznacz jako gotowe
-                </button>
-              )}
-              {pobierzPrzejscieCofnieciaStatusu(rekord.status) && czyKontoMozeCofnacStatus(konto, rekord) && (
-                <button type="button" onClick={() => cofnijStatus(rekord)}>
-                  Cofnij status
-                </button>
-              )}
-              <label className="szczegoly-rekord__status-szkolenia">
-                Status szkolenia
-                <select value={rekord.statusSzkolenia ?? rekord.dane.statusSzkolenia} onChange={(zdarzenie) => ustawStatusSzkolenia(rekord, zdarzenie.target.value)}>
-                  {statusySzkolenia.map((status) => (
-                    <option key={status} value={status}>
-                      {status}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {czyMoznaUtworzycAktualizacje(rekord.status) && (
-                <button type="button" onClick={() => utworzAktualizacje(rekord)}>
-                  {rekord.opiekunId === konto.id || czyKontoArchitekta(konto) ? 'Utwórz aktualizację' : 'Utwórz formularz bez grup'}
-                </button>
-              )}
-              <AkcjeRekordu podglad={() => ustawPodgladRekorduId(rekord.id)} edytuj={() => utworzAktualizacje(rekord)} duplikuj={() => duplikujRekord(rekord)} usun={() => usunRekord(rekord)} />            </div>
-            {podgladRekorduId === rekord.id && <p className="szczegoly-komunikat">Podglad: {rekord.dane.tytulSzkolenia || rekord.nazwa} · {rekord.grupy.length} grup.</p>}          </article>
-        ))}
+              <AkcjeRekordu
+                podglad={() => ustawPodgladRekorduId((obecny) => obecny === rekord.id ? null : rekord.id)}
+                edytuj={czyMoznaUtworzycAktualizacje(rekord.status) ? () => utworzAktualizacje(rekord) : undefined}
+                duplikuj={() => duplikujRekord(rekord)}
+                usun={() => usunRekord(rekord)}
+              />
+              {!czyMoznaUtworzycAktualizacje(rekord.status) && <Komunikat>Rozliczony dokument nie przyjmuje aktualizacji. Możesz otworzyć podgląd lub utworzyć osobną kopię.</Komunikat>}
+            </KartaRejestruSzczegolow>
+          ))}
         </div>
       </div>
     </section>

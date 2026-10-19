@@ -5,29 +5,22 @@ import {
   czyKontoMozeEdytowacKopie,
   czyKontoMozeWidziecKopie,
   pobierzAktywneKontoSzczegolow,
-  pobierzKolorTlaOpiekuna,
-  pobierzNazweOpiekuna,
 } from '../uzytkownicySzczegolow'
-import { duplikujKopieRobocza, pobierzAktualnaWersjeRobocza, pobierzKopieRobocze, ustawAktualnaWersjeRobocza, usunKopieRobocza } from '../uslugi/magazynWersjiRoboczych'
-import './widokNowychSzczegolowOrganizacyjnych.css'
+import { duplikujKopieRobocza, pobierzOpublikowaneSzczegoly, pobierzAktualnaWersjeRobocza, pobierzKopieRobocze, ustawAktualnaWersjeRobocza, usunKopieRobocza } from '../uslugi/magazynWersjiRoboczych'
+import { Komunikat, Przycisk, PustyStan } from '../../../../wspolne/komponenty/ElementyInterfejsu'
+import IkonaMenu from '../../../../aplikacja/menu/IkonaMenu'
+import { KartaRejestruSzczegolow } from '../komponenty/KartaRejestruSzczegolow'
+import './rejestrySzczegolowV4.css'
 
 type WlasciwosciWidokuKopii = {
   otworzNoweSzczegoly: () => void
-}
-
-function formatujDate(data: string) {
-  return new Date(data).toLocaleString('pl-PL')
-}
-
-function pobierzTrenerow(grupy: { trenerzy: { imieNazwisko: string }[] }[]) {
-  const trenerzy = grupy.flatMap((grupa) => grupa.trenerzy.map((trener) => trener.imieNazwisko).filter(Boolean))
-  return trenerzy.length ? trenerzy.join(', ') : 'Bez trenera'
 }
 
 export default function WidokKopiiRoboczychSzczegolowOrganizacyjnych({ otworzNoweSzczegoly }: WlasciwosciWidokuKopii) {
   const konto = useMemo(() => pobierzAktywneKontoSzczegolow(), [])
   const [kopie, ustawKopie] = useState(() => pobierzKopieRobocze())
   const [podgladKopiiId, ustawPodgladKopiiId] = useState<string | null>(null)
+  const opublikowane = useMemo(() => pobierzOpublikowaneSzczegoly(), [])
   const aktualnaKopia = pobierzAktualnaWersjeRobocza()
   const widoczneKopie = kopie.filter((kopia) => kopia.id === aktualnaKopia?.id || czyKontoMozeWidziecKopie(konto, kopia))
 
@@ -55,35 +48,32 @@ export default function WidokKopiiRoboczychSzczegolowOrganizacyjnych({ otworzNow
   }
 
   return (
-    <section className="widok szczegoly-organizacyjne">
+    <section className="widok rejestr-szczegolow" aria-labelledby="kopie-szczegolow-tytul">
       <div className="szczegoly-obszar-roboczy">
-        <header className="szczegoly-widok-naglowek">
-          <h1>Kopie robocze szczegółów organizacyjnych</h1>
+        <header className="rejestr-szczegolow__naglowek">
+          <span className="rejestr-szczegolow__ikona"><IkonaMenu typ="kopie" /></span>
+          <div>
+            <h1 id="kopie-szczegolow-tytul">Kopie robocze szczegółów organizacyjnych</h1>
+            <p>Zapisane szkice i rozpoczęte aktualizacje. Wznowienie edycji zachowuje zapisane dane oraz powiązania dokumentu.</p>
+          </div>
+          <Przycisk onClick={otworzNoweSzczegoly}>Otwórz formularz szczegółów</Przycisk>
         </header>
 
-        <div className="szczegoly-lista-rekordow">
-          {widoczneKopie.length === 0 && <p className="szczegoly-komunikat">Brak dostępnych kopii roboczych.</p>}
+        <div className="rejestr-szczegolow__lista">
+          {widoczneKopie.length === 0 && <PustyStan>Brak dostępnych kopii roboczych. Opublikowane dokumenty znajdziesz na liście szczegółów organizacyjnych.</PustyStan>}
           {widoczneKopie.map((kopia) => (
-            <article className="szczegoly-rekord" key={kopia.id} style={{ backgroundColor: pobierzKolorTlaOpiekuna(kopia.dane.opiekunId) }}>
-              <div className="szczegoly-rekord__naglowek">
-                <div>
-                  <h2>{kopia.dane.tytulSzkolenia || kopia.nazwa}</h2>
-                  <p>{kopia.dane.nazwaKlienta || 'Bez klienta'}</p>
-                </div>
-                <strong>{kopia.dane.status}</strong>
-              </div>
-              <div className="szczegoly-rekord__metadane">
-                <span>Nazwa kopii: {kopia.nazwa}</span>
-                <span>Opiekun: {pobierzNazweOpiekuna(kopia.dane.opiekunId)}</span>
-                <span>Autor: {kopia.autorNazwa}</span>
-                <span>Zapis: {formatujDate(kopia.dataZapisu)}</span>
-                <span>Grupy: {kopia.grupy.length}</span>
-                <span>Trenerzy: {pobierzTrenerow(kopia.grupy)}</span>
-              </div>
-              <div className="szczegoly-rekord__akcje">
-                <AkcjeRekordu podglad={() => ustawPodgladKopiiId(kopia.id)} edytuj={() => edytujKopie(kopia)} duplikuj={() => duplikujKopie(kopia)} usun={() => usunKopie(kopia)} />
-              </div>
-            {podgladKopiiId === kopia.id && <p className="szczegoly-komunikat">Podglad: {kopia.dane.tytulSzkolenia || kopia.nazwa} · {kopia.grupy.length} grup.</p>}            </article>
+            <KartaRejestruSzczegolow
+              key={kopia.id} rodzaj="kopia" rekord={kopia} czyPodglad={podgladKopiiId === kopia.id}
+              aktualnaWersjaOpublikowana={opublikowane.find((rekord) => rekord.id === kopia.zrodloOpublikowanegoId)?.numerWersji}
+            >
+              <AkcjeRekordu
+                podglad={() => ustawPodgladKopiiId((obecny) => obecny === kopia.id ? null : kopia.id)}
+                edytuj={czyKontoMozeEdytowacKopie(konto, kopia) ? () => edytujKopie(kopia) : undefined}
+                duplikuj={czyKontoMozeEdytowacKopie(konto, kopia) ? () => duplikujKopie(kopia) : undefined}
+                usun={czyKontoMozeEdytowacKopie(konto, kopia) ? () => usunKopie(kopia) : undefined}
+              />
+              {!czyKontoMozeEdytowacKopie(konto, kopia) && <Komunikat>Kopia tylko do odczytu. Zmiany może wprowadzać jej opiekun lub administrator.</Komunikat>}
+            </KartaRejestruSzczegolow>
           ))}
         </div>
       </div>

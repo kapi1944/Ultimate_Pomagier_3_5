@@ -1,0 +1,31 @@
+.rejestr-szczegolow { min-width: 0; overflow-wrap: anywhere; }
+.rejestr-szczegolow .szczegoly-obszar-roboczy { display: grid; gap: var(--ui-odstep-6); min-width: 0; }
+.rejestr-szczegolow__naglowek { display: flex; flex-wrap: wrap; align-items: start; gap: var(--ui-odstep-4); background: var(--ui-panel); border: 1px solid var(--ui-obramowanie); border-radius: var(--ui-promien-karty); padding: var(--ui-odstep-4); }
+.rejestr-szczegolow__naglowek > div { flex: 1 1 300px; min-width: 0; }
+.rejestr-szczegolow h1 { font-size: clamp(1.5rem, 3vw, 2rem); }
+.rejestr-szczegolow__ikona { display: inline-flex; color: var(--ui-akcent); padding: var(--ui-odstep-2); background: var(--ui-powierzchnia); border: 1px solid var(--ui-obramowanie); border-radius: var(--ui-promien-pola); }
+.rejestr-szczegolow__ikona svg { width: 28px; height: 28px; }
+.rejestr-szczegolow__lista { display: grid; gap: var(--ui-odstep-4); }
+.rejestr-szczegolow .rejestr-szczegolow__karta { gap: var(--ui-odstep-4); border-color: var(--ui-status); border-inline-start-width: 5px; box-shadow: none; }
+.rejestr-szczegolow__naglowek-karty { display: flex; flex-wrap: wrap; gap: var(--ui-odstep-4); align-items: start; }
+.rejestr-szczegolow__naglowek-karty > div { flex: 1 1 280px; min-width: 0; }
+.rejestr-szczegolow__karta h2 { margin: 0 0 var(--ui-odstep-2); font-size: var(--ui-tekst-naglowek); line-height: 1.4; }
+.rejestr-szczegolow .rejestr-szczegolow__klient { color: var(--ui-tekst); font-weight: 600; }
+.rejestr-szczegolow__statusy { display: flex; flex-wrap: wrap; gap: var(--ui-odstep-2); }
+.rejestr-szczegolow__statusy .ui-odznaka { align-self: start; }
+.rejestr-szczegolow__metadane { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: var(--ui-odstep-3); margin: 0; }
+.rejestr-szczegolow__metadane > div { min-width: 0; padding: var(--ui-odstep-3); background: var(--ui-powierzchnia); border: 1px solid var(--ui-obramowanie); border-radius: var(--ui-promien-pola); }
+.rejestr-szczegolow__metadane dt { color: var(--ui-tekst-drugi); font-size: var(--ui-tekst-maly); }
+.rejestr-szczegolow__metadane dd { margin: var(--ui-odstep-1) 0 0; color: var(--ui-tekst); }
+.rejestr-szczegolow__metadane ul { margin: 0; padding-inline-start: 20px; }
+.rejestr-szczegolow__pelna-szerokosc { grid-column: 1 / -1; }
+.rejestr-szczegolow__akcje { display: grid; gap: var(--ui-odstep-3); border-top: 1px solid var(--ui-obramowanie); padding-top: var(--ui-odstep-3); }
+.rejestr-szczegolow__workflow { display: flex; flex-wrap: wrap; gap: var(--ui-odstep-2); align-items: end; }
+.rejestr-szczegolow__status-szkolenia { display: grid; gap: var(--ui-odstep-1); min-width: 0; max-width: 100%; font-size: var(--ui-tekst-maly); }
+.rejestr-szczegolow select { min-width: 0; max-width: 100%; min-height: 44px; padding: var(--ui-odstep-2); font: inherit; background: var(--ui-pole); color: var(--ui-tekst); border: 1px solid var(--ui-obramowanie); border-radius: var(--ui-promien-pola); }
+.rejestr-szczegolow .ui-przycisk { min-width: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.rejestr-szczegolow .akcje-rekordu { margin: 0; }
+.rejestr-szczegolow .akcje-rekordu__przycisk--usun { color: var(--ui-error); border-color: var(--ui-error); }
+@media (max-width: 480px) {
+  .rejestr-szczegolow__workflow > *, .rejestr-szczegolow .akcje-rekordu > *, .rejestr-szczegolow__naglowek > .ui-przycisk { width: 100%; }
+}

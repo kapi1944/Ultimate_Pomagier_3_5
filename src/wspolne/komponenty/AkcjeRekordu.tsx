@@ -5,9 +5,9 @@ type TypAkcjiRekordu = 'podglad' | 'edycja' | 'duplikuj' | 'usun'
 
 type WlasciwosciAkcjiRekordu = {
   podglad: () => void
-  edytuj: () => void
-  duplikuj: () => void
-  usun: () => void
+  edytuj?: () => void
+  duplikuj?: () => void
+  usun?: () => void
 }
 
 const sciezkiIkon: Record<TypAkcjiRekordu, string[]> = {
@@ -24,8 +24,8 @@ function IkonaAkcjiRekordu({ typ }: { typ: TypAkcjiRekordu }) {
 export function AkcjeRekordu({ podglad, edytuj, duplikuj, usun }: WlasciwosciAkcjiRekordu) {
   return <div className="akcje-rekordu">
     <Przycisk className="akcje-rekordu__przycisk" onClick={podglad}><IkonaAkcjiRekordu typ="podglad" />Podglad</Przycisk>
-    <Przycisk className="akcje-rekordu__przycisk" onClick={edytuj}><IkonaAkcjiRekordu typ="edycja" />Edytuj</Przycisk>
-    <Przycisk className="akcje-rekordu__przycisk" onClick={duplikuj}><IkonaAkcjiRekordu typ="duplikuj" />Duplikuj</Przycisk>
-    <Przycisk className="akcje-rekordu__przycisk akcje-rekordu__przycisk--usun" onClick={usun}><IkonaAkcjiRekordu typ="usun" />Usun</Przycisk>
+    {edytuj && <Przycisk className="akcje-rekordu__przycisk" onClick={edytuj}><IkonaAkcjiRekordu typ="edycja" />Edytuj</Przycisk>}
+    {duplikuj && <Przycisk className="akcje-rekordu__przycisk" onClick={duplikuj}><IkonaAkcjiRekordu typ="duplikuj" />Duplikuj</Przycisk>}
+    {usun && <Przycisk className="akcje-rekordu__przycisk akcje-rekordu__przycisk--usun" onClick={usun}><IkonaAkcjiRekordu typ="usun" />Usun</Przycisk>}
   </div>
 }

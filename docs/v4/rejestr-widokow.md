@@ -13,7 +13,7 @@ Obowiązuje poniższy plan 23 etapów, zsynchronizowany jednorazowo w V4-05. Daw
 - V4-03: Ekran logowania i jego stany — **ukończony**.
 - V4-04: Pulpit, zadania, oś czasu, paczki i zakupy — **ukończony**.
 - V4-05: Szkolenia zamknięte i otwarte — **ukończony**.
-- V4-06: Lista i kopie szczegółów organizacyjnych — **przyszłe zadanie**.
+- V4-06: Lista i kopie szczegółów organizacyjnych — **ukończony**.
 - V4-07: Formularz szczegółów organizacyjnych — **przyszłe zadanie**.
 - V4-08: Centrum dokumentów, rejestry, kopie i kosze — **przyszłe zadanie**.
 - V4-09: Wspólny workspace generatorów — **przyszłe zadanie**.
@@ -36,8 +36,8 @@ Obowiązuje poniższy plan 23 etapów, zsynchronizowany jednorazowo w V4-05. Daw
 
 - `widoki[id].zadanie` oznacza właściciela liftingu widoku, a `pliki[ścieżka].zadanie` właściciela kodu. Właściciel pliku koordynuje zmiany; nie ma wyłączności na jego modyfikację.
 - `wspoldzieloneZ` wskazuje inne etapy mogące modyfikować współdzielony komponent wraz z jego odbiorcami. Wspólny plik nie przenosi własności widoku na właściciela kodu.
-- `ukonczoneEtapy` pliku odnotowuje rzeczywisty udział w commitach V4-01–05, a nie ukończenie wszystkich jego przyszłych zadań. Dla widoku oznacza ukończony lifting tego widoku.
-- `realizacjaEtapow` zawiera faktyczny status etapu i dowody historyczne (SHA/raport); V4-05 wskazuje niniejszy commit, aby uniknąć samoodwołującego się SHA. Właściciele V4-01–04 i raporty pozostają zachowani. V4-06–23 są planowane i nie zostały rozpoczęte w V4-05.
+- `ukonczoneEtapy` pliku odnotowuje rzeczywisty udział w commitach V4-01–06, a nie ukończenie wszystkich jego przyszłych zadań. Dla widoku oznacza ukończony lifting tego widoku.
+- `realizacjaEtapow` zawiera faktyczny status etapu i dowody historyczne (SHA/raport); V4-06 wskazuje niniejszy commit, aby uniknąć samoodwołującego się SHA. Właściciele V4-01–04 i raporty pozostają zachowani. V4-07–23 są planowane i nie zostały rozpoczęte w V4-06.
 - V4-09 obejmuje workspace bez odrębnej trasy; V4-23 audytuje wszystkie 53 widoki i wszystkie pliki/powierzchnie, bez przejmowania ich własności. Etap nie musi mieć własnego ID widoku.
 - `generator-szczegolow` to alias pełnego formularza `zamkniete_szczegoly_organizacyjne_nowe`, nie osobny ekran wejściowy. Oba należą do V4-07. Lista i kopie szczegółów należą do V4-06. Rejestry, kopie i kosze wszystkich generatorów należą do V4-08.
 
@@ -97,8 +97,8 @@ Adres `/` oznacza istniejący fallback nawigacji, a nie nową trasę. Kilka wido
 | `zakupy_pulpit` | V4-18 | `/zakupy` | tak | — |
 | `zakupy_zamowienia` | V4-18 | `/zakupy/zamowienia-i-dostawy` | tak | — |
 | `zakupy_zapotrzebowania` | V4-18 | `/zakupy/zapotrzebowania` | tak | — |
-| `zamkniete_szczegoly_organizacyjne_kopie_robocze` | V4-06 | `/szkolenia-zamkniete/szczegoly-organizacyjne/kopie-robocze` | tak | — |
-| `zamkniete_szczegoly_organizacyjne_lista` | V4-06 | `/szkolenia-zamkniete/szczegoly-organizacyjne` | tak | — |
+| `zamkniete_szczegoly_organizacyjne_kopie_robocze` | V4-06 | `/szkolenia-zamkniete/szczegoly-organizacyjne/kopie-robocze` | tak | V4-06 |
+| `zamkniete_szczegoly_organizacyjne_lista` | V4-06 | `/szkolenia-zamkniete/szczegoly-organizacyjne` | tak | V4-06 |
 | `zamkniete_szczegoly_organizacyjne_nowe` | V4-07 | `/szkolenia-zamkniete/szczegoly-organizacyjne/nowe` | tak | — |
 
 ## Podwidoki i powierzchnie wewnętrzne
@@ -182,8 +182,8 @@ Właściciel pliku obejmuje wszystkie warunki renderowania, stany pusty/błąd/�
 | `src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/PoleUczestnikowGrupy.tsx` | V4-07 | — | — | 0 |
 | `src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/PrzelacznikTakNie.tsx` | V4-07 | V4-20 | — | 0 |
 | `src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/SekcjaFormularza.tsx` | V4-07 | — | — | 0 |
-| `src/moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokKopiiRoboczychSzczegolowOrganizacyjnych.tsx` | V4-06 | — | — | 0 |
-| `src/moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokListySzczegolowOrganizacyjnych.tsx` | V4-06 | — | — | 3 |
+| `src/moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokKopiiRoboczychSzczegolowOrganizacyjnych.tsx` | V4-06 | — | V4-06 | 0 |
+| `src/moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokListySzczegolowOrganizacyjnych.tsx` | V4-06 | — | V4-06 | 3 |
 | `src/moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokNowychSzczegolowOrganizacyjnych.tsx` | V4-07 | — | — | 7 |
 | `src/moduly/zamkniete/szkolenia/WidokSzkolenZamknietych.tsx` | V4-05 | — | V4-05 | 0 |
 | `src/moduly/zamkniete/szkolenia/generator_szczegolow/WidokGeneratoraSzczegolow.tsx` | V4-07 | — | — | 0 |
@@ -193,13 +193,14 @@ Właściciel pliku obejmuje wszystkie warunki renderowania, stany pusty/błąd/�
 | `src/wspolne/dokumenty/PanelKontroliJakosciDokumentu.tsx` | V4-09 | V4-10, V4-11, V4-12, V4-13, V4-14, V4-15, V4-16, V4-21 | — | 9 |
 | `src/wspolne/dokumenty/RendererSwobodnychBlokow.tsx` | V4-09 | V4-10, V4-11, V4-12, V4-13, V4-14, V4-15, V4-16 | — | 0 |
 | `src/wspolne/dokumenty/WidokKopiiRoboczychGeneratora.tsx` | V4-08 | V4-10, V4-11, V4-12, V4-13, V4-14, V4-15 | — | 0 |
-| `src/wspolne/komponenty/AkcjeRekordu.tsx` | V4-08 | V4-06, V4-20, V4-21 | V4-01 | 0 |
+| `src/wspolne/komponenty/AkcjeRekordu.tsx` | V4-08 | V4-06, V4-20, V4-21 | V4-01, V4-06 | 0 |
 | `src/wspolne/komponenty/ElementyInterfejsu.tsx` | V4-22 | V4-01, V4-02, V4-03, V4-04, V4-05, V4-06, V4-07, V4-08, V4-09, V4-10, V4-11, V4-12, V4-13, V4-14, V4-15, V4-16, V4-17, V4-18, V4-19, V4-20, V4-21, V4-23 | V4-01, V4-02 | 5 |
 | `src/wspolne/komponenty/GaleriaKomponentow.tsx` | V4-22 | V4-01 | V4-01 | 2 |
 | `src/wspolne/telefon/PoleTelefonu.tsx` | V4-07 | V4-20, V4-21 | — | 0 |
 | `src/aplikacja/layout/DockAplikacji.tsx` | V4-02 | — | V4-02 | 0 |
+| `src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/KartaRejestruSzczegolow.tsx` | V4-06 | — | V4-06 | 0 |
 
-Wspólny lokalny styl obu ekranów szkoleń: `src/moduly/szkoleniaV4.css` — właściciel V4-05, używany przez oba widoki. Inwentaryzacja TSX i jej istniejące sygnatury pozostają bez zmian.
+Wspólny lokalny styl obu ekranów szkoleń: `src/moduly/szkoleniaV4.css` — właściciel V4-05, używany przez oba widoki. W V4-06 inwentaryzację rozszerzono o lokalną kartę rejestru; zachowano wszystkie dotychczasowe sygnatury.
 
 ## Ustalenia audytu i zgodność
 
@@ -237,3 +238,10 @@ Plan tygodniowy nie istnieje w obecnym kodzie; zapisano go w docs/v4/backlog.md.
 ## V4-05 — Szkolenia i synchronizacja planu
 
 Oba ekrany szkoleń otrzymały lifting V4. Zamknięte udostępniają istniejącą listę, formularz oraz kopie szczegółów przez centralne ustawWidok. Pozycja nadrzędna menu otwiera teraz ten ekran, zachowując rozwijanie podmenu; na telefonie zamyka menu po wyborze. Otwarte pozostają widokiem informacyjnym bez fikcyjnych operacji i danych. Zmiana właścicieli w planie nie oznacza wykonania przyszłych etapów. Formularza, list, modeli ani storage nie zmieniano. Szczegóły w raporcie V4-05.
+
+## V4-06 — rejestry Szczegółów organizacyjnych
+
+- Lista szczegółów organizacyjnych: ukończony lifting, pełne karty, osobne metadane i statusy, zachowane operacje oraz reguły workflow.
+- Kopie robocze szczegółów organizacyjnych: ukończony lifting, odrębne szkice, metadane wersji bazowej i ostrzeżenie o historycznej podstawie aktualizacji; akcje zależą od istniejących uprawnień.
+
+Lokalna karta KartaRejestruSzczegolow należy do V4-06. Wspólny arkusz `src/moduly/zamkniete/szczegoly_organizacyjne/widoki/rejestrySzczegolowV4.css` i prezentacja statusów `src/moduly/zamkniete/szczegoly_organizacyjne/prezentacjaRejestruSzczegolow.ts` również należą do V4-06. Pełny formularz i jego arkusz pozostały bez zmian; V4-07 nie rozpoczęto. Szczegóły w raporcie V4-06.
