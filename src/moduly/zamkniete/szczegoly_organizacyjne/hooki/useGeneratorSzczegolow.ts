@@ -315,6 +315,11 @@ function scalDaneFormularza(obecne: DaneFormularza, czesciowe: Partial<DaneFormu
     ...czesciowe,
     nabywca: scalFirme(obecne.nabywca, czesciowe.nabywca),
     odbiorca: scalFirme(obecne.odbiorca, czesciowe.odbiorca),
+    dyspozycjeMaterialowe: { ...obecne.dyspozycjeMaterialowe, ...czesciowe.dyspozycjeMaterialowe },
+    odbiorcaPaczki: {
+      ...obecne.odbiorcaPaczki,
+      ...Object.fromEntries(Object.entries(czesciowe.odbiorcaPaczki ?? {}).filter(([, wartosc]) => wartosc !== '')),
+    },
     dokumentacja: scalDokumentacje(obecne.dokumentacja, czesciowe.dokumentacja),
     logotypy: { ...obecne.logotypy, ...czesciowe.logotypy },
     dodatkoweWymogi: {

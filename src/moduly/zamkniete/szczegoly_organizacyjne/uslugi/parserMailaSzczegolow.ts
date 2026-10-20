@@ -1,17 +1,22 @@
 import type {
   DaneFirmy,
   DaneFormularza,
+  DyspozycjaMaterialowa,
+  DyspozycjeMaterialowe,
   FormaSzkolenia,
   GrupaSzkoleniowa,
   OswiadczenieVat,
+  RodzajDyspozycjiMaterialowej,
   WynikParseraMailaSzczegolow,
 } from '../typy'
+import { poczatkoweDaneFormularza } from '../danePoczatkowe'
 
 function normalizujTekst(tekst: string) {
   return tekst
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
+    .replace(/ł/g, 'l')
 }
 
 function zabezpieczWyrazenie(tekst: string) {
@@ -19,7 +24,27 @@ function zabezpieczWyrazenie(tekst: string) {
 }
 
 function normalizujTrescMaila(tresc: string) {
-  return tresc.replace(/\r\n?/g, '\n').replace(/\u00a0/g, ' ').replace(/^\uFEFF/, '')
+  const encje: Record<string, string> = {
+    nbsp: ' ', amp: '&', lt: '<', gt: '>', quot: '"', apos: "'",
+    ensp: ' ', emsp: ' ', thinsp: ' ', ndash: '–', mdash: '—',
+    colon: ':', tab: ' ', newline: '\n', laquo: '„', raquo: '”',
+    ldquo: '„', rdquo: '”', shy: '', zwj: '', zwnj: '',
+  }
+  return tresc
+    .replace(/\r\n?/g, '\n')
+    .replace(/<!--[\s\S]*?-->|<(style|script)\b[^>]*>[\s\S]*?<\/\1>/gi, '')
+    .replace(/<(?:br|hr)\b[^>]*>|<\/?(?:p|div|tr|td|th|table|li|h[1-6])\b[^>]*>/gi, '\n')
+    .replace(/<\/?[a-z][a-z\d:-]*(?:\s[^<>]*)?\s*\/?>/gi, '')
+    .replace(/&(#x[\da-f]+|#\d+|[a-z]+);/gi, (calosc, encja: string) => {
+      if (!encja.startsWith('#')) return encje[encja.toLowerCase()] ?? calosc
+      const kod = encja[1].toLowerCase() === 'x' ? parseInt(encja.slice(2), 16) : Number(encja.slice(1))
+      return kod > 0 && kod <= 0x10ffff ? String.fromCodePoint(kod) : calosc
+    })
+    .replace(/[\u200b\uFEFF\u00ad]|\u200c|\u200d/g, '')
+    .replace(/\*\*|__/g, '')
+    .split('\n')
+    .map((wiersz) => wiersz.replace(/[^\S\n]+/g, ' ').trim().replace(/^(?:>\s*|#{1,6}\s+|[-*•–]\s*(?=\p{L}))/gu, ''))
+    .join('\n')
 }
 
 function czyWierszJestEtykieta(wiersz: string) {
@@ -30,7 +55,10 @@ function znajdzWartoscWNastepnejLinii(wiersze: string[], indeks: number) {
   for (let nastepny = indeks + 1; nastepny < wiersze.length; nastepny += 1) {
     const wartosc = wiersze[nastepny].trim()
     if (!wartosc) continue
-    return czyWierszJestEtykieta(wartosc) ? '' : wartosc
+    const etykiety = [...Object.values(etykietyDyspozycji).flat(), 'Trener Prowadzący', 'Liczba godzin', 'Liczba uczestników', 'Nazwa firmy']
+    const dalszyTekst = wiersze.slice(nastepny, nastepny + 5).filter((wiersz) => wiersz.trim()).join(' ')
+    const czyFragmentEtykiety = etykiety.some((etykieta) => normalizujTekst(dalszyTekst).startsWith(`${normalizujTekst(etykieta)}:`))
+    return czyWierszJestEtykieta(wartosc) || czyFragmentEtykiety ? '' : wartosc
   }
   return ''
 }
@@ -39,13 +67,16 @@ function rozdzielNaglowkiWiadomosci(tresc: string) {
   const wiersze = normalizujTrescMaila(tresc).split('\n')
   const naglowki: Record<string, string> = {}
   const trescWlasciwa: string[] = []
+  let czyWBlokuNaglowkow = false
 
   for (let indeks = 0; indeks < wiersze.length; indeks += 1) {
-    const naglowek = wiersze[indeks].match(/^\s*(Od|Do|DW|Data|Temat|Załączniki|Zalaczniki|From|To|Cc|Date|Sent|Subject|Attachments)\s*:\s*(.*)$/i)
-    if (!naglowek) {
+    const naglowek = wiersze[indeks].match(/^\s*(Od|Do|DW|Data|Temat|Nadawca|Adresat|Załączniki|Zalaczniki|From|To|Cc|Date|Sent|Subject|Attachments)\s*:\s*(.*)$/i)
+    if (!naglowek || (normalizujTekst(naglowek[1]) === 'data' && !czyWBlokuNaglowkow)) {
       trescWlasciwa.push(wiersze[indeks])
+      if (wiersze[indeks].trim()) czyWBlokuNaglowkow = false
       continue
     }
+    czyWBlokuNaglowkow = true
     const nazwa = normalizujTekst(naglowek[1])
     const wartosc = naglowek[2].trim() || znajdzWartoscWNastepnejLinii(wiersze, indeks)
     naglowki[nazwa] ??= wartosc
@@ -59,16 +90,152 @@ function rozdzielNaglowkiWiadomosci(tresc: string) {
 }
 
 function znajdzPoEtykiecie(tresc: string, etykiety: string[]) {
-  const wzorEtykiet = etykiety.map(zabezpieczWyrazenie).join('|')
+  return znajdzWartosciPoEtykiecie(tresc, etykiety)[0] ?? ''
+}
+
+function znajdzWartosciPoEtykiecie(tresc: string, etykiety: string[]) {
+  const wzorEtykiet = etykiety.map((etykieta) => zabezpieczWyrazenie(normalizujTekst(etykieta))).join('|')
   const wzor = new RegExp(`^[ \\t]*(?:${wzorEtykiet})[ \\t]*[:\\-–][ \\t]*(.*)$`, 'i')
   const wiersze = tresc.split('\n')
+  const wartosci: string[] = []
   for (let indeks = 0; indeks < wiersze.length; indeks += 1) {
-    const dopasowanie = wiersze[indeks].match(wzor)
-    if (!dopasowanie) continue
-    const wartosc = dopasowanie[1].trim() || znajdzWartoscWNastepnejLinii(wiersze, indeks)
-    if (wartosc) return wartosc
+    let wiersz = wiersze[indeks]
+    for (let koniec = indeks; koniec < Math.min(indeks + 5, wiersze.length); koniec += 1) {
+      if (koniec > indeks && wiersze[koniec].trim()) wiersz += ` ${wiersze[koniec]}`
+      const dopasowanie = normalizujTekst(wiersz).match(wzor)
+      if (dopasowanie) {
+        const wartosc = wiersz.slice(dopasowanie[0].length - dopasowanie[1].length).trim()
+          || znajdzWartoscWNastepnejLinii(wiersze, koniec)
+        if (wartosc) wartosci.push(wartosc)
+        break
+      }
+      if (!wiersz.trim() || !etykiety.some((etykieta) => normalizujTekst(etykieta).startsWith(normalizujTekst(wiersz).trim()))) break
+    }
   }
-  return ''
+  return wartosci
+}
+
+function podzielKonteksty(tresc: string) {
+  const dane: string[] = []
+  const materialy: string[] = []
+  const wysylki: string[][] = []
+  let sekcja: 'dane' | 'wysylka' | 'pomijana' = 'dane'
+  let pierwszaGrupa = ''
+  let czyPierwszaGrupa = true
+
+  const wiersze = tresc.split('\n')
+  for (let indeks = 0; indeks < wiersze.length; indeks += 1) {
+    let wiersz = wiersze[indeks]
+    if (/^(?:grupa(?: szkoleniowa)?|nazwa grupy)\s*:?$/i.test(normalizujTekst(wiersz))) {
+      const wartosc = znajdzWartoscWNastepnejLinii(wiersze, indeks)
+      if (wartosc) {
+        wiersz = `Grupa: ${wartosc}`
+        while (!wiersze[indeks + 1].trim()) indeks += 1
+        indeks += 1
+      }
+    }
+    const tekst = normalizujTekst(wiersz).replace(/^[^a-z\d]+/, '').trim()
+    const grupa = tekst.match(/^(?:grupa(?: szkoleniowa)?|nazwa grupy)\s*(?::|[-–])?\s*([^:]+?)\s*:?$/)
+    if (grupa) {
+      pierwszaGrupa ||= grupa[1]
+      czyPierwszaGrupa = grupa[1] === pierwszaGrupa
+      sekcja = 'dane'
+      if (czyPierwszaGrupa) dane.push(`Grupa: ${wiersz.replace(/^(?:grupa(?: szkoleniowa)?|nazwa grupy)\s*[:–-]?\s*/i, '').replace(/:$/, '')}`)
+      continue
+    }
+    if (/^(?:dla [\p{L} ]+:\s*)?(?:materialy (?:na adres|do wysylki)|adres (?:do )?(?:wysylki|dostawy)|dane (?:do wysylki|odbiorcy paczki)|wysylka (?:materialow|paczki)|odbiorca (?:materialow|paczki))\b/u.test(tekst)) {
+      sekcja = 'wysylka'
+      if (czyPierwszaGrupa) wysylki.push([wiersz.includes(':') ? wiersz.slice(wiersz.lastIndexOf(':') + 1).trim() : ''])
+      continue
+    }
+    if (/^(?:(?:wazna )?informacja dla trenera|dla trenera|instrukcje dla trenera|uwagi dla trenera|hotel\b|nocleg\b|zakwaterowanie\b|adres hotelu\b|harmonogram szkolenia|program szkolenia)/.test(tekst)) {
+      sekcja = 'pomijana'
+      continue
+    }
+    if (/^(?:dane szkolenia|szczegoly szkolenia|podstawowe informacje|dokumentacja|dyspozycje materialowe|dane nabywcy|dane do faktury)\s*:?$/.test(tekst)) sekcja = 'dane'
+    if (/^(?:(?:adres|miejsce|forma|tryb|data) szkolenia\s*:|sala szkoleniowa\b)/.test(tekst)) sekcja = 'dane'
+    if (!czyPierwszaGrupa || /^dla [\p{L} ]+:\s*$/u.test(tekst)) continue
+    if (sekcja === 'wysylka') wysylki.at(-1)?.push(wiersz)
+    if (sekcja === 'dane') {
+      dane.push(wiersz)
+      materialy.push(wiersz)
+    }
+  }
+  return { dane: dane.join('\n'), materialy: materialy.join('\n'), wysylki: wysylki.map((wiersze) => wiersze.join('\n')) }
+}
+
+const etykietyDyspozycji: Record<RodzajDyspozycjiMaterialowej, string[]> = {
+  materialySzkoleniowe: ['Materiały szkoleniowe', 'Materiały szkol.', 'Mat. szkoleniowe', 'Mat. szkol.', 'Materiały', 'Skrypty', 'Podręczniki'],
+  certyfikaty: ['Certyfikaty', 'Certyfikat', 'Cert.', 'Dyplomy', 'Zaświadczenia'],
+  listaObecnosci: ['Lista obecności', 'Listy obecności', 'Lista obecn.', 'L. obecności', 'L.O.'],
+  materialyDodatkowe: ['Materiały dodatkowe', 'Mat. dodatkowe', 'Mat. dod.', 'Materiały dod.'],
+  ankiety: ['Ankiety', 'Ankieta', 'Ankiety ewaluacyjne', 'Ank.'],
+}
+
+function parsujDyspozycje(wartosc: string): DyspozycjaMaterialowa {
+  const tekst = normalizujTekst(wartosc)
+  const dyspozycja: DyspozycjaMaterialowa = { tekstZrodlowy: wartosc, status: 'zaimportowane' }
+  const czyOnline = /\bon[ -]?line\b|elektroniczn|cyfrow|\bpdf\b|e-?mail/.test(tekst)
+  const papier = /druk|papier/.test(tekst)
+  const klient = /\bklient(?:a|owi|em)?\b|zamawiajac/.test(tekst)
+  const organizator = /organizator|semper|iist|\bmy\b/.test(tekst)
+  const poSzkoleniu = /po (?:szkoleniu|zakonczeniu(?: szkolenia)?|kursie)/.test(tekst)
+  const przedSzkoleniem = /przed (?:szkoleniem|rozpoczeciem(?: szkolenia)?|kursem)/.test(tekst)
+  if (czyOnline !== papier) dyspozycja.formaPrzekazania = czyOnline ? 'online' : 'papierowa'
+  if (papier && klient !== organizator) dyspozycja.sposobPrzygotowania = klient ? 'drukuje_klient' : 'drukuje_organizator'
+  if (poSzkoleniu !== przedSzkoleniem) dyspozycja.terminPrzekazania = poSzkoleniu ? 'po_szkoleniu' : 'przed_szkoleniem'
+  if (czyOnline && papier || klient && organizator || poSzkoleniu && przedSzkoleniem
+    || /\?|\blub\b|\balbo\b|\bmoze\b|do (?:ustalenia|potwierdzenia)|\bnie\b|\bbez\b/.test(tekst)
+    || !dyspozycja.formaPrzekazania && !dyspozycja.terminPrzekazania) dyspozycja.status = 'niepewne'
+  return dyspozycja
+}
+
+function rozpoznajDyspozycje(tresc: string) {
+  const dyspozycje: DyspozycjeMaterialowe = {}
+  for (const rodzaj of Object.keys(etykietyDyspozycji) as RodzajDyspozycjiMaterialowej[]) {
+    const wartosci = znajdzWartosciPoEtykiecie(tresc, etykietyDyspozycji[rodzaj])
+    if (!wartosci.length) continue
+    const dyspozycja = parsujDyspozycje(wartosci[0])
+    if (new Set(wartosci.map(normalizujTekst)).size > 1) {
+      dyspozycje[rodzaj] = { tekstZrodlowy: wartosci.join('\n'), status: 'niepewne' }
+    } else dyspozycje[rodzaj] = dyspozycja
+  }
+  return dyspozycje
+}
+
+function rozpoznajOdbiorcePaczki(tresc: string) {
+  const wiersze = tresc.split('\n').map((wiersz) => wiersz.trim()).filter(Boolean)
+  const dane: Partial<DaneFormularza['odbiorcaPaczki']> = {}
+  const nazwa = znajdzPoEtykiecie(tresc, ['Nazwa firmy', 'Nazwa odbiorcy', 'Odbiorca', 'Firma'])
+    || wiersze.find((wiersz) => !czyWierszJestEtykieta(wiersz) && !/^(?:ul\.|\d|tel\.|kontakt)/i.test(wiersz) && !znajdzEmail(wiersz))
+  if (nazwa) dane.nazwaFirmy = nazwa
+  const adres = znajdzPoEtykiecie(tresc, ['Adres', 'Adres odbiorcy'])
+  const indeksKodu = wiersze.findIndex((wiersz) => /^\d{2}-\d{3}\s/.test(wiersz))
+  const wierszPrzedKodem = indeksKodu > 0 && /\s\d+[a-z]?(?:\/\d+[a-z]?)?$/i.test(wiersze[indeksKodu - 1]) ? wiersze[indeksKodu - 1] : ''
+  const ulica = znajdzPoEtykiecie(tresc, ['Ulica']) || adres || wiersze.find((wiersz) => /^(?:ul\.|ulica\b|al\.|aleja\b|pl\.)/i.test(wiersz)) || wierszPrzedKodem
+  const dopasowanieUlicy = ulica.match(/^(?:ul\.?\s*|ulica\s+)?(.+?)\s+(\d+[a-z]?)\s*(?:\/\s*(\d+[a-z]?))?(?:,|$)/i)
+  if (dopasowanieUlicy) {
+    dane.ulica = dopasowanieUlicy[1]
+    dane.nrBudynku = dopasowanieUlicy[2]
+    if (dopasowanieUlicy[3]) dane.nrLokalu = dopasowanieUlicy[3]
+  } else if (ulica) dane.ulica = ulica
+  const nrBudynku = znajdzPoEtykiecie(tresc, ['Nr budynku', 'Numer budynku'])
+  const nrLokalu = znajdzPoEtykiecie(tresc, ['Nr lokalu', 'Numer lokalu'])
+  if (nrBudynku) dane.nrBudynku = nrBudynku
+  if (nrLokalu) dane.nrLokalu = nrLokalu
+  const kodIMiasto = `${adres}\n${tresc}`.match(/\b(\d{2}-\d{3})\s+([^\n]+)/)
+  const kod = znajdzPoEtykiecie(tresc, ['Kod pocztowy', 'Kod']) || kodIMiasto?.[1]
+  const miasto = znajdzPoEtykiecie(tresc, ['Miasto', 'Miejscowość']) || kodIMiasto?.[2]
+  if (kod) dane.kodPocztowy = kod
+  if (miasto) dane.miasto = miasto
+  const kontakt = znajdzPoEtykiecie(tresc, ['Kontakt', 'Osoba kontaktowa', 'Osoba do kontaktu', 'Imię i nazwisko', 'Imię i nazwisko odbiorcy'])
+  if (kontakt) dane.imieNazwisko = kontakt
+  const telefon = znajdzPoEtykiecie(tresc, ['Telefon', 'Tel.', 'Tel', 'Telefon kontaktowy'])
+    || tresc.match(/\btel\.?\s*(\+?\d[\d ()-]{6,})/i)?.[1] || ''
+  if (telefon) dane.telefon = znajdzTelefon(telefon)
+  const email = znajdzEmail(tresc)
+  if (email) dane.email = email
+  return dane
 }
 
 type KandydatTytulu = {
@@ -127,7 +294,8 @@ function znajdzNumer(tekst: string) {
     return Number.NaN
   }
 
-  return Number(dopasowanie[1].replace(/\s/g, '').replace(',', '.'))
+  const liczba = dopasowanie[1].trim().replace(/\s/g, '')
+  return Number(liczba.includes(',') ? liczba.replace(/\./g, '').replace(',', '.') : liczba)
 }
 
 function normalizujDate(wartosc: string) {
@@ -217,8 +385,10 @@ function uzupelnijDaneFirmy(czesciowe: Partial<DaneFirmy>, wartosci: Partial<Dan
 }
 
 export function parsujMailaSzczegolow(tresc: string): WynikParseraMailaSzczegolow {
+  const tekstZrodlowy = tresc
   const wiadomosc = rozdzielNaglowkiWiadomosci(tresc)
-  tresc = wiadomosc.tresc
+  const konteksty = podzielKonteksty(wiadomosc.tresc)
+  tresc = konteksty.dane
   const temat = parsujTematWiadomosci(wiadomosc.naglowki.temat ?? wiadomosc.naglowki.subject ?? '')
   const daneFormularza: Partial<DaneFormularza> = {}
   const pierwszaGrupa: Partial<GrupaSzkoleniowa> = {}
@@ -240,13 +410,19 @@ export function parsujMailaSzczegolow(tresc: string): WynikParseraMailaSzczegolo
     if (tytul.niepewny) dodajNiepewne(polaNiepewne, 'tytulSzkolenia')
   }
 
-  const nazwaKlienta = znajdzPoEtykiecie(tresc, ['Nazwa klienta', 'Klient'])
+  const nazwaKlienta = znajdzPoEtykiecie(tresc, ['Nazwa klienta', 'Klient', 'Nazwa firmy'])
   if (nazwaKlienta) {
     daneFormularza.nazwaKlienta = nazwaKlienta
     dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'podstawowe informacje', 'nazwaKlienta')
   }
 
-  const trener = znajdzPoEtykiecie(tresc, ['Trener', 'Prowadzący', 'Prowadząca'])
+  const nazwaGrupy = znajdzPoEtykiecie(tresc, ['Grupa', 'Nazwa grupy'])
+  if (nazwaGrupy) {
+    pierwszaGrupa.nazwa = /^\d+$/.test(nazwaGrupy) ? `Grupa ${nazwaGrupy}` : nazwaGrupy
+    dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'grupa szkoleniowa', 'grupy.0.nazwa')
+  }
+
+  const trener = znajdzPoEtykiecie(tresc, ['Trener', 'Prowadzący', 'Prowadząca', 'Trener Prowadzący'])
   if (trener) {
     pierwszaGrupa.trenerzy = [
       {
@@ -261,7 +437,7 @@ export function parsujMailaSzczegolow(tresc: string): WynikParseraMailaSzczegolo
 
   const dataOd = normalizujDate(znajdzPoEtykiecie(tresc, ['Data od']))
   const dataDo = normalizujDate(znajdzPoEtykiecie(tresc, ['Data do']))
-  const termin = znajdzPoEtykiecie(tresc, ['Termin', 'Data szkolenia'])
+  const termin = znajdzPoEtykiecie(tresc, ['Termin', 'Data szkolenia', 'Data'])
   const datyTerminu = termin ? znajdzDaty(termin) : { dataOd: '', dataDo: '' }
   const dataOdZTresci = dataOd || datyTerminu.dataOd
   const dataDoZTresci = dataDo || datyTerminu.dataDo
@@ -309,7 +485,7 @@ export function parsujMailaSzczegolow(tresc: string): WynikParseraMailaSzczegolo
     dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'grupa szkoleniowa', 'grupy.0.liczbaGodzin')
   }
 
-  const cenaNetto = znajdzPoEtykiecie(tresc, ['Cena netto', 'Wartość netto'])
+  const cenaNetto = znajdzPoEtykiecie(tresc, ['Cena netto', 'Wartość netto', 'Cena'])
   if (cenaNetto) {
     pierwszaGrupa.cenaNetto = znajdzNumer(cenaNetto)
     dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'cena', 'grupy.0.cenaNetto')
@@ -337,6 +513,13 @@ export function parsujMailaSzczegolow(tresc: string): WynikParseraMailaSzczegolo
   if (dataUmowy) {
     pierwszaGrupa.dataUmowy = dataUmowy
     dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'umowa', 'grupy.0.dataUmowy')
+  }
+
+  for (const pole of ['liczbaUczestnikow', 'liczbaGodzin', 'cenaNetto', 'terminPlatnosci'] as const) {
+    if (pierwszaGrupa[pole] !== undefined && !Number.isFinite(pierwszaGrupa[pole])) {
+      delete pierwszaGrupa[pole]
+      dodajNiepewne(polaNiepewne, `grupy.0.${pole}`)
+    }
   }
 
   const nabywca = uzupelnijDaneFirmy({}, {
@@ -376,6 +559,35 @@ export function parsujMailaSzczegolow(tresc: string): WynikParseraMailaSzczegolo
     daneFormularza.czyNabywcaJestOdbiorca = Boolean(nabywca.nazwa && odbiorca.nazwa && nabywca.nazwa === odbiorca.nazwa)
     dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'dane odbiorcy', 'odbiorca.nazwa')
   }
+
+  const dyspozycje = rozpoznajDyspozycje(konteksty.materialy)
+  if (Object.keys(dyspozycje).length) {
+    daneFormularza.dyspozycjeMaterialowe = dyspozycje
+    for (const [rodzaj, dyspozycja] of Object.entries(dyspozycje)) {
+      const pole = `dyspozycjeMaterialowe.${rodzaj}`
+      dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'dyspozycje materiałowe', pole)
+      if (dyspozycja.status === 'niepewne') dodajNiepewne(polaNiepewne, pole)
+    }
+  }
+
+  const odbiorcyPaczek = konteksty.wysylki.map(rozpoznajOdbiorcePaczki).filter((dane) => Object.keys(dane).length)
+  if (odbiorcyPaczek.length) {
+    const odbiorcaPaczki = odbiorcyPaczek[0]
+    daneFormularza.odbiorcaPaczki = { ...poczatkoweDaneFormularza.odbiorcaPaczki, ...odbiorcaPaczki }
+    daneFormularza.wysylkaPaczkiDotyczy = true
+    dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'wysyłka materiałów', 'wysylkaPaczkiDotyczy')
+    for (const pole of Object.keys(odbiorcaPaczki)) {
+      dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'wysyłka materiałów', `odbiorcaPaczki.${pole}`)
+      if (odbiorcyPaczek.some((dane) => dane[pole as keyof typeof dane] !== odbiorcaPaczki[pole as keyof typeof odbiorcaPaczki])) {
+        dodajNiepewne(polaNiepewne, `odbiorcaPaczki.${pole}`)
+      }
+    }
+    if (!odbiorcaPaczki.nrBudynku || !odbiorcaPaczki.kodPocztowy || !odbiorcaPaczki.miasto) {
+      dodajNiepewne(polaNiepewne, 'odbiorcaPaczki.ulica')
+    }
+  }
+
+  if (rozpoznanePola.length) daneFormularza.zrodloImportuMaila = tekstZrodlowy
 
   return {
     daneFormularza,

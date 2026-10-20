@@ -13,6 +13,7 @@ import {
   zapiszWersjeRobocza,
 } from '../src/moduly/zamkniete/szczegoly_organizacyjne/uslugi/magazynWersjiRoboczych.ts'
 import type { DaneFormularza, WersjaRoboczaGeneratora } from '../src/moduly/zamkniete/szczegoly_organizacyjne/typy.ts'
+import { parsujMailaSzczegolow } from '../src/moduly/zamkniete/szczegoly_organizacyjne/uslugi/parserMailaSzczegolow.ts'
 
 const magazyn = new Map<string, string>()
 
@@ -156,3 +157,29 @@ test('banner kopii roboczej ma trwałe, jawne akcje przywrócenia i odrzucenia',
   assert.match(hook, /czyPominacNastepnyAutosave = useRef\(true\)/)
   assert.match(hook, /function odrzucAutosave\(\)[\s\S]*czyPominacNastepnyAutosave\.current = true[\s\S]*usunAutosaveSzczegolow\(\)/)
 })
+
+for (const czyStarszyRekord of [false, true]) {
+  test(`zapis i odczyt dyspozycji oraz źródła w kopii i autosave, rekord starszy: ${czyStarszyRekord}`, () => {
+    magazyn.clear()
+    const tresc = readFileSync(new URL('./fixtures/mailDyspozycjeMaterialowe.txt', import.meta.url), 'utf8')
+    const wynik = parsujMailaSzczegolow(tresc)
+    const dane: DaneFormularza = { ...structuredClone(poczatkoweDaneFormularza), ...wynik.daneFormularza }
+    if (czyStarszyRekord) {
+      delete dane.dyspozycjeMaterialowe
+      delete dane.zrodloImportuMaila
+    }
+    const wersja: WersjaRoboczaGeneratora = {
+      id: 'kopia-importu', dokumentId: 'dokument-importu', wersja: 'test', etykietaWersji: 'test',
+      nazwa: 'Import maila', dataZapisu: '2026-10-20T08:00:00.000Z', autorId: 'autor', autorNazwa: 'Autor',
+      dane, grupy: [], adresaci: { reczniAdresaci: '', trybTresci: 'Tylko zmiany', czyPodpis: true, wiadomoscWlasna: '' }, statusyPol: {},
+    }
+    zapiszWersjeRobocza(wersja)
+    zapiszAutosaveSzczegolow({ id: 'autosave-importu', dataZapisu: wersja.dataZapisu, dane, grupy: [], adresaci: wersja.adresaci, statusyPol: {}, aktywnaKopiaId: wersja.id })
+    const wczytane = [pobierzKopieRobocze()[0].dane, pobierzAutosaveSzczegolow()?.dane]
+    for (const wczytaneDane of wczytane) {
+      assert.deepEqual(wczytaneDane?.dyspozycjeMaterialowe, czyStarszyRekord ? undefined : wynik.daneFormularza.dyspozycjeMaterialowe)
+      assert.equal(wczytaneDane?.zrodloImportuMaila, czyStarszyRekord ? undefined : tresc)
+      assert.equal(wczytaneDane?.odbiorcaPaczki.email, 'kontakt@example.org')
+    }
+  })
+}

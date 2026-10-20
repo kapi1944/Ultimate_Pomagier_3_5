@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
+import { readFileSync } from 'node:fs'
 import { parsujMailaSzczegolow } from '../src/moduly/zamkniete/szczegoly_organizacyjne/uslugi/parserMailaSzczegolow.ts'
 
 const tytul = 'Wartościowanie stanowisk pracy'
@@ -152,4 +153,200 @@ test('nie uzupełnia końca terminu sprzeczną datą z tematu, jeśli treść po
   const wynik = parsujMailaSzczegolow(`Temat: ${tematZMetadanymi}\nData od: 09.10.2026`)
   assert.equal(wynik.pierwszaGrupa.dataOd, '2026-10-09')
   assert.equal(wynik.pierwszaGrupa.dataDo, undefined)
+})
+
+const mailDyspozycji = readFileSync(new URL('./fixtures/mailDyspozycjeMaterialowe.txt', import.meta.url), 'utf8')
+
+test('mail o strukturze wiadomości Dawida Chyły: pięć dyspozycji i odbiorca, bez danych hotelu i instrukcji zwrotu', () => {
+  const wynik = parsujMailaSzczegolow(mailDyspozycji)
+  assert.deepEqual(wynik.daneFormularza.dyspozycjeMaterialowe, {
+    materialySzkoleniowe: { formaPrzekazania: 'online', tekstZrodlowy: 'online', status: 'zaimportowane' },
+    certyfikaty: { terminPrzekazania: 'po_szkoleniu', tekstZrodlowy: 'po szkoleniu', status: 'zaimportowane' },
+    listaObecnosci: { formaPrzekazania: 'papierowa', sposobPrzygotowania: 'drukuje_klient', tekstZrodlowy: 'drukuje Klient', status: 'zaimportowane' },
+    materialyDodatkowe: { formaPrzekazania: 'papierowa', tekstZrodlowy: 'druk', status: 'zaimportowane' },
+    ankiety: { formaPrzekazania: 'papierowa', sposobPrzygotowania: 'drukuje_klient', tekstZrodlowy: 'drukuje Klient', status: 'zaimportowane' },
+  })
+  assert.deepEqual(wynik.daneFormularza.odbiorcaPaczki, {
+    nazwaFirmy: 'Przykładowy Urząd', ulica: 'Przykładowa', nrBudynku: '8', nrLokalu: '',
+    kodPocztowy: '00-001', miasto: 'Miasto Testowe', kraj: 'Polska', imieNazwisko: 'Anna Testowa',
+    telefon: '+48 000000001', email: 'kontakt@example.org',
+  })
+  assert.equal(wynik.daneFormularza.wysylkaPaczkiDotyczy, true)
+  assert.equal(wynik.daneFormularza.zrodloImportuMaila, mailDyspozycji)
+  assert.equal(wynik.daneFormularza.nazwaKlienta, 'Przykładowy Urząd')
+  assert.equal(wynik.pierwszaGrupa.nazwa, 'Grupa 1')
+  assert.equal(wynik.pierwszaGrupa.dataOd, '2026-10-26')
+  assert.equal(wynik.pierwszaGrupa.trenerzy?.[0].imieNazwisko, 'Jan Testowy')
+  assert.equal(wynik.pierwszaGrupa.liczbaGodzin, 8)
+  assert.equal(wynik.pierwszaGrupa.liczbaUczestnikow, 30)
+  assert.equal(wynik.pierwszaGrupa.cenaNetto, 6500)
+  assert.equal(wynik.pierwszaGrupa.formaSzkolenia, undefined)
+  assert.equal(wynik.daneFormularza.uwagi, undefined)
+  assert.ok(!wynik.polaNiepewne.some((pole) => /dyspozycje|odbiorcaPaczki/.test(pole)))
+})
+
+for (const [etykieta, wartosc, rodzaj, oczekiwane] of [
+  ['MAT. SZKOL.', 'ON-LINE', 'materialySzkoleniowe', { formaPrzekazania: 'online' }],
+  ['materialy szkoleniowe', 'w wersji elektronicznej PDF', 'materialySzkoleniowe', { formaPrzekazania: 'online' }],
+  ['Cert.', 'po zakonczeniu szkolenia', 'certyfikaty', { terminPrzekazania: 'po_szkoleniu' }],
+  ['Zaświadczenia', 'przed szkoleniem', 'certyfikaty', { terminPrzekazania: 'przed_szkoleniem' }],
+  ['Lista obecnosci', 'wydruk po stronie Klienta', 'listaObecnosci', { formaPrzekazania: 'papierowa', sposobPrzygotowania: 'drukuje_klient' }],
+  ['L.O.', 'Zamawiający drukuje', 'listaObecnosci', { formaPrzekazania: 'papierowa', sposobPrzygotowania: 'drukuje_klient' }],
+  ['Mat. dod.', 'papierowe', 'materialyDodatkowe', { formaPrzekazania: 'papierowa' }],
+  ['Ankiety ewaluacyjne', 'drukuje organizator', 'ankiety', { formaPrzekazania: 'papierowa', sposobPrzygotowania: 'drukuje_organizator' }],
+] as const) {
+  test(`wariant dyspozycji ${etykieta}: ${wartosc}`, () => {
+    const wynik = parsujMailaSzczegolow(`${etykieta}: ${wartosc}`)
+    assert.deepEqual(wynik.daneFormularza.dyspozycjeMaterialowe?.[rodzaj], { ...oczekiwane, tekstZrodlowy: wartosc, status: 'zaimportowane' })
+    assert.deepEqual(wynik.pierwszaGrupa, {})
+  })
+}
+
+for (const formatuj of [
+  (tekst: string) => tekst.replace(/: /g, ':\u00a0\u00a0').replace(/\n/g, '\r\n'),
+  (tekst: string) => tekst.replace(/^(.+?):/gm, '**$1:**').replace(/: /g, ':\n\n'),
+  (tekst: string) => `<html><head><style>.MsoNormal { color: red; }</style></head><body>${tekst.split('\n').map((wiersz) => `<p class="MsoNormal"><b>${wiersz.replace(/ /g, '&nbsp;')}</b><o:p>&#160;</o:p></p>`).join('')}</body></html>`,
+  (tekst: string) => `<div class="gmail_default">${tekst.replace(/\n/g, '<br>').replace(/ł/g, '&#322;').replace(/ /g, '&#x20;')}</div>`,
+]) {
+  test('normalizacja Outlooka, Gmaila i Markdown zachowuje dyspozycje oraz źródło', () => {
+    const tresc = formatuj(mailDyspozycji)
+    const wynik = parsujMailaSzczegolow(tresc)
+    const wzorzec = parsujMailaSzczegolow(mailDyspozycji)
+    assert.deepEqual(wynik.daneFormularza.dyspozycjeMaterialowe, wzorzec.daneFormularza.dyspozycjeMaterialowe)
+    assert.deepEqual(wynik.daneFormularza.odbiorcaPaczki, wzorzec.daneFormularza.odbiorcaPaczki)
+    assert.equal(wynik.daneFormularza.zrodloImportuMaila, tresc)
+    assert.equal(wynik.pierwszaGrupa.dataOd, '2026-10-26')
+  })
+}
+
+test('etykiety podzielone na wiersze, tabele HTML i puste wartości nie połykają kolejnych etykiet', () => {
+  const wynik = parsujMailaSzczegolow(`<table><tr><td>Materiały<br>szkoleniowe:</td><td>ONLINE</td></tr>
+    <tr><td>Lista<br>obecności:</td><td>drukuje Klient</td></tr></table>
+    Certyfikaty:
+    Materiały
+    dodatkowe:
+    druk
+    Trener
+    Prowadzacy:
+    Jan Testowy
+    Liczba
+    uczestnikow:
+    20`)
+  assert.equal(wynik.daneFormularza.dyspozycjeMaterialowe?.materialySzkoleniowe?.formaPrzekazania, 'online')
+  assert.equal(wynik.daneFormularza.dyspozycjeMaterialowe?.listaObecnosci?.sposobPrzygotowania, 'drukuje_klient')
+  assert.equal(wynik.daneFormularza.dyspozycjeMaterialowe?.materialyDodatkowe?.formaPrzekazania, 'papierowa')
+  assert.equal(wynik.daneFormularza.dyspozycjeMaterialowe?.certyfikaty, undefined)
+  assert.equal(wynik.pierwszaGrupa.trenerzy?.[0].imieNazwisko, 'Jan Testowy')
+  assert.equal(wynik.pierwszaGrupa.liczbaUczestnikow, 20)
+})
+
+test('forma szkolenia jest niezależna od dyspozycji materiałów i listy uczestników', () => {
+  const wynik = parsujMailaSzczegolow('Forma szkolenia: Stacjonarne\nMateriały szkoleniowe: online\nLista uczestników: po szkoleniu')
+  assert.equal(wynik.pierwszaGrupa.formaSzkolenia, 'Stacjonarne')
+  assert.equal(wynik.daneFormularza.dyspozycjeMaterialowe?.materialySzkoleniowe?.formaPrzekazania, 'online')
+  assert.equal(wynik.daneFormularza.dyspozycjeMaterialowe?.listaObecnosci, undefined)
+})
+
+test('nie uzupełnia braków pierwszej grupy wartościami drugiej grupy', () => {
+  const wynik = parsujMailaSzczegolow(`Grupa 1
+    Data: 26.10.2026
+    Trener Prowadzący: Jan Testowy
+    Materiały: online
+    Grupa 2
+    Data: 27.10.2026
+    Nazwa firmy: Drugi klient
+    Cena: 9000
+    Liczba uczestników: 100
+    Liczba godzin: 16
+    Materiały: druk
+    Adres wysyłki:
+    Drugi odbiorca
+    ul. Inna 1
+    00-009 Inne Miasto`)
+  assert.equal(wynik.pierwszaGrupa.dataOd, '2026-10-26')
+  assert.equal(wynik.pierwszaGrupa.cenaNetto, undefined)
+  assert.equal(wynik.pierwszaGrupa.liczbaUczestnikow, undefined)
+  assert.equal(wynik.pierwszaGrupa.liczbaGodzin, undefined)
+  assert.equal(wynik.daneFormularza.nazwaKlienta, undefined)
+  assert.equal(wynik.daneFormularza.odbiorcaPaczki, undefined)
+  assert.equal(wynik.daneFormularza.dyspozycjeMaterialowe?.materialySzkoleniowe?.formaPrzekazania, 'online')
+})
+
+for (const naglowek of ['DLA KACPRA: Materiały na adres:', 'Adres wysyłki:', 'Adres do dostawy:', 'Dane odbiorcy paczki:', 'Wysyłka materiałów:']) {
+  test(`sekcja wysyłkowa ${naglowek} odseparowana od szkolenia i hotelu`, () => {
+    const wynik = parsujMailaSzczegolow(`Adres szkolenia: ul. Szkolenia 1\n${naglowek}
+      Nazwa firmy: Odbiorca Testowy
+      Adres: ul. Paczkowa 7/2, 00-004 Miasto Paczki
+      Osoba kontaktowa: Anna Testowa
+      Telefon: +48 000 000 003
+      E-mail: paczka@example.org
+      Hotel:
+      Nazwa firmy: Hotel Testowy
+      Adres: ul. Hotelowa 99
+      00-005 Miasto Hotelu
+      Email: hotel@example.org`)
+    assert.equal(wynik.daneFormularza.odbiorcaPaczki?.nazwaFirmy, 'Odbiorca Testowy')
+    assert.equal(wynik.daneFormularza.odbiorcaPaczki?.ulica, 'Paczkowa')
+    assert.equal(wynik.daneFormularza.odbiorcaPaczki?.nrLokalu, '2')
+    assert.equal(wynik.daneFormularza.odbiorcaPaczki?.miasto, 'Miasto Paczki')
+    assert.equal(wynik.daneFormularza.odbiorcaPaczki?.email, 'paczka@example.org')
+    assert.equal(wynik.pierwszaGrupa.miejsce, 'ul. Szkolenia 1')
+    assert.equal(wynik.daneFormularza.nazwaKlienta, undefined)
+  })
+}
+
+for (const wartosc of ['online lub druk', 'do ustalenia', 'drukuje Klient?', 'nie drukuje Klient']) {
+  test(`niejednoznaczna dyspozycja wymaga potwierdzenia: ${wartosc}`, () => {
+    const wynik = parsujMailaSzczegolow(`Ankiety: ${wartosc}`)
+    assert.equal(wynik.daneFormularza.dyspozycjeMaterialowe?.ankiety?.status, 'niepewne')
+    assert.equal(wynik.daneFormularza.dyspozycjeMaterialowe?.ankiety?.tekstZrodlowy, wartosc)
+    assert.ok(wynik.polaNiepewne.includes('dyspozycjeMaterialowe.ankiety'))
+  })
+}
+
+test('sprzeczne dyspozycje i odbiorcy wymagają potwierdzenia, bez arbitralnego wyboru formy', () => {
+  const wynik = parsujMailaSzczegolow(`Ankiety: online\nAnkiety: druk
+    Adres wysyłki:
+    Firma Pierwsza
+    ul. Pierwsza 1
+    00-001 Miasto Pierwsze
+    Adres wysyłki:
+    Firma Druga
+    ul. Druga 2
+    00-002 Miasto Drugie`)
+  assert.equal(wynik.daneFormularza.dyspozycjeMaterialowe?.ankiety?.formaPrzekazania, undefined)
+  assert.equal(wynik.daneFormularza.dyspozycjeMaterialowe?.ankiety?.status, 'niepewne')
+  assert.ok(wynik.polaNiepewne.includes('odbiorcaPaczki.nazwaFirmy'))
+  assert.ok(wynik.polaNiepewne.includes('odbiorcaPaczki.ulica'))
+})
+
+test('grupy z nazwą pod etykietą zachowują granice także bez numeracji', () => {
+  const wynik = parsujMailaSzczegolow('Grupa:\nPoranna\nData: 26.10.2026\nNazwa grupy:\nPopołudniowa\nCena: 2000\nLiczba godzin: 4')
+  assert.equal(wynik.pierwszaGrupa.nazwa, 'Poranna')
+  assert.equal(wynik.pierwszaGrupa.cenaNetto, undefined)
+  assert.equal(wynik.pierwszaGrupa.liczbaGodzin, undefined)
+})
+
+test('adres szkolenia po sekcji wysyłki nie staje się częścią adresu odbiorcy', () => {
+  const wynik = parsujMailaSzczegolow(`Adres wysyłki:
+    Firma Paczki
+    Paczkowa 8
+    00-001 Miasto Paczki
+    Kontakt: Anna Testowa
+    Adres szkolenia: ul. Szkolenia 2
+    Forma szkolenia: Stacjonarne
+    Hotel:
+    ul. Hotelowa 3`)
+  assert.equal(wynik.daneFormularza.odbiorcaPaczki?.ulica, 'Paczkowa')
+  assert.equal(wynik.daneFormularza.odbiorcaPaczki?.nrBudynku, '8')
+  assert.equal(wynik.pierwszaGrupa.miejsce, 'ul. Szkolenia 2')
+  assert.equal(wynik.pierwszaGrupa.formaSzkolenia, 'Stacjonarne')
+})
+
+test('nierozstrzygnięta liczba nie zapisuje NaN ani nie połyka następnej etykiety', () => {
+  const wynik = parsujMailaSzczegolow('Cena: do ustalenia\nLiczba uczestników:\nLiczba\ngodzin:\n8')
+  assert.equal(wynik.pierwszaGrupa.cenaNetto, undefined)
+  assert.ok(wynik.polaNiepewne.includes('grupy.0.cenaNetto'))
+  assert.equal(wynik.pierwszaGrupa.liczbaUczestnikow, undefined)
+  assert.equal(wynik.pierwszaGrupa.liczbaGodzin, 8)
 })

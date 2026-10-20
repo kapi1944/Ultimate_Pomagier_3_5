@@ -1,0 +1,117 @@
+Temat:
+26.10.2026 szczegóły organizacyjne Przykładowy Urząd, „Dostęp do informacji publicznej”, Miasto Testowe, Testowy
+Nadawca:
+Opiekun Testowy <opiekun@example.org>
+Data:
+19.10.2026, 10:20
+Adresat:
+Organizator Testowy <organizator@example.org>, Wysyłacz Testowy <wysylacz@example.org>
+
+Materiały szkoleniowe: online
+ Certyfikaty: po szkoleniu
+ Lista obecności: drukuje Klient
+ Materiały dodatkowe: druk
+ Ankiety: drukuje Klient
+
+DLA KACPRA:
+Materiały na adres:
+
+Przykładowy Urząd
+
+ul. Przykładowa 8
+
+00-001 Miasto Testowe
+
+Kontakt:
+
+Anna Testowa
+tel. +48 000000001
+e-mail: kontakt@example.org
+
+⚠️ WAŻNA INFORMACJA DLA TRENERA ⚠️
+Uwaga!
+Przypominamy, że obowiązkiem trenera jest dostarczenie oryginałów ankiet ewaluacyjnych oraz list obecności na adres naszej siedziby w Mieście Organizatora niezwłocznie po zakończeniu szkolenia - najpóźniej do 5 dni po jego zakończeniu.
+Niedostarczenie wymaganych dokumentów w oryginale lub nieprzestrzeganie harmonogramu zajęć skutkuje nałożeniem bardzo wysokich kar umownych zgodnie z zapisami umowy z Klientem.
+Prosimy o szczególną rzetelność i terminowość w realizacji obowiązków dokumentacyjnych i organizacyjnych.
+
+Grupa 1
+
+Data: 26.10.2026 r.
+
+godz. 09:00 - 15:00
+
+Liczba godzin: 8h dydaktycznych
+
+Klient oczekuje aby Trener przybył na miejsce szkolenia 20 minut przed jego rozpoczęciem.
+
+„Dostęp do informacji publicznej”
+
+-Nazwa firmy:
+
+Przykładowy Urząd
+
+ul. Szkoleniowa 12
+
+00-002 Miasto Szkolenia
+
+-NIP: 0000000000
+
+-Cena: 6.500,00 zł ZW.
+
+-Termin płatności: 14 dni po wystawieniu FV
+
+-Trener Prowadzący: Jan Testowy
+
+-Liczba uczestników: 30 osób
+
+-Sala szkoleniowa zapewniona przez Zamawiającego:
+
+Przykładowy Urząd
+
+ul. Szkoleniowa 12
+
+00-002 Miasto Szkolenia
+
+-Zakwaterowanie Trenera:
+
+HOTEL TESTOWY
+ul. Hotelowa 82
+00-003 Miasto Hotelu
+
+Zakwaterowanie na 1 dobę ze śniadaniem od 25.10.2026 w pokoju 1-osobowym
+
+- Serwis kawowy oraz lunch zapewnia Zamawiający.
+
+-Dane osoby kontaktowej:
+
+Anna Testowa
+tel. +48 000000001
+e-mail: kontakt@example.org
+
+-Raport na adres: raport@example.org
+
+-Lista uczestników: po szkoleniu
+
+Harmonogram szkolenia:
+
+Godz. 09:00 – rozpoczęcie szkolenia
+Godz. 10:30 – przerwa kawowa (15 minut)
+Godz. 12:00 – przerwa obiadowa (30 minut)
+Godz. 15:00 – zakończenie szkolenia
+
+Program szkolenia:
+
+Podstawy prawne dostępu do informacji publicznej
+        źródła prawa krajowego;
+        podstawowe zasady udostępniania informacji publicznej.
+
+Podsumowanie i pytania uczestników
+
+--
+W przypadku dodatkowych pytań zachęcamy do kontaktu i pozostajemy do dyspozycji.
+Z pozdrowieniami
+Opiekun Testowy
+Specjalista ds. projektów dedykowanych
+Dział Szkoleń
+Organizator Testowy
+tel: +48 000000002

@@ -104,6 +104,7 @@ export const poczatkoweDaneFormularza: DaneFormularza = {
     szczegolyWzorowKlienta: { ...poczatkoweSzczegolyWzorowKlienta },
   },
   programSzkolenia: '',
+  dyspozycjeMaterialowe: {},
   uwagi: {
     wewnetrzne: '',
     informacjeNiepewne: '',

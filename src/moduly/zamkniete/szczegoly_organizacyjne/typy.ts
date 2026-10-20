@@ -134,6 +134,23 @@ export type DaneUwag = {
   dlaWysylaczy: string
 }
 
+export type RodzajDyspozycjiMaterialowej =
+  | 'materialySzkoleniowe'
+  | 'certyfikaty'
+  | 'listaObecnosci'
+  | 'materialyDodatkowe'
+  | 'ankiety'
+
+export type DyspozycjaMaterialowa = {
+  formaPrzekazania?: 'online' | 'papierowa'
+  sposobPrzygotowania?: 'drukuje_klient' | 'drukuje_organizator'
+  terminPrzekazania?: 'przed_szkoleniem' | 'po_szkoleniu'
+  tekstZrodlowy: string
+  status: Extract<StatusPolaImportu, 'zaimportowane' | 'niepewne'>
+}
+
+export type DyspozycjeMaterialowe = Partial<Record<RodzajDyspozycjiMaterialowej, DyspozycjaMaterialowa>>
+
 export type DaneFormularza = {
   tytulSzkolenia: string
   nazwaKlienta: string
@@ -152,6 +169,8 @@ export type DaneFormularza = {
   dodatkoweWymogi: DaneDodatkowychWymogow
   programSzkolenia: string
   uwagi: DaneUwag
+  dyspozycjeMaterialowe?: DyspozycjeMaterialowe
+  zrodloImportuMaila?: string
 }
 
 export type TrenerKartoteki = {
