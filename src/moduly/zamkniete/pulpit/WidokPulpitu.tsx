@@ -10,7 +10,9 @@ import { czyPozycjaJestAktywna } from '../../dokumenty/generatory/checklisty_pac
 import { pobierzEtykietyOsiCzasu, pobierzGraniceDniaPracyNaOsi, pobierzStanWskaznikaCzasu, pozycjaGodzinyNaOsi, type ZakresDniaPracy } from './logika/czasDnia'
 import { formularzZZadania, type FormularzZadania, type TrybFormularzaZadania } from './logika/formularzZadania'
 import { aktualizujKadrMiniatury, przygotujMiniatureZadania } from './logika/miniaturyZadan'
-import { czyPaczkaOpozniona, czyPaczkaWidoczna, czyWysylkaWymagaDodatkowegoPotwierdzenia, liczbaDniWidocznosciPaczki, pobierzGotowoscPaczki, pobierzTerminWzglednyPaczki, sortujPaczki } from './logika/paczki'
+import { czyWysylkaWymagaDodatkowegoPotwierdzenia, liczbaDniWidocznosciPaczki } from './logika/paczki'
+import { zbudujWysylkiMonitora } from './logika/monitorWysylek'
+import MonitorWysylek from './MonitorWysylek'
 import { generujZadaniaAutomatyczne } from './logika/zadaniaAutomatyczne'
 import { czyMoznaZmienicKontekstPulpitu } from './logika/kontekstPulpitu'
 import { obliczLicznikiPulpitu } from './logika/podsumowaniePulpitu'
@@ -152,29 +154,6 @@ function etykietaPriorytetu(priorytet: ZadaniePulpitu['priorytet']) {
 function etykietaPrzypomnienia(przypomnienie: PrzypomnienieZadania) {
   const jednostki: Record<JednostkaPrzypomnienia, string> = { MINUTY: 'min przed', GODZINY: 'godz. przed', DNI: 'dni przed' }
   return przypomnienie.wartosc + ' ' + jednostki[przypomnienie.jednostka]
-}
-
-function pobierzPaczki(wyslanePaczki: Record<string, string>): PaczkaPulpitu[] {
-  return pobierzChecklistyPaczek().flatMap((checklista) => {
-    const dane = checklista.daneDokumentu
-    if (!dane.dataWyslania) return []
-    const wymagane = dane.pozycje.filter((pozycja) => pozycja.czyWymagana && !pozycja.czyOpcjonalna && !pozycja.czyOnline && czyPozycjaJestAktywna(pozycja))
-    const brakujacePozycje = wymagane.filter((pozycja) => pozycja.statusGotowosci !== 'GOTOWE').map((pozycja) => pozycja.nazwa)
-    const brakDanychOdbiorcy = [dane.daneOdbiorcy.imieNazwisko || dane.daneOdbiorcy.nazwaFirmy, dane.daneOdbiorcy.ulica, dane.daneOdbiorcy.nrBudynku, dane.daneOdbiorcy.kodPocztowy, dane.daneOdbiorcy.miasto].some((wartosc) => !wartosc.trim())
-    return [{
-      id: checklista.id,
-      nazwaSzkolenia: dane.migawkaZrodla?.tytulSzkolenia || checklista.tytul,
-      miasto: dane.migawkaZrodla?.miejsce || dane.daneOdbiorcy.miasto || 'Brak miasta',
-      terminySzkolenia: dane.migawkaZrodla?.terminy ?? [],
-      trenerzy: dane.migawkaZrodla?.trenerzy ?? [],
-      planowanaDataWysylki: dane.dataWyslania,
-      wlascicielId: dane.wysylaczId || dane.opiekunId || checklista.wlascicielId || '',
-      liczbaGotowych: wymagane.length - brakujacePozycje.length,
-      liczbaWymaganych: wymagane.length,
-      brakujaceElementy: brakDanychOdbiorcy ? [...brakujacePozycje, 'dane odbiorcy'] : brakujacePozycje,
-      czyWyslana: Boolean(wyslanePaczki[checklista.id]),
-    }]
-  })
 }
 
 function pobierzZadaniaAutomatyczne() {
@@ -530,6 +509,7 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
   const [trybFormularzaZadania, ustawTrybFormularzaZadania] = useState<TrybFormularzaZadania>('create')
   const [edytowaneZadanieId, ustawEdytowaneZadanieId] = useState<string | null>(null)
   const [paczkaDoPotwierdzenia, ustawPaczkeDoPotwierdzenia] = useState<PaczkaPulpitu | null>(null)
+  const [bladWysylki, ustawBladWysylki] = useState('')
   const [czyFormularzZadaniaOtwarty, ustawCzyFormularzZadaniaOtwarty] = useState(false)
   const [czyWykazZakupowOtwarty, ustawCzyWykazZakupowOtwarty] = useState(false)
   const [wybranyZakup, ustawWybranyZakup] = useState<ZapotrzebowanieZakupowe | null>(null)
@@ -553,18 +533,24 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
 
   useEffect(() => {
     const identyfikator = window.setInterval(() => ustawTeraz(new Date()), 60_000)
-    return () => window.clearInterval(identyfikator)
+    function odswiezDanePulpitu() { ustawStan(pobierzStanPulpitu()) }
+    window.addEventListener('focus', odswiezDanePulpitu)
+    window.addEventListener('storage', odswiezDanePulpitu)
+    return () => {
+      window.clearInterval(identyfikator)
+      window.removeEventListener('focus', odswiezDanePulpitu)
+      window.removeEventListener('storage', odswiezDanePulpitu)
+    }
   }, [])
 
   const czyArchitekt = czyMoznaZmienicKontekstPulpitu(zalogowanyUzytkownik?.rola)
   const czyWyborZadaniodawcy = czyMoznaWybracZadaniodawce(zalogowanyUzytkownik?.rola)
   const zadania = useMemo(() => [...stan.zadaniaReczne, ...pobierzZadaniaAutomatyczne()].filter((zadanie) => czyZadanieWidoczneDlaUzytkownika(zadanie, wybranyUzytkownikId)), [stan.zadaniaReczne, wybranyUzytkownikId])
-  const paczki = useMemo(() => pobierzPaczki(stan.wyslanePaczki).filter((paczka) => paczka.wlascicielId === wybranyUzytkownikId), [stan.wyslanePaczki, wybranyUzytkownikId])
+  const paczki = useMemo(() => zbudujWysylkiMonitora(pobierzSzczegolyDoChecklisty(), pobierzChecklistyPaczek(), stan.wyslanePaczki).filter((paczka) => !paczka.wlascicielId || paczka.wlascicielId === wybranyUzytkownikId), [stan.wyslanePaczki, wybranyUzytkownikId])
   const zadaniaAktywneDnia = zadania.filter((zadanie) => zadanie.status === 'OTWARTE' && czyZadanieDotyczyDnia(zadanie, data))
   const zadaniaGodzinowe = pobierzZadaniaDeadline(zadaniaAktywneDnia, data, teraz, zakresDniaPracy)
   const zadaniaBezGodziny = sortujZadaniaBezGodziny(zadaniaAktywneDnia.filter((zadanie) => !zadanie.godzina && !czyZadanieDoKoncaDnia(zadanie)), teraz, zakresDniaPracy)
   const zadaniaWykonane = zadania.filter((zadanie) => zadanie.status === 'WYKONANE' && czyZadanieDotyczyDnia(zadanie, data))
-  const paczkiWidoczne = sortujPaczki(paczki.filter((paczka) => czyPaczkaWidoczna(paczka, teraz)), teraz)
   const pilne = zadania.filter((zadanie) => zadanie.status === 'OTWARTE' && (zadanie.priorytet === 'PILNE' || zadanie.priorytet === 'ASAP' || czyZadanieOpoznione(zadanie, teraz, zakresDniaPracy)))
   const liczniki = obliczLicznikiPulpitu(zadania, paczki, teraz, data, zakresDniaPracy)
   const aktywneZapotrzebowaniaZakupowe = useMemo(() => pobierzAktywneZapotrzebowaniaZakupowe(stan.zapotrzebowaniaZakupowe), [stan.zapotrzebowaniaZakupowe])
@@ -752,7 +738,11 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
   }
   function potwierdzWysylke() {
     if (!paczkaDoPotwierdzenia) return
-    oznaczPaczkeJakoWyslana(paczkaDoPotwierdzenia.id)
+    if (!oznaczPaczkeJakoWyslana(paczkaDoPotwierdzenia.id)) {
+      ustawBladWysylki('Nie udało się zapisać potwierdzenia wysyłki. Spróbuj ponownie.')
+      return
+    }
+    ustawBladWysylki('')
     ustawPaczkeDoPotwierdzenia(null)
     odswiezStan()
   }
@@ -1042,17 +1032,14 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
       {zadaniaWykonane.length > 0 && <details className="pulpit-wykonane"><summary>Wykonane ({zadaniaWykonane.length})</summary>{zadaniaWykonane.map((zadanie) => <KartaZadania key={zadanie.id} nazwaSzkolenia={pobierzNazweSzkolenia(szkoleniaDostepne, zadanie.powiazaneSzkolenieId)} zadanie={zadanie} teraz={teraz} zakresDniaPracy={zakresDniaPracy} uzytkownicy={uzytkownicy} otworz={() => otworzZadanie(zadanie)} />)}</details>}
     </section>}
 
-    {pokazPaczki && <section className="pulpit-sekcja" aria-labelledby="nadchodzace-paczki">
-      <div className="pulpit-sekcja__naglowek"><div><h2 id="nadchodzace-paczki">Nadchodzące paczki</h2><p>Widoczne od 7 dni przed planowaną wysyłką.</p></div></div>
-      {paczkiWidoczne.length ? <div className="pulpit-paczki">{paczkiWidoczne.map((paczka) => {
-        const gotowosc = pobierzGotowoscPaczki(paczka)
-        const opozniona = czyPaczkaOpozniona(paczka, teraz)
-        return <article className={'pulpit-paczka' + (opozniona ? ' pulpit-paczka--opozniona' : '')} key={paczka.id}>
-          <div><span className={'pulpit-status' + (opozniona ? ' pulpit-status--czerwony' : gotowosc.czyGotowa ? ' pulpit-status--zielony' : '')}>{opozniona ? 'OPÓŹNIONA' : gotowosc.czyGotowa ? 'GOTOWA' : pobierzTerminWzglednyPaczki(paczka, teraz)}</span><h3>{paczka.nazwaSzkolenia}</h3><p>{paczka.miasto} &middot; {paczka.terminySzkolenia.map(formatujDate).join(', ') || 'brak terminu'}</p><p>Trener: {paczka.trenerzy.join(', ') || 'brak'}</p><p>Planowana wysyłka: <strong>{formatujDate(paczka.planowanaDataWysylki)} &middot; {pobierzTerminWzglednyPaczki(paczka, teraz)}</strong></p></div>
-          <div className="pulpit-paczka__gotowosc"><strong>{gotowosc.tekst}</strong><span>Gotowość paczki</span>{paczka.brakujaceElementy.length > 0 && <div><b>Brakuje:</b><ul>{paczka.brakujaceElementy.map((brak) => <li key={brak}>{brak}</li>)}</ul></div>}<div className="pulpit-paczka__akcje"><Przycisk onClick={() => otworzPaczke?.(paczka.id)} type="button">Otwórz checklistę</Przycisk><Przycisk className="pulpit-przycisk-glowny" onClick={() => ustawPaczkeDoPotwierdzenia(paczka)} type="button">Oznacz jako wysłaną</Przycisk></div></div>
-        </article>
-      })}</div> : <PustyStan>Brak paczek w oknie wysyłki.</PustyStan>}
-    </section>}
+    {pokazPaczki && <MonitorWysylek
+      key={wybranyUzytkownikId}
+      wysylki={paczki}
+      teraz={teraz}
+      otworzSzkolenie={otworzRekordZrodlowy}
+      otworzCheckliste={otworzPaczke}
+      oznaczWyslana={(wysylka) => { ustawBladWysylki(''); ustawPaczkeDoPotwierdzenia(wysylka) }}
+    />}
 
     {czyWykazZakupowOtwarty && <PanelWysuwany otwarty tytul="Aktualne zapotrzebowania zakupowe" zamknij={() => ustawCzyWykazZakupowOtwarty(false)}>
       <div className="pulpit-drawer__naglowek"><div><h2>Zakupy</h2><p>{'Aktywne zapotrzebowania ca\u{142}ej organizacji.'}</p></div><Przycisk className="pulpit-przycisk-glowny" onClick={otworzDodawanieZakupu} type="button">{'+ Zg\u{142}o\u{15b} zakup'}</Przycisk></div>
@@ -1109,6 +1096,8 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
     </PanelWysuwany>}
 
     {paczkaDoPotwierdzenia && <OknoDialogowe otwarty tytul="Potwierdzenie wysyłki" etykietaZamkniecia="Wróć" zamknij={() => ustawPaczkeDoPotwierdzenia(null)}><div>
+      <p>Potwierdzenie obejmuje wszystkie paczki z tej checklisty.</p>
+      {bladWysylki && <Komunikat status="error">{bladWysylki}</Komunikat>}
       {czyWysylkaWymagaDodatkowegoPotwierdzenia(paczkaDoPotwierdzenia) && <p>Paczka nie jest oznaczona jako w pełni gotowa. Nadal brakuje: {paczkaDoPotwierdzenia.brakujaceElementy.join(', ')}. Czy na pewno oznaczyć jako wysłaną?</p>}
       <div className="pulpit-modal__akcje"><Przycisk className="pulpit-przycisk-glowny" onClick={potwierdzWysylke} type="button">Potwierdzam wysyłkę</Przycisk></div>
     </div></OknoDialogowe>}

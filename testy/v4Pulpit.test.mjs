@@ -17,7 +17,7 @@ assert.equal((wynik.match(/class="pulpit-kafelek__ikona"/g) ?? []).length, 5)
 assert.match(wynik, /data-status="warning"/)
 assert.match(wynik, /data-status="error"/)
 assert.match(wynik, /Brak zadań bez przypisanej godziny/)
-assert.match(wynik, /Brak paczek w oknie wysyłki/)
+assert.match(wynik, /Brak szkoleń wymagających wysyłki materiałów/)
 const { default: FormularzZakupu } = await import('../src/moduly/zamkniete/pulpit/FormularzZakupu.tsx')
 const formularz = { nazwa: '', ilosc: '1', uwagi: '', linkiProduktow: [''], zalaczniki: [] }
 for (const czyZamawiacz of [false, true]) {

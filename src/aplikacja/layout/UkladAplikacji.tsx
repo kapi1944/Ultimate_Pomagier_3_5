@@ -26,6 +26,7 @@ import WidokAnkiet from '../../moduly/dokumenty/generatory/ankiety/WidokAnkiet'
 import WidokDyplomow from '../../moduly/dokumenty/generatory/dyplomy/WidokDyplomow'
 import WidokKartNaDrzwi from '../../moduly/dokumenty/generatory/karta_na_drzwi/WidokKartNaDrzwi'
 import WidokChecklistPaczek from '../../moduly/dokumenty/generatory/checklisty_paczek/WidokChecklistPaczek'
+import { pobierzChecklistePaczki } from '../../moduly/dokumenty/generatory/checklisty_paczek/rejestrChecklistPaczek'
 import WidokListyObecnosciZDokumentu from '../../moduly/dokumenty/generatory/listy_obecnosci/WidokListyObecnosciZDokumentu'
 import { WidokProgramowSzkolen } from '../../moduly/dokumenty/generatory/programy_szkolen'
 import {
@@ -202,7 +203,11 @@ function renderujWidok(
     case 'profil_uzytkownika':
       return <WidokProfiluUzytkownika key={uzytkownikIdProfilu ?? 'wlasny'} ustawCzyMaNiezapisaneZmiany={ustawCzyProfilMaNiezapisaneZmiany} uzytkownikId={uzytkownikIdProfilu} wybierzProfil={wybierzProfil} />
     case 'pulpit':
-      return <WidokPulpitu otworzDokumenty={otworzDokumentyPulpitu} otworzPaczke={otworzPaczkePulpitu} otworzRekordZrodlowy={otworzRekordPulpitu} />
+      return <WidokPulpitu otworzDokumenty={otworzDokumentyPulpitu} otworzPaczke={(id) => {
+        const checklista = pobierzChecklistePaczki(id)
+        if (checklista) otworzDokument(checklista)
+        else otworzPaczkePulpitu()
+      }} otworzRekordZrodlowy={otworzRekordPulpitu} />
     case 'szkolenia-zamkniete':
       return <WidokSzkolenZamknietych ustawWidok={ustawAktywnyWidok} />
     case 'generator-szczegolow':

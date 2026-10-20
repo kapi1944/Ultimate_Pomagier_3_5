@@ -1,0 +1,48 @@
+.monitor-wysylek__filtry, .monitor-wysylek__akcje {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ui-odstep-2);
+}
+.monitor-wysylek__filtry [aria-pressed="true"] {
+  border-color: var(--ui-akcent);
+  background: var(--ui-akcent);
+  color: var(--ui-tekst-na-akcencie);
+}
+.monitor-wysylek__lista { display: grid; gap: var(--ui-odstep-4); }
+.monitor-wysylek__rekord {
+  --monitor-kolor: var(--ui-obramowanie);
+  min-width: 0;
+  padding: var(--ui-odstep-4);
+  border: 2px solid var(--monitor-kolor);
+  border-radius: 9px;
+  background: var(--ui-powierzchnia);
+  overflow-wrap: anywhere;
+}
+.monitor-wysylek__rekord[data-pilnosc="ZALEGLE"] {
+  --monitor-kolor: var(--ui-error);
+  background: color-mix(in srgb, var(--ui-error) 8%, var(--ui-powierzchnia));
+  animation: pulsowanie-zaleglej-wysylki 2.4s ease-in-out infinite;
+}
+.monitor-wysylek__rekord[data-pilnosc="DZISIAJ"] { --monitor-kolor: light-dark(#9a3412, #fdba74); }
+.monitor-wysylek__rekord[data-pilnosc="JUTRO"] { --monitor-kolor: var(--ui-warning); }
+.monitor-wysylek__rekord[data-pilnosc="ZA_2_3_DNI"] { --monitor-kolor: var(--ui-info); }
+.monitor-wysylek__rekord[data-pilnosc="WYSŁANE"] { --monitor-kolor: var(--ui-success); }
+.monitor-wysylek__termin { color: var(--monitor-kolor); font-weight: 700; }
+.monitor-wysylek__naglowek { display: flex; align-items: start; justify-content: space-between; flex-wrap: wrap; gap: var(--ui-odstep-3); }
+.monitor-wysylek__naglowek h3 { margin: var(--ui-odstep-2) 0; }
+.monitor-wysylek__dane { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: var(--ui-odstep-3); }
+.monitor-wysylek__dane dt { color: var(--ui-tekst-drugi); font-size: var(--ui-tekst-maly); }
+.monitor-wysylek__dane dd { margin: var(--ui-odstep-1) 0 0; }
+.monitor-wysylek__dokumenty { margin-top: var(--ui-odstep-4); color: var(--ui-tekst-drugi); }
+.monitor-wysylek__dokumenty summary { cursor: pointer; }
+.monitor-wysylek__dokumenty ol { display: flex; flex-wrap: wrap; gap: var(--ui-odstep-2) var(--ui-odstep-6); }
+@keyframes pulsowanie-zaleglej-wysylki {
+  50% {
+    border-color: color-mix(in srgb, var(--ui-error) 55%, var(--ui-powierzchnia));
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--ui-error) 18%, transparent);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .monitor-wysylek__rekord[data-pilnosc="ZALEGLE"] { animation: none; }
+}
+[data-ui-ogranicz-animacje="true"] .monitor-wysylek__rekord[data-pilnosc="ZALEGLE"] { animation: none; }
