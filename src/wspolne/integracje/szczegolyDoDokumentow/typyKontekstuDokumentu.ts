@@ -1,5 +1,5 @@
 import type { TypDokumentu } from '../../dokumenty/modelDokumentu'
-import type { DaneFormularza, GrupaSzkoleniowa } from '../../../moduly/zamkniete/szczegoly_organizacyjne/typy'
+import type { DaneFormularza, DyspozycjeMaterialowe, GrupaSzkoleniowa } from '../../../moduly/zamkniete/szczegoly_organizacyjne/typy'
 
 export type StrategiaGenerowaniaDokumentu = 'JEDEN_NA_GRUPE' | 'JEDEN_NA_UCZESTNIKA' | 'JEDEN_ZBIORCZY'
 
@@ -28,6 +28,8 @@ export type TrenerKontekstuSzkolenia = {
 
 export type KontekstGrupySzkoleniowej = {
   id: string
+  dyspozycjeMaterialowe?: DyspozycjeMaterialowe
+  zrodloImportuMaila?: string
   nazwa: string
   daty: string[]
   tryb: string | null

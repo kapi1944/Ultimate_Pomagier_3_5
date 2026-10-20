@@ -740,6 +740,10 @@ export function useGeneratorSzczegolow() {
     ustawDaneFormularza((obecne) => scalDaneFormularza(obecne, wynik.daneFormularza))
     ustawGrupy((obecne) => {
       const pierwsza = scalGrupe(obecne[0] ?? normalizujGrupe(), wynik.pierwszaGrupa)
+      if (wynik.daneFormularza.dyspozycjeMaterialowe) {
+        pierwsza.dyspozycjeMaterialowe = { ...pierwsza.dyspozycjeMaterialowe, ...wynik.daneFormularza.dyspozycjeMaterialowe }
+        pierwsza.zrodloImportuMaila = wynik.daneFormularza.zrodloImportuMaila
+      }
       return [pierwsza, ...obecne.slice(1)]
     })
     ustawRozpoznaneObszary(wynik.rozpoznaneObszary)

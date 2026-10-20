@@ -2,6 +2,12 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import type { KontekstDokumentuSzkolenia } from '../src/wspolne/integracje/szczegolyDoDokumentow/index.ts'
+import { przygotujZrodloZWersjiRoboczej, zbudujKontekstZeSzczegolow } from '../src/wspolne/integracje/szczegolyDoDokumentow/zbudujKontekstZeSzczegolow.ts'
+import { poczatkoweDaneFormularza, poczatkowaGrupa, poczatkowiAdresaci } from '../src/moduly/zamkniete/szczegoly_organizacyjne/danePoczatkowe.ts'
+import { parsujMailaSzczegolow } from '../src/moduly/zamkniete/szczegoly_organizacyjne/uslugi/parserMailaSzczegolow.ts'
+import { zapiszWersjeRobocza, opublikujWersjeRobocza } from '../src/moduly/zamkniete/szczegoly_organizacyjne/uslugi/magazynWersjiRoboczych.ts'
+import type { WersjaRoboczaGeneratora } from '../src/moduly/zamkniete/szczegoly_organizacyjne/typy.ts'
+import { zastosujDyspozycjeMaterialoweChecklisty, potwierdzIloscDyspozycji } from '../src/moduly/dokumenty/generatory/checklisty_paczek/dyspozycjeChecklistyPaczki.ts'
 import { zbudujNazweEksportowanegoDokumentu, utworzIdentyfikatorDokumentu } from '../src/wspolne/dokumenty/nazwyDokumentow.ts'
 import { repozytoriumWspolnychDokumentow } from '../src/wspolne/dokumenty/rejestrDokumentow.ts'
 import {
@@ -40,6 +46,7 @@ import {
   utworzChecklistePaczkiZeZrodla,
   zarejestrujWydrukChecklisty,
   zapiszChecklistePaczki,
+  aktualizujDyspozycjeChecklisty,
 } from '../src/moduly/dokumenty/generatory/checklisty_paczek/rejestrChecklistPaczek.ts'
 
 const magazyn = new Map<string, string>()
@@ -446,4 +453,283 @@ test('checklista prezentuje faktyczną ilość przed oczekiwaną i tabelę danyc
   for (const etykieta of ['Nazwa szkolenia:', 'Liczba osób:', 'Klient:', 'Termin:', 'Lokalizacja:', 'Opiekun:', 'Podpis opiekuna:']) assert.ok(widok.includes(etykieta))
   assert.match(widok, /ikona="termin"/)
   assert.match(widok, /className="checklista-paczki__pola-szczegolow"/)
+})
+
+function utworzWersjeZMailem(): WersjaRoboczaGeneratora {
+  const tekst = readFileSync(new URL('./fixtures/mailDyspozycjeMaterialowe.txt', import.meta.url), 'utf8')
+  const wynik = parsujMailaSzczegolow(tekst)
+  return {
+    id: 'szczegoly-maila', dokumentId: 'szczegoly-maila', wersja: 'test', etykietaWersji: 'test',
+    nazwa: 'Test dyspozycji', dataZapisu: '2026-10-20T08:00:00.000Z', autorId: 'opiekun-1', autorNazwa: 'Opiekun',
+    dane: { ...structuredClone(poczatkoweDaneFormularza), ...wynik.daneFormularza },
+    grupy: [{ ...structuredClone(poczatkowaGrupa), ...wynik.pierwszaGrupa, id: 'grupa-1' }],
+    adresaci: { ...poczatkowiAdresaci }, statusyPol: {},
+  }
+}
+
+function kontekstWersji(wersja: WersjaRoboczaGeneratora) {
+  return zbudujKontekstZeSzczegolow(przygotujZrodloZWersjiRoboczej(wersja))
+}
+
+test('1.2.1: mail → Szczegóły → checklista: online, brak dokumentów klienta i propozycja 30 wydruków', () => {
+  magazyn.clear()
+  const wersja = utworzWersjeZMailem()
+  const przed = JSON.stringify(wersja)
+  const dokument = utworzChecklistePaczkiZeZrodla(kontekstWersji(wersja), 'grupa-1', daneZrodla(), 'opiekun-1')!
+  const dane = dokument.daneDokumentu
+  assert.equal(wersja.grupy[0].formaSzkolenia, 'Stacjonarne')
+  assert.equal(JSON.stringify(wersja), przed)
+  assert.equal(pobierzPozycje(dane, 'Podręczniki / materiały szkoleniowe').czyOnline, true)
+  for (const nazwa of ['Lista obecności', 'Ankiety', 'Certyfikaty / Dyplomy']) {
+    const pozycja = pobierzPozycje(dane, nazwa)
+    assert.equal(pozycja.czyNieDotyczy, true)
+    assert.equal(pozycja.czyWymagana, false)
+    assert.equal(pobierzIloscPozycji(pozycja, 30, 1).koncowa, 0)
+    assert.equal(czyPozycjaJestAktywna(pozycja), false)
+  }
+  const dodatkowe = pobierzPozycje(dane, 'Materiały dodatkowe')
+  assert.equal(dodatkowe.czyWymagana, true)
+  assert.equal(dodatkowe.czyOnline, false)
+  assert.deepEqual(dodatkowe.regulaIlosci, { typ: 'UCZESTNICY' })
+  assert.equal(pobierzIloscPozycji(dodatkowe, 30, 1).koncowa, 30)
+  assert.equal(dodatkowe.importDyspozycji?.propozycjaIlosci, 30)
+  assert.equal(dodatkowe.importDyspozycji?.czyIloscWymagaPotwierdzenia, true)
+  assert.match(dodatkowe.uwagiDrukowane, /30.*potwierdzenia/)
+  assert.equal(dodatkowe.nadpisanieReczne, null)
+  assert.equal(dodatkowe.iloscPrzygotowana, null)
+  assert.ok(dane.pozycje.every((pozycja) => pozycja.statusGotowosci === 'NIEGOTOWE'))
+  const domyslne = utworzDomyslneDaneChecklisty({ identyfikator: 'porownanie', numerDzienny: 1 })
+  for (const nazwa of ['Prezentacje', 'Pre/Post-testy', 'Teczki', 'Karta na drzwi', 'Długopisy', 'Torby']) {
+    const { id: pierwszyId, kategoriaId: pierwszaKategoria, ...pierwsza } = pobierzPozycje(dane, nazwa)
+    const { id: drugiId, kategoriaId: drugaKategoria, ...druga } = pobierzPozycje(domyslne, nazwa)
+    assert.ok(pierwszyId && drugiId && pierwszaKategoria && drugaKategoria)
+    assert.deepEqual(pierwsza, druga)
+  }
+  assert.equal(dane.historia.at(-1)?.zrodloDyspozycji?.zrodloImportuMaila, wersja.dane.zrodloImportuMaila)
+  assert.equal(dane.historia.at(-1)?.zmianyDyspozycji?.length, 5)
+  assert.deepEqual(pobierzChecklistePaczki(dokument.id)?.daneDokumentu.pozycje, dane.pozycje)
+})
+
+test('potwierdzenie propozycji jest jawne, blokuje finalizację do decyzji i nie oznacza wydruku jako gotowego', () => {
+  magazyn.clear()
+  const dokument = utworzChecklistePaczkiZeZrodla(kontekstWersji(utworzWersjeZMailem()), 'grupa-1', daneZrodla(), 'autor')!
+  const dane = structuredClone(dokument.daneDokumentu)
+  dane.pozycje.forEach((pozycja) => { pozycja.statusGotowosci = 'GOTOWE' })
+  assert.equal(czyMoznaFinalizowacCheckliste(dane).czyMozna, false)
+  const dodatkowe = pobierzPozycje(dane, 'Materiały dodatkowe')
+  dodatkowe.statusGotowosci = 'NIEGOTOWE'
+  const potwierdzone = potwierdzIloscDyspozycji(dane, dodatkowe.id)
+  const pozycja = pobierzPozycje(potwierdzone, 'Materiały dodatkowe')
+  assert.equal(pozycja.nadpisanieReczne, 30)
+  assert.equal(pozycja.importDyspozycji?.czyIloscWymagaPotwierdzenia, false)
+  assert.doesNotMatch(pozycja.uwagiDrukowane, /wymaga potwierdzenia/)
+  assert.equal(pozycja.statusGotowosci, 'NIEGOTOWE')
+  assert.equal(pozycja.iloscPrzygotowana, null)
+})
+
+test('ponowny zapis poprawionego maila automatycznie zmienia roboczą checklistę bez duplikacji', () => {
+  magazyn.clear()
+  const wersja = utworzWersjeZMailem()
+  zapiszWersjeRobocza(wersja)
+  const dokument = utworzChecklistePaczkiZeZrodla(kontekstWersji(wersja), 'grupa-1', daneZrodla(), 'autor')!
+  const poprawiony = parsujMailaSzczegolow('Materiały dodatkowe: online\nAnkiety: drukuje organizator')
+  wersja.dane.dyspozycjeMaterialowe = { ...wersja.dane.dyspozycjeMaterialowe, ...poprawiony.daneFormularza.dyspozycjeMaterialowe }
+  wersja.dane.zrodloImportuMaila = poprawiony.daneFormularza.zrodloImportuMaila
+  zapiszWersjeRobocza(wersja)
+  const poImporcie = pobierzChecklistePaczki(dokument.id)!.daneDokumentu
+  assert.equal(pobierzPozycje(poImporcie, 'Materiały dodatkowe').czyOnline, true)
+  assert.equal(pobierzPozycje(poImporcie, 'Ankiety').czyNieDotyczy, false)
+  assert.equal(pobierzPozycje(poImporcie, 'Ankiety').importDyspozycji?.czyIloscWymagaPotwierdzenia, true)
+  assert.deepEqual(poImporcie.pozycje.map((pozycja) => pozycja.id), dokument.daneDokumentu.pozycje.map((pozycja) => pozycja.id))
+  assert.equal(poImporcie.historia.at(-1)?.zrodloDyspozycji?.zrodloImportuMaila, poprawiony.daneFormularza.zrodloImportuMaila)
+  const serializacja = JSON.stringify(poImporcie)
+  zapiszWersjeRobocza(wersja)
+  assert.equal(JSON.stringify(pobierzChecklistePaczki(dokument.id)!.daneDokumentu), serializacja)
+  assert.equal(pobierzChecklistyPaczek().length, 1)
+  const zmiany = poImporcie.historia.at(-1)?.zmianyDyspozycji
+  assert.ok(zmiany?.some((zmiana) => zmiana.przed.czyOnline === false && zmiana.po.czyOnline === true))
+})
+
+test('ręczne uwagi, reguły, ilości i stan przygotowania pozostają chronione; nadpisanie wymaga osobnej zgody', () => {
+  magazyn.clear()
+  const wersja = utworzWersjeZMailem()
+  const dokument = utworzChecklistePaczkiZeZrodla(kontekstWersji(wersja), 'grupa-1', daneZrodla(), 'autor')!
+  const dane = structuredClone(dokument.daneDokumentu)
+  const dodatkowe = pobierzPozycje(dane, 'Materiały dodatkowe')
+  dodatkowe.nadpisanieReczne = 7
+  dodatkowe.uwagiDrukowane = 'Ręczna uwaga do paczki'
+  dodatkowe.statusGotowosci = 'CZESCIOWO_GOTOWE'
+  dodatkowe.iloscPrzygotowana = 3
+  const ankiety = pobierzPozycje(dane, 'Ankiety')
+  ankiety.czyNieDotyczy = false
+  ankiety.regulaIlosci = { typ: 'RECZNA', wartoscReczna: 5 }
+  zapiszChecklistePaczki(dokument.id, dane, 'autor')
+  wersja.dane.dyspozycjeMaterialowe = parsujMailaSzczegolow('Materiały dodatkowe: online\nAnkiety: drukuje organizator').daneFormularza.dyspozycjeMaterialowe
+  const wynik = aktualizujDyspozycjeChecklisty(dokument.id, kontekstWersji(wersja), 'autor')!.daneDokumentu
+  const po = pobierzPozycje(wynik, 'Materiały dodatkowe')
+  assert.equal(po.czyOnline, false)
+  assert.equal(po.nadpisanieReczne, 7)
+  assert.equal(po.uwagiDrukowane, 'Ręczna uwaga do paczki')
+  assert.equal(po.iloscPrzygotowana, 3)
+  assert.equal(po.statusGotowosci, 'CZESCIOWO_GOTOWE')
+  assert.equal(po.importDyspozycji?.czyKonfliktReczny, true)
+  assert.deepEqual(pobierzPozycje(wynik, 'Ankiety').regulaIlosci, { typ: 'RECZNA', wartoscReczna: 5 })
+  const zgoda = aktualizujDyspozycjeChecklisty(dokument.id, kontekstWersji(wersja), 'autor', { pozycjeZeZgoda: [po.id] })!.daneDokumentu
+  assert.equal(pobierzPozycje(zgoda, 'Materiały dodatkowe').czyOnline, true)
+  assert.equal(pobierzPozycje(zgoda, 'Materiały dodatkowe').nadpisanieReczne, 7)
+  assert.equal(pobierzPozycje(zgoda, 'Materiały dodatkowe').uwagiDrukowane, 'Ręczna uwaga do paczki')
+  assert.deepEqual(pobierzPozycje(zgoda, 'Ankiety').regulaIlosci, { typ: 'RECZNA', wartoscReczna: 5 })
+})
+
+test('zatwierdzona ilość pozostaje stała po zmianie liczby uczestników', () => {
+  magazyn.clear()
+  const wersja = utworzWersjeZMailem()
+  const dokument = utworzChecklistePaczkiZeZrodla(kontekstWersji(wersja), 'grupa-1', daneZrodla(), 'autor')!
+  const idPozycji = pobierzPozycje(dokument.daneDokumentu, 'Materiały dodatkowe').id
+  zapiszChecklistePaczki(dokument.id, potwierdzIloscDyspozycji(dokument.daneDokumentu, idPozycji), 'autor')
+  wersja.grupy[0].liczbaUczestnikow = 40
+  const wynik = aktualizujDyspozycjeChecklisty(dokument.id, kontekstWersji(wersja), 'autor')!
+  assert.equal(pobierzPozycje(wynik.daneDokumentu, 'Materiały dodatkowe').nadpisanieReczne, 30)
+  assert.equal(pobierzPozycje(wynik.daneDokumentu, 'Materiały dodatkowe').importDyspozycji?.czyIloscWymagaPotwierdzenia, false)
+})
+
+test('grupy i paczki mają niezależne dyspozycje, a ponowne zastosowanie nie dodaje pozycji', () => {
+  magazyn.clear()
+  const wersja = utworzWersjeZMailem()
+  const drugaDyspozycja = parsujMailaSzczegolow('Materiały dodatkowe: online')
+  wersja.grupy[0].dyspozycjeMaterialowe = wersja.dane.dyspozycjeMaterialowe
+  wersja.grupy.push({ ...structuredClone(poczatkowaGrupa), id: 'grupa-2', liczbaUczestnikow: 12,
+    dyspozycjeMaterialowe: drugaDyspozycja.daneFormularza.dyspozycjeMaterialowe })
+  const kontekst = kontekstWersji(wersja)
+  const pierwsza = utworzChecklistePaczkiZeZrodla(kontekst, 'grupa-1', daneZrodla(), 'autor')!
+  const druga = utworzChecklistePaczkiZeZrodla(kontekst, 'grupa-2', daneZrodla(), 'autor')!
+  const drugaPrzed = pobierzChecklistePaczki(druga.id)!.daneDokumentu
+  assert.equal(pobierzPozycje(druga.daneDokumentu, 'Materiały dodatkowe').czyOnline, true)
+  const zPaczka = duplikujPaczkeChecklisty(pierwsza.daneDokumentu, pierwsza.daneDokumentu.paczki[0].id)
+  zPaczka.paczki[0].statusOperacyjny = 'WYSŁANA'
+  zapiszChecklistePaczki(pierwsza.id, zPaczka, 'autor')
+  wersja.grupy[0].dyspozycjeMaterialowe = drugaDyspozycja.daneFormularza.dyspozycjeMaterialowe
+  const wynik = aktualizujDyspozycjeChecklisty(pierwsza.id, kontekstWersji(wersja), 'autor')!
+  assert.equal(wynik.daneDokumentu.pozycje.length, zPaczka.pozycje.length)
+  assert.deepEqual(wynik.daneDokumentu.pozycje.filter((pozycja) => pozycja.paczkaId === zPaczka.paczki[0].id), zPaczka.pozycje.filter((pozycja) => pozycja.paczkaId === zPaczka.paczki[0].id))
+  assert.equal(wynik.daneDokumentu.pozycje.find((pozycja) => pozycja.paczkaId === zPaczka.paczki[1].id && pozycja.nazwa === 'Materiały dodatkowe')?.czyOnline, true)
+  assert.deepEqual(pobierzChecklistePaczki(druga.id)?.daneDokumentu, drugaPrzed)
+  wersja.grupy.reverse()
+  assert.deepEqual(kontekstWersji(wersja).grupy.find((grupa) => grupa.id === 'grupa-1')?.dyspozycjeMaterialowe, drugaDyspozycja.daneFormularza.dyspozycjeMaterialowe)
+})
+
+test('stare dyspozycje 1.2.0 dotyczą pierwszej grupy, bez rozlewania na kolejne', () => {
+  const wersja = utworzWersjeZMailem()
+  wersja.grupy.push({ ...structuredClone(poczatkowaGrupa), id: 'grupa-2' })
+  const kontekst = kontekstWersji(wersja)
+  assert.ok(kontekst.grupy[0].dyspozycjeMaterialowe)
+  assert.equal(kontekst.grupy[1].dyspozycjeMaterialowe, undefined)
+})
+
+for (const status of ['WYDRUKOWANA', 'KOMPLETNA', 'ZARCHIWIZOWANA'] as const) {
+  test(`automatyczny import nie zmienia dokumentu ${status} ani historycznych wydruków`, () => {
+    magazyn.clear()
+    const wersja = utworzWersjeZMailem()
+    const dokument = utworzChecklistePaczkiZeZrodla(kontekstWersji(wersja), 'grupa-1', daneZrodla(), 'autor')!
+    zarejestrujWydrukChecklisty(dokument.id, 'autor')
+    ustawStatusChecklisty(dokument.id, status, 'autor', 'Ustawiono status testowy')
+    const przed = JSON.stringify(pobierzChecklistePaczki(dokument.id))
+    wersja.dane.dyspozycjeMaterialowe = parsujMailaSzczegolow('Materiały dodatkowe: online').daneFormularza.dyspozycjeMaterialowe
+    zapiszWersjeRobocza(wersja)
+    assert.equal(JSON.stringify(pobierzChecklistePaczki(dokument.id)), przed)
+    assert.equal(aktualizujDyspozycjeChecklisty(dokument.id, kontekstWersji(wersja), 'autor'), null)
+  })
+}
+
+test('niepewna dyspozycja nie wyłącza wydruków i wymaga decyzji', () => {
+  magazyn.clear()
+  const wersja = utworzWersjeZMailem()
+  wersja.dane.dyspozycjeMaterialowe = parsujMailaSzczegolow('Ankiety: online lub druk').daneFormularza.dyspozycjeMaterialowe
+  const dokument = utworzChecklistePaczkiZeZrodla(kontekstWersji(wersja), 'grupa-1', daneZrodla(), 'autor')!
+  assert.equal(pobierzPozycje(dokument.daneDokumentu, 'Ankiety').czyOnline, false)
+  assert.equal(pobierzPozycje(dokument.daneDokumentu, 'Ankiety').czyNieDotyczy, false)
+  assert.equal(pobierzPozycje(dokument.daneDokumentu, 'Ankiety').importDyspozycji?.dyspozycja.status, 'niepewne')
+  assert.equal(czyMoznaFinalizowacCheckliste(dokument.daneDokumentu).czyMozna, false)
+})
+
+test('publikacja Szczegółów stosuje poprawiony mail do istniejącej roboczej checklisty', () => {
+  magazyn.clear()
+  const wersja = utworzWersjeZMailem()
+  const dokument = utworzChecklistePaczkiZeZrodla(kontekstWersji(wersja), 'grupa-1', daneZrodla(), 'autor')!
+  wersja.dane.dyspozycjeMaterialowe = parsujMailaSzczegolow('Materiały dodatkowe: online').daneFormularza.dyspozycjeMaterialowe
+  wersja.dane.status = 'PEŁNE'
+  opublikujWersjeRobocza(wersja)
+  assert.equal(pobierzPozycje(pobierzChecklistePaczki(dokument.id)!.daneDokumentu, 'Materiały dodatkowe').czyOnline, true)
+})
+
+test('import do jednej paczki pozostawia pozostałe bez zmian', () => {
+  magazyn.clear()
+  const wersja = utworzWersjeZMailem()
+  const dokument = utworzChecklistePaczkiZeZrodla(kontekstWersji(wersja), 'grupa-1', daneZrodla(), 'autor')!
+  const dane = duplikujPaczkeChecklisty(dokument.daneDokumentu, dokument.daneDokumentu.paczki[0].id)
+  const migawka = { ...dane.migawkaZrodla!, dyspozycjeMaterialowe: parsujMailaSzczegolow('Materiały dodatkowe: online').daneFormularza.dyspozycjeMaterialowe }
+  const wynik = zastosujDyspozycjeMaterialoweChecklisty(dane, migawka, { paczkaId: dane.paczki[1].id })
+  assert.deepEqual(wynik.dane.pozycje.filter((pozycja) => pozycja.paczkaId === dane.paczki[0].id), dane.pozycje.filter((pozycja) => pozycja.paczkaId === dane.paczki[0].id))
+  assert.equal(wynik.porownania.length, 1)
+})
+
+test('zmiana liczby uczestników aktualizuje tylko niezatwierdzoną propozycję ilości', () => {
+  magazyn.clear()
+  const wersja = utworzWersjeZMailem()
+  const dokument = utworzChecklistePaczkiZeZrodla(kontekstWersji(wersja), 'grupa-1', daneZrodla(), 'autor')!
+  wersja.grupy[0].liczbaUczestnikow = 35
+  zapiszWersjeRobocza(wersja)
+  const dane = pobierzChecklistePaczki(dokument.id)!.daneDokumentu
+  const pozycja = pobierzPozycje(dane, 'Materiały dodatkowe')
+  assert.equal(pobierzDaneSzkoleniaChecklisty(dane).liczbaUczestnikow, 35)
+  assert.equal(pozycja.importDyspozycji?.propozycjaIlosci, 35)
+  assert.equal(pozycja.importDyspozycji?.czyIloscWymagaPotwierdzenia, true)
+  assert.equal(pozycja.nadpisanieReczne, null)
+  assert.equal(pozycja.statusGotowosci, 'NIEGOTOWE')
+})
+
+test('pierwsze powiązanie chroni ilości i uwagi ręcznej checklisty bez metadanych importu', () => {
+  magazyn.clear()
+  const dokument = utworzRecznaChecklistePaczki('autor')
+  const dane = structuredClone(dokument.daneDokumentu)
+  const pozycja = pobierzPozycje(dane, 'Materiały dodatkowe')
+  pozycja.regulaIlosci = { typ: 'STALA', wartoscStala: 13 }
+  pozycja.uwagiDrukowane = 'Własna instrukcja'
+  zapiszChecklistePaczki(dokument.id, dane, 'autor')
+  const wynik = powiazChecklisteZeSzkoleniem(dokument.id, kontekstWersji(utworzWersjeZMailem()), 'grupa-1', daneZrodla(), 'autor')!
+  const zachowana = pobierzPozycje(wynik.daneDokumentu, 'Materiały dodatkowe')
+  assert.deepEqual(zachowana.regulaIlosci, pozycja.regulaIlosci)
+  assert.equal(zachowana.uwagiDrukowane, pozycja.uwagiDrukowane)
+  assert.equal(zachowana.importDyspozycji?.czyKonfliktReczny, true)
+})
+
+test('ponowne otwarcie dokumentu z wydrukiem nie zezwala na automatyczną zmianę historii', () => {
+  magazyn.clear()
+  const wersja = utworzWersjeZMailem()
+  const dokument = utworzChecklistePaczkiZeZrodla(kontekstWersji(wersja), 'grupa-1', daneZrodla(), 'autor')!
+  zarejestrujWydrukChecklisty(dokument.id, 'autor')
+  otworzPonownieCheckliste(dokument.id, 'ADMINISTRATOR', 'admin')
+  const przed = JSON.stringify(pobierzChecklistePaczki(dokument.id))
+  wersja.dane.dyspozycjeMaterialowe = parsujMailaSzczegolow('Materiały dodatkowe: online').daneFormularza.dyspozycjeMaterialowe
+  zapiszWersjeRobocza(wersja)
+  assert.equal(JSON.stringify(pobierzChecklistePaczki(dokument.id)), przed)
+})
+
+test('identyczny mail po potwierdzeniu ilości nie zmienia dokumentu ani nie dopisuje historii importu', () => {
+  magazyn.clear()
+  const wersja = utworzWersjeZMailem()
+  const dokument = utworzChecklistePaczkiZeZrodla(kontekstWersji(wersja), 'grupa-1', daneZrodla(), 'autor')!
+  const pozycja = pobierzPozycje(dokument.daneDokumentu, 'Materiały dodatkowe')
+  zapiszChecklistePaczki(dokument.id, potwierdzIloscDyspozycji(dokument.daneDokumentu, pozycja.id), 'autor')
+  const przed = JSON.stringify(pobierzChecklistePaczki(dokument.id))
+  aktualizujDyspozycjeChecklisty(dokument.id, kontekstWersji(wersja), 'autor')
+  assert.equal(JSON.stringify(pobierzChecklistePaczki(dokument.id)), przed)
+})
+
+test('pusty model dyspozycji nie zmienia odcisku kontekstu starszego szkolenia', () => {
+  const wersja = utworzWersjeZMailem()
+  delete wersja.dane.dyspozycjeMaterialowe
+  const przed = kontekstWersji(wersja)
+  wersja.dane.dyspozycjeMaterialowe = {}
+  assert.deepEqual(kontekstWersji(wersja), przed)
 })

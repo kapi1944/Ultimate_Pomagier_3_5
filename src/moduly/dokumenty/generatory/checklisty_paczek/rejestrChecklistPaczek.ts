@@ -4,11 +4,14 @@ import { pobierzKolejnyNumerDziennyDokumentu, utworzIdentyfikatorDokumentu } fro
 import { repozytoriumWspolnychDokumentow } from '../../../../wspolne/dokumenty/rejestrDokumentow'
 import {
   pobierzSzczegolyDoGeneratorow,
+  zbudujKontekstZeSzczegolow,
+  type DaneSzczegolowDoKontekstu,
   type KontekstDokumentuSzkolenia,
   type SzczegolyDoGeneratoraDokumentu,
 } from '../../../../wspolne/integracje/szczegolyDoDokumentow/index.ts'
 import type { RolaUzytkownika } from '../../../../kartoteki/uzytkownicy/typyUzytkownikow'
 import { utworzUstawieniaUkladuDokumentu } from '../../../../wspolne/dokumenty/ustawieniaUkladuDokumentu'
+import { zastosujDyspozycjeMaterialoweChecklisty, czyMoznaImportowacDyspozycje } from './dyspozycjeChecklistyPaczki'
 import {
   normalizujDaneChecklisty,
   pobierzDaneSzkoleniaChecklisty,
@@ -65,6 +68,8 @@ function utworzMigawke(kontekst: KontekstDokumentuSzkolenia, grupaId: string, da
     ? daneZrodla.logotypy
     : kontekst.organizator.logoNazwaPliku ? [{ nazwa: kontekst.organizator.logoNazwaPliku, podglad: kontekst.organizator.logoPodglad ?? '' }] : []
   return {
+    dyspozycjeMaterialowe: grupa.dyspozycjeMaterialowe,
+    zrodloImportuMaila: grupa.zrodloImportuMaila,
     szczegolyOrganizacyjneId: kontekst.zrodlo.szczegolyOrganizacyjneId,
     grupaId,
     nazwaGrupy: grupa.nazwa,
@@ -133,7 +138,8 @@ export function utworzChecklistePaczkiZeZrodla(kontekst: KontekstDokumentuSzkole
   const dokumenty = repozytoriumWspolnychDokumentow.pobierzWszystkie()
   const numerDzienny = pobierzKolejnyNumerDziennyDokumentu(dokumenty, 'CHECKLISTA_PACZKI')
   const identyfikator = utworzIdentyfikatorDokumentu('CHECKLISTA_PACZKI', numerDzienny, 1)
-  const dane = zastosujWzoryKlienta(utworzDomyslneDaneChecklisty({ identyfikator, numerDzienny, migawka, wariantOnline: false, uzytkownikId }), daneZrodla.wzoryKlienta)
+  const poczatkowe = zastosujWzoryKlienta(utworzDomyslneDaneChecklisty({ identyfikator, numerDzienny, migawka, wariantOnline: false, uzytkownikId }), daneZrodla.wzoryKlienta)
+  const dane = zastosujDyspozycjeZHistoria(poczatkowe, migawka, uzytkownikId)
   dane.daneSzkolenia = { ...pobierzDaneSzkoleniaChecklisty(dane), organizator: kontekst.organizator.nazwa ?? '' }
   return repozytoriumWspolnychDokumentow.utworz(utworzNowyDokument({
     typ: 'CHECKLISTA_PACZKI',
@@ -268,7 +274,7 @@ export function powiazChecklisteZeSzkoleniem(id: string, kontekst: KontekstDokum
   const obecne = pobierzDaneSzkoleniaChecklisty(dokument.daneDokumentu)
   const pobrane = { ...pobierzDaneSzkoleniaChecklisty({ migawkaZrodla: migawka }), organizator: kontekst.organizator.nazwa ?? '' }
   const daneSzkolenia = { ...pobrane, ...Object.fromEntries(Object.entries(obecne).filter(([, wartosc]) => Array.isArray(wartosc) ? wartosc.length > 0 : typeof wartosc === 'number' ? wartosc > 0 : wartosc !== '')) }
-  return zapiszDaneChecklisty(id, {
+  const dane = {
     ...dokument.daneDokumentu,
     daneSzkolenia,
     migawkaZrodla: migawka,
@@ -278,13 +284,67 @@ export function powiazChecklisteZeSzkoleniem(id: string, kontekst: KontekstDokum
     klient: dokument.daneDokumentu.klient || migawka.klient,
     opiekunId: dokument.daneDokumentu.opiekunId || migawka.opiekunId,
     daneOdbiorcy: { ...migawka.odbiorca, ...Object.fromEntries(Object.entries(dokument.daneDokumentu.daneOdbiorcy).filter(([, wartosc]) => Boolean(wartosc))) },
-  }, uzytkownikId, 'Powiązano ze szkoleniem, zachowując lokalne dane i pozycje.', {
+  }
+  return zapiszDaneChecklisty(id, zastosujDyspozycjeZHistoria(dane, migawka, uzytkownikId), uzytkownikId, 'Powiązano ze szkoleniem, zachowując lokalne dane i pozycje.', {
     szkolenieId: kontekst.szkolenie.id,
     klientId: kontekst.klient.id,
     organizatorId: kontekst.organizator.id,
     powiazania: { ...dokument.powiazania, szkolenieId: kontekst.szkolenie.id, klientId: kontekst.klient.id, organizatorId: kontekst.organizator.id, grupaId, szczegolyOrganizacyjneId: migawka.szczegolyOrganizacyjneId, wersjaSzczegolowId: kontekst.zrodlo.wersjaSzczegolowId, odciskDanychZrodlowych: migawka.odciskDanych },
     integralnosc: { powiazanieZeSzczegolami: 'POWIAZANY_ZE_SZCZEGOLAMI', idZrodlowychSzczegolow: migawka.szczegolyOrganizacyjneId, znacznikDanychZrodlowych: migawka.odciskDanych, czyDaneZrodloweNowsze: false },
   })
+}
+
+function zastosujDyspozycjeZHistoria(
+  dane: DaneChecklistyPaczki, migawka: MigawkaZrodlaChecklisty, uzytkownikId: string | null,
+  opcje: { paczkaId?: string; pozycjeZeZgoda?: string[] } = {},
+) {
+  const wynik = zastosujDyspozycjeMaterialoweChecklisty(dane, migawka, opcje)
+  if (!wynik.porownania.length) return dane
+  const poZmianie = dodajWpisHistorii(wynik.dane, 'EDYCJA', uzytkownikId, opcje.pozycjeZeZgoda?.length
+    ? 'Zastosowano dyspozycje po jawnej zgodzie użytkownika na zmianę wskazanych pozycji.'
+    : 'Porównano i zastosowano dyspozycje materiałowe ze Szczegółów; ręczne ustawienia pozostawiono do decyzji użytkownika.')
+  const wpis = poZmianie.historia.at(-1)!
+  wpis.zmianyDyspozycji = wynik.porownania
+  wpis.zrodloDyspozycji = {
+    szczegolyOrganizacyjneId: migawka.szczegolyOrganizacyjneId, grupaId: migawka.grupaId,
+    odciskDanych: migawka.odciskDanych, dyspozycjeMaterialowe: migawka.dyspozycjeMaterialowe,
+    zrodloImportuMaila: migawka.zrodloImportuMaila,
+  }
+  return poZmianie
+}
+
+export function aktualizujDyspozycjeChecklisty(
+  id: string, kontekst: KontekstDokumentuSzkolenia, uzytkownikId: string | null,
+  opcje: { paczkaId?: string; pozycjeZeZgoda?: string[] } = {},
+) {
+  const dokument = pobierzChecklistePaczki(id)
+  if (!dokument || dokument.czyUsunietyMiekko || dokument.czyZarchiwizowany || !['ROBOCZY', 'GOTOWY'].includes(dokument.status)
+    || !czyMoznaImportowacDyspozycje(dokument.daneDokumentu)) return null
+  const dane = dokument.daneDokumentu
+  if (dane.szczegolyOrganizacyjneId !== kontekst.zrodlo.szczegolyOrganizacyjneId || !dane.grupaId || !dane.migawkaZrodla) return null
+  const grupa = kontekst.grupy.find((obecna) => obecna.id === dane.grupaId)
+  if (!grupa) return null
+  const szkolenie = pobierzDaneSzkoleniaChecklisty(dane)
+  const czyRecznaLiczbaUczestnikow = szkolenie.liczbaUczestnikow !== dane.migawkaZrodla.liczbaUczestnikow
+  const migawka = { ...dane.migawkaZrodla, dyspozycjeMaterialowe: grupa.dyspozycjeMaterialowe,
+    zrodloImportuMaila: grupa.zrodloImportuMaila, odciskDanych: kontekst.zrodlo.odciskDanych, liczbaUczestnikow: grupa.liczbaUczestnikow }
+  const doImportu = { ...dane, daneSzkolenia: { ...szkolenie,
+    liczbaUczestnikow: czyRecznaLiczbaUczestnikow ? szkolenie.liczbaUczestnikow : grupa.liczbaUczestnikow } }
+  const zaktualizowane = zastosujDyspozycjeZHistoria(doImportu, migawka, uzytkownikId, opcje)
+  if (zaktualizowane === doImportu) return dokument
+  return repozytoriumWspolnychDokumentow.aktualizuj(id, {
+    daneDokumentu: { ...zaktualizowane, migawkaZrodla: { ...migawka, odciskDanych: dane.migawkaZrodla.odciskDanych } }, status: pobierzStatusWspolny(zaktualizowane.statusChecklisty),
+  }) as DokumentChecklistyPaczki | null
+}
+
+export function aktualizujDyspozycjeChecklistPowiazanych(zrodlo: DaneSzczegolowDoKontekstu, uzytkownikId: string | null) {
+  const powiazane = pobierzChecklistyPowiazane(zrodlo.szczegolyOrganizacyjneId)
+    .filter((dokument) => czyMoznaImportowacDyspozycje(dokument.daneDokumentu) && zrodlo.grupy.some((grupa) => grupa.id === dokument.daneDokumentu.grupaId))
+  if (!powiazane.length) return
+  const kontekst = zbudujKontekstZeSzczegolow(zrodlo)
+  for (const dokument of powiazane) {
+    aktualizujDyspozycjeChecklisty(dokument.id, kontekst, uzytkownikId)
+  }
 }
 
 export function odlaczChecklisteOdSzkolenia(id: string, uzytkownikId: string | null) {

@@ -46,9 +46,16 @@ function zbudujGrupe(dane: DaneSzczegolowDoKontekstu, grupa: DaneSzczegolowDoKon
   const daty = zbudujDaty(grupa.dataOd, grupa.dataDo)
   const trybOnline = grupa.formaSzkolenia === 'Online'
   const odbiorca = dane.dane.odbiorcaPaczki
+  const czyStarszeDyspozycje = !dane.grupy.some((obecna) => obecna.dyspozycjeMaterialowe)
+  const dyspozycjeMaterialowe = grupa.dyspozycjeMaterialowe
+    ?? (czyStarszeDyspozycje && grupa.id === dane.grupy[0]?.id ? dane.dane.dyspozycjeMaterialowe : undefined)
 
   return {
     id: grupa.id,
+    ...(dyspozycjeMaterialowe && Object.keys(dyspozycjeMaterialowe).length ? {
+      dyspozycjeMaterialowe,
+      zrodloImportuMaila: grupa.dyspozycjeMaterialowe ? grupa.zrodloImportuMaila ?? '' : dane.dane.zrodloImportuMaila ?? '',
+    } : {}),
     nazwa: grupa.nazwa,
     daty,
     tryb: grupa.formaSzkolenia ?? null,

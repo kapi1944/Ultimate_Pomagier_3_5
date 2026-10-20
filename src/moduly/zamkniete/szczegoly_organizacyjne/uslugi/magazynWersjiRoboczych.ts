@@ -12,6 +12,8 @@ import type {
   WpisHistoriiSzczegolow,
 } from '../typy'
 import { utworzPoczatkowaGrupe } from '../danePoczatkowe'
+import { aktualizujDyspozycjeChecklistPowiazanych } from '../../../dokumenty/generatory/checklisty_paczek/rejestrChecklistPaczek'
+import { przygotujZrodloZWersjiRoboczej, przygotujZrodloZOpublikowanychSzczegolow } from '../../../../wspolne/integracje/szczegolyDoDokumentow/zbudujKontekstZeSzczegolow'
 import { repozytoriumWspolnychDokumentow } from '../../../../wspolne/dokumenty/rejestrDokumentow'
 import { zapiszDokumentRoboczyGeneratora } from '../../../../wspolne/dokumenty/zapisDokumentuGeneratora'
 import { czyMoznaUtworzycAktualizacje, walidujPrzejscieStatusuSzczegolow, type AkcjaStatusuSzczegolow } from '../workflowStatusow'
@@ -226,6 +228,7 @@ export function zapiszWersjeRobocza(wersja: WersjaRoboczaGeneratora) {
     wlascicielId: wersja.dane.opiekunId || null,
   })
   ustawAktualnaWersjeRobocza(wersja)
+  aktualizujDyspozycjeChecklistPowiazanych(przygotujZrodloZWersjiRoboczej(wersja), wersja.autorId)
 
   dodajWpisHistoriiSzczegolow({
     typ: 'wersja',
@@ -309,6 +312,7 @@ export function opublikujWersjeRobocza(wersja: WersjaRoboczaGeneratora) {
   }
 
   zapiszOpublikowaneSzczegoly([rekord, ...opublikowane.filter((pozycja) => pozycja.id !== rekord.id)])
+  aktualizujDyspozycjeChecklistPowiazanych(przygotujZrodloZOpublikowanychSzczegolow(rekord), wersja.autorId)
   if (wersja.id !== rekord.id) {
     usunKopieRobocza(wersja.id)
   } else if (pobierzAktualnaWersjeRobocza()?.id === wersja.id) {

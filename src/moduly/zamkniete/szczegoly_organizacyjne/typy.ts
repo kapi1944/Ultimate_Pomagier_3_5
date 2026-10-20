@@ -204,6 +204,8 @@ export type LokalizacjaKartoteki = {
 
 export type GrupaSzkoleniowa = {
   id: string
+  dyspozycjeMaterialowe?: DyspozycjeMaterialowe
+  zrodloImportuMaila?: string
   nazwa: string
   trenerzy: TrenerGrupy[]
   uczestnicy?: UczestnikGrupy[]

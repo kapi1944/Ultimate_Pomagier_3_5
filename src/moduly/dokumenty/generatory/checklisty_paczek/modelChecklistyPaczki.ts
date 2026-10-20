@@ -1,4 +1,5 @@
 import { WERSJA_SCHEMATU_SWOBODNYCH_BLOKOW, normalizujBlokiSwobodneDokumentu, type BlokSwobodnyDokumentu } from '../../../../wspolne/dokumenty/modelSwobodnychBlokow'
+import type { DyspozycjeMaterialowe, DyspozycjaMaterialowa, RodzajDyspozycjiMaterialowej } from '../../../zamkniete/szczegoly_organizacyjne/typy'
 
 export type StatusGotowosciPozycji = 'NIEGOTOWE' | 'W_TOKU_LUB_PROBLEM' | 'CZESCIOWO_GOTOWE' | 'GOTOWE'
 export type StatusChecklistyPaczki = 'KOPIA_ROBOCZA' | 'GOTOWA_DO_WYDRUKU' | 'WYDRUKOWANA' | 'KOMPLETNA' | 'ZARCHIWIZOWANA'
@@ -44,6 +45,27 @@ export type PozycjaChecklisty = {
   wzorKlienta: string
   uwagiDrukowane: string
   notatkiWewnetrzne: string
+  importDyspozycji?: {
+    rodzaj: RodzajDyspozycjiMaterialowej
+    dyspozycja: DyspozycjaMaterialowa
+    grupaId: string
+    szczegolyOrganizacyjneId: string
+    ostatnieWartosciAutomatyczne: PolaDyspozycjiChecklisty
+    propozycjaIlosci: number | null
+    czyIloscWymagaPotwierdzenia: boolean
+    czyKonfliktReczny: boolean
+  }
+}
+
+export type PolaDyspozycjiChecklisty = Pick<PozycjaChecklisty, 'czyWymagana' | 'czyOpcjonalna' | 'czyNieDotyczy' | 'czyOnline' | 'regulaIlosci' | 'uwagiDrukowane'>
+
+export type PorownanieDyspozycjiChecklisty = {
+  pozycjaId: string
+  paczkaId: string
+  przed: PolaDyspozycjiChecklisty
+  proponowane: PolaDyspozycjiChecklisty
+  po: PolaDyspozycjiChecklisty
+  czyKonfliktReczny: boolean
 }
 
 export type ParametryLogistycznePaczki = {
@@ -100,6 +122,8 @@ export type UwagaZeSzczegolow = {
 }
 
 export type MigawkaZrodlaChecklisty = {
+  dyspozycjeMaterialowe?: DyspozycjeMaterialowe
+  zrodloImportuMaila?: string
   szczegolyOrganizacyjneId: string
   grupaId: string
   nazwaGrupy: string
@@ -143,6 +167,8 @@ export type WpisAudytuChecklisty = {
   data: string
   uzytkownikId: string | null
   opis: string
+  zmianyDyspozycji?: PorownanieDyspozycjiChecklisty[]
+  zrodloDyspozycji?: Pick<MigawkaZrodlaChecklisty, 'szczegolyOrganizacyjneId' | 'grupaId' | 'odciskDanych' | 'dyspozycjeMaterialowe' | 'zrodloImportuMaila'>
 }
 
 export type ProsbaOWeryfikacje = {
@@ -507,10 +533,11 @@ export function czyMoznaFinalizowacCheckliste(dane: DaneChecklistyPaczki) {
   const liczbaUczestnikow = pobierzDaneSzkoleniaChecklisty(dane).liczbaUczestnikow
   const liczbaDni = new Set(pobierzDaneSzkoleniaChecklisty(dane).terminy).size
   const brakujacePozycje = dane.pozycje.filter((pozycja) => {
+    if (pozycja.importDyspozycji?.czyKonfliktReczny || pozycja.importDyspozycji?.dyspozycja.status === 'niepewne') return true
     if (!pozycja.czyWymagana || pozycja.czyOpcjonalna || !czyPozycjaJestAktywna(pozycja) || pozycja.czyOnline) return false
     const wymaganaIlosc = pobierzIloscPozycji(pozycja, liczbaUczestnikow, liczbaDni).koncowa
     const czyBrakujeIlosci = pozycja.iloscPrzygotowana !== null && pozycja.iloscPrzygotowana < wymaganaIlosc
-    return pozycja.statusGotowosci !== 'GOTOWE' || czyBrakujeIlosci
+    return pozycja.statusGotowosci !== 'GOTOWE' || czyBrakujeIlosci || pozycja.importDyspozycji?.czyIloscWymagaPotwierdzenia || pozycja.importDyspozycji?.czyKonfliktReczny
   })
   return { czyMozna: !brakujacePozycje.length && czyDaneOdbiorcySaKompletne(dane.daneOdbiorcy), brakujacePozycje, czyBrakujeDanychWysylkowych: !czyDaneOdbiorcySaKompletne(dane.daneOdbiorcy) }
 }
