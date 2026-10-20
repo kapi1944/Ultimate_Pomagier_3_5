@@ -184,3 +184,46 @@ test('checklisty: routing, formularz, zapis, stare dane, eksport i izolacja awar
     assert.deepEqual(bledySieci, [], 'Błędy ładowania modułów lub zasobów')
   } finally { await przegladarka.close() }
 })
+
+
+test('checklisty: pisanie nie zapisuje rejestru co znak, podpowiedzi zachowują własne wartości', { timeout: 60000 }, async () => {
+  const przegladarka = await chromium.launch({ channel: 'chrome', headless: true })
+  try {
+    const strona = await przegladarka.newPage()
+    await strona.goto(adres + '/dokumenty/checklisty-paczek')
+    await strona.getByRole('button', { name: 'Zaloguj', exact: true }).click()
+    const tytul = strona.getByLabel('Tytuł szkolenia', { exact: true })
+    await tytul.waitFor()
+    await strona.evaluate(() => {
+      window.zapisyChecklisty = 0
+      const zapisz = Storage.prototype.setItem
+      Storage.prototype.setItem = function (klucz, wartosc) {
+        if (klucz === 'ultimatePomagier.rejestrDokumentow.v1') window.zapisyChecklisty++
+        return zapisz.call(this, klucz, wartosc)
+      }
+    })
+    await tytul.pressSequentially('Szybkie wpisywanie formularza', { delay: 1 })
+    assert.equal(await tytul.inputValue(), 'Szybkie wpisywanie formularza')
+    assert.equal(await strona.evaluate(() => window.zapisyChecklisty), 0)
+    await strona.waitForFunction(() => window.zapisyChecklisty === 1)
+    // Po zapisie historia nie może uruchamiać kolejnych zapisów bez edycji.
+    await strona.waitForTimeout(1000)
+    assert.equal(await strona.evaluate(() => window.zapisyChecklisty), 1)
+    assert.ok(await strona.locator('#checklista-miejscowosci option').count() > 0)
+    assert.ok(await strona.locator('#checklista-trenerzy option').count() > 0)
+    const trener = await strona.locator('#checklista-trenerzy option').first().getAttribute('value')
+    const trenerzy = strona.getByLabel('Trenerzy (oddziel przecinkiem)', { exact: true })
+    await trenerzy.fill('Własny Trener,')
+    assert.equal(await strona.locator('#checklista-trenerzy option').first().getAttribute('value'), 'Własny Trener,' + trener)
+    await trenerzy.fill('Własny Trener,' + trener)
+    const miejsce = strona.getByLabel('Miejsce / tryb', { exact: true })
+    await miejsce.fill('Własna miejscowość / online')
+    await strona.getByLabel('Miasto', { exact: true }).fill('Dowolne miasto odbiorcy')
+    await strona.getByRole('button', { name: 'Zapisz jako roboczą', exact: true }).click()
+    await strona.reload()
+    assert.equal(await miejsce.inputValue(), 'Własna miejscowość / online')
+    assert.equal(await trenerzy.inputValue(), 'Własny Trener,' + trener)
+    assert.equal(await strona.getByLabel('Miasto', { exact: true }).inputValue(), 'Dowolne miasto odbiorcy')
+    assert.match(await strona.locator('#wydruk-checklisty').innerText(), /Własny Trener/)
+  } finally { await przegladarka.close() }
+})

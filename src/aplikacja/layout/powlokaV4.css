@@ -20,7 +20,7 @@
   .menu-boczne:not(.menu-boczne--otwarte) .menu-boczne__strzalka,
   .menu-boczne:not(.menu-boczne--otwarte) .menu-boczne__etykieta { display: none; }
   .menu-boczne:not(.menu-boczne--otwarte) nav > .menu-boczne__lista { padding: 8px; }
-  .menu-boczne:not(.menu-boczne--otwarte) .menu-boczne__przycisk { justify-content: center; padding: 12px !important; min-height: 48px; }
+  .menu-boczne:not(.menu-boczne--otwarte) .menu-boczne__przycisk { width: 44px; height: 44px; min-height: 44px; justify-content: center; margin-inline: auto; padding: 0 !important; }
   .uklad-aplikacji .menu-boczne__hamburger { z-index: calc(var(--ui-warstwa-menu) + 1); width: 44px; height: 44px; top: 8px; left: 14px; }
   .uklad-aplikacji--menu-przypiete .menu-boczne__hamburger { display: none; }
   .uklad-aplikacji--menu-przypiete .menu-boczne { padding-top: 8px; }
