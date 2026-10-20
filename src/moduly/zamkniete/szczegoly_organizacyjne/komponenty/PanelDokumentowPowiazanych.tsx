@@ -38,13 +38,13 @@ export default function PanelDokumentowPowiazanych({ szczegolyOrganizacyjneId, w
             <article key={dokument.id} className="szczegoly-dokument-karta">
               <span className="szczegoly-dokument-karta__typ">{typ}</span>
               <strong>{dokument.tytul}</strong>
-              <div className="szczegoly-dokument-karta__metadane">
-                {grupa?.nazwa && <span>Grupa: {grupa.nazwa}</span>}
-                {termin && <span>Termin: {termin}</span>}
-                {status && <span>Status: {status}</span>}
-                <span>Wersja: {dokument.wersja}</span>
-                <span>Ostatnia zmiana: {new Date(dokument.zmodyfikowano).toLocaleString('pl-PL')}</span>
-              </div>
+              <dl className="szczegoly-dokument-karta__metadane">
+                {grupa?.nazwa && <div><dt>Grupa</dt><dd>{grupa.nazwa}</dd></div>}
+                {termin && <div><dt>Termin</dt><dd>{termin}</dd></div>}
+                {status && <div><dt>Status</dt><dd>{status}</dd></div>}
+                <div><dt>Wersja</dt><dd>{dokument.wersja}</dd></div>
+                <div><dt>Zmiana</dt><dd>{new Date(dokument.zmodyfikowano).toLocaleString('pl-PL')}</dd></div>
+              </dl>
               <button type="button" onClick={() => otworzDokument(dokument)}>Otwórz</button>
             </article>
           )

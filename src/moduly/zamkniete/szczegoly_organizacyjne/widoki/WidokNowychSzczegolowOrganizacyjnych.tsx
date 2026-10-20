@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ChangeEvent, type KeyboardEvent, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent, type ReactNode } from 'react'
 import { pobierzLokalizacjeZMagazynu } from '../../../../kartoteki/lokalizacje/magazynLokalizacji'
 import type { Dokument } from '../../../../wspolne/dokumenty/modelDokumentu'
 import { utworzDokumentZeSzczegolow } from '../../../../wspolne/integracje/szczegolyDoDokumentow'
@@ -296,6 +296,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
   const [czyPanelJakosciOtwarty, ustawCzyPanelJakosciOtwarty] = useState(czyPanelJakosciPrzypiety)
   const [czyWysuwaniePaneluJakosciWlaczone, ustawCzyWysuwaniePaneluJakosciWlaczone] = useState(pobierzPoczatkoweWysuwaniePaneluJakosci)
   const czyPanelJakosciOdpiety = !czyPanelJakosciPrzypiety
+  const przyciskJakosci = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     try {
@@ -335,7 +336,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
   }
 
   function schowajPanelJakosciJesliOdpiety() {
-    if (czyPanelJakosciOdpiety) {
+    if (czyPanelJakosciOdpiety && !document.getElementById(idPaneluJakosci)?.contains(document.activeElement)) {
       ustawCzyPanelJakosciOtwarty(false)
     }
   }
@@ -356,7 +357,8 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
   function obsluzKlawiszPaneluJakosci(zdarzenie: KeyboardEvent<HTMLElement>) {
     if (zdarzenie.key === 'Escape' && czyPanelJakosciOdpiety) {
       zdarzenie.stopPropagation()
-      schowajPanelJakosciJesliOdpiety()
+      ustawCzyPanelJakosciOtwarty(false)
+      przyciskJakosci.current?.focus()
     }
   }
 
@@ -560,13 +562,17 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
           tytul="Nowe szczegóły organizacyjne"
           akcje={
             <>
+              <button ref={przyciskJakosci} aria-controls={idPaneluJakosci} aria-expanded={czyPanelJakosciOtwarty} type="button" onClick={() => {
+                ustawCzyPanelJakosciOtwarty(true)
+                requestAnimationFrame(() => document.getElementById(idPaneluJakosci)?.querySelector<HTMLButtonElement>('button')?.focus())
+              }}>Kontrola jakości</button>
               {generator.daneFormularza.status === 'NIEPEŁNE' && (
                 <button disabled={generator.czyTylkoPodglad} type="button" onClick={generator.zapiszWersje}>
                   Zapisz wersję roboczą
                 </button>
               )}
               {generator.daneFormularza.status === 'PEŁNE' && (
-                <button disabled={!generator.czyFormularzKompletny || generator.czyTylkoPodglad} type="button" onClick={generator.opublikujSzczegoly}>
+                <button className="szczegoly-akcja-glowna" disabled={!generator.czyFormularzKompletny || generator.czyTylkoPodglad} type="button" onClick={generator.opublikujSzczegoly}>
                   Opublikuj
                 </button>
               )}
@@ -1072,6 +1078,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
 
       <div className="szczegoly-panel-jakosci__strefa-aktywacji" onMouseEnter={otworzPanelJakosciZKrawedzi} aria-hidden="true" />
       <aside
+        inert={!czyPanelJakosciOtwarty}
         aria-label="Panel kontroli jakosci"
         className={`szczegoly-panel-jakosci${czyPanelJakosciOtwarty ? ' szczegoly-panel-jakosci--otwarty' : ''}${czyPanelJakosciPrzypiety ? ' szczegoly-panel-jakosci--przypiety' : ''}`}
         id={idPaneluJakosci}
@@ -1079,6 +1086,13 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
         onMouseEnter={otworzPanelJakosci}
         onMouseLeave={schowajPanelJakosciJesliOdpiety}
       >
+        <div className="szczegoly-panel-jakosci__naglowek">
+          <h2>Kontrola jakości</h2>
+          <button type="button" onClick={() => {
+            ustawTrybAutoukrywaniaPaneluJakosci(true)
+            przyciskJakosci.current?.focus()
+          }}>Schowaj panel</button>
+        </div>
         <div className="szczegoly-panel-jakosci__sterowanie">
           <button aria-label={czyWysuwaniePaneluJakosciWlaczone ? 'Wylacz automatyczne wysuwanie panelu jakosci' : 'Wlacz automatyczne wysuwanie panelu jakosci'} className="szczegoly-panel-jakosci__przycisk" onClick={przelaczWysuwaniePaneluJakosci} title={czyWysuwaniePaneluJakosciWlaczone ? 'Wylacz wysuwanie' : 'Wlacz wysuwanie'} type="button">
             {czyWysuwaniePaneluJakosciWlaczone ? 'Wylacz wysuwanie' : 'Wlacz wysuwanie'}

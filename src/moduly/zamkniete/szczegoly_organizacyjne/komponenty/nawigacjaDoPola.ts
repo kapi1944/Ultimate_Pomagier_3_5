@@ -30,7 +30,7 @@ export function przejdzDoPolaFormularza(pole: string, idSekcjiFormularza: string
       const element = znajdzElementDocelowy(pole, idSekcjiFormularza, idDocelowy)
       if (!element) return
 
-      element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      element.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' })
       if (element instanceof HTMLInputElement || element instanceof HTMLSelectElement || element instanceof HTMLTextAreaElement || element instanceof HTMLButtonElement) {
         element.focus({ preventScroll: true })
         podswietlPole(element)

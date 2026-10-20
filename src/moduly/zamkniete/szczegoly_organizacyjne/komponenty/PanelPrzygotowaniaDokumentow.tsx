@@ -122,7 +122,7 @@ export default function PanelPrzygotowaniaDokumentow({ wersja, otworzDokument, p
 
       <div className="szczegoly-dokumenty-blok">
         <h3>Pakiety dokumentów</h3>
-        <div className="szczegoly-dokumenty-akcje">
+        <div className="szczegoly-dokumenty-pakiety">
           <button disabled={!wersja} type="button" onClick={() => wykonajPakiet(rodzajePakietuPodstawowego)}>Utwórz pakiet podstawowy</button>
           <button disabled={!wersja} type="button" onClick={() => ustawCzyPokazacDodatkowe(true)}>Utwórz dokumenty dodatkowe</button>
           <button disabled={!wersja} type="button" onClick={() => ustawCzyPotwierdzicWszystkie(true)}>Utwórz wszystkie dokumenty</button>

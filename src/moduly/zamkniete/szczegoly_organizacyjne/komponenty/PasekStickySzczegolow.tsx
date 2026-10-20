@@ -23,6 +23,13 @@ export default function PasekStickySzczegolow({ tytul, status, sekcje, kompletne
 
   useEffect(() => {
     let klatkaAnimacji: number | null = null
+    const obszar = pasekRef.current?.closest<HTMLElement>('.uklad-aplikacji__obszar-roboczy')
+    const formularz = pasekRef.current?.closest<HTMLElement>('.szczegoly-organizacyjne')
+    const obserwator = new ResizeObserver(() => {
+      formularz?.style.setProperty('--wysokosc-paska-szczegolow', `${pasekRef.current?.offsetHeight ?? 0}px`)
+      zaplanujAktualizacje()
+    })
+    if (pasekRef.current) obserwator.observe(pasekRef.current)
 
     function aktualizujAktywnaSekcje() {
       klatkaAnimacji = null
@@ -44,7 +51,7 @@ export default function PasekStickySzczegolow({ tytul, status, sekcje, kompletne
         ?? sekcjeWBiezacymRzedzie[0]
         ?? elementySekcji[0]
 
-      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2) {
+      if (obszar && obszar.scrollTop > 0 && obszar.scrollTop + obszar.clientHeight >= obszar.scrollHeight - 2) {
         aktywnaSekcja = elementySekcji[elementySekcji.length - 1]
       }
 
@@ -59,11 +66,13 @@ export default function PasekStickySzczegolow({ tytul, status, sekcje, kompletne
     }
 
     zaplanujAktualizacje()
-    window.addEventListener('scroll', zaplanujAktualizacje, { passive: true })
+    const przewijanyElement = obszar ?? window
+    przewijanyElement.addEventListener('scroll', zaplanujAktualizacje, { passive: true })
     window.addEventListener('resize', zaplanujAktualizacje)
 
     return () => {
-      window.removeEventListener('scroll', zaplanujAktualizacje)
+      obserwator.disconnect()
+      przewijanyElement.removeEventListener('scroll', zaplanujAktualizacje)
       window.removeEventListener('resize', zaplanujAktualizacje)
       if (klatkaAnimacji !== null) {
         window.cancelAnimationFrame(klatkaAnimacji)
@@ -81,7 +90,7 @@ export default function PasekStickySzczegolow({ tytul, status, sekcje, kompletne
     zdarzenie.preventDefault()
     preferowanaSekcjaRef.current = idSekcji
     ustawAktywnaSekcjaId(idSekcji)
-    sekcja.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    sekcja.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' })
     window.history.pushState(null, '', `#${idSekcji}`)
   }
 

@@ -278,9 +278,9 @@ const styleProgramuSzkolenia = `
   min-height: 0;
   margin: 0;
   padding: 0;
-  border: 1px solid color-mix(in srgb, var(--ui-tekst) 45%, transparent);
+  border: 1px solid var(--ui-error);
   border-radius: 999px;
-  background: var(--ui-pole);
+  background: var(--ui-error-tlo);
   cursor: pointer;
 }
 
@@ -296,8 +296,8 @@ const styleProgramuSzkolenia = `
 }
 
 .program-szkolen .program-szkolen__przelacznik:checked {
-  border-color: var(--ui-akcent);
-  background: var(--ui-akcent);
+  border-color: var(--ui-success);
+  background: var(--ui-success-tlo);
 }
 
 .program-szkolen__przelacznik:checked::before {
@@ -1738,6 +1738,18 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
                 </label>
               </div>
               {kolorNiepoprawny && <div className="program-szkolen__blad">Wpisz kolor w formacie #RRGGBB.</div>}
+              <label className="program-szkolen__etykieta">
+                <span className="program-szkolen__wiersz-przelacznika">
+                  <input
+                    className="program-szkolen__przelacznik"
+                    checked={ustawienia.czyAkcentowacNazweOrganizatoraWStopce}
+                    onChange={(zdarzenie) => zmienUstawienie('czyAkcentowacNazweOrganizatoraWStopce', zdarzenie.target.checked)}
+                    role="switch"
+                    type="checkbox"
+                  />
+                  koloruj nazwę organizatora w stopce (SEMPER / IIST)
+                </span>
+              </label>
               <button className="program-szkolen__przycisk" onClick={przywrocKolorProfilu} type="button">
                 Przywróć kolor profilu
               </button>
@@ -2093,6 +2105,7 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
             separacjaModulow={ustawienia.separacjaModulow}
             szerokoscLogotypu={ustawienia.szerokoscLogotypu}
             stopkaOrganizatora={profil.stopka}
+            czyAkcentowacNazweOrganizatoraWStopce={ustawienia.czyAkcentowacNazweOrganizatoraWStopce}
             stylDni={ustawienia.stylDni}
             separatorTytuluDnia={ustawienia.separatorTytuluDnia}
             stylListyGlownej={ustawienia.stylListyGlownej}

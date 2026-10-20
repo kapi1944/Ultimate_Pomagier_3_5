@@ -13,10 +13,10 @@ export default function SekcjaFormularza({ id, tytul, opis, akcje, dzieci, child
   const zawartosc = dzieci ?? children
 
   return (
-    <section className="szczegoly-sekcja" id={id}>
+    <section className="szczegoly-sekcja" id={id} aria-labelledby={`${id}-tytul`}>
       <header className="szczegoly-sekcja__naglowek">
         <div>
-          <h2>{tytul}</h2>
+          <h2 id={`${id}-tytul`}>{tytul}</h2>
           {opis && <p>{opis}</p>}
         </div>
         {akcje && <div className="szczegoly-sekcja__akcje">{akcje}</div>}

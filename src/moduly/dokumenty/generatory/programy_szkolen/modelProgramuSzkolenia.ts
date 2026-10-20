@@ -27,6 +27,7 @@ export type UstawieniaProgramuSzkolenia = {
   czyJustowac: boolean
   elementyIdentyfikacji: Partial<ElementyIdentyfikacjiProgramu>
   profilFirmy: ProfilFirmyProgramu
+  czyAkcentowacNazweOrganizatoraWStopce: boolean
   kolorAkcentuProgramu: string
   kolorReczny: boolean
   formatowanieSkryptowe: boolean
@@ -102,6 +103,7 @@ export const domyslneUstawieniaProgramu: UstawieniaProgramuSzkolenia = {
   czyJustowac: true,
   elementyIdentyfikacji: {},
   profilFirmy: 'semper',
+  czyAkcentowacNazweOrganizatoraWStopce: true,
   kolorAkcentuProgramu: '#DE1914',
   kolorReczny: false,
   formatowanieSkryptowe: true,
@@ -179,6 +181,7 @@ export function normalizujProgramSzkolenia(zapis: unknown): ModelProgramuSzkolen
         : konfiguracjePresetowProgramu[presetWygladu].justowanie,
       elementyIdentyfikacji: czyObiekt(ustawienia.elementyIdentyfikacji) ? ustawienia.elementyIdentyfikacji : {},
       profilFirmy: ustawienia.profilFirmy === 'iist' ? 'iist' : 'semper',
+      czyAkcentowacNazweOrganizatoraWStopce: ustawienia.czyAkcentowacNazweOrganizatoraWStopce !== false,
       kolorAkcentuProgramu: tekstLubDomyslny(ustawienia.kolorAkcentuProgramu, domyslneUstawieniaProgramu.kolorAkcentuProgramu),
       kolorReczny: ustawienia.kolorReczny === true,
       formatowanieSkryptowe: typeof ustawienia.formatowanieSkryptowe === 'boolean' ? ustawienia.formatowanieSkryptowe : domyslneUstawieniaProgramu.formatowanieSkryptowe,

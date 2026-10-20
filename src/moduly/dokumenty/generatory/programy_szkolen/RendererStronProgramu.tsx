@@ -38,6 +38,7 @@ type WlasciwosciRendereraStronProgramu = WlasciwosciWygladuTrescProgramu & {
   nazwaOrganizatora: string
   kontaktOrganizatora: string
   stopkaOrganizatora: string
+  czyAkcentowacNazweOrganizatoraWStopce: boolean
   czyNieDzielicPunktowGlownych?: boolean
   czyFormatowanieSkryptowe: boolean
   tekstSurowy: string
@@ -64,6 +65,7 @@ type WlasciwosciStronyFizycznej = {
   nazwaOrganizatora: string
   kontaktOrganizatora: string
   stopkaOrganizatora: string
+  czyAkcentowacNazweOrganizatoraWStopce: boolean
   atrybutyStrony?: Record<string, string | true>
   atrybutyTresci?: Record<string, string>
   zawartosc?: ReactNode
@@ -106,6 +108,7 @@ function ZawartoscStronyFizycznejProgramu({
   nazwaOrganizatora,
   kontaktOrganizatora,
   stopkaOrganizatora,
+  czyAkcentowacNazweOrganizatoraWStopce,
   atrybutyStrony,
   atrybutyTresci,
   zawartosc,
@@ -152,7 +155,7 @@ function ZawartoscStronyFizycznejProgramu({
         <main className="program-dotychczasowy__tresc program-kartka-a4__tresc" {...atrybutyTresci}>{tresc}</main>
         <footer className="program-kartka-a4__stopka">
           {profilFirmy === 'semper'
-            ? <><strong>{pierwszaLiniaStopki}</strong>{pozostaleLinieStopki.length > 0 && `\n${pozostaleLinieStopki.join('\n')}`}</>
+            ? <><strong>{czyAkcentowacNazweOrganizatoraWStopce ? pierwszaLiniaStopki.split(/(SEMPER|IIST)/g).map((fragment, indeks) => fragment === 'SEMPER' || fragment === 'IIST' ? <span key={indeks} style={{ color: fragment === 'SEMPER' ? '#dc2626' : '#1d4ed8' }}>{fragment}</span> : fragment) : pierwszaLiniaStopki}</strong>{pozostaleLinieStopki.length > 0 && `\n${pozostaleLinieStopki.join('\n')}`}</>
             : stopkaOrganizatora}
         </footer>
         <RendererSwobodnychBlokow bloki={blokiSwobodne ?? []} kontekst={kontekstSwobodnychBlokow} numerStrony={strona?.numer ?? 1} trybRenderowania={trybRenderowania} />
@@ -304,6 +307,7 @@ export default function RendererStronProgramu({
   nazwaOrganizatora,
   kontaktOrganizatora,
   stopkaOrganizatora,
+  czyAkcentowacNazweOrganizatoraWStopce,
   czyNieDzielicPunktowGlownych = false,
   czyFormatowanieSkryptowe,
   tekstSurowy,
@@ -343,6 +347,7 @@ export default function RendererStronProgramu({
     nazwaOrganizatora,
     kontaktOrganizatora,
     stopkaOrganizatora,
+    czyAkcentowacNazweOrganizatoraWStopce,
     kontekstSwobodnychBlokow,
     blokiSwobodne: dokument.blokiSwobodne,
     trybRenderowania,

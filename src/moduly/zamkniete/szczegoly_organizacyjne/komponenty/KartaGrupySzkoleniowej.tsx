@@ -400,6 +400,7 @@ export default function KartaGrupySzkoleniowej({
 
       {czyRozwinieta && <div className="szczegoly-karta-grupy__formularz" id={'grupa-' + grupa.id}>
         <div className="szczegoly-karta-grupy__kolumna szczegoly-karta-grupy__kolumna--lewa">
+          <h4>Termin, miejsce i rozliczenie</h4>
           <div className="szczegoly-karta-grupy__pola">
             <PoleTekstowe
               etykieta="Data od"
@@ -438,6 +439,7 @@ export default function KartaGrupySzkoleniowej({
                 <ZnacznikStatusu pole={poleMiejsca} statusyPol={statusyPol} />
               </span>
               <input
+                aria-label="Miejsce"
                 aria-describedby={bladMiejsca ? pobierzIdBleduPola(poleMiejsca) : undefined}
                 aria-invalid={Boolean(bladMiejsca)}
                 disabled={grupa.formaSzkolenia === 'Online'}
@@ -461,7 +463,7 @@ export default function KartaGrupySzkoleniowej({
                     <button type="button" onClick={() => potwierdzMiejscownik()}>
                       Potwierdź
                     </button>
-                    <input placeholder="Poprawny miejscownik" value={poprawionyMiejscownik} onChange={(zdarzenie) => ustawPoprawionyMiejscownik(zdarzenie.target.value)} />
+                    <input aria-label="Poprawny miejscownik" placeholder="Poprawny miejscownik" value={poprawionyMiejscownik} onChange={(zdarzenie) => ustawPoprawionyMiejscownik(zdarzenie.target.value)} />
                     <button disabled={!poprawionyMiejscownik.trim()} type="button" onClick={() => potwierdzMiejscownik(poprawionyMiejscownik)}>
                       Zapisz poprawkę
                     </button>
@@ -556,6 +558,7 @@ export default function KartaGrupySzkoleniowej({
         </div>
 
         <div className="szczegoly-karta-grupy__kolumna szczegoly-karta-grupy__kolumna--prawa">
+          <h4>Trener, uczestnicy i organizacja</h4>
           <div className="szczegoly-karta-grupy__pola">
             <label className={`szczegoly-pole ${statusyPol[`grupy.${indeks}.trenerzy`] ? klasyStatusowPol[statusyPol[`grupy.${indeks}.trenerzy`]!] : ''}`}>
               <span className="szczegoly-pole__naglowek">

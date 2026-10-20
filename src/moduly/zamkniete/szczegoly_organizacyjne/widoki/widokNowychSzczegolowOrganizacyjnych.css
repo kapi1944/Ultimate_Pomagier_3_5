@@ -93,7 +93,7 @@
 .szczegoly-przycisk-link,
 .szczegoly-przycisk-pliku,
 .szczegoly-organizacyjne button {
-  min-height: 34px;
+  min-height: 44px;
   border: 1px solid color-mix(in srgb, var(--ui-akcent) 32%, transparent);
   border-radius: 6px;
   background: var(--ui-powierzchnia);
@@ -113,9 +113,9 @@
 }
 
 .szczegoly-sticky__kotwice a.szczegoly-sticky__kotwica--kompletna {
-  border-color: #4ade80;
-  background: color-mix(in srgb, #166534 72%, var(--ui-powierzchnia));
-  color: #dcfce7;
+  border-color: var(--ui-success);
+  background: var(--ui-success-tlo);
+  color: var(--ui-success);
 }
 
 .szczegoly-sticky__kotwice a.szczegoly-sticky__kotwica--aktywna {
@@ -126,8 +126,8 @@
 }
 
 .szczegoly-sticky__kotwice a.szczegoly-sticky__kotwica--aktywna.szczegoly-sticky__kotwica--kompletna {
-  color: #dcfce7;
-  box-shadow: 0 0 0 2px var(--ui-akcent), inset 0 -3px 0 #4ade80;
+  color: var(--ui-success);
+  box-shadow: 0 0 0 2px var(--ui-akcent), inset 0 -3px 0 var(--ui-success);
 }
 
 .szczegoly-organizacyjne button:disabled {
@@ -212,7 +212,7 @@
 .szczegoly-panel-jakosci__przycisk {
   width: 100%;
   min-width: 0;
-  font-size: 0.76rem;
+  font-size: var(--ui-tekst-maly);
   line-height: 1.2;
   white-space: normal;
 }
@@ -224,13 +224,13 @@
   align-items: center;
   border: 1px solid rgba(250, 204, 21, 0.36);
   border-radius: 8px;
-  background: #2b2205;
-  color: #fef3c7;
+  background: var(--ui-warning-tlo);
+  color: var(--ui-warning);
   padding: 12px;
 }
 
 .szczegoly-autosave span {
-  color: #fde68a;
+  color: var(--ui-warning);
 }
 
 .szczegoly-sekcja-dokumentow {
@@ -315,7 +315,7 @@
 .szczegoly-dokumenty-potwierdzenie,
 .szczegoly-dokumenty-wyniki {
   border-left: 3px solid var(--ui-akcent);
-  background: color-mix(in srgb, var(--ui-akcent) 8%, transparent);
+  background: var(--ui-powierzchnia);
   padding: 12px;
 }
 
@@ -339,7 +339,7 @@
 }
 
 .szczegoly-sekcja {
-  scroll-margin-top: 186px;
+  scroll-margin-top: calc(var(--wysokosc-paska-szczegolow, 180px) + 16px);
   padding: 16px;
 }
 
@@ -427,7 +427,7 @@
   background: var(--ui-pole);
   color: var(--ui-tekst);
   font: inherit;
-  min-height: 36px;
+  min-height: 44px;
   padding: 8px 9px;
 }
 
@@ -462,7 +462,7 @@
 }
 
 .szczegoly-pole__kropka-bledu {
-  background: #ef4444;
+  background: var(--ui-error);
   border-radius: 50%;
   display: inline-block;
   flex: 0 0 9px;
@@ -473,18 +473,18 @@
 
 .szczegoly-pole__status {
   border-radius: 999px;
-  font-size: 0.68rem;
+  font-size: var(--ui-tekst-maly);
   line-height: 1;
   padding: 4px 7px;
 }
 
 .szczegoly-pole__pomoc,
 .szczegoly-pole__blad {
-  font-size: 0.76rem;
+  font-size: var(--ui-tekst-maly);
 }
 
 .szczegoly-pole__blad {
-  color: #fecaca;
+  color: var(--ui-error);
 }
 
 .szczegoly-pole__pomoc {
@@ -492,30 +492,30 @@
 }
 
 .szczegoly-pole--zaimportowane .szczegoly-pole__status {
-  background: #1d4ed8;
-  color: #eff6ff;
+  background: var(--ui-info-tlo);
+  color: var(--ui-info);
 }
 
 .szczegoly-pole--brak .szczegoly-pole__status {
-  background: #b91c1c;
-  color: #fff1f2;
+  background: var(--ui-error-tlo);
+  color: var(--ui-error);
 }
 
 .szczegoly-pole--niepewne .szczegoly-pole__status {
-  background: #d97706;
-  color: #fff7ed;
+  background: var(--ui-warning-tlo);
+  color: var(--ui-warning);
 }
 
 .szczegoly-pole--reczne .szczegoly-pole__status {
-  background: #16a34a;
-  color: #f0fdf4;
+  background: var(--ui-success-tlo);
+  color: var(--ui-success);
 }
 
 .szczegoly-checkbox {
   display: inline-flex;
   gap: 8px;
   align-items: center;
-  min-height: 34px;
+  min-height: 44px;
   color: var(--ui-tekst);
   font-size: 0.88rem;
 }
@@ -685,7 +685,7 @@
 .szczegoly-problemy__sekcja--niepewne {
   border: 1px solid rgba(217, 119, 6, 0.4);
   border-radius: 8px;
-  background: rgba(217, 119, 6, 0.08);
+  background: var(--ui-warning-tlo);
   padding: 10px;
 }
 
@@ -730,11 +730,11 @@ button.szczegoly-checklista__naglowek:hover {
 }
 
 .szczegoly-checklista__pozycja--blad > .szczegoly-checklista__naglowek {
-  color: #fecaca;
+  color: var(--ui-error);
 }
 
 .szczegoly-checklista__pozycja--ok > .szczegoly-checklista__naglowek {
-  color: #bbf7d0;
+  color: var(--ui-success);
 }
 
 .szczegoly-checklista__strzalka {
@@ -745,7 +745,7 @@ button.szczegoly-checklista__naglowek:hover {
   justify-self: start;
   border-color: color-mix(in srgb, var(--ui-tekst-drugi) 35%, transparent);
   background: transparent;
-  color: #d1fae5;
+  color: var(--ui-tekst);
   padding: 4px 7px;
   font-size: 0.8rem;
 }
@@ -769,7 +769,7 @@ button.szczegoly-checklista__naglowek:hover {
 .szczegoly-checklista__naglowek:focus-visible,
 .szczegoly-checklista__blad:focus-visible,
 .szczegoly-checklista__przycisk-zbiorczy:focus-visible {
-  outline: 2px solid #fef08a;
+  outline: 2px solid var(--ui-focus);
   outline-offset: 2px;
 }
 
@@ -783,15 +783,15 @@ button.szczegoly-checklista__naglowek:hover {
 }
 
 .szczegoly-problem--blad {
-  color: #fecaca;
+  color: var(--ui-error);
 }
 
 .szczegoly-problem--ostrzezenie {
-  color: #fed7aa;
+  color: var(--ui-warning);
 }
 
 .szczegoly-problem--informacja {
-  color: #bfdbfe;
+  color: var(--ui-info);
 }
 
 .szczegoly-rozpoznane {
@@ -884,7 +884,7 @@ button.szczegoly-checklista__naglowek:hover {
   background: var(--ui-pole);
   color: var(--ui-tekst);
   font: inherit;
-  min-height: 36px;
+  min-height: 44px;
   padding: 8px 9px;
 }
 
@@ -920,8 +920,8 @@ button.szczegoly-checklista__naglowek:hover {
   width: min(100%, 210px);
   border: 1px solid color-mix(in srgb, var(--ui-tekst-drugi) 28%, transparent);
   border-radius: 6px;
-  background: #f8fafc;
-  color: #334155;
+  background: var(--ui-pole);
+  color: var(--ui-tekst);
   overflow: hidden;
   padding: 8px;
 }
@@ -943,18 +943,19 @@ button.szczegoly-checklista__naglowek:hover {
   gap: 8px;
   align-items: center;
   justify-content: center;
-  width: 166px;
-  flex: 0 0 166px;
+  width: fit-content;
+  max-width: 100%;
+  flex: 0 1 auto;
 }
 
 .szczegoly-przelacznik-tak-nie__tor {
   position: relative;
-  width: 88px;
+  width: 48px;
   height: 30px;
-  flex: 0 0 88px;
-  border: 1px solid color-mix(in srgb, var(--ui-tekst-drugi) 46%, transparent);
+  flex: 0 0 48px;
+  border: 1px solid var(--ui-error);
   border-radius: 999px;
-  background: linear-gradient(180deg, #dc3545, #b91c1c);
+  background: var(--ui-error-tlo);
   box-shadow:
     inset 0 2px 5px rgba(255, 255, 255, 0.22),
     inset 0 -4px 7px rgba(0, 0, 0, 0.38);
@@ -975,14 +976,14 @@ button.szczegoly-checklista__naglowek:hover {
 
 .szczegoly-przelacznik-tak-nie__tor::before {
   left: 18px;
-  color: #0f7a25;
+  color: var(--ui-success);
   content: "✓";
   opacity: 0;
 }
 
 .szczegoly-przelacznik-tak-nie__tor::after {
   right: 18px;
-  color: #7f1d1d;
+  color: var(--ui-tekst-drugi);
   content: "×";
   opacity: 1;
 }
@@ -996,18 +997,18 @@ button.szczegoly-checklista__naglowek:hover {
   height: 22px;
   border: 1px solid rgba(15, 23, 42, 0.35);
   border-radius: 999px;
-  background: linear-gradient(180deg, #ffffff, #d9d9d9);
+  background: var(--ui-tekst);
   box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.9);
   transition: transform 0.18s ease;
 }
 
 .szczegoly-przelacznik-tak-nie--tak .szczegoly-przelacznik-tak-nie__tor {
-  border-color: var(--ui-akcent);
-  background: linear-gradient(180deg, #42d62d, #16a34a);
+  border-color: var(--ui-success);
+  background: var(--ui-success-tlo);
 }
 
 .szczegoly-przelacznik-tak-nie--tak .szczegoly-przelacznik-tak-nie__uchwyt {
-  transform: translateX(58px);
+  transform: translateX(18px);
 }
 
 .szczegoly-przelacznik-tak-nie--tak .szczegoly-przelacznik-tak-nie__tor::before {
@@ -1142,7 +1143,7 @@ button.szczegoly-checklista__naglowek:hover {
 }
 
 .szczegoly-historia__wartosc--starsza {
-  color: #fca5a5 !important;
+  color: var(--ui-error) !important;
 }
 
 .szczegoly-historia__wartosc--nowsza {
@@ -1338,6 +1339,93 @@ button.szczegoly-checklista__naglowek:hover {
   }
 }
 
+/* Formularz V4: pełne powierzchnie i geometria względem obszaru powłoki. */
+@media screen {
+  .szczegoly-organizacyjne { overflow: visible; padding-bottom: 24px; }
+  .szczegoly-organizacyjne :where(div, section, article, header, label, span, input, select, textarea) { min-width: 0; box-sizing: border-box; }
+  .szczegoly-organizacyjne :where(h1, h2, h3, h4, p, span, strong, button, a, label) { overflow-wrap: anywhere; }
+  .szczegoly-organizacyjne :where(input, select, textarea, button) { max-width: 100%; }
+  .szczegoly-organizacyjne :where(input, select, textarea, button, a, summary):focus-visible { outline: 3px solid var(--ui-focus); outline-offset: 3px; }
+  .szczegoly-przycisk-pliku:focus-within { outline: 3px solid var(--ui-focus); outline-offset: 3px; }
+  .szczegoly-organizacyjne :where(input, select, textarea, [role="switch"]) { scroll-margin-top: calc(var(--wysokosc-paska-szczegolow, 180px) + 16px); }
+  .szczegoly-sticky { border-color: var(--ui-obramowanie); border-radius: 12px; box-shadow: var(--ui-cien); }
+  .szczegoly-sticky__wiersz { grid-template-columns: minmax(0, 1fr) auto; }
+  .szczegoly-sticky__status { grid-column: 1; font-size: var(--ui-tekst-maly); border-left: 3px solid var(--ui-akcent); padding-left: 10px; }
+  .szczegoly-sticky__akcje { grid-column: 2; grid-row: 1 / 3; justify-content: flex-end; max-width: 360px; }
+  .szczegoly-sticky__kotwice { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 6px; scrollbar-width: thin; }
+  .szczegoly-sticky__kotwice a { flex: 0 0 auto; white-space: nowrap; font-size: var(--ui-tekst-maly); }
+  .szczegoly-sticky__kotwica--kompletna::before { content: '✓ '; }
+  .szczegoly-organizacyjne .szczegoly-akcja-glowna { background: var(--ui-akcent); color: var(--ui-tekst-na-akcencie); font-weight: 700; }
+  .szczegoly-sekcja, .szczegoly-sekcja-dokumentow { background: var(--ui-panel); border-color: var(--ui-obramowanie); border-radius: 12px; padding: clamp(12px, 1.5vw, 24px); }
+  .szczegoly-sekcja__naglowek { border-bottom: 1px solid var(--ui-obramowanie); padding-bottom: 14px; margin-bottom: 20px; }
+  .szczegoly-sekcja__naglowek h2, .szczegoly-sekcja-dokumentow h2 { font-size: var(--ui-tekst-naglowek); line-height: 1.4; }
+  .szczegoly-sekcja__naglowek p { color: var(--ui-tekst-drugi); line-height: 1.5; }
+  .szczegoly-sekcja__tresc { gap: 20px; }
+  .szczegoly-uklad-sekcji { grid-template-columns: minmax(0, 1fr); }
+  .szczegoly-pole, .szczegoly-przelacznik-pole { font-size: var(--ui-tekst-maly); align-content: start; }
+  .szczegoly-pole__naglowek { flex-wrap: wrap; align-items: start; line-height: 1.5; }
+  .szczegoly-pole__status { line-height: 1.3; }
+  .szczegoly-pole :where(input, select, textarea), .szczegoly-pole-minut input { border-color: var(--ui-obramowanie); }
+  .szczegoly-pole [aria-invalid="true"], .szczegoly-pole-minut [aria-invalid="true"] { border-color: var(--ui-error); }
+  .szczegoly-pole textarea { line-height: 1.6; }
+  .szczegoly-pole > input:not([type="range"]), .szczegoly-pole > select { max-width: 64ch; }
+  .szczegoly-karta-grupy { border-color: var(--ui-obramowanie); border-left: 4px solid var(--ui-akcent); border-radius: 10px; gap: 20px; }
+  .szczegoly-karta-grupy__naglowek { flex-wrap: wrap; border-bottom: 1px solid var(--ui-obramowanie); padding-bottom: 16px; }
+  .szczegoly-karta-grupy__naglowek > div:first-child { flex: 1 1 260px; }
+  .szczegoly-karta-grupy__naglowek span { display: block; margin-top: 8px; line-height: 1.5; }
+  .szczegoly-karta-grupy__kolumna h4 { margin: 0; font-size: 1rem; color: var(--ui-akcent); }
+  .szczegoly-karta-grupy__flagi { padding-top: 12px; }
+  .szczegoly-wiersz-wymogu { grid-template-columns: minmax(0, 1fr) auto; gap: 16px; }
+  .szczegoly-wiersz-wymogu > .szczegoly-checkbox { grid-column: 1 / -1; }
+  .szczegoly-wzor-klienta { grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }
+  .szczegoly-wiersz-wymogu--przyjazd-aktywny { grid-template-columns: minmax(0, 1fr) minmax(0, 200px) auto; }
+  .szczegoly-przelacznik-tak-nie__tor { box-shadow: none; border-color: var(--ui-obramowanie); }
+  .szczegoly-przelacznik-tak-nie__tor::before, .szczegoly-przelacznik-tak-nie__tor::after { content: none; }
+  .szczegoly-przelacznik-tak-nie__uchwyt { box-shadow: none; }
+  .szczegoly-przelacznik-tak-nie__tekst { white-space: normal; }
+  .szczegoly-panel-jakosci { border: 1px solid var(--ui-obramowanie); border-radius: 12px; box-shadow: var(--ui-cien); visibility: hidden; }
+  .szczegoly-panel-jakosci--otwarty { visibility: visible; }
+  .szczegoly-panel-jakosci__naglowek { display: grid; gap: 12px; }
+  .szczegoly-panel-jakosci__naglowek h2 { margin: 0; font-size: var(--ui-tekst-naglowek); }
+  .szczegoly-panel-jakosci__sterowanie { grid-template-columns: 1fr; }
+  .szczegoly-panel-jakosci--przypiety .szczegoly-panel-jakosci__sterowanie button:last-child { border-color: var(--ui-akcent); background: var(--ui-akcent-mocny); }
+  .szczegoly-problemy { background: var(--ui-panel); border-color: var(--ui-obramowanie); }
+  .szczegoly-problemy__naglowek { flex-wrap: wrap; }
+  .szczegoly-problemy__sekcja { border-top: 1px solid var(--ui-obramowanie); padding-top: 16px; line-height: 1.5; }
+  .szczegoly-problemy__sekcja h3 { font-size: 1rem; }
+  .szczegoly-checklista__pozycja { border-bottom: 1px solid var(--ui-obramowanie); padding-bottom: 8px; }
+  .szczegoly-problemy ul[hidden] { display: none; }
+  .szczegoly-dokumenty-siatka { grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); }
+  .szczegoly-dokument-karta { border-color: var(--ui-obramowanie); padding: 16px; gap: 12px; }
+  .szczegoly-dokument-karta__metadane { width: 100%; gap: 8px; margin: 0; }
+  .szczegoly-dokument-karta__metadane > div { display: grid; grid-template-columns: minmax(70px, 1fr) minmax(0, 2fr); gap: 8px; border-top: 1px solid var(--ui-obramowanie); padding-top: 8px; }
+  .szczegoly-dokument-karta__metadane dd { margin: 0; color: var(--ui-tekst); }
+  .szczegoly-dokumenty-pakiety { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 12px; }
+  .szczegoly-dokumenty-pakiety button { min-height: 96px; text-align: left; padding: 20px; border-left: 3px solid var(--ui-akcent); }
+  .szczegoly-sekcja-dokumentow > summary { font-size: var(--ui-tekst-naglowek); padding-block: 8px; }
+  .szczegoly-sekcja-dokumentow[open] > summary { margin-bottom: 16px; }
+  .szczegoly-historia__wpis { padding: 16px; border-color: var(--ui-obramowanie); }
+  .szczegoly-autosave { border-color: var(--ui-warning); }
+  .szczegoly-autosave span { color: inherit; }
+  @container obszar-roboczy (max-width: 900px) {
+    .szczegoly-sticky__wiersz { grid-template-columns: minmax(0, 1fr); }
+    .szczegoly-sticky__akcje { grid-column: 1; grid-row: auto; justify-content: start; max-width: none; }
+    .szczegoly-wiersz-wymogu, .szczegoly-wiersz-wymogu--przyjazd-aktywny { grid-template-columns: minmax(0, 1fr); }
+  }
+  @media (max-width: 600px) {
+    .szczegoly-sticky__wiersz { grid-template-columns: minmax(0, 1fr); }
+    .szczegoly-sticky__akcje { grid-column: 1; grid-row: auto; justify-content: start; }
+    .szczegoly-sticky h1 { font-size: 1.125rem; }
+    .szczegoly-sticky__etykieta, .szczegoly-sticky__status > span { display: none; }
+    .szczegoly-sticky { gap: 8px; padding: 10px; }
+    .szczegoly-sticky__wiersz { gap: 8px; }
+    .szczegoly-wiersz-wymogu, .szczegoly-wiersz-wymogu--przyjazd-aktywny { grid-template-columns: minmax(0, 1fr); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .szczegoly-organizacyjne *, .szczegoly-organizacyjne *::before, .szczegoly-organizacyjne *::after { animation: none; transition: none; scroll-behavior: auto; }
+  }
+}
+
 .szczegoly-widok-naglowek h1 {
   margin: 0;
 }
@@ -1400,7 +1488,7 @@ button.szczegoly-checklista__naglowek:hover {
   background: rgba(255, 255, 255, 0.58);
   color: var(--ui-pole);
   font: inherit;
-  min-height: 34px;
+  min-height: 44px;
   padding: 6px 8px;
 }
 
