@@ -194,7 +194,6 @@ export default function MenuBoczne({
 
               if (pozycja.widok) { ustawAktywnyWidok(pozycja.widok); if (czyMalyEkran) zamknijMenu() }
             }}
-            style={{ paddingLeft: `${14 + poziom * 18}px` }}
             type="button"
           >
             <IkonaMenu typ={pobierzTypIkonyMenu(pozycja.widok ?? pozycja.id)} />
