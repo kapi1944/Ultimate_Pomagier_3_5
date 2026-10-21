@@ -26,6 +26,7 @@ export type DaneListyObecnosci = {
   miejsce: string
   daty: string[]
   organizator: OrganizatorListyObecnosci
+  czyAkcentowacNazweOrganizatoraWStopce: boolean
   trybListy: TrybListyObecnosci
   liczbaPustychWierszy: number
   uczestnicyTekst: string
@@ -212,6 +213,7 @@ export function utworzDomyslneDaneListyObecnosci(): DaneListyObecnosci {
     miejsce: '',
     daty: [],
     organizator: 'SEMPER',
+    czyAkcentowacNazweOrganizatoraWStopce: true,
     trybListy: 'WYPELNIONA',
     liczbaPustychWierszy: 20,
     uczestnicyTekst: '',
@@ -249,6 +251,7 @@ export function deserializujDaneListyObecnosci(tekst: string | null): DaneListyO
       miejsce: pobierzTekst(dane, 'miejsce'),
       daty,
       organizator: normalizujOrganizatora(dane.organizator),
+      czyAkcentowacNazweOrganizatoraWStopce: dane.czyAkcentowacNazweOrganizatoraWStopce !== false,
       trybListy: normalizujTrybListy(dane.trybListy),
       liczbaPustychWierszy: normalizujLiczbePustychWierszy(dane.liczbaPustychWierszy),
       uczestnicyTekst: pobierzTekst(dane, 'uczestnicyTekst'),
@@ -272,7 +275,7 @@ export function utworzDaneListyObecnosciZIntegracji(daneZrodlowe: DaneListyObecn
   const dane = { ...daneZrodlowe, ...korektyReczne }
   const uczestnicy = dane.uczestnicy.map((uczestnik, indeks) => ({ id: uczestnik.id ?? `uczestnik-${indeks + 1}`, imieINazwisko: uczestnik.nazwaPelna }))
   const daty = normalizujDaty(dane.daty)
-  return { wersjaSchematu: 2, wygladTabeli: { ...domyslnyWygladTabeliListy }, odstepPodTerminemMm: 6, trener: dane.trenerzy.map((trener) => trener.imieINazwisko).join(', '), szczegolyId: dane.daneZrodlowe.szczegolyOrganizacyjneId, tytulSzkolenia: dane.tytulSzkolenia, miejsce: pobierzMiejsce(dane), daty, organizator: normalizujOrganizatora(dane.organizator.marka ?? dane.organizator.nazwa), trybListy: 'WYPELNIONA', liczbaPustychWierszy: Math.max(dane.liczbaUczestnikow, 20), uczestnicyTekst: '', uczestnicy, kolumny: [...domyslneKolumny], wariantWielodniowy: zaproponujWariantWielodniowyListyObecnosci(daty), czyPokazacPodpisTrenera: false, czyPokazacPodpisOrganizatora: false, blokiSwobodne: utworzBlokiSzablonuListyObecnosci(), wersjaSchematuBlokow: WERSJA_SCHEMATU_SWOBODNYCH_BLOKOW }
+  return { wersjaSchematu: 2, wygladTabeli: { ...domyslnyWygladTabeliListy }, odstepPodTerminemMm: 6, trener: dane.trenerzy.map((trener) => trener.imieINazwisko).join(', '), szczegolyId: dane.daneZrodlowe.szczegolyOrganizacyjneId, tytulSzkolenia: dane.tytulSzkolenia, miejsce: pobierzMiejsce(dane), daty, organizator: normalizujOrganizatora(dane.organizator.marka ?? dane.organizator.nazwa), trybListy: 'WYPELNIONA', liczbaPustychWierszy: Math.max(dane.liczbaUczestnikow, 20), uczestnicyTekst: '', uczestnicy, kolumny: [...domyslneKolumny], wariantWielodniowy: zaproponujWariantWielodniowyListyObecnosci(daty), czyAkcentowacNazweOrganizatoraWStopce: true, czyPokazacPodpisTrenera: false, czyPokazacPodpisOrganizatora: false, blokiSwobodne: utworzBlokiSzablonuListyObecnosci(), wersjaSchematuBlokow: WERSJA_SCHEMATU_SWOBODNYCH_BLOKOW }
 }
 
 export function pobierzLiczbeWierszyNaStronieListyObecnosci(dane: DaneListyObecnosci) {

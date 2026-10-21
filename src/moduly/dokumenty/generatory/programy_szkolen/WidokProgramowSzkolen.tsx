@@ -1,4 +1,5 @@
 import { styleOznaczenProgramu } from './oznaczeniaProgramu'
+import { tekstyStopekOrganizatorow } from '../../../../wspolne/dokumenty/tekstyStopekOrganizatorow'
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useKontekstUzytkownika } from '../../../../aplikacja/logowanie/useKontekstUzytkownika'
 import AkcjeEksportuPdf from '../../../../wspolne/dokumenty/AkcjeEksportuPdf'
@@ -90,14 +91,13 @@ const daneProfilowFirmy: Record<ProfilFirmy, DaneProfiluFirmy> = {
     nazwa: 'SEMPER',
     kolor: '#DE1914',
     kontakt: 'Centrum Organizacji Szkoleń i Konferencji SEMPER',
-    stopka:
-      'Centrum Organizacji Szkoleń i Konferencji SEMPER\nul. Libelta 1a/2, 61-706 Poznań | biuro@szkolenia-semper.pl | NIP 7772616176 | REGON 301265926',
+    stopka: tekstyStopekOrganizatorow.SEMPER,
   },
   iist: {
     nazwa: 'IIST',
     kolor: '#2E89BE',
     kontakt: 'Międzynarodowy Instytut Szkoleń Specjalistycznych IIST',
-    stopka: 'IIST - robocza stopka dokumentu programu szkolenia',
+    stopka: tekstyStopekOrganizatorow.IIST,
   },
 }
 
@@ -221,6 +221,62 @@ const styleProgramuSzkolenia = `
 
 .program-szkolen__siatka--dwie {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.program-szkolen__wiersz-tytulu {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.program-szkolen__cudzyslowy {
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  padding: 0;
+  font-size: 0.82rem;
+}
+
+.program-szkolen__cudzyslowy legend {
+  margin-bottom: 6px;
+  padding: 0;
+  font-weight: 700;
+}
+
+.program-szkolen__opcja-cudzyslowu {
+  position: relative;
+  display: block;
+  cursor: pointer;
+}
+
+.program-szkolen__opcja-cudzyslowu input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.program-szkolen__opcja-cudzyslowu span {
+  display: block;
+  border: 1px solid var(--ui-obramowanie);
+  padding: 3px 12px;
+  background: var(--ui-pole);
+  text-align: center;
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+
+.program-szkolen__opcja-cudzyslowu:first-of-type span { border-radius: 6px 6px 0 0; }
+.program-szkolen__opcja-cudzyslowu:last-of-type span { border-radius: 0 0 6px 6px; }
+.program-szkolen__opcja-cudzyslowu + .program-szkolen__opcja-cudzyslowu { margin-top: -1px; }
+.program-szkolen__opcja-cudzyslowu input:checked + span {
+  background: var(--ui-akcent);
+  color: var(--ui-tekst-na-akcencie);
+}
+.program-szkolen__opcja-cudzyslowu input:focus-visible + span {
+  position: relative;
+  outline: 2px solid var(--ui-akcent);
+  outline-offset: 2px;
 }
 
 .program-szkolen__siatka--logotypy {
@@ -547,7 +603,7 @@ const styleProgramuSzkolenia = `
 }
 
 .program-kartka-a4__tresc {
-  margin-top: 34px;
+  margin-top: 17px;
 }
 
 .program-kartka-a4__pusty {
@@ -564,16 +620,16 @@ const styleProgramuSzkolenia = `
   white-space: pre-wrap;
   color: #374151;
   font-size: 0.9rem;
-  line-height: 1.7;
+  line-height: calc(1.7 * var(--program-mnoznik-interlinii, 1));
 }
 
 .program-kartka-a4__wiersz-surowy {
-  min-height: 1.7em;
+  min-height: calc(1.7em * var(--program-mnoznik-interlinii, 1));
 }
 
 .program-kartka-a4__dzien {
   break-inside: avoid-page;
-  margin-bottom: 28px;
+  margin-bottom: calc(28px * var(--program-mnoznik-odstepu-dni, 1));
 }
 
 .program-kartka-a4__dzien-tytul {
@@ -629,6 +685,7 @@ const styleProgramuSzkolenia = `
   color: #1f2937;
   font-size: 0.9rem;
   font-weight: 700;
+  line-height: calc(1.2 * var(--program-mnoznik-interlinii, 1));
   text-transform: uppercase;
 }
 
@@ -648,7 +705,7 @@ const styleProgramuSzkolenia = `
   gap: 8px;
   color: #374151;
   font-size: 0.9rem;
-  line-height: 1.5;
+  line-height: calc(1.5 * var(--program-mnoznik-interlinii, 1));
   overflow-wrap: anywhere;
 }
 
@@ -792,7 +849,7 @@ const styleProgramuSzkolenia = `
 
 .program-semper__tresc .program-kartka-a4__dzien {
   break-inside: avoid-page;
-  margin-bottom: 5mm;
+  margin-bottom: calc(5mm * var(--program-mnoznik-odstepu-dni, 1));
 }
 
 .program-kartka-a4__grupa-punktow {
@@ -804,7 +861,7 @@ const styleProgramuSzkolenia = `
 .program-strony--semper_kompaktowy .program-kartka-a4__grupa-punktow { gap: 3px; }
 .program-strony--semper_szczegolowy .program-kartka-a4__lista,
 .program-strony--semper_szczegolowy .program-kartka-a4__grupa-punktow { gap: 2px; }
-.program-strony--semper_szczegolowy .program-kartka-a4__pozycja { font-size: .82rem; line-height: 1.35; }
+.program-strony--semper_szczegolowy .program-kartka-a4__pozycja { font-size: .82rem; line-height: calc(1.35 * var(--program-mnoznik-interlinii, 1)); }
 .program-strony--semper_wedlug_dni .program-kartka-a4__dzien-tytul { break-after: avoid-page; }
 
 .program-semper__stopka {
@@ -1015,7 +1072,7 @@ function pobierzKolorAkcentu(ustawienia: UstawieniaProgramu) {
 function formatujTytulSzkolenia(tytul: string, formatCudzyslowu: FormatCudzyslowu) {
   const tekst = tytul.trim()
 
-  if (!tekst) {
+  if (!tekst || formatCudzyslowu === 'brak') {
     return tekst
   }
 
@@ -1769,19 +1826,33 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
                 />
               </label>
 
+              <div className="program-szkolen__srodtytul">Treść programu</div>
+
               <label className="program-szkolen__etykieta">
-                Format cudzysłowu
-                <select
-                  className="program-szkolen__lista"
-                  onChange={(zdarzenie) => zmienUstawienie('formatCudzyslowu', zdarzenie.target.value as FormatCudzyslowu)}
-                  value={ustawienia.formatCudzyslowu}
-                >
-                  <option value="dolny-gorny">„Tytuł”</option>
-                  <option value="gorny-gorny">"Tytuł"</option>
-                </select>
+                Interlinia modułów i podpunktów: {Math.round(ustawienia.mnoznikInterlinii * 100)}%
+                <input
+                  className="program-szkolen__pole"
+                  min={0.8}
+                  max={2}
+                  step={0.05}
+                  type="range"
+                  value={ustawienia.mnoznikInterlinii}
+                  onChange={(zdarzenie) => zmienUstawienie('mnoznikInterlinii', Number(zdarzenie.target.value))}
+                />
               </label>
 
-              <div className="program-szkolen__srodtytul">Treść programu</div>
+              <label className="program-szkolen__etykieta">
+                Odstęp między dniami: {Math.round(ustawienia.mnoznikOdstepuMiedzyDniami * 100)}%
+                <input
+                  className="program-szkolen__pole"
+                  min={0}
+                  max={2}
+                  step={0.05}
+                  type="range"
+                  value={ustawienia.mnoznikOdstepuMiedzyDniami}
+                  onChange={(zdarzenie) => zmienUstawienie('mnoznikOdstepuMiedzyDniami', Number(zdarzenie.target.value))}
+                />
+              </label>
 
               <label className="program-szkolen__etykieta">
                 <span className="program-szkolen__wiersz-przelacznika">
@@ -2005,15 +2076,35 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
           <section className="program-szkolen__sekcja program-szkolen__sekcja--edycja">
             <h2>EDYCJA</h2>
             <div className="program-szkolen__siatka">
-              <label className="program-szkolen__etykieta">
-                Tytuł szkolenia
-                <input
-                  className="program-szkolen__pole"
-                  onChange={(zdarzenie) => zmienDane('tytulSzkolenia', zdarzenie.target.value)}
-                  type="text"
-                  value={tytulSzkolenia}
-                />
-              </label>
+              <div className="program-szkolen__wiersz-tytulu">
+                <label className="program-szkolen__etykieta">
+                  Tytuł szkolenia
+                  <input
+                    className="program-szkolen__pole"
+                    onChange={(zdarzenie) => zmienDane('tytulSzkolenia', zdarzenie.target.value)}
+                    type="text"
+                    value={tytulSzkolenia}
+                  />
+                </label>
+                <fieldset className="program-szkolen__cudzyslowy">
+                  <legend>Cudzysłowia</legend>
+                  {([
+                    ['brak', 'BRAK'],
+                    ['dolny-gorny', '„...”'],
+                    ['gorny-gorny', '"..."'],
+                  ] as const).map(([format, etykieta]) => (
+                    <label className="program-szkolen__opcja-cudzyslowu" key={format}>
+                      <input
+                        type="radio"
+                        name="cudzyslowy-tytulu-programu"
+                        checked={ustawienia.formatCudzyslowu === format}
+                        onChange={() => zmienUstawienie('formatCudzyslowu', format)}
+                      />
+                      <span>{etykieta}</span>
+                    </label>
+                  ))}
+                </fieldset>
+              </div>
 
               <label className="program-szkolen__etykieta">
                 Program z pliku
@@ -2110,6 +2201,8 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
             separatorTytuluDnia={ustawienia.separatorTytuluDnia}
             stylListyGlownej={ustawienia.stylListyGlownej}
             stylPodpunktow={ustawienia.stylPodpunktow}
+            mnoznikInterlinii={ustawienia.mnoznikInterlinii}
+            mnoznikOdstepuMiedzyDniami={ustawienia.mnoznikOdstepuMiedzyDniami}
             stylePoziomowListy={ustawienia.stylePoziomowListy}
             tekstSurowy={trescProgramu}
             trybRenderowania={trybRenderowania}

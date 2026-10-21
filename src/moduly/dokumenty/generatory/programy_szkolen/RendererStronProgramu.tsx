@@ -1,4 +1,5 @@
 import { pobierzLogoOrganizatora } from '../../../../wspolne/dokumenty/logoOrganizatora'
+import { TrescStopkiOrganizatora } from '../../../../wspolne/dokumenty/TrescStopkiOrganizatora'
 import { Fragment, useMemo, type CSSProperties, type ReactNode, type RefObject } from 'react'
 import type { DokumentBlokowy } from '../../../../wspolne/dokumenty/modelBlokowy'
 import ElementPomocniczyEdytora from '../../../../wspolne/dokumenty/ElementPomocniczyEdytora'
@@ -122,7 +123,6 @@ function ZawartoscStronyFizycznejProgramu({
   onZmienBlok,
 }: WlasciwosciStronyFizycznej) {
   const profil = profileOrganizatorowProgramu[profilFirmy]
-  const [pierwszaLiniaStopki, ...pozostaleLinieStopki] = stopkaOrganizatora.split('\n')
   const tresc = zawartosc ?? <RendererZawartosciStrony strona={strona} trybRenderowania={trybRenderowania} wyglad={wyglad} />
 
   if (preset === 'DOTYCHCZASOWY') {
@@ -154,9 +154,7 @@ function ZawartoscStronyFizycznejProgramu({
         </header>
         <main className="program-dotychczasowy__tresc program-kartka-a4__tresc" {...atrybutyTresci}>{tresc}</main>
         <footer className="program-kartka-a4__stopka">
-          {profilFirmy === 'semper'
-            ? <><strong>{czyAkcentowacNazweOrganizatoraWStopce ? pierwszaLiniaStopki.split(/(SEMPER|IIST)/g).map((fragment, indeks) => fragment === 'SEMPER' || fragment === 'IIST' ? <span key={indeks} style={{ color: fragment === 'SEMPER' ? '#dc2626' : '#1d4ed8' }}>{fragment}</span> : fragment) : pierwszaLiniaStopki}</strong>{pozostaleLinieStopki.length > 0 && `\n${pozostaleLinieStopki.join('\n')}`}</>
-            : stopkaOrganizatora}
+          <TrescStopkiOrganizatora tekst={stopkaOrganizatora} czyKolorowac={czyAkcentowacNazweOrganizatoraWStopce} />
         </footer>
         <RendererSwobodnychBlokow bloki={blokiSwobodne ?? []} kontekst={kontekstSwobodnychBlokow} numerStrony={strona?.numer ?? 1} trybRenderowania={trybRenderowania} />
         {czyWarstwaEdycji && onZaznaczBlok && onZmienBlok && <EdytowalnaWarstwaSwobodnychBlokow marginesPoziomyMm={geometriaStronyProgramu.odstepPoziomyMm} marginesPionowyMm={geometriaStronyProgramu.odstepGornyMm} bloki={blokiSwobodne ?? []} numerStrony={strona?.numer ?? 1} zaznaczonyBlokId={zaznaczonyBlokId ?? null} trybEdycjiSzablonu={trybEdycjiSzablonu} onZaznacz={onZaznaczBlok} onZmienBlok={onZmienBlok} />}
@@ -326,6 +324,8 @@ export default function RendererStronProgramu({
   const elementy = pobierzElementyIdentyfikacjiProgramu(preset, nadpisania)
   const wymiaryStrony = pobierzWymiaryStronyProgramu()
   const stylGeometrii = {
+    '--program-mnoznik-interlinii': wyglad.mnoznikInterlinii ?? 1,
+    '--program-mnoznik-odstepu-dni': wyglad.mnoznikOdstepuMiedzyDniami ?? 1,
     '--program-szerokosc-strony': wymiaryStrony.szerokosc,
     '--program-wysokosc-strony': wymiaryStrony.wysokosc,
     '--program-odstep-gorny': `${geometriaStronyProgramu.odstepGornyMm}mm`,

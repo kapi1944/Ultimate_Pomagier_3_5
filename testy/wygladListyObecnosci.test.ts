@@ -88,6 +88,19 @@ zapiszDokumentRoboczyGeneratora({ ...zapis, id: dokument.id, daneDokumentu: { te
 assert.deepEqual(repozytoriumWspolnychDokumentow.pobierzPoId(dokument.id)?.daneDokumentu, { tekst: serializujDaneListyObecnosci(poZmianie), listaObecnosci: poZmianie })
 
 const { default: Renderer } = await import('../src/moduly/dokumenty/generatory/listy_obecnosci/RendererListyObecnosci.tsx')
+const { tekstyStopekOrganizatorow } = await import('../src/wspolne/dokumenty/tekstyStopekOrganizatorow.ts')
+for (const organizator of ['SEMPER', 'IIST'] as const) {
+  for (const czyAkcentowacNazweOrganizatoraWStopce of [true, false]) {
+    const lista = { ...domyslne, organizator, czyAkcentowacNazweOrganizatoraWStopce, trybListy: 'PUSTA' as const, liczbaPustychWierszy: 100 }
+    const wynik = renderToStaticMarkup(createElement(Renderer, { dane: lista }))
+    const stopki = [...wynik.matchAll(/<footer class="lista-obecnosci-a4__stopka">([\s\S]*?)<\/footer>/g)].map((dopasowanie) => dopasowanie[1])
+    assert.equal(stopki.length, podzielListeObecnosciNaStrony(lista).length)
+    for (const stopka of stopki) {
+      assert.equal(stopka.replace(/<[^>]*>/g, ''), tekstyStopekOrganizatorow[organizator])
+      assert.equal(stopka.includes(`color:${organizator === 'SEMPER' ? '#dc2626' : '#1d4ed8'}`), czyAkcentowacNazweOrganizatoraWStopce)
+    }
+  }
+}
 const { default: Kontrolki } = await import('../src/moduly/dokumenty/generatory/listy_obecnosci/UstawieniaTabeliListy.tsx')
 const html = renderToStaticMarkup(createElement(Renderer, { dane }))
 for (const [klucz, wartosc] of Object.entries(pobierzStylTabeliListy(dane.wygladTabeli))) assert.ok(html.includes(`${klucz}:${wartosc}`))

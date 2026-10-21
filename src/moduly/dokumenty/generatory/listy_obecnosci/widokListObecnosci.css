@@ -315,6 +315,23 @@
   margin-top: 7cqw;
 }
 
+.lista-obecnosci-a4__stopka {
+  position: absolute;
+  right: 4.76%;
+  bottom: 3.37%;
+  left: 4.76%;
+  border-top: 1px solid #cbd5e1;
+  padding-top: 1.5cqw;
+  white-space: pre-line;
+  text-align: center;
+  font-size: 1.25cqw;
+  line-height: 1.45;
+}
+
+.lista-obecnosci-a4 .lista-obecnosci-a4__stopka,
+.lista-obecnosci-a4 .lista-obecnosci-a4__stopka strong { color: #6b7280; }
+.lista-obecnosci-a4__stopka > strong { font-size: 1.4cqw; }
+
 .lista-obecnosci-a4__podpisy span {
   width: 28%;
   padding-top: 2.5cqw;

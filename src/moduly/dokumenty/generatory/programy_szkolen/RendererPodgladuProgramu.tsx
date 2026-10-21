@@ -12,6 +12,8 @@ type SeparacjaModulowPodgladu = 'brak' | 'ramka' | 'linia' | 'separator-pytan'
 type StylListyPodgladu = 'numeracja' | 'punktory'
 
 export type WlasciwosciWygladuTrescProgramu = {
+  mnoznikInterlinii?: number
+  mnoznikOdstepuMiedzyDniami?: number
   kolorAkcentu: string
   stylDni: StylDniPodgladu
   separatorTytuluDnia?: SeparatorTytuluDniaProgramu

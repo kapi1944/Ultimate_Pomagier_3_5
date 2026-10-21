@@ -14,6 +14,11 @@ import type { DaneListyObecnosciZIntegracji } from '../src/wspolne/integracje/sz
 
 const domyslne = utworzDomyslneDaneListyObecnosci()
 assert.equal(domyslne.organizator, 'SEMPER')
+assert.equal(domyslne.czyAkcentowacNazweOrganizatoraWStopce, true)
+assert.equal(deserializujDaneListyObecnosci('{}').czyAkcentowacNazweOrganizatoraWStopce, true)
+for (const czyAkcentowacNazweOrganizatoraWStopce of [true, false]) {
+  assert.equal(deserializujDaneListyObecnosci(serializujDaneListyObecnosci({ ...domyslne, czyAkcentowacNazweOrganizatoraWStopce })).czyAkcentowacNazweOrganizatoraWStopce, czyAkcentowacNazweOrganizatoraWStopce)
+}
 assert.equal(domyslne.trybListy, 'WYPELNIONA')
 assert.equal(domyslne.uczestnicy.length, 0)
 

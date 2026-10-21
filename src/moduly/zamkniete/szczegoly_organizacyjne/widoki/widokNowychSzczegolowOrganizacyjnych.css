@@ -997,9 +997,9 @@ button.szczegoly-checklista__naglowek:hover {
   height: 22px;
   border: 1px solid rgba(15, 23, 42, 0.35);
   border-radius: 999px;
-  background: var(--ui-tekst);
+  background: var(--ui-error);
   box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.9);
-  transition: transform 0.18s ease;
+  transition: transform 0.18s ease, background-color 0.18s ease;
 }
 
 .szczegoly-przelacznik-tak-nie--tak .szczegoly-przelacznik-tak-nie__tor {
@@ -1009,6 +1009,7 @@ button.szczegoly-checklista__naglowek:hover {
 
 .szczegoly-przelacznik-tak-nie--tak .szczegoly-przelacznik-tak-nie__uchwyt {
   transform: translateX(18px);
+  background: var(--ui-success);
 }
 
 .szczegoly-przelacznik-tak-nie--tak .szczegoly-przelacznik-tak-nie__tor::before {

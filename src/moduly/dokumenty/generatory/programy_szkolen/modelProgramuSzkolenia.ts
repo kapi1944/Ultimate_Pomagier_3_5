@@ -19,7 +19,7 @@ export type SeparatorTytuluDniaProgramu = 'myslnik' | 'dwukropek' | 'kropka' | '
 export type SeparacjaModulowProgramu = 'brak' | 'ramka' | 'linia' | 'separator-pytan'
 export type StylPodpunktowProgramu = 'punktory' | 'numeracja'
 export type StylListyGlownejProgramu = 'numeracja' | 'punktory'
-export type FormatCudzyslowuProgramu = 'dolny-gorny' | 'gorny-gorny'
+export type FormatCudzyslowuProgramu = 'brak' | 'dolny-gorny' | 'gorny-gorny'
 
 export type UstawieniaProgramuSzkolenia = {
   presetWygladu: PresetWygladuProgramu
@@ -31,6 +31,8 @@ export type UstawieniaProgramuSzkolenia = {
   kolorAkcentuProgramu: string
   kolorReczny: boolean
   formatowanieSkryptowe: boolean
+  mnoznikInterlinii: number
+  mnoznikOdstepuMiedzyDniami: number
   stylDni: StylDniProgramu
   separatorTytuluDnia: SeparatorTytuluDniaProgramu
   separacjaModulow: SeparacjaModulowProgramu
@@ -107,6 +109,8 @@ export const domyslneUstawieniaProgramu: UstawieniaProgramuSzkolenia = {
   kolorAkcentuProgramu: '#DE1914',
   kolorReczny: false,
   formatowanieSkryptowe: true,
+  mnoznikInterlinii: 1,
+  mnoznikOdstepuMiedzyDniami: 1,
   stylDni: 'pasek',
   separatorTytuluDnia: 'myslnik',
   separacjaModulow: 'separator-pytan',
@@ -185,6 +189,8 @@ export function normalizujProgramSzkolenia(zapis: unknown): ModelProgramuSzkolen
       kolorAkcentuProgramu: tekstLubDomyslny(ustawienia.kolorAkcentuProgramu, domyslneUstawieniaProgramu.kolorAkcentuProgramu),
       kolorReczny: ustawienia.kolorReczny === true,
       formatowanieSkryptowe: typeof ustawienia.formatowanieSkryptowe === 'boolean' ? ustawienia.formatowanieSkryptowe : domyslneUstawieniaProgramu.formatowanieSkryptowe,
+      mnoznikInterlinii: Math.min(2, Math.max(0.8, liczbaLubDomyslna(ustawienia.mnoznikInterlinii, domyslneUstawieniaProgramu.mnoznikInterlinii))),
+      mnoznikOdstepuMiedzyDniami: Math.min(2, Math.max(0, liczbaLubDomyslna(ustawienia.mnoznikOdstepuMiedzyDniami, domyslneUstawieniaProgramu.mnoznikOdstepuMiedzyDniami))),
       stylDni: ustawienia.stylDni === 'naglowek' ? 'naglowek' : 'pasek',
       separatorTytuluDnia: ustawienia.separatorTytuluDnia === 'dwukropek' || ustawienia.separatorTytuluDnia === 'kropka' || ustawienia.separatorTytuluDnia === 'nowa-linia' ? ustawienia.separatorTytuluDnia : 'myslnik',
       separacjaModulow: ustawienia.separacjaModulow === 'brak' || ustawienia.separacjaModulow === 'ramka' || ustawienia.separacjaModulow === 'linia' ? ustawienia.separacjaModulow : 'separator-pytan',
@@ -193,7 +199,7 @@ export function normalizujProgramSzkolenia(zapis: unknown): ModelProgramuSzkolen
       oznaczeniaPoziomow: Array.isArray(ustawienia.oznaczeniaPoziomow) ? ustawienia.oznaczeniaPoziomow.map((styl) => czyStylOznaczeniaPoprawny(styl) ? styl : 'oryginalne') : [],
       stylePoziomowListy: stylePoziomowListy.length ? stylePoziomowListy : [...domyslneUstawieniaProgramu.stylePoziomowListy],
       gruboscObramowaniaTytulu: liczbaLubDomyslna(ustawienia.gruboscObramowaniaTytulu, domyslneUstawieniaProgramu.gruboscObramowaniaTytulu),
-      formatCudzyslowu: ustawienia.formatCudzyslowu === 'dolny-gorny' ? 'dolny-gorny' : 'gorny-gorny',
+      formatCudzyslowu: ustawienia.formatCudzyslowu === 'brak' || ustawienia.formatCudzyslowu === 'dolny-gorny' ? ustawienia.formatCudzyslowu : 'gorny-gorny',
       szerokoscLogotypu: liczbaLubDomyslna(ustawienia.szerokoscLogotypu, domyslneUstawieniaProgramu.szerokoscLogotypu),
       czyNieDzielicPunktowGlownych: typeof ustawienia.czyNieDzielicPunktowGlownych === 'boolean' ? ustawienia.czyNieDzielicPunktowGlownych : domyslneUstawieniaProgramu.czyNieDzielicPunktowGlownych,
       czyPogrubiacNaglowkiListyProgramu: typeof ustawienia.czyPogrubiacNaglowkiListyProgramu === 'boolean' ? ustawienia.czyPogrubiacNaglowkiListyProgramu : domyslneUstawieniaProgramu.czyPogrubiacNaglowkiListyProgramu,

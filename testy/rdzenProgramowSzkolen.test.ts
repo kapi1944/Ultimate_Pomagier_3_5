@@ -79,6 +79,69 @@ test('kanoniczny Program zachowuje logiczne dane po zapisie i odczycie', () => {
   assert.equal(dokument.wlascicielId, 'uzytkownik-1')
 })
 
+test('wybór cudzysłowów zachowuje się po zapisie i odczycie programu', () => {
+  magazyn.clear()
+  for (const formatCudzyslowu of ['brak', 'dolny-gorny', 'gorny-gorny'] as const) {
+    const program = przykladowyProgram()
+    program.ustawienia.formatCudzyslowu = formatCudzyslowu
+    const dokument = zapiszJawnaKopieProgramu({
+      tryb: 'zapisz',
+      tytul: program.tytulSzkolenia,
+      statusBiznesowy: 'robocza',
+      daneDokumentu: program,
+      metadane: metadane(),
+    })
+    assert.equal(pobierzProgramPoId(dokument.id)?.daneDokumentu.ustawienia.formatCudzyslowu, formatCudzyslowu)
+    zapiszAutosaveProgramu({ idSesji: 'sesja-cudzyslowow', daneDokumentu: program })
+    assert.equal(pobierzAutosaveProgramu()?.daneDokumentu.ustawienia.formatCudzyslowu, formatCudzyslowu)
+  }
+  assert.equal(normalizujProgramSzkolenia({ ustawienia: {} }).ustawienia.formatCudzyslowu, 'gorny-gorny')
+  assert.equal(normalizujProgramSzkolenia({ ustawienia: { formatCudzyslowu: 'nieznany' } }).ustawienia.formatCudzyslowu, 'gorny-gorny')
+})
+
+test('interlinia zachowuje się w kopii i autosave, a starsze dane zachowują domyślny wygląd', () => {
+  magazyn.clear()
+  const program = przykladowyProgram()
+  program.ustawienia.mnoznikInterlinii = 1.65
+  const dokument = zapiszJawnaKopieProgramu({
+    tryb: 'zapisz',
+    tytul: program.tytulSzkolenia,
+    statusBiznesowy: 'robocza',
+    daneDokumentu: program,
+    metadane: metadane(),
+  })
+  assert.equal(pobierzProgramPoId(dokument.id)?.daneDokumentu.ustawienia.mnoznikInterlinii, 1.65)
+  zapiszAutosaveProgramu({ idSesji: 'sesja-interlinii', daneDokumentu: program })
+  assert.equal(pobierzAutosaveProgramu()?.daneDokumentu.ustawienia.mnoznikInterlinii, 1.65)
+  for (const mnoznikInterlinii of [undefined, null, '1.5', Number.NaN, Number.POSITIVE_INFINITY]) {
+    assert.equal(normalizujProgramSzkolenia({ ustawienia: { mnoznikInterlinii } }).ustawienia.mnoznikInterlinii, 1)
+  }
+  assert.equal(normalizujProgramSzkolenia({ ustawienia: { mnoznikInterlinii: 0 } }).ustawienia.mnoznikInterlinii, 0.8)
+  assert.equal(normalizujProgramSzkolenia({ ustawienia: { mnoznikInterlinii: 3 } }).ustawienia.mnoznikInterlinii, 2)
+})
+
+test('odstęp między dniami zachowuje się po zapisie i autosave, także przy wartości zero', () => {
+  magazyn.clear()
+  for (const mnoznikOdstepuMiedzyDniami of [0, 0.5, 1, 2]) {
+    const program = normalizujProgramSzkolenia({ ...przykladowyProgram(), ustawienia: { mnoznikOdstepuMiedzyDniami } })
+    const dokument = zapiszJawnaKopieProgramu({
+      tryb: 'zapisz',
+      tytul: program.tytulSzkolenia,
+      statusBiznesowy: 'robocza',
+      daneDokumentu: program,
+      metadane: metadane(),
+    })
+    assert.equal(pobierzProgramPoId(dokument.id)?.daneDokumentu.ustawienia.mnoznikOdstepuMiedzyDniami, mnoznikOdstepuMiedzyDniami)
+    zapiszAutosaveProgramu({ idSesji: 'sesja-odstepu-dni', daneDokumentu: program })
+    assert.equal(pobierzAutosaveProgramu()?.daneDokumentu.ustawienia.mnoznikOdstepuMiedzyDniami, mnoznikOdstepuMiedzyDniami)
+  }
+  for (const mnoznikOdstepuMiedzyDniami of [undefined, null, '0.5', Number.NaN, Number.POSITIVE_INFINITY]) {
+    assert.equal(normalizujProgramSzkolenia({ ustawienia: { mnoznikOdstepuMiedzyDniami } }).ustawienia.mnoznikOdstepuMiedzyDniami, 1)
+  }
+  assert.equal(normalizujProgramSzkolenia({ ustawienia: { mnoznikOdstepuMiedzyDniami: -1 } }).ustawienia.mnoznikOdstepuMiedzyDniami, 0)
+  assert.equal(normalizujProgramSzkolenia({ ustawienia: { mnoznikOdstepuMiedzyDniami: 3 } }).ustawienia.mnoznikOdstepuMiedzyDniami, 2)
+})
+
 test('autosave przechowuje kanoniczny Program we wspolnym rejestrze', () => {
   magazyn.clear()
   const program = przykladowyProgram()

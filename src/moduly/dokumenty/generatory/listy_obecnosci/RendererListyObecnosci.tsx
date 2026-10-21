@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
+import { TrescStopkiOrganizatora } from '../../../../wspolne/dokumenty/TrescStopkiOrganizatora'
+import { tekstyStopekOrganizatorow } from '../../../../wspolne/dokumenty/tekstyStopekOrganizatorow'
 import { pobierzLogoOrganizatora } from '../../../../wspolne/dokumenty/logoOrganizatora'
 import { pobierzBladPrzepelnieniaListy, pobierzStylTabeliListy } from './wygladTabeliListy'
 import { EdytowalnaWarstwaSwobodnychBlokow } from '../../../../wspolne/dokumenty/EdytorSwobodnychBlokow'
@@ -55,5 +57,6 @@ export default function RendererListyObecnosci({ dane: daneZrodlowe, czyPokazacK
     {czyPokazacKontury && <div className="generator-list-obecnosci__kontury" data-pomin-w-eksporcie aria-hidden="true">{dane.blokiSwobodne.filter((blok) => czyBlokWidocznyNaStronie(blok, indeksStrony + 1)).map((blok) => <div key={blok.id} data-kontur-bloku={blok.id} style={{ left: (blok.xMm * 100 / 210) + '%', top: (blok.yMm * 100 / 297) + '%', width: (blok.szerokoscMm * 100 / 210) + '%', height: (blok.wysokoscMm * 100 / 297) + '%' }} />)}</div>}
     {indeksStrony > 0 && <header className="lista-obecnosci-a4__naglowek-kontynuacji"><strong>Lista obecności — {dane.tytulSzkolenia}</strong>{strona.dataPodpisu && <span>{strona.dataPodpisu}</span>}</header>}
     <TabelaListy dane={{ ...dane, daty: strona.datyPodpisow }} dataPodpisu={strona.dataPodpisu} indeksPierwszegoWiersza={strona.indeksPierwszegoWiersza} uczestnicy={strona.uczestnicy} /><PodpisyOdpowiedzialnych dane={dane} />
+    <footer className="lista-obecnosci-a4__stopka"><TrescStopkiOrganizatora tekst={tekstyStopekOrganizatorow[dane.organizator]} czyKolorowac={dane.czyAkcentowacNazweOrganizatoraWStopce} /></footer>
   </section>)}</div>
 }
