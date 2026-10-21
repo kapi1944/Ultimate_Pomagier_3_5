@@ -203,9 +203,12 @@ function renderujWidok(
     case 'profil_uzytkownika':
       return <WidokProfiluUzytkownika key={uzytkownikIdProfilu ?? 'wlasny'} ustawCzyMaNiezapisaneZmiany={ustawCzyProfilMaNiezapisaneZmiany} uzytkownikId={uzytkownikIdProfilu} wybierzProfil={wybierzProfil} />
     case 'pulpit':
-      return <WidokPulpitu otworzDokumenty={otworzDokumentyPulpitu} otworzPaczke={(id) => {
+      return <WidokPulpitu otworzDokumenty={otworzDokumentyPulpitu} otworzPaczke={(id, paczkaId) => {
         const checklista = pobierzChecklistePaczki(id)
-        if (checklista) otworzDokument(checklista)
+        if (checklista) {
+          otworzDokument(checklista)
+          if (paczkaId) window.history.replaceState(window.history.state, '', window.location.pathname + '#paczka-' + encodeURIComponent(paczkaId))
+        }
         else otworzPaczkePulpitu()
       }} otworzRekordZrodlowy={otworzRekordPulpitu} />
     case 'szkolenia-zamkniete':

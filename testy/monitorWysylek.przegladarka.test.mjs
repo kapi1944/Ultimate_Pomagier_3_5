@@ -36,7 +36,7 @@ test('monitor na Pulpicie: źródła, filtry, statusy, responsywność, ogranicz
       repozytoriumWspolnychDokumentow.utworz(utworzNowyDokument({ id: 'online-monitora', typ: 'SZCZEGOLY_ORGANIZACYJNE', generatorId: 'szczegoly_organizacyjne', tytul: 'Online bez paczki', daneDokumentu: { dokumentId: 'online-monitora', dane: { ...dane, wysylkaPaczkiDotyczy: false, tytulSzkolenia: 'Online bez paczki' }, grupy: [{ ...grupy[0], formaSzkolenia: 'Online' }] }, ustawieniaDokumentu: {} }))
     })
     await strona.reload()
-    const monitor = strona.getByRole('region', { name: 'Monitor wysyłek paczek' })
+    const monitor = strona.getByRole('region', { name: 'Paczki do wysłania' })
     await monitor.waitFor()
     const rekordy = monitor.locator('article')
     assert.equal(await rekordy.count(), 8)
@@ -75,7 +75,7 @@ test('monitor na Pulpicie: źródła, filtry, statusy, responsywność, ogranicz
     await strona.evaluate(() => {
       const zapisz = Storage.prototype.setItem
       Storage.prototype.setItem = function (klucz, wartosc) {
-        if (klucz === 'ultimatePomagier.pulpit.v1') throw new DOMException('Test braku miejsca', 'QuotaExceededError')
+        if (klucz.startsWith('ultimatePomagier.rejestrDokumentow.')) throw new DOMException('Test braku miejsca', 'QuotaExceededError')
         return zapisz.call(this, klucz, wartosc)
       }
       window.przywrocZapisMonitora = () => { Storage.prototype.setItem = zapisz }
@@ -90,6 +90,37 @@ test('monitor na Pulpicie: źródła, filtry, statusy, responsywność, ogranicz
     assert.equal(await rekordy.count(), 2)
     await rekordy.first().getByRole('button', { name: 'Otwórz checklistę' }).click()
     await strona.waitForURL(/\/dokumenty\/checklisty-paczek\/checklista-monitora-/)
-    assert.deepEqual(bledy, [], 'Pulpit i otwarcie checklisty bez wyjątków')
+    assert.match(new URL(strona.url()).hash, /#paczka-/)
+    const liczbaPrzed = await strona.evaluate(async () => {
+      const { pobierzChecklistyPaczek, zapiszChecklistePaczki } = await import('/src/moduly/dokumenty/generatory/checklisty_paczek/rejestrChecklistPaczek.ts')
+      const { utworzNowaPaczkeChecklisty } = await import('/src/moduly/dokumenty/generatory/checklisty_paczek/modelChecklistyPaczki.ts')
+      const dokument = pobierzChecklistyPaczek().find((obecna) => obecna.id === 'checklista-monitora-0')
+      const druga = utworzNowaPaczkeChecklisty(dokument.daneDokumentu.paczki, 'Druga przesyłka testowa')
+      zapiszChecklistePaczki(dokument.id, { ...dokument.daneDokumentu, paczki: [...dokument.daneDokumentu.paczki, druga] }, null)
+      return pobierzChecklistyPaczek().length
+    })
+    await strona.goto(adres)
+    await monitor.waitFor()
+    assert.equal(await rekordy.count(), 9)
+    const drugaPrzesylka = rekordy.filter({ hasText: 'Druga przesyłka testowa' })
+    await drugaPrzesylka.getByRole('button', { name: 'Otwórz checklistę', exact: true }).click()
+    await strona.waitForURL(/checklista-monitora-0#paczka-/)
+    const wskazanaPaczka = strona.locator('[id="' + decodeURIComponent(new URL(strona.url()).hash.slice(1)) + '"]')
+    assert.match(await wskazanaPaczka.innerText(), /Druga przesyłka testowa/)
+    await strona.goto(adres)
+    const brakChecklisty = rekordy.filter({ hasText: 'Grupa 6' })
+    await brakChecklisty.getByRole('button', { name: 'Utwórz checklistę', exact: true }).click()
+    await strona.waitForURL(/\/dokumenty\/checklisty-paczek\/[^/]+#paczka-/)
+    const idNowej = new URL(strona.url()).pathname.split('/').at(-1)
+    const noweDane = await strona.evaluate(async (id) => {
+      const { pobierzChecklistyPaczek, pobierzChecklistePaczki } = await import('/src/moduly/dokumenty/generatory/checklisty_paczek/rejestrChecklistPaczek.ts')
+      return { liczba: pobierzChecklistyPaczek().length, grupaId: pobierzChecklistePaczki(id).daneDokumentu.grupaId }
+    }, idNowej)
+    assert.equal(noweDane.liczba, liczbaPrzed + 1)
+    assert.equal(noweDane.grupaId, 'grupa-6')
+    await strona.goto(adres)
+    await rekordy.filter({ hasText: 'Grupa 6' }).getByRole('button', { name: 'Otwórz checklistę', exact: true }).click()
+    await strona.waitForURL(new RegExp(idNowej))
+    assert.deepEqual(bledy, [], 'Pulpit, wiele paczek i utworzenie checklisty bez wyjątków')
   } finally { await przegladarka.close() }
 })

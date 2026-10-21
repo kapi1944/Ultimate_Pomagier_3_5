@@ -1,12 +1,19 @@
 import type { DokumentChecklistyPaczki, SzczegolyDoChecklisty } from '../../../dokumenty/generatory/checklisty_paczek/rejestrChecklistPaczek'
-import { czyPozycjaJestAktywna } from '../../../dokumenty/generatory/checklisty_paczek/modelChecklistyPaczki'
+import { czyDaneOdbiorcySaKompletne, czyPozycjaJestAktywna } from '../../../dokumenty/generatory/checklisty_paczek/modelChecklistyPaczki'
 import type { PaczkaPulpitu } from '../modele/pulpit'
 
 export type WysylkaMonitora = PaczkaPulpitu & {
   szczegolyId: string
+  zrodloSzczegolowId: string
   checklistaId?: string
   klient: string
   grupa: string
+  grupaId: string
+  paczkaId?: string
+  nazwaPaczki: string
+  liczbaUczestnikow: number
+  liczbaNiepotwierdzonych: number
+  czyMoznaOznaczycWyslana: boolean
   statusPrzesylki: string
 }
 
@@ -51,34 +58,40 @@ export function sortujWysylki(wysylki: WysylkaMonitora[], dzisiaj: Date) {
 
 export function zbudujWysylkiMonitora(szczegoly: SzczegolyDoChecklisty[], checklisty: DokumentChecklistyPaczki[], wyslanePaczki: Record<string, string>): WysylkaMonitora[] {
   return szczegoly.filter((szkolenie) => szkolenie.dane.statusSzkolenia !== 'NIEZREALIZOWANE' && szkolenie.dane.status !== 'NIEZREALIZOWANE').flatMap((szkolenie) => szkolenie.grupy.flatMap((grupa) => {
-    const powiazane = checklisty.filter((checklista) => !checklista.czyUsunietyMiekko && checklista.daneDokumentu.statusChecklisty !== 'ZARCHIWIZOWANA' && checklista.daneDokumentu.szczegolyOrganizacyjneId === szkolenie.id && checklista.daneDokumentu.grupaId === grupa.id)
+    const powiazane = checklisty.filter((checklista) => !checklista.czyUsunietyMiekko && !checklista.czyZarchiwizowany && checklista.daneDokumentu.statusChecklisty !== 'ZARCHIWIZOWANA' && [szkolenie.id, szkolenie.zrodloKontekstu.szczegolyOrganizacyjneId].includes(checklista.daneDokumentu.szczegolyOrganizacyjneId ?? '') && checklista.daneDokumentu.grupaId === grupa.id)
     if (grupa.formaSzkolenia === 'Online' && !szkolenie.dane.wysylkaPaczkiDotyczy) return []
     if (!szkolenie.dane.wysylkaPaczkiDotyczy && !powiazane.length) return []
-    return (powiazane.length ? powiazane : [null]).map((checklista): WysylkaMonitora => {
+    return (powiazane.length ? powiazane : [null]).flatMap((checklista) => (checklista?.daneDokumentu.paczki.length ? checklista.daneDokumentu.paczki : [null]).map((paczka): WysylkaMonitora => {
       const dane = checklista?.daneDokumentu
-      const wymagane = dane?.pozycje.filter((pozycja) => pozycja.czyWymagana && !pozycja.czyOpcjonalna && !pozycja.czyOnline && czyPozycjaJestAktywna(pozycja)) ?? []
+      const pozycje = dane?.pozycje.filter((pozycja) => !paczka || pozycja.paczkaId === paczka.id) ?? []
+      const wymagane = pozycje.filter((pozycja) => pozycja.czyWymagana && !pozycja.czyOpcjonalna && !pozycja.czyOnline && czyPozycjaJestAktywna(pozycja))
       const brakujaceElementy = wymagane.filter((pozycja) => pozycja.statusGotowosci !== 'GOTOWE').map((pozycja) => pozycja.nazwa)
-      const liczbaWyslanych = dane?.paczki.filter((paczka) => paczka.statusOperacyjny === 'WYSŁANA').length ?? 0
-      const czyWyslana = dane ? Boolean(checklista && wyslanePaczki[checklista.id]) || (dane.paczki.length > 0 && liczbaWyslanych === dane.paczki.length) : szkolenie.dane.statusSzkolenia === 'WYSŁANA PACZKA'
-      const datyPaczek = dane?.paczki.filter((paczka) => czyWyslana || paczka.statusOperacyjny !== 'WYSŁANA').map((paczka) => paczka.parametryLogistyczne.dataWyslania) ?? []
-      const daty = datyPaczek.filter(czyPoprawnaDataWysylki).sort()
-      // Dotychczasowy Pulpit traktuje dataWyslania checklisty jako termin planowany.
-      const czyMaDatyPaczek = datyPaczek.some(Boolean)
-      const planowanaDataWysylki = czyMaDatyPaczek ? daty[0] || datyPaczek.find(Boolean) || '' : dane?.dataWyslania || ''
-      if (czyMaDatyPaczek && daty.length !== datyPaczek.length) brakujaceElementy.push('poprawne terminy wysyłki części paczek')
-      if (dane) {
-        const odbiorca = dane.daneOdbiorcy
-        if ([odbiorca.imieNazwisko || odbiorca.nazwaFirmy, odbiorca.ulica, odbiorca.nrBudynku, odbiorca.kodPocztowy, odbiorca.miasto].some((wartosc) => !wartosc.trim())) brakujaceElementy.push('dane odbiorcy')
-      } else brakujaceElementy.push('checklista paczki')
-      let statusPrzesylki = 'Robocza'
+      const liczbaNiepotwierdzonych = pozycje.filter((pozycja) => pozycja.importDyspozycji?.czyIloscWymagaPotwierdzenia).length
+      const konflikty = pozycje.filter((pozycja) => pozycja.importDyspozycji?.czyKonfliktReczny)
+      const niepewne = pozycje.filter((pozycja) => pozycja.importDyspozycji?.dyspozycja.status === 'niepewne')
+      if (liczbaNiepotwierdzonych) brakujaceElementy.push(`potwierdzenie ilości wydruków (${liczbaNiepotwierdzonych})`)
+      if (konflikty.length) brakujaceElementy.push('konflikt z ręcznymi ustawieniami: ' + konflikty.map((pozycja) => pozycja.nazwa).join(', '))
+      if (niepewne.length) brakujaceElementy.push('weryfikacja niejednoznacznych dyspozycji')
+      // Stare potwierdzenia pozostają czytelne; nowe zapisy trafiają do paczki checklisty.
+      const czyWyslana = dane ? Boolean(checklista && wyslanePaczki[checklista.id]) || paczka?.statusOperacyjny === 'WYSŁANA' : szkolenie.dane.statusSzkolenia === 'WYSŁANA PACZKA'
+      const planowanaDataWysylki = paczka?.parametryLogistyczne.dataWyslania || (dane?.paczki.length === 1 ? dane.dataWyslania : '') || ''
+      if (!czyDaneOdbiorcySaKompletne(dane?.daneOdbiorcy ?? { ...szkolenie.dane.odbiorcaPaczki, zrodloPropozycji: null })) brakujaceElementy.push('adres odbiorcy')
+      if (!dane) brakujaceElementy.push('checklista paczki')
+      let statusPrzesylki = 'Wymaga przygotowania'
       if (czyWyslana) statusPrzesylki = dane ? 'Wysłana' : 'Wysłana — status szkolenia'
-      else if (!dane) statusPrzesylki = 'Brak checklisty'
-      else if (liczbaWyslanych) statusPrzesylki = `Częściowo wysłana (${liczbaWyslanych}/${dane.paczki.length})`
-      else if (dane.paczki.length && dane.paczki.every((paczka) => paczka.statusOperacyjny === 'GOTOWA')) statusPrzesylki = 'Gotowa do wysyłki'
-      else if (dane.paczki.some((paczka) => paczka.statusOperacyjny === 'W_PRZYGOTOWANIU')) statusPrzesylki = 'W przygotowaniu'
+      else if (liczbaNiepotwierdzonych || konflikty.length || niepewne.length) statusPrzesylki = 'Wymaga potwierdzenia'
+      else if (dane && brakujaceElementy.length === 0 && (wymagane.length > 0 || paczka?.statusOperacyjny === 'GOTOWA')) statusPrzesylki = 'Gotowa do wysyłki'
+      else if (paczka?.statusOperacyjny === 'W_PRZYGOTOWANIU' || paczka?.statusOperacyjny === 'GOTOWA' || wymagane.some((pozycja) => pozycja.statusGotowosci !== 'NIEGOTOWE')) statusPrzesylki = 'W trakcie kompletowania'
       return {
-        id: checklista?.id ?? `szczegoly:${szkolenie.id}:grupa:${grupa.id}`,
+        id: checklista && paczka ? `${checklista.id}:paczka:${paczka.id}` : checklista?.id ?? `szczegoly:${szkolenie.id}:grupa:${grupa.id}`,
         szczegolyId: szkolenie.id,
+        zrodloSzczegolowId: szkolenie.zrodloKontekstu.szczegolyOrganizacyjneId,
+        grupaId: grupa.id,
+        paczkaId: paczka?.id,
+        nazwaPaczki: paczka?.nazwa || 'Paczka do przygotowania',
+        liczbaUczestnikow: grupa.liczbaUczestnikow,
+        liczbaNiepotwierdzonych,
+        czyMoznaOznaczycWyslana: Boolean(paczka && dane && !['WYDRUKOWANA', 'KOMPLETNA', 'ZARCHIWIZOWANA'].includes(dane.statusChecklisty) && !dane.wersjeWydruku.length),
         checklistaId: checklista?.id,
         nazwaSzkolenia: szkolenie.dane.tytulSzkolenia || szkolenie.nazwa || 'Brak tytułu',
         klient: szkolenie.dane.nazwaKlienta || szkolenie.dane.nabywca.nazwa || 'Brak klienta',
@@ -94,6 +107,6 @@ export function zbudujWysylkiMonitora(szczegoly: SzczegolyDoChecklisty[], checkl
         czyWyslana,
         statusPrzesylki,
       }
-    })
+    }))
   }))
 }

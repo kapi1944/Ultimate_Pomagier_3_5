@@ -1,5 +1,5 @@
 import FormularzZakupu, { type DaneFormularzaZakupu } from './FormularzZakupu'
-import { czyJestZamawiaczem } from '../../../kartoteki/uzytkownicy/uprawnienia'
+import { czyJestZamawiaczem, czyMozeWysylac } from '../../../kartoteki/uzytkownicy/uprawnienia'
 import { useEffect, useId, useMemo, useRef, useState, type ClipboardEvent, type CSSProperties, type Dispatch, type DragEvent, type SetStateAction } from 'react'
 import { useKontekstUzytkownika } from '../../../aplikacja/logowanie/useKontekstUzytkownika'
 import { pobierzUstawieniaAplikacji } from '../../../aplikacja/ustawienia/magazynUstawienAplikacji'
@@ -12,14 +12,16 @@ import { formularzZZadania, type FormularzZadania, type TrybFormularzaZadania } 
 import { aktualizujKadrMiniatury, przygotujMiniatureZadania } from './logika/miniaturyZadan'
 import { czyWysylkaWymagaDodatkowegoPotwierdzenia, liczbaDniWidocznosciPaczki } from './logika/paczki'
 import { zbudujWysylkiMonitora } from './logika/monitorWysylek'
+import { otworzLubUtworzChecklistePulpitu, oznaczWysylkeChecklisty } from './uslugi/checklistyPulpitu'
+import type { WysylkaMonitora } from './logika/monitorWysylek'
 import MonitorWysylek from './MonitorWysylek'
 import { generujZadaniaAutomatyczne } from './logika/zadaniaAutomatyczne'
 import { czyMoznaZmienicKontekstPulpitu } from './logika/kontekstPulpitu'
 import { obliczLicznikiPulpitu } from './logika/podsumowaniePulpitu'
 import { czyPoprawnyLinkProduktu, obliczLiczbeAktywnychZapotrzebowanZakupowych, odmienRzeczDoZakupu, pobierzAktywneZapotrzebowaniaZakupowe, pobierzTekstLicznikaZakupow, walidujNoweZapotrzebowanieZakupowe } from './logika/zapotrzebowaniaZakupowe'
 import { czyMoznaEdytowacZadanie, czyMoznaOznaczycZadanieRecznie, czyMoznaWybracZadaniodawce, czyZadanieDoKoncaDnia, czyZadanieDotyczyDnia, czyZadanieOpoznione, czyZadanieWidoczneDlaUzytkownika, pobierzEtykieteStatusuZadania, pobierzGodzineMarkeraZadania, pobierzKolorZadaniodawcy, pobierzSzerokoscLiniiDoFajrantu, pobierzZadaniaDeadline, rozstrzygnijPrzypisanieZadania, sortujZadaniaBezGodziny, walidujPrzypomnienia } from './logika/zadania'
-import type { JednostkaPrzypomnienia, KadrMiniaturyZadania, PaczkaPulpitu, PrzypomnienieZadania, ZadaniePulpitu, ZapotrzebowanieZakupowe } from './modele/pulpit'
-import { pobierzLinkiProduktu, zapiszZakupPrzezUzytkownika, edytujZadanieRecznePrzezZadaniodawce, oznaczPaczkeJakoWyslana, pobierzStanPulpitu, usunZadanieReczne, zapiszZadanieReczne } from './uslugi/magazynPulpitu'
+import type { JednostkaPrzypomnienia, KadrMiniaturyZadania, PrzypomnienieZadania, ZadaniePulpitu, ZapotrzebowanieZakupowe } from './modele/pulpit'
+import { pobierzLinkiProduktu, zapiszZakupPrzezUzytkownika, edytujZadanieRecznePrzezZadaniodawce, pobierzStanPulpitu, usunZadanieReczne, zapiszZadanieReczne } from './uslugi/magazynPulpitu'
 import './pulpit.css'
 import { Przycisk, Komunikat, PustyStan, PanelWysuwany, OknoDialogowe } from '../../../wspolne/komponenty/ElementyInterfejsu'
 
@@ -28,7 +30,7 @@ type FiltrPulpitu = 'WSZYSTKIE' | 'DO_ZROBIENIA' | 'PILNE' | 'PACZKI' | 'BLOKADY
 type WlasciwosciPulpitu = {
   otworzRekordZrodlowy?: (idSzkolenia?: string) => void
   otworzDokumenty?: () => void
-  otworzPaczke?: (idPaczki: string) => void
+  otworzPaczke?: (idChecklisty: string, paczkaId?: string) => void
 }
 
 function pobierzRodzajTerminuZapisu(formularz: FormularzZadania) {
@@ -508,7 +510,7 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
   const [wybraneZadanie, ustawWybraneZadanie] = useState<ZadaniePulpitu | null>(null)
   const [trybFormularzaZadania, ustawTrybFormularzaZadania] = useState<TrybFormularzaZadania>('create')
   const [edytowaneZadanieId, ustawEdytowaneZadanieId] = useState<string | null>(null)
-  const [paczkaDoPotwierdzenia, ustawPaczkeDoPotwierdzenia] = useState<PaczkaPulpitu | null>(null)
+  const [paczkaDoPotwierdzenia, ustawPaczkeDoPotwierdzenia] = useState<WysylkaMonitora | null>(null)
   const [bladWysylki, ustawBladWysylki] = useState('')
   const [czyFormularzZadaniaOtwarty, ustawCzyFormularzZadaniaOtwarty] = useState(false)
   const [czyWykazZakupowOtwarty, ustawCzyWykazZakupowOtwarty] = useState(false)
@@ -532,7 +534,7 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
   const szkoleniaDostepne = useMemo(() => pobierzSzczegolyDoChecklisty().map((szczegoly) => ({ id: szczegoly.id, nazwa: szczegoly.nazwa })), [])
 
   useEffect(() => {
-    const identyfikator = window.setInterval(() => ustawTeraz(new Date()), 60_000)
+    const identyfikator = window.setInterval(() => { ustawTeraz(new Date()); odswiezDanePulpitu() }, 60_000)
     function odswiezDanePulpitu() { ustawStan(pobierzStanPulpitu()) }
     window.addEventListener('focus', odswiezDanePulpitu)
     window.addEventListener('storage', odswiezDanePulpitu)
@@ -738,7 +740,12 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
   }
   function potwierdzWysylke() {
     if (!paczkaDoPotwierdzenia) return
-    if (!oznaczPaczkeJakoWyslana(paczkaDoPotwierdzenia.id)) {
+    try {
+      if (!oznaczWysylkeChecklisty(paczkaDoPotwierdzenia, zalogowanyUzytkownik?.id ?? null)) {
+        ustawBladWysylki('Nie udało się zapisać potwierdzenia wysyłki. Spróbuj ponownie.')
+        return
+      }
+    } catch {
       ustawBladWysylki('Nie udało się zapisać potwierdzenia wysyłki. Spróbuj ponownie.')
       return
     }
@@ -1032,12 +1039,22 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
       {zadaniaWykonane.length > 0 && <details className="pulpit-wykonane"><summary>Wykonane ({zadaniaWykonane.length})</summary>{zadaniaWykonane.map((zadanie) => <KartaZadania key={zadanie.id} nazwaSzkolenia={pobierzNazweSzkolenia(szkoleniaDostepne, zadanie.powiazaneSzkolenieId)} zadanie={zadanie} teraz={teraz} zakresDniaPracy={zakresDniaPracy} uzytkownicy={uzytkownicy} otworz={() => otworzZadanie(zadanie)} />)}</details>}
     </section>}
 
+    {bladWysylki && !paczkaDoPotwierdzenia && <Komunikat status="error">{bladWysylki}</Komunikat>}
     {pokazPaczki && <MonitorWysylek
       key={wybranyUzytkownikId}
       wysylki={paczki}
+      czyMozeWysylac={czyMozeWysylac(zalogowanyUzytkownik)}
       teraz={teraz}
       otworzSzkolenie={otworzRekordZrodlowy}
-      otworzCheckliste={otworzPaczke}
+      otworzCheckliste={otworzPaczke ? (wysylka) => {
+        try {
+          const dokument = otworzLubUtworzChecklistePulpitu(wysylka, zalogowanyUzytkownik?.id ?? null)
+          if (!dokument) { ustawBladWysylki('Nie znaleziono checklisty lub danych jej szkolenia.'); return }
+          otworzPaczke(dokument.id, wysylka.paczkaId ?? dokument.daneDokumentu.paczki[0]?.id)
+        } catch {
+          ustawBladWysylki('Nie udało się otworzyć lub utworzyć checklisty. Spróbuj ponownie.')
+        }
+      } : undefined}
       oznaczWyslana={(wysylka) => { ustawBladWysylki(''); ustawPaczkeDoPotwierdzenia(wysylka) }}
     />}
 
@@ -1096,7 +1113,7 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
     </PanelWysuwany>}
 
     {paczkaDoPotwierdzenia && <OknoDialogowe otwarty tytul="Potwierdzenie wysyłki" etykietaZamkniecia="Wróć" zamknij={() => ustawPaczkeDoPotwierdzenia(null)}><div>
-      <p>Potwierdzenie obejmuje wszystkie paczki z tej checklisty.</p>
+      <p>Potwierdzenie obejmuje wyłącznie wybraną paczkę: {paczkaDoPotwierdzenia.nazwaPaczki}.</p>
       {bladWysylki && <Komunikat status="error">{bladWysylki}</Komunikat>}
       {czyWysylkaWymagaDodatkowegoPotwierdzenia(paczkaDoPotwierdzenia) && <p>Paczka nie jest oznaczona jako w pełni gotowa. Nadal brakuje: {paczkaDoPotwierdzenia.brakujaceElementy.join(', ')}. Czy na pewno oznaczyć jako wysłaną?</p>}
       <div className="pulpit-modal__akcje"><Przycisk className="pulpit-przycisk-glowny" onClick={potwierdzWysylke} type="button">Potwierdzam wysyłkę</Przycisk></div>

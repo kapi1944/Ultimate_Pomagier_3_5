@@ -34,7 +34,7 @@ test('monitor czyta aktualne szczegóły i zachowuje stabilne powiązania grup',
   assert.deepEqual(wynik[0].terminySzkolenia, ['2026-10-29', '2026-10-30'])
   assert.equal(wynik[0].checklistaId, 'checklista-a')
   assert.equal(wynik[1].checklistaId, undefined)
-  assert.equal(wynik[1].statusPrzesylki, 'Brak checklisty')
+  assert.equal(wynik[1].statusPrzesylki, 'Wymaga przygotowania')
   assert.equal(wynik[1].miasto, 'Kraków')
   assert.equal(wynik[1].id, zbudujWysylkiMonitora([{ ...dane, grupy: [...dane.grupy].reverse() }], [], {})[0].id)
 })
@@ -80,10 +80,12 @@ test('częściowa wysyłka zachowuje alarm dla pozostałych paczek i bierze term
   const kolejna = utworzNowaPaczkeChecklisty(dane.paczki)
   kolejna.parametryLogistyczne.dataWyslania = '2026-10-22'
   dane.paczki.push(kolejna)
-  const wynik = zbudujWysylkiMonitora([szczegoly()], [dokument], {})[0]
-  assert.equal(wynik.czyWyslana, false)
-  assert.equal(wynik.statusPrzesylki, 'Częściowo wysłana (1/2)')
-  assert.equal(wynik.planowanaDataWysylki, '2026-10-22')
+  const wynik = zbudujWysylkiMonitora([szczegoly()], [dokument], {})
+  assert.equal(wynik.length, 2)
+  assert.equal(wynik[0].czyWyslana, true)
+  assert.equal(wynik[1].czyWyslana, false)
+  assert.equal(wynik[1].paczkaId, kolejna.id)
+  assert.equal(wynik[1].planowanaDataWysylki, '2026-10-22')
 })
 
 test('status całego szkolenia jest jawnym fallbackiem bez checklisty, bez nadpisywania statusów grup', () => {
@@ -100,7 +102,7 @@ test('niepełne daty paczek nie ukrywają znanego terminu, a błędne nie są za
   dane.paczki.push(utworzNowaPaczkeChecklisty(dane.paczki))
   const wynik = zbudujWysylkiMonitora([szczegoly()], [dokument], {})[0]
   assert.equal(wynik.planowanaDataWysylki, '2026-10-19')
-  assert.ok(wynik.brakujaceElementy.includes('poprawne terminy wysyłki części paczek'))
+  assert.equal(zbudujWysylkiMonitora([szczegoly()], [dokument], {})[1].planowanaDataWysylki, '')
   dane.paczki[0].parametryLogistyczne.dataWyslania = '2026-02-30'
   const bledny = zbudujWysylkiMonitora([szczegoly()], [dokument], {})[0]
   assert.equal(bledny.planowanaDataWysylki, '2026-02-30')
@@ -139,4 +141,72 @@ test('budowa monitora nie zmienia dokumentów ani danych szkolenia', () => {
   const przed = structuredClone({ dane, dokument })
   zbudujWysylkiMonitora([dane], [dokument], {})
   assert.deepEqual({ dane, dokument }, przed)
+})
+
+
+test('1.2.2: status, postęp i ostrzeżenia wynikają z pozycji konkretnej paczki', () => {
+  const dokument = checklista()
+  const dane = dokument.daneDokumentu
+  dane.daneOdbiorcy = { ...dane.daneOdbiorcy, nazwaFirmy: 'Klient', ulica: 'Polna', nrBudynku: '1', kodPocztowy: '00-001', miasto: 'Warszawa', kraj: 'Polska' }
+  dane.pozycje = [dane.pozycje[0]]
+  const pozycja = dane.pozycje[0]
+  assert.equal(zbudujWysylkiMonitora([szczegoly()], [dokument], {})[0].statusPrzesylki, 'Wymaga przygotowania')
+  pozycja.statusGotowosci = 'CZESCIOWO_GOTOWE'
+  assert.equal(zbudujWysylkiMonitora([szczegoly()], [dokument], {})[0].statusPrzesylki, 'W trakcie kompletowania')
+  pozycja.statusGotowosci = 'GOTOWE'
+  assert.equal(zbudujWysylkiMonitora([szczegoly()], [dokument], {})[0].statusPrzesylki, 'Gotowa do wysyłki')
+  pozycja.importDyspozycji = { rodzaj: 'materialySzkoleniowe', dyspozycja: { tekstZrodlowy: 'wydrukuj', status: 'zaimportowane', formaPrzekazania: 'papierowa', sposobPrzygotowania: 'drukuje_organizator', terminPrzekazania: 'przed_szkoleniem' }, grupaId: 'grupa-a', szczegolyOrganizacyjneId: 'szczegoly-a', ostatnieWartosciAutomatyczne: { czyWymagana: true, czyOpcjonalna: false, czyNieDotyczy: false, czyOnline: false, regulaIlosci: { typ: 'UCZESTNICY' }, uwagiDrukowane: '' }, propozycjaIlosci: 30, czyIloscWymagaPotwierdzenia: true, czyKonfliktReczny: true }
+  const druga = utworzNowaPaczkeChecklisty(dane.paczki)
+  druga.statusOperacyjny = 'WYSŁANA'
+  dane.paczki.push(druga)
+  const przed = structuredClone(dokument)
+  const wynik = zbudujWysylkiMonitora([szczegoly()], [dokument], {})
+  assert.equal(wynik[0].liczbaGotowych, 1)
+  assert.equal(wynik[0].liczbaWymaganych, 1)
+  assert.equal(wynik[0].liczbaNiepotwierdzonych, 1)
+  assert.equal(wynik[0].statusPrzesylki, 'Wymaga potwierdzenia')
+  assert.match(wynik[0].brakujaceElementy.join(' '), /konflikt z ręcznymi/)
+  assert.equal(wynik[1].liczbaWymaganych, 0)
+  assert.equal(wynik[1].liczbaNiepotwierdzonych, 0)
+  assert.equal(wynik[1].statusPrzesylki, 'Wysłana')
+  assert.deepEqual(dokument, przed)
+})
+
+test('1.2.2: tworzenie z Pulpitu jest idempotentne, wysyłka dotyczy jednej paczki i chroni historię', async () => {
+  const magazyn = new Map<string, string>()
+  Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: {
+    getItem: (klucz: string) => magazyn.get(klucz) ?? null,
+    setItem: (klucz: string, wartosc: string) => magazyn.set(klucz, wartosc),
+    removeItem: (klucz: string) => magazyn.delete(klucz),
+  } })
+  const { repozytoriumWspolnychDokumentow } = await import('../src/wspolne/dokumenty/rejestrDokumentow.ts')
+  const { pobierzUzytkownikow } = await import('../src/kartoteki/uzytkownicy/magazynUzytkownikow.ts')
+  const { otworzLubUtworzChecklistePulpitu, oznaczWysylkeChecklisty } = await import('../src/moduly/zamkniete/pulpit/uslugi/checklistyPulpitu.ts')
+  const { pobierzSzczegolyDoChecklisty, pobierzChecklistyPaczek, zapiszChecklistePaczki, pobierzChecklistePaczki } = await import('../src/moduly/dokumenty/generatory/checklisty_paczek/rejestrChecklistPaczek.ts')
+  const dane = szczegoly()
+  repozytoriumWspolnychDokumentow.utworz(utworzNowyDokument({ id: dane.id, typ: 'SZCZEGOLY_ORGANIZACYJNE', generatorId: 'szczegoly_organizacyjne', tytul: dane.nazwa, daneDokumentu: { dokumentId: dane.id, id: 'wersja-a', dane: dane.dane, grupy: dane.grupy }, ustawieniaDokumentu: {} }))
+  const uzytkownikId = pobierzUzytkownikow().find((osoba) => osoba.rola === 'ARCHITEKT')!.id
+  const wysylka = zbudujWysylkiMonitora(pobierzSzczegolyDoChecklisty(), [], {})[0]
+  const dokument = otworzLubUtworzChecklistePulpitu(wysylka, uzytkownikId)!
+  assert.ok(dokument)
+  assert.equal(otworzLubUtworzChecklistePulpitu(wysylka, uzytkownikId)!.id, dokument.id)
+  assert.equal(pobierzChecklistyPaczek().length, 1)
+  assert.equal(dokument.daneDokumentu.grupaId, 'grupa-a')
+  assert.equal(dokument.powiazania.grupaId, 'grupa-a')
+  const druga = utworzNowaPaczkeChecklisty(dokument.daneDokumentu.paczki)
+  zapiszChecklistePaczki(dokument.id, { ...dokument.daneDokumentu, paczki: [...dokument.daneDokumentu.paczki, druga] }, uzytkownikId)
+  const rekord = zbudujWysylkiMonitora(pobierzSzczegolyDoChecklisty(), pobierzChecklistyPaczek(), {})[0]
+  const przed = pobierzChecklistePaczki(dokument.id)!
+  assert.equal(oznaczWysylkeChecklisty(rekord, null), null)
+  const wynik = oznaczWysylkeChecklisty(rekord, uzytkownikId)!
+  assert.equal(wynik.daneDokumentu.paczki[0].statusOperacyjny, 'WYSŁANA')
+  assert.equal(wynik.daneDokumentu.paczki[1].statusOperacyjny, 'ROBOCZA')
+  assert.deepEqual(wynik.daneDokumentu.pozycje, przed.daneDokumentu.pozycje)
+  assert.equal(magazyn.has('ultimatePomagier.pulpit.v1'), false)
+  for (const statusChecklisty of ['WYDRUKOWANA', 'KOMPLETNA', 'ZARCHIWIZOWANA'] as const) {
+    repozytoriumWspolnychDokumentow.aktualizuj(dokument.id, { daneDokumentu: { ...wynik.daneDokumentu, statusChecklisty } })
+    const historyczna = pobierzChecklistePaczki(dokument.id)
+    assert.equal(oznaczWysylkeChecklisty(rekord, uzytkownikId), null)
+    assert.deepEqual(pobierzChecklistePaczki(dokument.id), historyczna)
+  }
 })
