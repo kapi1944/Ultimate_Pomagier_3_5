@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { poczatkoweDaneFormularza, poczatkowaGrupa } from '../src/moduly/zamkniete/szczegoly_organizacyjne/danePoczatkowe.ts'
-import { utworzDomyslneDaneChecklisty, utworzNowaPaczkeChecklisty } from '../src/moduly/dokumenty/generatory/checklisty_paczek/modelChecklistyPaczki.ts'
+import { czyMoznaFinalizowacCheckliste, utworzDomyslneDaneChecklisty, utworzNowaPaczkeChecklisty } from '../src/moduly/dokumenty/generatory/checklisty_paczek/modelChecklistyPaczki.ts'
 import type { DokumentChecklistyPaczki, SzczegolyDoChecklisty } from '../src/moduly/dokumenty/generatory/checklisty_paczek/rejestrChecklistPaczek.ts'
 import { utworzNowyDokument } from '../src/wspolne/dokumenty/modelDokumentu.ts'
 import { czyPoprawnaDataWysylki, filtrujWysylki, pobierzPilnoscWysylki, sortujWysylki, zbudujWysylkiMonitora } from '../src/moduly/zamkniete/pulpit/logika/monitorWysylek.ts'
@@ -161,7 +161,7 @@ test('1.2.2: status, postęp i ostrzeżenia wynikają z pozycji konkretnej paczk
   dane.paczki.push(druga)
   const przed = structuredClone(dokument)
   const wynik = zbudujWysylkiMonitora([szczegoly()], [dokument], {})
-  assert.equal(wynik[0].liczbaGotowych, 1)
+  assert.equal(wynik[0].liczbaGotowych, 0)
   assert.equal(wynik[0].liczbaWymaganych, 1)
   assert.equal(wynik[0].liczbaNiepotwierdzonych, 1)
   assert.equal(wynik[0].statusPrzesylki, 'Wymaga potwierdzenia')
@@ -170,6 +170,42 @@ test('1.2.2: status, postęp i ostrzeżenia wynikają z pozycji konkretnej paczk
   assert.equal(wynik[1].liczbaNiepotwierdzonych, 0)
   assert.equal(wynik[1].statusPrzesylki, 'Wysłana')
   assert.deepEqual(dokument, przed)
+})
+
+test('1.2.2: postęp paczki respektuje wymaganą ilość i ręczne ustawienia zapisanej checklisty', () => {
+  const dokument = checklista()
+  const dane = dokument.daneDokumentu
+  dane.daneOdbiorcy = { ...dane.daneOdbiorcy, nazwaFirmy: 'Klient', ulica: 'Polna', nrBudynku: '1', kodPocztowy: '00-001', miasto: 'Warszawa', kraj: 'Polska' }
+  dane.daneSzkolenia = { tytulSzkolenia: 'Zapisany tytuł', nazwaGrupy: 'Grupa A', miejsce: '', terminy: ['2026-10-29', '2026-10-30'], organizator: '', trenerzy: [], liczbaUczestnikow: 12 }
+  dane.pozycje = [dane.pozycje[0]]
+  const pozycja = dane.pozycje[0]
+  pozycja.statusGotowosci = 'GOTOWE'
+  pozycja.iloscPrzygotowana = 11
+  const druga = utworzNowaPaczkeChecklisty(dane.paczki)
+  druga.statusOperacyjny = 'GOTOWA'
+  dane.paczki.push(druga)
+  const szkolenie = szczegoly()
+  szkolenie.grupy[0].liczbaUczestnikow = 30
+  const przed = structuredClone({ dokument, szkolenie })
+  const wynik = zbudujWysylkiMonitora([szkolenie], [dokument], {})
+  assert.equal(czyMoznaFinalizowacCheckliste(dane).czyMozna, false)
+  assert.equal(wynik[0].liczbaGotowych, 0)
+  assert.equal(wynik[0].liczbaWymaganych, 1)
+  assert.equal(wynik[0].statusPrzesylki, 'W trakcie kompletowania')
+  assert.ok(wynik[0].brakujaceElementy.includes(pozycja.nazwa))
+  assert.equal(wynik[1].statusPrzesylki, 'Gotowa do wysyłki')
+  assert.deepEqual({ dokument, szkolenie }, przed)
+
+  for (const iloscPrzygotowana of [12, null]) {
+    pozycja.iloscPrzygotowana = iloscPrzygotowana
+    assert.equal(czyMoznaFinalizowacCheckliste(dane).czyMozna, true)
+    assert.equal(zbudujWysylkiMonitora([szkolenie], [dokument], {})[0].statusPrzesylki, 'Gotowa do wysyłki')
+  }
+  pozycja.iloscPrzygotowana = 12
+  pozycja.nadpisanieReczne = 15
+  assert.equal(zbudujWysylkiMonitora([szkolenie], [dokument], {})[0].liczbaGotowych, 0)
+  pozycja.iloscPrzygotowana = 15
+  assert.equal(zbudujWysylkiMonitora([szkolenie], [dokument], {})[0].liczbaGotowych, 1)
 })
 
 test('1.2.2: tworzenie z Pulpitu jest idempotentne, wysyłka dotyczy jednej paczki i chroni historię', async () => {

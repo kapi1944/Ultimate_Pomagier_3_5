@@ -44,6 +44,34 @@ test('monitor na Pulpicie: źródła, filtry, statusy, responsywność, ogranicz
     assert.match(await rekordy.first().innerText(), /Klient monitora/)
     assert.match(await rekordy.first().innerText(), /29.10.2026 – 30.10.2026/)
     assert.equal(await monitor.getByText('Online bez paczki').count(), 0)
+    const drugaKarta = await kontekst.newPage()
+    await drugaKarta.goto(adres)
+    await drugaKarta.evaluate(async () => {
+      const { pobierzChecklistePaczki, zapiszChecklistePaczki } = await import('/src/moduly/dokumenty/generatory/checklisty_paczek/rejestrChecklistPaczek.ts')
+      const dokument = pobierzChecklistePaczki('checklista-monitora-1')
+      const dane = dokument.daneDokumentu
+      zapiszChecklistePaczki(dokument.id, { ...dane,
+        daneSzkolenia: { ...dane.daneSzkolenia, liczbaUczestnikow: 12 },
+        daneOdbiorcy: { ...dane.daneOdbiorcy, nazwaFirmy: 'Klient', ulica: 'Polna', nrBudynku: '1', kodPocztowy: '00-001', miasto: 'Warszawa', kraj: 'Polska' },
+        pozycje: [{ ...dane.pozycje[0], statusGotowosci: 'GOTOWE', iloscPrzygotowana: 11 }],
+      }, null)
+    })
+    const kompletowana = rekordy.filter({ hasText: 'Grupa 1' })
+    await kompletowana.getByText('W trakcie kompletowania', { exact: true }).waitFor()
+    const postep = kompletowana.locator('dl > div').filter({ has: strona.getByText('Przygotowane pozycje', { exact: true }) }).locator('dd')
+    assert.equal(await postep.innerText(), '0 / 1')
+    await kompletowana.locator('summary').click()
+    assert.match(await kompletowana.locator('details ul').innerText(), /Prezentacje/)
+    await drugaKarta.evaluate(async () => {
+      const { pobierzChecklistePaczki, zapiszChecklistePaczki } = await import('/src/moduly/dokumenty/generatory/checklisty_paczek/rejestrChecklistPaczek.ts')
+      const dokument = pobierzChecklistePaczki('checklista-monitora-1')
+      zapiszChecklistePaczki(dokument.id, { ...dokument.daneDokumentu,
+        pozycje: dokument.daneDokumentu.pozycje.map((pozycja) => ({ ...pozycja, iloscPrzygotowana: 12 })),
+      }, null)
+    })
+    await kompletowana.getByText('Gotowa do wysyłki', { exact: true }).waitFor()
+    assert.equal(await postep.innerText(), '1 / 1')
+    await drugaKarta.close()
     for (const [etykieta, liczba] of [['Zaległe (1)', 1], ['Dzisiaj (1)', 1], ['Najbliższe 3 dni (3)', 3], ['Wysłane (1)', 1]]) {
       await monitor.getByRole('button', { name: etykieta, exact: true }).click()
       assert.equal(await rekordy.count(), liczba)

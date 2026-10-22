@@ -1,5 +1,5 @@
 import type { DokumentChecklistyPaczki, SzczegolyDoChecklisty } from '../../../dokumenty/generatory/checklisty_paczek/rejestrChecklistPaczek'
-import { czyDaneOdbiorcySaKompletne, czyPozycjaJestAktywna } from '../../../dokumenty/generatory/checklisty_paczek/modelChecklistyPaczki'
+import { czyDaneOdbiorcySaKompletne, czyMoznaFinalizowacCheckliste, czyPozycjaJestAktywna } from '../../../dokumenty/generatory/checklisty_paczek/modelChecklistyPaczki'
 import type { PaczkaPulpitu } from '../modele/pulpit'
 
 export type WysylkaMonitora = PaczkaPulpitu & {
@@ -65,7 +65,8 @@ export function zbudujWysylkiMonitora(szczegoly: SzczegolyDoChecklisty[], checkl
       const dane = checklista?.daneDokumentu
       const pozycje = dane?.pozycje.filter((pozycja) => !paczka || pozycja.paczkaId === paczka.id) ?? []
       const wymagane = pozycje.filter((pozycja) => pozycja.czyWymagana && !pozycja.czyOpcjonalna && !pozycja.czyOnline && czyPozycjaJestAktywna(pozycja))
-      const brakujaceElementy = wymagane.filter((pozycja) => pozycja.statusGotowosci !== 'GOTOWE').map((pozycja) => pozycja.nazwa)
+      const brakujacePozycje = new Set(dane ? czyMoznaFinalizowacCheckliste({ ...dane, pozycje }).brakujacePozycje.map((pozycja) => pozycja.id) : [])
+      const brakujaceElementy = wymagane.filter((pozycja) => brakujacePozycje.has(pozycja.id)).map((pozycja) => pozycja.nazwa)
       const liczbaNiepotwierdzonych = pozycje.filter((pozycja) => pozycja.importDyspozycji?.czyIloscWymagaPotwierdzenia).length
       const konflikty = pozycje.filter((pozycja) => pozycja.importDyspozycji?.czyKonfliktReczny)
       const niepewne = pozycje.filter((pozycja) => pozycja.importDyspozycji?.dyspozycja.status === 'niepewne')
@@ -101,7 +102,7 @@ export function zbudujWysylkiMonitora(szczegoly: SzczegolyDoChecklisty[], checkl
         trenerzy: grupa.trenerzy.map((trener) => trener.imieNazwisko),
         planowanaDataWysylki,
         wlascicielId: dane?.wysylaczId || dane?.opiekunId || szkolenie.opiekunId || checklista?.wlascicielId || '',
-        liczbaGotowych: wymagane.filter((pozycja) => pozycja.statusGotowosci === 'GOTOWE').length,
+        liczbaGotowych: wymagane.filter((pozycja) => !brakujacePozycje.has(pozycja.id)).length,
         liczbaWymaganych: wymagane.length,
         brakujaceElementy,
         czyWyslana,
