@@ -1,3 +1,6 @@
+import logoTabliczka from '../../../multimedia/logo_tabliczka_gold.png'
+import { RegulacjaSzerokosci } from '../../wspolne/komponenty/RegulacjaSzerokosci'
+import { pobierzUstawieniaAplikacji, zapiszUstawieniaAplikacji } from '../ustawienia/magazynUstawienAplikacji'
 import { informacjeOWersji } from '../wersjaAplikacji'
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { useKontekstUzytkownika } from '../logowanie/useKontekstUzytkownika'
@@ -244,6 +247,10 @@ export default function MenuBoczne({
         onPointerEnter={(zdarzenie) => { if (zdarzenie.pointerType === 'mouse' && !czyMalyEkran) otworzMenuZKrawedzi() }}
         onPointerLeave={(zdarzenie) => { if (zdarzenie.pointerType === 'mouse' && !zdarzenie.currentTarget.contains(document.activeElement)) schowajMenuJesliOdpiete() }}
       >
+        {czyRozwiniete && !czyMalyEkran && <RegulacjaSzerokosci panel=".menu-boczne" obszar=".uklad-aplikacji" zmienna="--ui-menu-width" strona="prawa" minimum={190} maksimum={420} zapisz={(szerokosc) => {
+          const ustawienia = pobierzUstawieniaAplikacji()
+          return zapiszUstawieniaAplikacji({ ...ustawienia, nawigacja: { ...ustawienia.nawigacja, szerokoscMenu: szerokosc } })
+        }} />}
         <div className="menu-boczne__naglowek">
           <div className="menu-boczne__akcje">
             <button className="menu-boczne__przycisk-naglowka" onClick={przelaczPrzypiecieMenu} aria-pressed={czyMenuPrzypiete} type="button">
@@ -251,7 +258,7 @@ export default function MenuBoczne({
             </button>
           </div>
           <div className="menu-boczne__marka">
-            <img alt="Ultimate Pomagier" className="menu-boczne__logo" src="/logo-ultimate-pomagier.png" />
+            <img alt="Ultimate Pomagier" className="menu-boczne__logo" src={logoTabliczka} />
             <strong>{informacjeOWersji.nazwaProduktu}</strong>
 
           </div>

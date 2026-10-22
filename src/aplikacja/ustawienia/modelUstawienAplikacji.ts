@@ -225,8 +225,8 @@ export function normalizujUstawieniaAplikacji(dane: unknown): UstawieniaAplikacj
     nawigacja: {
       szerokoscMenu: ograniczLiczbe(
         nawigacja.szerokoscMenu,
-        220,
-        360,
+        190,
+        420,
         domyslneUstawieniaAplikacji.nawigacja.szerokoscMenu,
       ),
       wysokoscPrzyciskuMenu: pobierzWartoscZListy(

@@ -898,7 +898,8 @@
     "src/moduly/dokumenty/wspolne/UkladGeneratoraDokumentu.tsx": {
       "zadanie": "V4-09",
       "powierzchnie": [
-        "aside aria-hidden={!czyOtwarty} aria-label={tytul} className={polaczKlasy('generator-panel-ustawien', czyOtwarty && 'generator-panel-ustawien--otwarty', className)} id={id} inert={!czyOtwarty} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}",
+        "RegulacjaSzerokosci panel=\".generator-panel-ustawien\" obszar=\".generator-z-panelem\" zmienna=\"--szerokosc-panelu-generatora\" strona=\"lewa\" minimum={280} maksimum={640} kluczZapisu={`ultimatePomagier.panel.${id}.szerokosc`}",
+        "aside aria-hidden={!czyOtwarty} aria-label={tytul} className={polaczKlasy('generator-panel-ustawien', czyOtwarty && 'generator-panel-ustawien--otwarty', className)} id={id} inert={!czyOtwarty} onMouseEnter={onMouseEnter} onMouseLeave={(zdarzenie) => { if (!zdarzenie.currentTarget.closest('[data-regulacja-szerokosci]')) onMouseLeave?.() }}",
         "button aria-label={`Zamknij: ${tytul}`} className=\"generator-panel-ustawien__zamknij\" onClick={zamknij} type=\"button\"",
         "button aria-pressed={czyPrzypiety} className=\"generator-panel-ustawien__przycisk\" onClick={przelaczPrzypiecie} title={czyPrzypiety ? 'Odepnij panel ustawień' : 'Przypnij panel ustawień'} type=\"button\"",
         "button aria-pressed={czyWysuwanieWlaczone} className=\"generator-panel-ustawien__przycisk\" onClick={przelaczWysuwanie} title={czyWysuwanieWlaczone ? 'Wyłącz wysuwanie z prawej krawędzi' : 'Włącz wysuwanie z prawej krawędzi'} type=\"button\"",
@@ -1152,7 +1153,8 @@
     "src/moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokNowychSzczegolowOrganizacyjnych.tsx": {
       "zadanie": "V4-07",
       "powierzchnie": [
-        "aside inert={!czyPanelJakosciOtwarty} aria-label=\"Panel kontroli jakosci\" className={`szczegoly-panel-jakosci${czyPanelJakosciOtwarty ? ' szczegoly-panel-jakosci--otwarty' : ''}${czyPanelJakosciPrzypiety ? ' szczegoly-panel-jakosci--przypiety' : ''}`} id={idPaneluJakosci} onKeyDown={obsluzKlawiszPaneluJakosci} onMouseEnter={otworzPanelJakosci} onMouseLeave={schowajPanelJakosciJesliOdpiety}",
+        "RegulacjaSzerokosci panel=\".szczegoly-panel-jakosci\" obszar=\".szczegoly-organizacyjne\" zmienna=\"--szerokosc-panelu-jakosci\" strona=\"lewa\" minimum={280} maksimum={600} kluczZapisu=\"ultimatePomagier.panelJakosci.szerokosc\"",
+        "aside inert={!czyPanelJakosciOtwarty} aria-label=\"Panel kontroli jakosci\" className={`szczegoly-panel-jakosci${czyPanelJakosciOtwarty ? ' szczegoly-panel-jakosci--otwarty' : ''}${czyPanelJakosciPrzypiety ? ' szczegoly-panel-jakosci--przypiety' : ''}`} id={idPaneluJakosci} onKeyDown={obsluzKlawiszPaneluJakosci} onMouseEnter={otworzPanelJakosci} onMouseLeave={(zdarzenie) => { if (!zdarzenie.currentTarget.closest('[data-regulacja-szerokosci]')) schowajPanelJakosciJesliOdpiety() }}",
         "button aria-label={czyPanelJakosciPrzypiety ? 'Odepnij panel kontroli jakosci' : 'Przypnij panel kontroli jakosci'} className=\"szczegoly-panel-jakosci__przycisk\" onClick={przelaczPrzypieciePaneluJakosci} title={czyPanelJakosciPrzypiety ? 'Odepnij panel' : 'Przypnij panel'} type=\"button\"",
         "button aria-label={czyWysuwaniePaneluJakosciWlaczone ? 'Wylacz automatyczne wysuwanie panelu jakosci' : 'Wlacz automatyczne wysuwanie panelu jakosci'} className=\"szczegoly-panel-jakosci__przycisk\" onClick={przelaczWysuwaniePaneluJakosci} title={czyWysuwaniePaneluJakosciWlaczone ? 'Wylacz wysuwanie' : 'Wlacz wysuwanie'} type=\"button\"",
         "div className=\"szczegoly-panel-jakosci__naglowek\"",
@@ -1387,6 +1389,21 @@
       "wspoldzieloneZ": [
         "V4-10",
         "V4-11"
+      ]
+    },
+    "src/wspolne/komponenty/RegulacjaSzerokosci.tsx": {
+      "zadanie": "V4-02",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": [
+        "V4-07",
+        "V4-09",
+        "V4-10",
+        "V4-11",
+        "V4-12",
+        "V4-13",
+        "V4-14",
+        "V4-15"
       ]
     }
   },

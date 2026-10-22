@@ -877,7 +877,7 @@ test('Etap 2 ustawień normalizuje zakres menu oraz konfigurację nowych zadań'
     },
   })
 
-  assert.equal(ustawienia.nawigacja.szerokoscMenu, 360)
+  assert.equal(ustawienia.nawigacja.szerokoscMenu, 420)
   assert.equal(ustawienia.nawigacja.wysokoscPrzyciskuMenu, 'DUZA')
 
   assert.equal(ustawienia.pulpit.widoczneKafelki.doZrobienia, false)

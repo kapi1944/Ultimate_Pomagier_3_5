@@ -591,10 +591,10 @@ export default function WidokUstawien() {
             <h2>Menu boczne</h2>
 
             <label className="ustawienia__pole">
-              Szerokość menu (220–360 px)
+              Szerokość menu (190–420 px)
               <input
-                max="360"
-                min="220"
+                max="420"
+                min="190"
                 onChange={(zdarzenie) =>
                   zmienNawigacje('szerokoscMenu', Number(zdarzenie.target.value))
                 }

@@ -1,3 +1,4 @@
+import { RegulacjaSzerokosci } from '../../../wspolne/komponenty/RegulacjaSzerokosci'
 import { createContext, forwardRef, useCallback, useContext, useEffect, useMemo, useReducer, type CSSProperties, type PropsWithChildren, type ReactNode } from 'react'
 import { utworzPoczatkowyStanPaneluGeneratora, zredukujStanPaneluGeneratora } from './stanPaneluGeneratora'
 import './ukladGeneratoraDokumentu.css'
@@ -213,8 +214,11 @@ export function PanelUstawienGeneratoraDokumentu({
       id={id}
       inert={!czyOtwarty}
       onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
+      onMouseLeave={(zdarzenie) => {
+        if (!zdarzenie.currentTarget.closest('[data-regulacja-szerokosci]')) onMouseLeave?.()
+      }}
     >
+      <RegulacjaSzerokosci panel=".generator-panel-ustawien" obszar=".generator-z-panelem" zmienna="--szerokosc-panelu-generatora" strona="lewa" minimum={280} maksimum={640} kluczZapisu={`ultimatePomagier.panel.${id}.szerokosc`} />
       <header className="generator-panel-ustawien__naglowek">
         <h2>{tytul}</h2>
         <div className="generator-panel-ustawien__akcje">
