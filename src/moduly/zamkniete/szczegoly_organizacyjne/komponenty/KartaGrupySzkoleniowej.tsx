@@ -267,6 +267,10 @@ export default function KartaGrupySzkoleniowej({
     const trenerzyImportowani = grupa.trenerzy.filter((trener) => !trenerzyKartoteki.some((pozycja) => pozycja.id === trener.id))
     return [...trenerzyKartoteki, ...trenerzyImportowani].sort((pierwszy, drugi) => pierwszy.imieNazwisko.localeCompare(drugi.imieNazwisko, 'pl'))
   }, [grupa.trenerzy, trenerzyKartoteki])
+  const etykietyTrenerow = useMemo(() => new Map(trenerzyDoWyboru.map((trener) => {
+    const czyPowtorzonaNazwa = trenerzyDoWyboru.filter((osoba) => osoba.imieNazwisko.toLocaleLowerCase('pl') === trener.imieNazwisko.toLocaleLowerCase('pl')).length > 1
+    return [trener.id, czyPowtorzonaNazwa ? `${trener.imieNazwisko} (${trener.email || trener.telefon || 'brak kontaktu'})` : trener.imieNazwisko]
+  })), [trenerzyDoWyboru])
   const wybranaLokalizacja = useMemo(() => znajdzLokalizacjeDlaMiejsca(grupa.miejsce, lokalizacje), [grupa.miejsce, lokalizacje])
   const lokalizacjeDoPodpowiedzi = useMemo(() => {
     const fraza = grupa.miejsce.trim().toLocaleLowerCase('pl')
@@ -274,8 +278,8 @@ export default function KartaGrupySzkoleniowej({
   }, [grupa.miejsce, lokalizacje])
   const trenerzyDoPodpowiedzi = useMemo(() => {
     const fraza = wartoscWyszukiwanegoTrenera.trim().toLocaleLowerCase('pl')
-    return trenerzyDoWyboru.filter((trener) => !fraza || trener.imieNazwisko.toLocaleLowerCase('pl').includes(fraza)).slice(0, 50)
-  }, [trenerzyDoWyboru, wartoscWyszukiwanegoTrenera])
+    return trenerzyDoWyboru.filter((trener) => !fraza || etykietyTrenerow.get(trener.id)?.toLocaleLowerCase('pl').includes(fraza)).slice(0, 50)
+  }, [trenerzyDoWyboru, etykietyTrenerow, wartoscWyszukiwanegoTrenera])
   const czyMechanizmPodzielonejPlatnosci = czyCenaWymagaMpp(grupa)
   const zasadyGodzinNiestandardowych = pobierzZasadyPolaDynamicznego(grupa, 'nazwaNiestandardowychGodzin')
   const poleMiejsca = `grupy.${indeks}.miejsce`
@@ -313,7 +317,9 @@ export default function KartaGrupySzkoleniowej({
       return
     }
 
-    const trener = trenerzyDoWyboru.find((pozycja) => pozycja.imieNazwisko.toLocaleLowerCase('pl') === wartosc.trim().toLocaleLowerCase('pl'))
+    const dopasowania = trenerzyKartoteki.filter((pozycja) => pozycja.imieNazwisko.toLocaleLowerCase('pl') === wartosc.trim().toLocaleLowerCase('pl')
+      || etykietyTrenerow.get(pozycja.id)?.toLocaleLowerCase('pl') === wartosc.trim().toLocaleLowerCase('pl'))
+    const trener = dopasowania.length === 1 ? dopasowania[0] : undefined
 
     if (trener) {
       ustawTrenera(trener.id)
@@ -328,9 +334,9 @@ export default function KartaGrupySzkoleniowej({
       return
     }
 
-    const trenerDokladny = trenerzyDoWyboru.find((trener) => trener.imieNazwisko.toLocaleLowerCase('pl') === fraza)
-    const trenerJedyny = trenerzyDoWyboru.filter((trener) => trener.imieNazwisko.toLocaleLowerCase('pl').includes(fraza))
-    const trener = trenerDokladny ?? (trenerJedyny.length === 1 ? trenerJedyny[0] : undefined)
+    const dokladni = trenerzyKartoteki.filter((trener) => trener.imieNazwisko.toLocaleLowerCase('pl') === fraza || etykietyTrenerow.get(trener.id)?.toLocaleLowerCase('pl') === fraza)
+    const trenerJedyny = trenerzyKartoteki.filter((trener) => etykietyTrenerow.get(trener.id)?.toLocaleLowerCase('pl').includes(fraza))
+    const trener = dokladni.length === 1 ? dokladni[0] : dokladni.length === 0 && trenerJedyny.length === 1 ? trenerJedyny[0] : undefined
 
     if (trener) {
       ustawTrenera(trener.id)
@@ -577,7 +583,7 @@ export default function KartaGrupySzkoleniowej({
               />
               <datalist id={`trenerzy-${grupa.id}`}>
                 {trenerzyDoPodpowiedzi.map((trener) => (
-                  <option key={trener.id} value={trener.imieNazwisko} />
+                  <option key={trener.id} value={etykietyTrenerow.get(trener.id)} />
                 ))}
               </datalist>
               {bladTrenerow && <span className="szczegoly-pole__blad" id={pobierzIdBleduPola(poleTrenerow)}>{bladTrenerow}</span>}

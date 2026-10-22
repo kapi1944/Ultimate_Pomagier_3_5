@@ -341,7 +341,9 @@ export type OpublikowaneSzczegolyOrganizacyjne = {
 export type WynikParseraMailaSzczegolow = {
   daneFormularza: Partial<DaneFormularza>
   pierwszaGrupa: Partial<GrupaSzkoleniowa>
+  pozostaleGrupy?: Partial<GrupaSzkoleniowa>[]
   rozpoznaneObszary: string[]
   rozpoznanePola: string[]
   polaNiepewne: string[]
+  ostrzezenia?: string[]
 }

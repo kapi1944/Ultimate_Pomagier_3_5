@@ -103,13 +103,15 @@ export function znajdzLokalizacjePoKluczu(klucz_lokalizacji: string, lokalizacje
 }
 
 export function znajdzLokalizacjeDlaMiejsca(miejsce: string, lokalizacje = pobierzLokalizacjeZMagazynu()) {
-  const szukanaNazwa = miejsce.trim().toLocaleLowerCase('pl')
+  const miastoZAdresu = miejsce.match(/\b\d{2}-\d{3}\s+([^,\n]+)\s*$/)?.[1]
+  const szukanaNazwa = (miastoZAdresu ?? miejsce).trim().toLocaleLowerCase('pl')
 
   if (!szukanaNazwa) {
     return null
   }
 
-  return lokalizacje.find((lokalizacja) => lokalizacja.nazwa.toLocaleLowerCase('pl') === szukanaNazwa) ?? null
+  const dopasowania = lokalizacje.filter((lokalizacja) => lokalizacja.nazwa.toLocaleLowerCase('pl') === szukanaNazwa)
+  return dopasowania.length === 1 ? dopasowania[0] : null
 }
 
 export function ustawPotwierdzonyMiejscownikLokalizacji(klucz_lokalizacji: string, miejscownik_pelny_auto: string) {

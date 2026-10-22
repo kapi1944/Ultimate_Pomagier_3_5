@@ -1,0 +1,102 @@
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
+import test from 'node:test'
+
+const wymagaj = createRequire(import.meta.url)
+const { chromium } = wymagaj(process.env.POMAGIER_PLAYWRIGHT || 'playwright')
+const adres = process.env.POMAGIER_ADRES || 'http://127.0.0.1:5173'
+const mail = readFileSync(new URL('./fixtures/mailOrganizacyjnyV4.txt', import.meta.url), 'utf8')
+
+test('import V4 w formularzu: kartoteki, lokalizacja, rozliczenia, jakość i ochrona ręcznych zmian', { timeout: 90000 }, async () => {
+  const przegladarka = await chromium.launch({ channel: 'chrome', headless: true })
+  try {
+    const kontekst = await przegladarka.newContext({ viewport: { width: 1440, height: 1000 } })
+    const strona = await kontekst.newPage()
+    const bledy = []
+    strona.on('pageerror', (blad) => bledy.push(blad.message))
+    await strona.goto(adres)
+    // Kartoteki i sesja istnieją wyłącznie w izolowanym kontekście testowym.
+    await strona.evaluate(async () => {
+      const { rozpocznijSesje } = await import('/src/aplikacja/logowanie/sesjaUzytkownika.ts')
+      const { pobierzLokalizacjeZMagazynu, znajdzLokalizacjeDlaMiejsca, ustawPotwierdzonyMiejscownikLokalizacji } = await import('/src/kartoteki/lokalizacje/magazynLokalizacji.ts')
+      localStorage.setItem('ultimate-pomagier.kartoteki.trenerzy', JSON.stringify([{ id: 'trener-test-17', imie: 'Renata', nazwisko: 'Stefaniuk', email: 'trener@example.org', telefon: '', status: 'Aktywny' }]))
+      const lokalizacja = znajdzLokalizacjeDlaMiejsca('Mielec', pobierzLokalizacjeZMagazynu())
+      if (!lokalizacja) throw new Error('Brak jednoznacznego Mielca w kartotece testowej')
+      if (znajdzLokalizacjeDlaMiejsca('Hotel Bulwary, ul. Rzeczna 8, 39-300 Mielec', [lokalizacja])?.klucz_lokalizacji !== lokalizacja.klucz_lokalizacji) throw new Error('Pełny adres nie trafił do mechanizmu lokalizacji')
+      if (znajdzLokalizacjeDlaMiejsca('Mielec', [lokalizacja, { ...lokalizacja, klucz_lokalizacji: 'duplikat' }])) throw new Error('Niejednoznaczna miejscowość nie może być dopasowana automatycznie')
+      if (znajdzLokalizacjeDlaMiejsca('Mielcu', [lokalizacja])) throw new Error('Nie wolno odgadywać mianownika miejscowości')
+      ustawPotwierdzonyMiejscownikLokalizacji(lokalizacja.klucz_lokalizacji, 'Mielcu')
+      if (!rozpocznijSesje('architekt-systemu')) throw new Error('Nie udało się rozpocząć sesji testowej')
+    })
+    await strona.goto(`${adres}/szkolenia-zamkniete/szczegoly-organizacyjne/nowe`)
+    const importuj = strona.getByRole('button', { name: 'Zastosuj treść maila', exact: true })
+    await strona.locator('.szczegoly-import-maila textarea').fill(mail)
+    await importuj.click()
+    const pole = (nazwa) => strona.locator(`input[id$="${nazwa}"], select[id$="${nazwa}"]`).filter({ visible: true })
+    assert.equal(await pole('nazwaKlienta').inputValue(), 'Polskie Zakłady Lotnicze Sp. z o.o.')
+    assert.equal(await pole('opiekunId').inputValue(), 'Dawid')
+    assert.equal(await pole('tytulSzkolenia').inputValue(), 'Lean management i kaizen - system ciągłego doskonalenia w organizacji')
+    const rozwin = strona.getByRole('button', { name: 'Rozwiń grupę', exact: true })
+    if (await rozwin.count()) await rozwin.click()
+    assert.equal(await pole('dataOd').inputValue(), '2026-10-28')
+    assert.equal(await pole('dataDo').inputValue(), '2026-10-29')
+    assert.equal(await strona.locator('input[aria-label="Miejsce"]').inputValue(), 'Hotel Bulwary, ul. Rzeczna 8, 39-300 Mielec')
+    assert.equal((await pole('cenaNetto').inputValue()).replace(/\s/g, ''), '8700,00')
+    assert.equal(await pole('vat').inputValue(), 'Nie – 23%')
+    assert.equal(await pole('liczbaUczestnikow').inputValue(), '19')
+    assert.equal(await pole('terminPlatnosci').inputValue(), '60')
+    assert.equal(await strona.locator('input[list^="trenerzy-"]').inputValue(), 'Renata Stefaniuk')
+    const stan = await strona.evaluate(async () => {
+      const { pobierzAutosaveSzczegolow } = await import('/src/moduly/zamkniete/szczegoly_organizacyjne/uslugi/magazynWersjiRoboczych.ts')
+      return pobierzAutosaveSzczegolow()
+    })
+    assert.equal(stan.grupy[0].trenerzy[0].id, 'trener-test-17')
+    assert.equal(stan.statusyPol['grupy.0.trenerzy'], 'zaimportowane')
+    assert.ok(!Object.values(stan.statusyPol).includes('niepewne'))
+    assert.equal(await strona.getByRole('heading', { name: 'Pola niepewne po imporcie' }).count(), 0)
+    await pole('nazwaKlienta').fill('Nazwa poprawiona ręcznie')
+    await pole('cenaNetto').fill('9200')
+    await pole('dataOd').fill('2026-10-27')
+    await pole('tytulSzkolenia').fill('')
+    await importuj.click()
+    assert.equal(await pole('nazwaKlienta').inputValue(), 'Nazwa poprawiona ręcznie')
+    assert.equal((await pole('cenaNetto').inputValue()).replace(/\s/g, ''), '9200,00')
+    assert.equal(await pole('dataOd').inputValue(), '2026-10-27')
+    assert.equal(await pole('tytulSzkolenia').inputValue(), '')
+    assert.equal(await pole('dataDo').inputValue(), '2026-10-29')
+    const dwieGrupy = mail.replace('Harmonogram szkolenia:', 'Grupa 2\nData: 30-31.10.2026\nTrener: Renata Stefaniuk\nCena netto: 2000\nForma szkolenia: Online\nHarmonogram szkolenia:')
+    await strona.locator('.szczegoly-import-maila textarea').fill(dwieGrupy)
+    await importuj.click()
+    const stanGrup = await strona.evaluate(async () => {
+      const { pobierzAutosaveSzczegolow } = await import('/src/moduly/zamkniete/szczegoly_organizacyjne/uslugi/magazynWersjiRoboczych.ts')
+      return pobierzAutosaveSzczegolow().grupy
+    })
+    assert.equal(stanGrup.length, 2, JSON.stringify(stanGrup.map((grupa) => ({ id: grupa.id, nazwa: grupa.nazwa }))))
+    assert.equal(stanGrup[0].cenaNetto, 9200)
+    assert.equal(stanGrup[1].cenaNetto, 2000)
+    assert.equal(stanGrup[1].dataOd, '2026-10-30')
+    assert.equal(stanGrup[1].trenerzy[0].id, 'trener-test-17')
+    await strona.evaluate(() => {
+      const trenerzy = JSON.parse(localStorage.getItem('ultimate-pomagier.kartoteki.trenerzy'))
+      localStorage.setItem('ultimate-pomagier.kartoteki.trenerzy', JSON.stringify([...trenerzy, { ...trenerzy[0], id: 'trener-test-18', email: 'inny@example.org' }]))
+    })
+    await strona.getByRole('button', { name: 'Odśwież trenerów z kartoteki', exact: true }).click()
+    await importuj.click()
+    const trener = strona.locator('input[list^="trenerzy-"]').first()
+    await trener.focus()
+    await trener.blur()
+    const pobierzStan = () => strona.evaluate(async () => {
+      const { pobierzAutosaveSzczegolow } = await import('/src/moduly/zamkniete/szczegoly_organizacyjne/uslugi/magazynWersjiRoboczych.ts')
+      return pobierzAutosaveSzczegolow()
+    })
+    assert.equal((await pobierzStan()).statusyPol['grupy.0.trenerzy'], 'niepewne', 'Sam fokus nie rozstrzyga dwóch pasujących rekordów')
+    await trener.fill('Renata Stefaniuk (inny@example.org)')
+    await trener.blur()
+    assert.equal((await pobierzStan()).grupy[0].trenerzy[0].id, 'trener-test-18')
+    assert.equal((await pobierzStan()).statusyPol['grupy.0.trenerzy'], 'reczne')
+    assert.deepEqual(bledy, [])
+  } finally {
+    await przegladarka.close()
+  }
+})
