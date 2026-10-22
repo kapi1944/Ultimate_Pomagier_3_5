@@ -741,8 +741,10 @@
         "ObszarZPanelemGeneratora idPanelu=\"panel-ukladu-checklisty\" kluczPrzypiecia=\"ultimate-pomagier.panel-generatora.checklisty-paczek.przypiety\" kluczWysuwania=\"ultimate-pomagier.panel-generatora.checklisty-paczek.wysuwanie\" tytulPanelu=\"Edytuj układ\"",
         "details",
         "details className=\"checklista-paczki__karta\"",
-        "details className=\"checklista-paczki__paczka\" key={paczka.id} open",
-        "details className=\"checklista-paczki__szczegoly-pozycji\""
+        "details className=\"checklista-paczki__kategoria-kompletowania\" key={paczka.id + kategoria.id} open",
+        "details className=\"checklista-paczki__paczka\" id={'paczka-' + paczka.id} key={paczka.id} open",
+        "details className=\"checklista-paczki__szczegoly-pozycji\"",
+        "details className=\"checklista-paczki__zrodlo-dyspozycji\""
       ],
       "ukonczoneEtapy": [],
       "wspoldzieloneZ": []

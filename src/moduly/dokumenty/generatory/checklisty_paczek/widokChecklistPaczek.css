@@ -275,6 +275,44 @@
 .checklista-paczki__wydruk-tabela-materialow .checklista-paczki__wydruk-kategoria { background: #dedede; }
 .checklista-paczki__ikona-danych { display: inline-block; width: 12px; height: 12px; margin-right: 4px; vertical-align: middle; }
 .checklista-paczki__wydruk-tabela-danych td { height: 24px; }
+
+.checklista-paczki__tryby, .checklista-paczki__wybor-paczki {
+  display: flex; flex-wrap: wrap; gap: 8px; margin-block: 12px;
+}
+.checklista-paczki__tryby [aria-pressed='true'],
+.checklista-paczki__wybor-paczki [aria-pressed='true'],
+.checklista-paczki__tryby button[aria-pressed='true']:hover:not(:disabled),
+.checklista-paczki__wybor-paczki button[aria-pressed='true']:hover:not(:disabled) {
+  border-color: var(--ui-akcent); background: var(--ui-akcent); color: var(--ui-tekst-na-akcencie);
+}
+.checklista-paczki__kompletowanie { min-width: 0; overflow-wrap: anywhere; }
+.checklista-paczki__kompletowanie progress { width: 100%; height: 14px; accent-color: var(--ui-success); }
+.checklista-paczki__kategoria-kompletowania { margin-block: 12px; border: 1px solid var(--ui-obramowanie); border-radius: 8px; }
+.checklista-paczki__kategoria-kompletowania > summary {
+  padding: 12px; min-height: 44px; cursor: pointer; font-weight: 600;
+  background: color-mix(in srgb, var(--ui-akcent) 8%, var(--ui-powierzchnia));
+}
+.checklista-paczki__kategoria-kompletowania > p { padding: 12px; }
+.checklista-paczki__pozycja-kompletowania {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 220px); gap: 12px;
+  padding: 14px; border-top: 1px solid var(--ui-obramowanie);
+}
+.checklista-paczki__pozycja-kompletowania h4 { margin: 0 0 8px; }
+.checklista-paczki__pozycja-kompletowania p { margin-bottom: 8px; }
+.checklista-paczki__pozycja-kompletowania small { display: block; white-space: normal; }
+.checklista-paczki__pozycja-kompletowania [role='status'] { color: var(--ui-warning); }
+.checklista-paczki__pozycja-kompletowania[data-gotowa='true'] { background: color-mix(in srgb, var(--ui-success) 7%, var(--ui-powierzchnia)); }
+.checklista-paczki__pozycja-kompletowania[data-gotowa='true'] [role='status'] { color: var(--ui-success); }
+.checklista-paczki__liczenie { display: flex; align-items: end; gap: 8px; }
+.checklista-paczki__liczenie label { flex: 1; }
+.checklista-paczki__liczenie input { min-width: 0; }
+.checklista-paczki__liczenie button { min-width: 44px; min-height: 44px; }
+.checklista-paczki__potwierdzenie-pozycji { grid-column: 1 / -1; }
+.checklista-paczki__podsumowanie-kompletowania { padding-block: 16px; }
+.checklista-paczki__zrodlo-dyspozycji summary { cursor: pointer; padding-block: 8px; }
+@container (max-width: 600px) {
+  .checklista-paczki__pozycja-kompletowania { grid-template-columns: minmax(0, 1fr); }
+}
 @container (max-width: 700px) {
   .checklista-paczki__wiersz { grid-template-columns: 32px minmax(0, 1fr) 70px auto; }
   .checklista-paczki__wiersz > input[type='number'] { grid-column: 3; grid-row: 1; }

@@ -14,6 +14,7 @@ import { utworzUstawieniaUkladuDokumentu } from '../../../../wspolne/dokumenty/u
 import { zastosujDyspozycjeMaterialoweChecklisty, czyMoznaImportowacDyspozycje } from './dyspozycjeChecklistyPaczki'
 import {
   normalizujDaneChecklisty,
+  czyMoznaFinalizowacCheckliste,
   pobierzDaneSzkoleniaChecklisty,
   czyMoznaEksportowacCheckliste,
   type DaneChecklistyPaczki,
@@ -168,7 +169,16 @@ type ZmianaPowiazaniaChecklisty = Pick<DokumentChecklistyPaczki, 'szkolenieId' |
 function zapiszDaneChecklisty(id: string, dane: DaneChecklistyPaczki, uzytkownikId: string | null, opis: string, powiazanie?: ZmianaPowiazaniaChecklisty) {
   const dokument = pobierzChecklistePaczki(id)
   if (!dokument || dokument.status === 'ZARCHIWIZOWANY') return null
-  const zaktualizowane = dodajWpisHistorii(normalizujDaneChecklisty(dane), 'EDYCJA', uzytkownikId, opis)
+  if (dane.paczki.some((paczka) => paczka.statusOperacyjny === 'GOTOWA'
+    && dokument.daneDokumentu.paczki.find((obecna) => obecna.id === paczka.id)?.statusOperacyjny !== 'GOTOWA'
+    && !czyMoznaFinalizowacCheckliste(dane, paczka.id).czyMozna)) return null
+  const znormalizowane = normalizujDaneChecklisty(dane)
+  const zapisaneWpisy = new Set(dokument.daneDokumentu.historia.map((wpis) => wpis.id))
+  const historia = [...dokument.daneDokumentu.historia, ...znormalizowane.historia.filter((wpis) => !zapisaneWpisy.has(wpis.id))]
+  const zaktualizowane = dodajWpisHistorii({ ...znormalizowane, historia }, 'EDYCJA', uzytkownikId, opis)
+  const zmienionePaczki = zaktualizowane.paczki.filter((paczka) => JSON.stringify({ paczka, pozycje: zaktualizowane.pozycje.filter((pozycja) => pozycja.paczkaId === paczka.id) })
+    !== JSON.stringify({ paczka: dokument.daneDokumentu.paczki.find((obecna) => obecna.id === paczka.id), pozycje: dokument.daneDokumentu.pozycje.filter((pozycja) => pozycja.paczkaId === paczka.id) }))
+  if (zmienionePaczki.length === 1) zaktualizowane.historia.at(-1)!.paczkaId = zmienionePaczki[0].id
   const daneSzkolenia = pobierzDaneSzkoleniaChecklisty(zaktualizowane)
   const reczneNadpisania = zaktualizowane.migawkaZrodla
     ? Object.fromEntries(Object.entries(daneSzkolenia).filter(([pole, wartosc]) => JSON.stringify(wartosc) !== JSON.stringify(zaktualizowane.migawkaZrodla?.[pole as keyof MigawkaZrodlaChecklisty])))

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
-import { mkdir, readFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import test from 'node:test'
 
 // Playwright może pochodzić z lokalnego środowiska testowego lub pakietu Codex.
@@ -185,6 +185,191 @@ test('checklisty: routing, formularz, zapis, stare dane, eksport i izolacja awar
   } finally { await przegladarka.close() }
 })
 
+
+test('1.2.3: kompletowanie 30 egzemplarzy, dwie paczki, ponowienie zapisu, Pulpit i niezmieniony wydruk', { timeout: 120000 }, async () => {
+  const przegladarka = await chromium.launch({ channel: 'chrome', headless: true })
+  try {
+    const strona = await przegladarka.newPage({ acceptDownloads: true, viewport: { width: 1440, height: 1000 } })
+    const bledy = []
+    strona.on('pageerror', (blad) => bledy.push(blad.message))
+    await strona.goto(adres)
+    await strona.getByRole('button', { name: 'Zaloguj', exact: true }).click()
+    const mail = await readFile(new URL('./fixtures/mailDyspozycjeMaterialowe.txt', import.meta.url), 'utf8')
+    const identyfikatory = await strona.evaluate(async (tekstMaila) => {
+      const { poczatkoweDaneFormularza, poczatkowaGrupa, poczatkowiAdresaci } = await import('/src/moduly/zamkniete/szczegoly_organizacyjne/danePoczatkowe.ts')
+      const { parsujMailaSzczegolow } = await import('/src/moduly/zamkniete/szczegoly_organizacyjne/uslugi/parserMailaSzczegolow.ts')
+      const { zapiszWersjeRobocza } = await import('/src/moduly/zamkniete/szczegoly_organizacyjne/uslugi/magazynWersjiRoboczych.ts')
+      const { przygotujZrodloZWersjiRoboczej, zbudujKontekstZeSzczegolow } = await import('/src/wspolne/integracje/szczegolyDoDokumentow/zbudujKontekstZeSzczegolow.ts')
+      const { utworzChecklistePaczkiZeZrodla, zapiszChecklistePaczki } = await import('/src/moduly/dokumenty/generatory/checklisty_paczek/rejestrChecklistPaczek.ts')
+      const { duplikujPaczkeChecklisty } = await import('/src/moduly/dokumenty/generatory/checklisty_paczek/modelChecklistyPaczki.ts')
+      const importMaila = parsujMailaSzczegolow(tekstMaila)
+      const wersja = { id: 'szczegoly-kompletowania', dokumentId: 'szczegoly-kompletowania', wersja: 'test', etykietaWersji: 'Test', nazwa: 'Panel kompletowania', dataZapisu: new Date().toISOString(), autorId: '', autorNazwa: '',
+        dane: { ...structuredClone(poczatkoweDaneFormularza), ...importMaila.daneFormularza, tytulSzkolenia: 'Szkolenie kompletowania', opiekunId: '', wysylkaPaczkiDotyczy: true },
+        grupy: [{ ...structuredClone(poczatkowaGrupa), ...importMaila.pierwszaGrupa, id: 'grupa-kompletowania', nazwa: 'Grupa operacyjna' }], adresaci: { ...poczatkowiAdresaci }, statusyPol: {} }
+      zapiszWersjeRobocza(wersja)
+      const dokument = utworzChecklistePaczkiZeZrodla(zbudujKontekstZeSzczegolow(przygotujZrodloZWersjiRoboczej(wersja)), 'grupa-kompletowania', {
+        opiekunId: '', odbiorca: { ...wersja.dane.odbiorcaPaczki, zrodloPropozycji: null },
+      }, null)
+      let dane = { ...dokument.daneDokumentu, pozycje: dokument.daneDokumentu.pozycje.filter((pozycja) => pozycja.importDyspozycji) }
+      dane = duplikujPaczkeChecklisty(dane, dane.paczki[0].id)
+      dane.paczki[1].nazwa = 'Druga przesyłka'
+      dane.paczki[1].parametryLogistyczne.numerPrzesylki = 'ZACHOWAJ-123'
+      zapiszChecklistePaczki(dokument.id, dane, null)
+      return { dokumentId: dokument.id, pierwsza: dane.paczki[0].id, druga: dane.paczki[1].id }
+    }, mail)
+    const adresChecklisty = `${adres}/dokumenty/checklisty-paczek/${identyfikatory.dokumentId}`
+    await strona.goto(adresChecklisty + '#paczka-' + identyfikatory.druga)
+    const podglad = strona.locator('#wydruk-checklisty')
+    const trescPrzed = await podglad.innerHTML()
+    await strona.getByRole('button', { name: 'Kompletowanie paczki', exact: true }).click()
+    const panel = strona.getByRole('region', { name: 'Panel kompletowania', exact: true })
+    assert.equal(await panel.getByRole('region', { name: 'Kompletowanie: Druga przesyłka', exact: true }).count(), 1)
+    assert.equal(await strona.getByLabel('Tytuł szkolenia', { exact: true }).count(), 0)
+    assert.equal(await podglad.innerHTML(), trescPrzed, 'Zmiana trybu nie zmienia dokumentu')
+    await panel.getByRole('button', { name: 'Paczka 1 · 0/1', exact: true }).click()
+    assert.equal(new URL(strona.url()).hash, '#paczka-' + identyfikatory.pierwsza)
+    const pozycja = panel.getByRole('article', { name: 'Materiały dodatkowe', exact: true })
+    const ilosc = pozycja.getByRole('spinbutton')
+    const potwierdzenie = pozycja.getByRole('button', { name: 'Potwierdź pełny komplet', exact: true })
+    for (const wartosc of ['0', '12', '30']) {
+      await ilosc.fill(wartosc)
+      assert.equal(await potwierdzenie.isDisabled(), true)
+      assert.equal(await panel.getByRole('progressbar').getAttribute('value'), '0')
+      assert.equal(await panel.getByRole('button', { name: 'Oznacz paczkę jako gotową', exact: true }).isDisabled(), true)
+      if (wartosc !== '30') assert.match(await pozycja.innerText(), new RegExp(`Brakuje ${30 - Number(wartosc)} egz`))
+    }
+    await pozycja.getByRole('button', { name: 'Potwierdź ilość: 30', exact: true }).click()
+    assert.equal(await potwierdzenie.isEnabled(), true)
+    await potwierdzenie.click()
+    assert.equal(await panel.getByRole('progressbar').getAttribute('value'), '100')
+    await panel.getByRole('button', { name: 'Oznacz paczkę jako gotową', exact: true }).click()
+    assert.match(await panel.innerText(), /Status operacyjny: Gotowa/)
+    assert.match(await panel.innerText(), /Materiały online/)
+    assert.match(await panel.innerText(), /Drukuje klient/)
+    assert.match(await panel.innerText(), /Certyfikaty po szkoleniu/)
+    const materialy = panel.locator('details').filter({ has: strona.locator('summary').filter({ hasText: /^Materiały ·/ }) }).first()
+    await materialy.locator('summary').first().press('Enter')
+    assert.equal(await pozycja.isVisible(), false)
+    await materialy.locator('summary').first().press('Enter')
+    await panel.getByRole('button', { name: 'Druga przesyłka · 0/1', exact: true }).click()
+    assert.equal(await panel.getByRole('progressbar').getAttribute('value'), '0')
+    assert.equal(await panel.getByRole('article', { name: 'Materiały dodatkowe', exact: true }).getByRole('spinbutton').inputValue(), '')
+    await panel.getByRole('button', { name: 'Paczka 1 · 1/1', exact: true }).click()
+    await pozycja.getByRole('button', { name: 'Zmniejsz ilość: Materiały dodatkowe', exact: true }).press('Enter')
+    assert.equal(await ilosc.inputValue(), '29')
+    assert.equal(await panel.getByRole('progressbar').getAttribute('value'), '0')
+    await pozycja.getByRole('button', { name: 'Zwiększ ilość: Materiały dodatkowe', exact: true }).click()
+    assert.equal(await ilosc.inputValue(), '30')
+    assert.equal(await panel.getByRole('progressbar').getAttribute('value'), '0')
+    await strona.evaluate(() => {
+      const zapisz = Storage.prototype.setItem
+      Storage.prototype.setItem = function (klucz, wartosc) {
+        if (klucz.startsWith('ultimatePomagier.rejestrDokumentow.')) throw new DOMException('Test kompletowania quota', 'QuotaExceededError')
+        return zapisz.call(this, klucz, wartosc)
+      }
+      window.przywrocZapisKompletowania = () => { Storage.prototype.setItem = zapisz }
+    })
+    await ilosc.fill('12')
+    await strona.getByRole('button', { name: 'Ponów zapis', exact: true }).waitFor()
+    assert.equal(await ilosc.inputValue(), '12')
+    await strona.evaluate(() => window.przywrocZapisKompletowania())
+    await strona.getByRole('button', { name: 'Ponów zapis', exact: true }).click()
+    await strona.reload()
+    await strona.getByRole('button', { name: 'Kompletowanie paczki', exact: true }).click()
+    assert.equal(await ilosc.inputValue(), '12')
+    await ilosc.fill('30')
+    await potwierdzenie.click()
+    await panel.getByRole('button', { name: 'Oznacz paczkę jako gotową', exact: true }).click()
+    const stan = await strona.evaluate(async (id) => {
+      const { pobierzChecklistePaczki } = await import('/src/moduly/dokumenty/generatory/checklisty_paczek/rejestrChecklistPaczek.ts')
+      return pobierzChecklistePaczki(id).daneDokumentu
+    }, identyfikatory.dokumentId)
+    assert.equal(stan.statusChecklisty, 'KOPIA_ROBOCZA')
+    assert.equal(stan.paczki[1].statusOperacyjny, 'ROBOCZA')
+    assert.equal(stan.paczki[1].parametryLogistyczne.numerPrzesylki, 'ZACHOWAJ-123')
+    assert.equal(stan.historia.at(-1).paczkaId, identyfikatory.pierwsza)
+    const trescPo = await podglad.innerHTML()
+    await strona.getByRole('button', { name: 'Edycja checklisty', exact: true }).click()
+    assert.equal(await podglad.innerHTML(), trescPo)
+    await strona.getByRole('button', { name: 'Kompletowanie paczki', exact: true }).click()
+    assert.equal(await podglad.innerHTML(), trescPo)
+    await mkdir('tmp', { recursive: true })
+    await pozycja.scrollIntoViewIfNeeded()
+    await strona.screenshot({ path: 'tmp/kompletowanie-paczki-desktop.png' })
+    await strona.setViewportSize({ width: 390, height: 844 })
+    assert.equal(await panel.evaluate((element) => element.scrollWidth <= element.clientWidth + 1), true)
+    await pozycja.scrollIntoViewIfNeeded()
+    await strona.screenshot({ path: 'tmp/kompletowanie-paczki-telefon.png' })
+    await strona.setViewportSize({ width: 1440, height: 1000 })
+    const pobieranie = strona.waitForEvent('download')
+    await strona.getByRole('button', { name: 'Pobierz PDF', exact: true }).click()
+    const pobrane = await pobieranie
+    const bajty = await readFile(await pobrane.path())
+    assert.equal(bajty.subarray(0, 4).toString(), '%PDF')
+    assert.match(await podglad.innerText(), /30\s*\/ z 30/)
+    assert.doesNotMatch(await podglad.innerText(), /Potwierdź pełny komplet|Przygotowane pozycje|Parametry logistyczne i historia paczki/)
+    await strona.getByRole('button', { name: 'Edycja checklisty', exact: true }).click()
+    const pobieranieZEdycji = strona.waitForEvent('download')
+    await strona.getByRole('button', { name: 'Pobierz PDF', exact: true }).click()
+    const bajtyZEdycji = await readFile(await (await pobieranieZEdycji).path())
+    const obrazyPdf = await strona.evaluate(async (pliki) => {
+      const { getDocument, GlobalWorkerOptions } = await import('/node_modules/pdfjs-dist/build/pdf.mjs')
+      GlobalWorkerOptions.workerSrc = '/node_modules/pdfjs-dist/build/pdf.worker.mjs'
+      const wyniki = []
+      const piksele = []
+      for (const bajtyPliku of pliki) {
+        const zadanieOdczytu = getDocument({ data: new Uint8Array(bajtyPliku) })
+        const dokument = await zadanieOdczytu.promise
+        const strony = []
+        const pikseleStron = []
+        for (let numer = 1; numer <= dokument.numPages; numer++) {
+          const stronaPdf = await dokument.getPage(numer)
+          const widok = stronaPdf.getViewport({ scale: 0.6 })
+          const obraz = document.createElement('canvas')
+          obraz.width = Math.ceil(widok.width)
+          obraz.height = Math.ceil(widok.height)
+          await stronaPdf.render({ canvasContext: obraz.getContext('2d'), viewport: widok }).promise
+          strony.push(obraz.toDataURL())
+          pikseleStron.push(obraz.getContext('2d').getImageData(0, 0, obraz.width, obraz.height))
+        }
+        wyniki.push(strony)
+        piksele.push(pikseleStron)
+        await zadanieOdczytu.destroy()
+      }
+      const roznice = piksele[0].map((pierwszy, indeks) => {
+        const drugi = piksele[1][indeks]
+        let liczbaRoznic = 0
+        for (let piksel = 0; piksel < pierwszy.data.length; piksel += 4) {
+          if ([0, 1, 2].some((kanal) => Math.abs(pierwszy.data[piksel + kanal] - drugi.data[piksel + kanal]) > 10)) {
+            liczbaRoznic++
+          }
+        }
+        return { liczbaRoznic, liczbaPikseli: pierwszy.width * pierwszy.height }
+      })
+      return { wyniki, roznice, wymiary: piksele.map((strony) => strony.map((obraz) => [obraz.width, obraz.height])) }
+    }, [Array.from(bajty), Array.from(bajtyZEdycji)])
+    for (const [indeks, strony] of obrazyPdf.wyniki.entries()) for (const [numer, obraz] of strony.entries()) await writeFile(`tmp/kompletowanie-pdf-${indeks}-${numer}.png`, Buffer.from(obraz.split(',')[1], 'base64'))
+    assert.deepEqual(obrazyPdf.wymiary[0], obrazyPdf.wymiary[1], 'Oba tryby zachowują liczbę i wymiary stron PDF')
+    // Rasterowy eksport może różnić się antyaliasingiem pojedynczej krawędzi tabeli.
+    assert.ok(obrazyPdf.roznice.every((roznica) => roznica.liczbaRoznic / roznica.liczbaPikseli < 0.001), 'Oba tryby zachowują wygląd PDF z tolerancją 0,1% pikseli')
+    await strona.goto(adres)
+    const wpisDrugiej = strona.getByRole('region', { name: 'Paczki do wysłania' }).locator('article').filter({ hasText: 'Druga przesyłka' })
+    await wpisDrugiej.getByRole('button', { name: 'Otwórz checklistę', exact: true }).click()
+    await strona.waitForURL(adresChecklisty + '#paczka-' + identyfikatory.druga)
+    await strona.getByRole('button', { name: 'Kompletowanie paczki', exact: true }).click()
+    assert.equal(await panel.getByRole('region', { name: 'Kompletowanie: Druga przesyłka', exact: true }).count(), 1)
+    assert.equal(await panel.getByRole('progressbar').getAttribute('value'), '0')
+    await strona.evaluate(async (id) => {
+      const { ustawStatusChecklisty } = await import('/src/moduly/dokumenty/generatory/checklisty_paczek/rejestrChecklistPaczek.ts')
+      ustawStatusChecklisty(id, 'ZARCHIWIZOWANA', null, 'Archiwizacja testowa')
+    }, identyfikatory.dokumentId)
+    await strona.reload()
+    await strona.getByRole('button', { name: 'Kompletowanie paczki', exact: true }).click()
+    assert.equal(await panel.getByRole('spinbutton').isDisabled(), true)
+    assert.equal(await panel.getByRole('button', { name: 'Oznacz paczkę jako gotową', exact: true }).isDisabled(), true)
+    assert.deepEqual(bledy, [])
+  } finally { await przegladarka.close() }
+})
 
 test('checklisty: pisanie nie zapisuje rejestru co znak, podpowiedzi zachowują własne wartości', { timeout: 60000 }, async () => {
   const przegladarka = await chromium.launch({ channel: 'chrome', headless: true })

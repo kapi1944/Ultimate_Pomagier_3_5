@@ -163,6 +163,7 @@ export type ZalacznikChecklisty = {
 
 export type WpisAudytuChecklisty = {
   id: string
+  paczkaId?: string
   typ: 'UTWORZENIE' | 'EDYCJA' | 'ZMIANA_ILOSCI' | 'NADPISANIE_RECZNE' | 'ZMIANA_STATUSU' | 'WYDRUK' | 'NOWA_WERSJA' | 'PROSBA_O_AKCEPTACJE' | 'ODPOWIEDZ_AKCEPTACJI' | 'DODANIE_ZALACZNIKA' | 'ARCHIWIZACJA' | 'PONOWNE_OTWARCIE' | 'ZMIANA_PARAMETROW_PACZKI'
   data: string
   uzytkownikId: string | null
@@ -529,17 +530,74 @@ export function czyDaneOdbiorcySaKompletne(dane: DaneOdbiorcyChecklisty) {
   return [dane.imieNazwisko || dane.nazwaFirmy, dane.ulica, dane.nrBudynku, dane.kodPocztowy, dane.miasto, dane.kraj].every((wartosc) => wartosc.trim().length > 0)
 }
 
-export function czyMoznaFinalizowacCheckliste(dane: DaneChecklistyPaczki) {
+export function czyMoznaFinalizowacCheckliste(dane: DaneChecklistyPaczki, paczkaId?: string) {
   const liczbaUczestnikow = pobierzDaneSzkoleniaChecklisty(dane).liczbaUczestnikow
   const liczbaDni = new Set(pobierzDaneSzkoleniaChecklisty(dane).terminy).size
   const brakujacePozycje = dane.pozycje.filter((pozycja) => {
+    if (paczkaId && pozycja.paczkaId !== paczkaId) return false
     if (pozycja.importDyspozycji?.czyKonfliktReczny || pozycja.importDyspozycji?.dyspozycja.status === 'niepewne') return true
     if (!pozycja.czyWymagana || pozycja.czyOpcjonalna || !czyPozycjaJestAktywna(pozycja) || pozycja.czyOnline) return false
     const wymaganaIlosc = pobierzIloscPozycji(pozycja, liczbaUczestnikow, liczbaDni).koncowa
     const czyBrakujeIlosci = pozycja.iloscPrzygotowana !== null && pozycja.iloscPrzygotowana < wymaganaIlosc
     return pozycja.statusGotowosci !== 'GOTOWE' || czyBrakujeIlosci || pozycja.importDyspozycji?.czyIloscWymagaPotwierdzenia || pozycja.importDyspozycji?.czyKonfliktReczny
   })
-  return { czyMozna: !brakujacePozycje.length && czyDaneOdbiorcySaKompletne(dane.daneOdbiorcy), brakujacePozycje, czyBrakujeDanychWysylkowych: !czyDaneOdbiorcySaKompletne(dane.daneOdbiorcy) }
+  return { czyMozna: (!paczkaId || dane.paczki.some((paczka) => paczka.id === paczkaId)) && !brakujacePozycje.length && czyDaneOdbiorcySaKompletne(dane.daneOdbiorcy), brakujacePozycje, czyBrakujeDanychWysylkowych: !czyDaneOdbiorcySaKompletne(dane.daneOdbiorcy) }
+}
+
+export function pobierzStanKompletowaniaPozycji(dane: DaneChecklistyPaczki, pozycja: PozycjaChecklisty) {
+  const szkolenie = pobierzDaneSzkoleniaChecklisty(dane)
+  const wymaganaIlosc = pobierzIloscPozycji(pozycja, szkolenie.liczbaUczestnikow, new Set(szkolenie.terminy).size).koncowa
+  const czyDoPakowania = czyPozycjaJestAktywna(pozycja) && !pozycja.czyOnline
+  const czyBezOstrzezen = !czyMoznaFinalizowacCheckliste({ ...dane, pozycje: [{ ...pozycja, statusGotowosci: 'GOTOWE' }] }).brakujacePozycje.length
+  return {
+    wymaganaIlosc,
+    brakujacaIlosc: czyDoPakowania ? Math.max(0, wymaganaIlosc - (pozycja.iloscPrzygotowana ?? 0)) : 0,
+    czyDoPakowania,
+    czyMoznaPotwierdzic: czyDoPakowania && pozycja.iloscPrzygotowana !== null && pozycja.iloscPrzygotowana >= wymaganaIlosc && czyBezOstrzezen,
+    czyGotowa: czyDoPakowania && pozycja.statusGotowosci === 'GOTOWE' && czyBezOstrzezen,
+  }
+}
+
+export function pobierzPostepKompletowaniaPaczki(dane: DaneChecklistyPaczki, paczkaId: string) {
+  const finalizacja = czyMoznaFinalizowacCheckliste(dane, paczkaId)
+  const brakujace = new Set(finalizacja.brakujacePozycje.map((pozycja) => pozycja.id))
+  const wymagane = dane.pozycje.filter((pozycja) => pozycja.paczkaId === paczkaId && pozycja.czyWymagana && !pozycja.czyOpcjonalna && !pozycja.czyOnline && czyPozycjaJestAktywna(pozycja))
+  const liczbaGotowych = wymagane.filter((pozycja) => !brakujace.has(pozycja.id)).length
+  return { ...finalizacja, liczbaGotowych, liczbaWymaganych: wymagane.length, procent: wymagane.length ? Math.round(100 * liczbaGotowych / wymagane.length) : 100 }
+}
+
+function czyMoznaKompletowacPaczke(dane: DaneChecklistyPaczki, paczkaId: string) {
+  const paczka = dane.paczki.find((obecna) => obecna.id === paczkaId)
+  return dane.statusChecklisty !== 'ZARCHIWIZOWANA' && Boolean(paczka && paczka.statusOperacyjny !== 'WYSŁANA')
+}
+
+function zastosujZmianeKompletowania(dane: DaneChecklistyPaczki, pozycja: PozycjaChecklisty): DaneChecklistyPaczki {
+  const zmienione = { ...dane, pozycje: dane.pozycje.map((obecna) => obecna.id === pozycja.id ? pozycja : obecna) }
+  return { ...zmienione, paczki: zmienione.paczki.map((paczka) => paczka.id === pozycja.paczkaId
+    && (paczka.statusOperacyjny === 'ROBOCZA' || (paczka.statusOperacyjny === 'GOTOWA' && !czyMoznaFinalizowacCheckliste(zmienione, paczka.id).czyMozna))
+    ? { ...paczka, statusOperacyjny: 'W_PRZYGOTOWANIU' } : paczka) }
+}
+
+export function zmienIloscPrzygotowanaPozycji(dane: DaneChecklistyPaczki, pozycjaId: string, ilosc: number | null): DaneChecklistyPaczki {
+  const pozycja = dane.pozycje.find((obecna) => obecna.id === pozycjaId)
+  if (!pozycja || !czyMoznaKompletowacPaczke(dane, pozycja.paczkaId) || !pobierzStanKompletowaniaPozycji(dane, pozycja).czyDoPakowania || (ilosc !== null && !Number.isFinite(ilosc))) return dane
+  const iloscPrzygotowana = ilosc === null ? null : Math.max(0, Math.round(ilosc))
+  const stan = pobierzStanKompletowaniaPozycji(dane, pozycja)
+  const statusGotowosci = pozycja.statusGotowosci === 'GOTOWE' && iloscPrzygotowana !== null && iloscPrzygotowana >= stan.wymaganaIlosc
+    ? 'GOTOWE' : iloscPrzygotowana ? 'CZESCIOWO_GOTOWE' : 'NIEGOTOWE'
+  return zastosujZmianeKompletowania(dane, { ...pozycja, iloscPrzygotowana, statusGotowosci })
+}
+
+export function ustawPotwierdzenieKompletuPozycji(dane: DaneChecklistyPaczki, pozycjaId: string, czyGotowa: boolean): DaneChecklistyPaczki {
+  const pozycja = dane.pozycje.find((obecna) => obecna.id === pozycjaId)
+  if (!pozycja || !czyMoznaKompletowacPaczke(dane, pozycja.paczkaId) || (czyGotowa && !pobierzStanKompletowaniaPozycji(dane, pozycja).czyMoznaPotwierdzic)) return dane
+  return zastosujZmianeKompletowania(dane, { ...pozycja, statusGotowosci: czyGotowa ? 'GOTOWE' : pozycja.iloscPrzygotowana ? 'CZESCIOWO_GOTOWE' : 'NIEGOTOWE' })
+}
+
+export function ustawStatusOperacyjnyPaczki(dane: DaneChecklistyPaczki, paczkaId: string, status: StatusOperacyjnyPaczki): DaneChecklistyPaczki {
+  if (dane.statusChecklisty === 'ZARCHIWIZOWANA' || !dane.paczki.some((paczka) => paczka.id === paczkaId)
+    || (status === 'GOTOWA' && !czyMoznaFinalizowacCheckliste(dane, paczkaId).czyMozna)) return dane
+  return { ...dane, paczki: dane.paczki.map((paczka) => paczka.id === paczkaId ? { ...paczka, statusOperacyjny: status } : paczka) }
 }
 
 export function pobierzEtykieteStatusuGotowosci(status: StatusGotowosciPozycji) {

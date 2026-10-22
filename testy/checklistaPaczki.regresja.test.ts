@@ -14,6 +14,11 @@ import {
   czyMoznaEksportowacCheckliste,
   pobierzDaneSzkoleniaChecklisty,
   czyMoznaFinalizowacCheckliste,
+  pobierzPostepKompletowaniaPaczki,
+  pobierzStanKompletowaniaPozycji,
+  zmienIloscPrzygotowanaPozycji,
+  ustawPotwierdzenieKompletuPozycji,
+  ustawStatusOperacyjnyPaczki,
   duplikujPaczkeChecklisty,
   czyPozycjaJestAktywna,
   formatujDateDoWydruku,
@@ -732,4 +737,104 @@ test('pusty model dyspozycji nie zmienia odcisku kontekstu starszego szkolenia',
   const przed = kontekstWersji(wersja)
   wersja.dane.dyspozycjeMaterialowe = {}
   assert.deepEqual(kontekstWersji(wersja), przed)
+})
+
+test('1.2.3: 0/30, 12/30 i 30/30 wymagają policzenia, potwierdzenia ilości i osobnego potwierdzenia kompletu', () => {
+  magazyn.clear()
+  const dokument = utworzChecklistePaczkiZeZrodla(kontekstWersji(utworzWersjeZMailem()), 'grupa-1', daneZrodla(), 'autor')!
+  let dane = { ...dokument.daneDokumentu, pozycje: dokument.daneDokumentu.pozycje.filter((pozycja) => pozycja.importDyspozycji) }
+  const paczkaId = dane.paczki[0].id
+  const pozycjaId = pobierzPozycje(dane, 'Materiały dodatkowe').id
+  assert.equal(pobierzPostepKompletowaniaPaczki(dane, paczkaId).liczbaWymaganych, 1)
+  for (const ilosc of [0, 12, 30]) {
+    dane = zmienIloscPrzygotowanaPozycji(dane, pozycjaId, ilosc)
+    const pozycja = pobierzPozycje(dane, 'Materiały dodatkowe')
+    assert.equal(pozycja.iloscPrzygotowana, ilosc)
+    assert.equal(pobierzStanKompletowaniaPozycji(dane, pozycja).brakujacaIlosc, 30 - ilosc)
+    assert.equal(pobierzPostepKompletowaniaPaczki(dane, paczkaId).liczbaGotowych, 0)
+    assert.deepEqual(ustawPotwierdzenieKompletuPozycji(dane, pozycjaId, true), dane)
+  }
+  dane = potwierdzIloscDyspozycji(dane, pozycjaId)
+  assert.equal(pobierzPostepKompletowaniaPaczki(dane, paczkaId).procent, 0)
+  dane = ustawPotwierdzenieKompletuPozycji(dane, pozycjaId, true)
+  const postep = pobierzPostepKompletowaniaPaczki(dane, paczkaId)
+  assert.equal(postep.liczbaGotowych, 1)
+  assert.equal(postep.procent, 100)
+  assert.equal(postep.czyMozna, true)
+  assert.equal(pobierzPozycje(dane, 'Podręczniki / materiały szkoleniowe').czyOnline, true)
+  for (const nazwa of ['Ankiety', 'Lista obecności', 'Certyfikaty / Dyplomy']) assert.equal(pobierzPozycje(dane, nazwa).czyNieDotyczy, true)
+
+  dane = ustawStatusOperacyjnyPaczki(dane, paczkaId, 'GOTOWA')
+  assert.equal(dane.paczki[0].statusOperacyjny, 'GOTOWA')
+  assert.equal(dane.statusChecklisty, 'KOPIA_ROBOCZA')
+  dane = zmienIloscPrzygotowanaPozycji(dane, pozycjaId, 29)
+  assert.equal(dane.paczki[0].statusOperacyjny, 'W_PRZYGOTOWANIU')
+  assert.equal(pobierzPozycje(dane, 'Materiały dodatkowe').statusGotowosci, 'CZESCIOWO_GOTOWE')
+  assert.equal(pobierzPostepKompletowaniaPaczki(dane, paczkaId).procent, 0)
+  dane = zmienIloscPrzygotowanaPozycji(dane, pozycjaId, 30)
+  assert.equal(pobierzPostepKompletowaniaPaczki(dane, paczkaId).procent, 0)
+})
+
+test('1.2.3: gotowość jednej paczki nie zależy od drugiej, zapis zachowuje logistykę i przypisuje historię po ID', () => {
+  magazyn.clear()
+  const dokument = utworzChecklistePaczkiZeZrodla(kontekstWersji(utworzWersjeZMailem()), 'grupa-1', daneZrodla(), 'autor')!
+  let dane = { ...dokument.daneDokumentu, pozycje: dokument.daneDokumentu.pozycje.filter((pozycja) => pozycja.importDyspozycji) }
+  const paczkaId = dane.paczki[0].id
+  const pozycjaId = pobierzPozycje(dane, 'Materiały dodatkowe').id
+  dane = potwierdzIloscDyspozycji(dane, pozycjaId)
+  dane = duplikujPaczkeChecklisty(dane, paczkaId)
+  dane.paczki[1].parametryLogistyczne.numerPrzesylki = 'ZACHOWAJ'
+  const drugaPrzed = structuredClone({ paczka: dane.paczki[1], pozycje: dane.pozycje.filter((pozycja) => pozycja.paczkaId === dane.paczki[1].id) })
+  zapiszChecklistePaczki(dokument.id, dane, 'autor')
+  dane = ustawPotwierdzenieKompletuPozycji(zmienIloscPrzygotowanaPozycji(dane, pozycjaId, 30), pozycjaId, true)
+  const historiaPrzed = structuredClone(pobierzChecklistePaczki(dokument.id)!.daneDokumentu.historia)
+  assert.equal(czyMoznaFinalizowacCheckliste(dane).czyMozna, false)
+  assert.equal(czyMoznaFinalizowacCheckliste(dane, paczkaId).czyMozna, true)
+  assert.equal(czyMoznaFinalizowacCheckliste(dane, 'nieistniejaca').czyMozna, false)
+  dane = ustawStatusOperacyjnyPaczki(dane, paczkaId, 'GOTOWA')
+  zapiszChecklistePaczki(dokument.id, dane, 'autor', 'Skompletowano wybraną paczkę.')
+  const zapisane = pobierzChecklistePaczki(dokument.id)!.daneDokumentu
+  assert.deepEqual(zapisane.historia.slice(0, historiaPrzed.length), historiaPrzed)
+  assert.equal(zapisane.historia.at(-1)?.paczkaId, paczkaId)
+  assert.deepEqual({ paczka: zapisane.paczki[1], pozycje: zapisane.pozycje.filter((pozycja) => pozycja.paczkaId === zapisane.paczki[1].id) }, drugaPrzed)
+  assert.equal(pobierzPostepKompletowaniaPaczki(zapisane, paczkaId).procent, 100)
+  assert.equal(pobierzPostepKompletowaniaPaczki(zapisane, zapisane.paczki[1].id).procent, 0)
+  zapisane.paczki[0].nazwa = 'Nowa nazwa paczki'
+  zapiszChecklistePaczki(dokument.id, zapisane, 'autor')
+  assert.ok(pobierzChecklistePaczki(dokument.id)!.daneDokumentu.historia.some((wpis) => wpis.opis === 'Skompletowano wybraną paczkę.' && wpis.paczkaId === paczkaId))
+})
+
+test('1.2.3: konflikty, niepełny adres i braki blokują gotową paczkę także przy zapisie poza UI', () => {
+  magazyn.clear()
+  const dokument = utworzChecklistePaczkiZeZrodla(kontekstWersji(utworzWersjeZMailem()), 'grupa-1', daneZrodla(), 'autor')!
+  const dane = dokument.daneDokumentu
+  const paczkaId = dane.paczki[0].id
+  const przed = pobierzChecklistePaczki(dokument.id)
+  assert.deepEqual(ustawStatusOperacyjnyPaczki(dane, paczkaId, 'GOTOWA'), dane)
+  assert.equal(zapiszChecklistePaczki(dokument.id, { ...dane, paczki: dane.paczki.map((paczka) => ({ ...paczka, statusOperacyjny: 'GOTOWA' })) }, 'autor'), null)
+  assert.deepEqual(pobierzChecklistePaczki(dokument.id), przed)
+  const pozycja = pobierzPozycje(dane, 'Materiały dodatkowe')
+  pozycja.iloscPrzygotowana = 30
+  pozycja.importDyspozycji!.czyKonfliktReczny = true
+  assert.equal(pobierzStanKompletowaniaPozycji(dane, pozycja).czyMoznaPotwierdzic, false)
+  assert.deepEqual(ustawPotwierdzenieKompletuPozycji(dane, pozycja.id, true), dane)
+  dane.daneOdbiorcy.ulica = ''
+  assert.equal(pobierzPostepKompletowaniaPaczki(dane, paczkaId).czyBrakujeDanychWysylkowych, true)
+})
+
+test('1.2.3: archiwum i wysłana paczka nie przyjmują zmian kompletowania, a wydruk zachowuje wersję', () => {
+  magazyn.clear()
+  const dokument = utworzChecklistePaczkiZeZrodla(kontekstWersji(utworzWersjeZMailem()), 'grupa-1', daneZrodla(), 'autor')!
+  zarejestrujWydrukChecklisty(dokument.id, 'autor')
+  const dane = pobierzChecklistePaczki(dokument.id)!.daneDokumentu
+  const wydruki = structuredClone(dane.wersjeWydruku)
+  const pozycja = pobierzPozycje(dane, 'Materiały dodatkowe')
+  const zmienione = zmienIloscPrzygotowanaPozycji(dane, pozycja.id, 12)
+  zapiszChecklistePaczki(dokument.id, zmienione, 'autor')
+  assert.deepEqual(pobierzChecklistePaczki(dokument.id)!.daneDokumentu.wersjeWydruku, wydruki)
+  for (const zablokowane of [{ ...dane, statusChecklisty: 'ZARCHIWIZOWANA' as const }, { ...dane, paczki: dane.paczki.map((paczka) => ({ ...paczka, statusOperacyjny: 'WYSŁANA' as const })) }]) {
+    assert.deepEqual(zmienIloscPrzygotowanaPozycji(zablokowane, pozycja.id, 30), zablokowane)
+    assert.deepEqual(ustawPotwierdzenieKompletuPozycji(zablokowane, pozycja.id, true), zablokowane)
+  }
+  assert.deepEqual(zmienIloscPrzygotowanaPozycji(dane, pozycja.id, Number.NaN), dane)
 })
