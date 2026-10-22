@@ -6,7 +6,7 @@
   "build": {
     "beforeDevCommand": "npm run dev -- --host localhost --port 1420 --strictPort",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "npm run build",
+    "beforeBuildCommand": "npm run build && node skrypty/kontrolaTrybuFrontendu.mjs",
     "frontendDist": "../dist"
   },
   "app": {

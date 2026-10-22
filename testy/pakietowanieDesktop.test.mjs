@@ -1,8 +1,14 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, existsSync } from 'node:fs'
+import { mkdtemp, writeFile, rm, rmdir } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { spawnSync } from 'node:child_process'
 import Ajv from 'ajv'
 import { przygotujKonfiguracjeWydania, nazwaInstalatora, adresStabilnegoWydania } from '../skrypty/budujDesktop.mjs'
+import { okreslTrybFrontendu, sprawdzManifestProdukcyjny, sprawdzFrontendDesktop } from '../skrypty/kontrolaTrybuFrontendu.mjs'
 
 const odczytaj = (sciezka) => JSON.parse(readFileSync(new URL(`../${sciezka}`, import.meta.url), 'utf8'))
 const konfiguracja = odczytaj('src-tauri/tauri.conf.json')
@@ -73,4 +79,63 @@ test('podpisany build odrzuca brak kluczy, zły klucz, rozjazd wersji i źródł
   assert.equal(wynik.plugins.updater.pubkey, kluczPubliczny)
   assert.deepEqual(wynik.plugins.updater.endpoints, [adresStabilnegoWydania])
   assert.equal(waliduj({ ...konfiguracja, bundle: { ...konfiguracja.bundle, ...wynik.bundle }, plugins: wynik.plugins }), true, JSON.stringify(waliduj.errors))
+})
+
+test('tryb demo nie może zostać wstrzyknięty do zwykłego buildu ani uruchomienia', () => {
+  assert.equal(okreslTrybFrontendu('production', {}).tryb, 'produkcyjny')
+  assert.equal(okreslTrybFrontendu('development', {}).tryb, 'programistyczny')
+  assert.equal(okreslTrybFrontendu('demonstracyjny', { VITE_TRYB_DEMONSTRACYJNY: 'true' }).tryb, 'demonstracyjny')
+  for (const tryb of ['production', 'development']) assert.throws(() => okreslTrybFrontendu(tryb, { VITE_TRYB_DEMONSTRACYJNY: 'true' }), /Demonstracja/)
+  assert.throws(() => okreslTrybFrontendu('demonstracyjny', {}), /Demonstracja/)
+  assert.throws(() => okreslTrybFrontendu('production', { VITE_TRYB_DEMONSTRACYJNY: 'TRUE' }), /true albo false/)
+})
+
+test('rzeczywista konfiguracja Vite odrzuca flagę demo z procesu i pliku env', async () => {
+  const katalog = fileURLToPath(new URL('../', import.meta.url))
+  const sprawdz = (tryb, flaga) => spawnSync(process.execPath, ['--input-type=module', '-e', `import { resolveConfig } from 'vite'; await resolveConfig({ mode: ${JSON.stringify(tryb)} }, 'build');`], {
+    cwd: katalog, encoding: 'utf8', env: { ...process.env, VITE_TRYB_DEMONSTRACYJNY: flaga }, windowsHide: true,
+  })
+  assert.equal(sprawdz('production', 'false').status, 0)
+  // Brak zmiennej procesu pozwala Vite odczytać jawną flagę z .env.demonstracyjny.
+  const zmienne = { ...process.env }
+  delete zmienne.VITE_TRYB_DEMONSTRACYJNY
+  const demonstracja = spawnSync(process.execPath, ['--input-type=module', '-e', "import { resolveConfig } from 'vite'; await resolveConfig({ mode: 'demonstracyjny' }, 'build');"], { cwd: katalog, encoding: 'utf8', env: zmienne, windowsHide: true })
+  assert.equal(demonstracja.status, 0, demonstracja.stderr)
+  for (const tryb of ['production', 'development']) {
+    const wynik = sprawdz(tryb, 'true')
+    assert.notEqual(wynik.status, 0)
+    assert.match(wynik.stderr, /Demonstracja wymaga/)
+  }
+  const katalogEnv = await mkdtemp(join(tmpdir(), 'pomagier-konfiguracja-trybu-'))
+  try {
+    await writeFile(join(katalogEnv, '.env.production.local'), 'VITE_TRYB_DEMONSTRACYJNY=true\n')
+    const adresKontroli = new URL('../skrypty/kontrolaTrybuFrontendu.mjs', import.meta.url).href
+    const wynik = spawnSync(process.execPath, ['--input-type=module', '-e', `import { loadEnv } from 'vite'; import { okreslTrybFrontendu } from ${JSON.stringify(adresKontroli)}; okreslTrybFrontendu('production', loadEnv('production', ${JSON.stringify(katalogEnv)}, 'VITE_'));`], { cwd: katalog, encoding: 'utf8', env: zmienne, windowsHide: true })
+    assert.notEqual(wynik.status, 0)
+    assert.match(wynik.stderr, /Demonstracja wymaga/)
+  } finally {
+    await rm(join(katalogEnv, '.env.production.local'), { force: true })
+    await rmdir(katalogEnv)
+  }
+})
+
+test('instalator produkcyjny odrzuca demo także po zmianie komendy lub podmianie dist', async () => {
+  for (const polecenie of ['npm run build:demo', 'npm run build', { script: 'npm run build:demo' }]) {
+    assert.throws(() => przygotujKonfiguracjeWydania(pakiet, { ...konfiguracja, build: { ...konfiguracja.build, beforeBuildCommand: polecenie } }, { podpisane: false }), /przed pakowaniem/)
+  }
+  assert.throws(() => sprawdzManifestProdukcyjny(okreslTrybFrontendu('demonstracyjny', { VITE_TRYB_DEMONSTRACYJNY: 'true' })), /Odrzucono/)
+  assert.throws(() => sprawdzManifestProdukcyjny(okreslTrybFrontendu('development', {})), /Odrzucono/)
+  assert.throws(() => sprawdzManifestProdukcyjny(null), /Odrzucono/)
+  const katalog = await mkdtemp(join(tmpdir(), 'pomagier-kontrola-trybu-'))
+  try {
+    await assert.rejects(() => sprawdzFrontendDesktop(katalog), /ENOENT/)
+    await writeFile(join(katalog, 'tryb-frontendu.json'), JSON.stringify(okreslTrybFrontendu('demonstracyjny', { VITE_TRYB_DEMONSTRACYJNY: 'true' })))
+    await assert.rejects(() => sprawdzFrontendDesktop(katalog), /Odrzucono/)
+    await writeFile(join(katalog, 'tryb-frontendu.json'), JSON.stringify(okreslTrybFrontendu('production', {})))
+    await sprawdzFrontendDesktop(katalog)
+  } finally {
+    // Usuwamy wyłącznie utworzony wyżej plik i pusty katalog testowy.
+    await rm(join(katalog, 'tryb-frontendu.json'), { force: true })
+    await rmdir(katalog)
+  }
 })

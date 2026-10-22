@@ -4,11 +4,13 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import { resolve, join } from 'node:path'
 import { createHash } from 'node:crypto'
 import { pobierzInformacjeOWersji } from './informacjeOWersji.mjs'
+import { sprawdzKonfiguracjeDesktop, sprawdzFrontendDesktop } from './kontrolaTrybuFrontendu.mjs'
 
 const katalog = fileURLToPath(new URL('../', import.meta.url))
 export const adresStabilnegoWydania = 'https://github.com/kapi1944/Ultimate_Pomagier_3_5/releases/latest/download/latest.json'
 
 export function przygotujKonfiguracjeWydania(pakiet, konfiguracja, { podpisane, tag, czysteZrodla, kluczPubliczny, kluczPrywatny }) {
+  sprawdzKonfiguracjeDesktop(konfiguracja)
   if (!/^\d+\.\d+\.\d+$/.test(pakiet.version) || (konfiguracja.version !== '../package.json' && pakiet.version !== konfiguracja.version)) throw new Error('Wersje pakietu i Tauri muszą być zgodne i stabilne.')
   if (podpisane) {
     if (tag !== `v${pakiet.version}`) throw new Error('Podpisane wydanie wymaga dokładnego stabilnego tagu zgodnego z wersją.')
@@ -56,6 +58,7 @@ async function buduj() {
   await writeFile(plikKonfiguracji, JSON.stringify(nadpisanie, null, 2))
   const wynik = spawnSync(process.execPath, [join(katalog, 'node_modules/@tauri-apps/cli/tauri.js'), 'build', '--ci', '--target', 'x86_64-pc-windows-msvc', '--bundles', 'nsis', '--config', plikKonfiguracji, '--', '--locked'], { cwd: katalog, stdio: 'inherit' })
   if (wynik.status !== 0) throw new Error('Build Tauri nie powiódł się. Artefakt nie został przygotowany.')
+  await sprawdzFrontendDesktop(join(katalog, 'dist'))
   const wersjaFrontendu = JSON.parse(await readFile(join(katalog, 'dist/wersja.json'), 'utf8'))
   if (JSON.stringify(wersjaFrontendu) !== JSON.stringify(informacjeOWersji)) throw new Error('Frontend pochodzi z innych źródeł niż bieżący build desktopowy.')
   const nazwa = nazwaInstalatora(pakiet.version)

@@ -16,6 +16,6 @@ test('wspólne metadane wydania identyfikują wersję i rzeczywiste źródła', 
 test('desktop zawsze buduje frontend z bieżących źródeł', () => {
   const konfiguracja = JSON.parse(readFileSync(new URL('../src-tauri/tauri.conf.json', import.meta.url), 'utf8'))
   assert.equal(konfiguracja.version, '../package.json')
-  assert.equal(konfiguracja.build.beforeBuildCommand, 'npm run build')
+  assert.equal(konfiguracja.build.beforeBuildCommand, 'npm run build && node skrypty/kontrolaTrybuFrontendu.mjs')
   assert.equal(konfiguracja.build.frontendDist, '../dist')
 })
