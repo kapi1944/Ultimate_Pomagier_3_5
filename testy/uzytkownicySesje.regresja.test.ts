@@ -28,9 +28,9 @@ test('magazyn inicjalizuje dane tylko raz, nie nadpisuje danych i bezpiecznie ob
   magazyn.set(kluczMagazynuUzytkownikow, JSON.stringify(niestandardowy))
   assert.equal(zainicjalizujMagazynUzytkownikow().find((uzytkownik) => uzytkownik.id === 'uzytkownik-niestandardowy')?.pseudonim, 'Zachowany użytkownik')
   magazyn.set(kluczMagazynuUzytkownikow, '{uszkodzony')
-  assert.equal(pobierzUzytkownikow().length, 9)
+  assert.throws(pobierzUzytkownikow)
   magazyn.set(kluczMagazynuUzytkownikow, JSON.stringify([{}]))
-  assert.equal(pobierzUzytkownikow().length, 9)
+  assert.throws(pobierzUzytkownikow)
 })
 
 test('docelowa baza startowa zawiera dokładnie 17 spójnych i unikalnych użytkowników', () => {
@@ -60,7 +60,7 @@ test('docelowa baza startowa zawiera dokładnie 17 spójnych i unikalnych użytk
   }
 })
 
-test('migracja starego magazynu aktualizuje bazę raz, zachowuje metadane i nie tworzy duplikatów', () => {
+test('migracja starego magazynu zachowuje wszystkie konta, ręczne wartości i metadane', () => {
   wyczyscStan()
   const stareUtworzenie = '2025-01-02T03:04:05.000Z'
   const stareLogowanie = '2026-01-02T03:04:05.000Z'
@@ -81,19 +81,21 @@ test('migracja starego magazynu aktualizuje bazę raz, zachowuje metadane i nie 
 
   const poPierwszejMigracji = zainicjalizujMagazynUzytkownikow()
   const izaPoMigracji = poPierwszejMigracji.find((uzytkownik) => uzytkownik.id === 'Iza')!
-  assert.equal(poPierwszejMigracji.length, 17)
+  assert.equal(poPierwszejMigracji.length, 10)
   assert.equal(izaPoMigracji.utworzono, stareUtworzenie)
   assert.equal(izaPoMigracji.ostatnieLogowanie, stareLogowanie)
-  assert.equal(izaPoMigracji.wersjaUprawnien, 2)
-  assert.equal(poPierwszejMigracji.every((uzytkownik) => uzytkownik.email === uzytkownik.emaile[0]), true)
-  assert.equal(poPierwszejMigracji.some((uzytkownik) => uzytkownik.id === 'opiekun-anna-nowak' || uzytkownik.id === 'opiekun-piotr-zielinski'), false)
+  assert.equal(izaPoMigracji.wersjaUprawnien, 1)
+  assert.equal(izaPoMigracji.login, 'iza')
+  assert.deepEqual(izaPoMigracji.odznaki, ['AKCEPTUJACY'])
+  assert.equal(poPierwszejMigracji.find((uzytkownik) => uzytkownik.id === 'architekt-systemu')?.email, 'stary-adres@pomagier.local')
+  assert.equal(poPierwszejMigracji.some((uzytkownik) => uzytkownik.id === 'opiekun-anna-nowak' || uzytkownik.id === 'opiekun-piotr-zielinski'), true)
   const zapisPoPierwszejMigracji = magazyn.get(kluczMagazynuUzytkownikow)
 
   const poDrugiejMigracji = zainicjalizujMagazynUzytkownikow()
   assert.deepEqual(poDrugiejMigracji, poPierwszejMigracji)
   assert.equal(magazyn.get(kluczMagazynuUzytkownikow), zapisPoPierwszejMigracji)
   assert.equal(new Set(poDrugiejMigracji.map((uzytkownik) => uzytkownik.id)).size, poDrugiejMigracji.length)
-  assert.equal(poDrugiejMigracji.find((uzytkownik) => uzytkownik.id === 'Iza')?.wersjaUprawnien, 2)
+  assert.equal(poDrugiejMigracji.find((uzytkownik) => uzytkownik.id === 'Iza')?.wersjaUprawnien, 1)
 })
 
 test('magazyn wyszukuje bez rozróżniania wielkości liter po loginie, e-mailu i aliasie', () => {
@@ -132,14 +134,14 @@ test('brak sesji nie zwraca Administratora, a role i odznaki nie przyznają dost
   assert.equal(czyMozeEksportowac(iza), true)
 })
 
-test('migracja starej sesji rozpoznaje konto i usuwa oba historyczne klucze', () => {
+test('stara sesja nie przyznaje dostępu i nie jest uznawana za uwierzytelnienie', () => {
   wyczyscStan()
   zainicjalizujMagazynUzytkownikow()
   magazyn.set('ultimate-pomagier.zalogowany-uzytkownik', JSON.stringify({ id: 'Iza' }))
   magazyn.set('ultimate-pomagier.aktywna-rola', 'Opiekun')
-  assert.equal(pobierzZalogowanegoUzytkownika()?.id, 'Iza')
-  assert.equal(magazyn.has('ultimate-pomagier.zalogowany-uzytkownik'), false)
-  assert.equal(magazyn.has('ultimate-pomagier.aktywna-rola'), false)
+  assert.equal(pobierzZalogowanegoUzytkownika(), null)
+  assert.equal(magazyn.has('ultimate-pomagier.zalogowany-uzytkownik'), true)
+  assert.equal(magazyn.has('ultimate-pomagier.aktywna-rola'), true)
 })
 
 test('migracja nadaje rolę Architekt wyłącznie Kacprowi i jest idempotentna', () => {
@@ -157,7 +159,9 @@ test('Administrator nie edytuje Architekta, a Architekt może edytować Administ
   const uzytkownicy = zainicjalizujMagazynUzytkownikow()
   const architekt = uzytkownicy.find((uzytkownik) => uzytkownik.id === 'administrator-kacper-madej')!
   const administrator = uzytkownicy.find((uzytkownik) => uzytkownik.id === 'architekt-systemu')!
+  rozpocznijSesje(administrator.id)
   assert.ok(zaktualizujUzytkownikaPrzezAdministratora(administrator, architekt.id, { pseudonim: 'Niedozwolone' }).blad)
+  rozpocznijSesje(architekt.id)
   assert.equal(zaktualizujUzytkownikaPrzezArchitekta(architekt, administrator.id, { pseudonim: 'Dozwolone' }).uzytkownik?.pseudonim, 'Dozwolone')
   assert.ok(zaktualizujUzytkownikaPrzezArchitekta(architekt, architekt.id, { status: 'ZABLOKOWANY' }).blad)
 })
@@ -183,7 +187,8 @@ test('struktura panelu i menu udostępnia lokalne logowanie, profil oraz dostęp
   const panel = readFileSync(new URL('../src/aplikacja/logowanie/PanelLogowania.tsx', import.meta.url), 'utf8')
   const menu = readFileSync(new URL('../src/aplikacja/menu/MenuBoczne.tsx', import.meta.url), 'utf8')
   const odznaka = readFileSync(new URL('../src/kartoteki/uzytkownicy/komponenty/OdznakaUzytkownika.tsx', import.meta.url), 'utf8')
-  assert.doesNotMatch(panel, /type="password"/)
+  assert.match(panel, /'password'/)
+  assert.doesNotMatch(panel, /type="radio"/)
   assert.match(panel, /Lokalny tryb demonstracyjny/)
   const naglowek = readFileSync(new URL('../src/aplikacja/layout/NaglowekAplikacji.tsx', import.meta.url), 'utf8')
   assert.doesNotMatch(menu, /menu-boczne__profil/)
@@ -200,6 +205,7 @@ test('administrator tworzy konto w centralnym magazynie, a odznaka Wysyłacz dzi
   const pracownik = uzytkownicy.find((uzytkownik) => uzytkownik.id === 'Iza')!
   const dane = { zwrot: 'Pani', tytulNaukowy: '', imie: 'Nowa', nazwisko: 'Osoba', pseudonim: 'Nowa', emaile: ['nowa.osoba@pomagier.local'], telefony: [{ prefiks: '+48', numer: '512 345 678', krajIso2: 'PL', numerE164: '+48512345678' }], login: 'nowa.osoba', rola: 'PRACOWNIK', organizacja: 'SEMPER', odznaki: ['WYSYLACZ'], status: 'AKTYWNY', kolorProfilu: '#38761d', aliasyHistoryczne: [], wymagaZmianyHasla: false } as Parameters<typeof utworzUzytkownikaPrzezAdministratora>[1]
   assert.ok(utworzUzytkownikaPrzezAdministratora(pracownik, dane).blad)
+  rozpocznijSesje(administrator.id)
   const wynik = utworzUzytkownikaPrzezAdministratora(administrator, dane)
   assert.equal(wynik.uzytkownik?.email, 'nowa.osoba@pomagier.local')
   assert.equal(czyMozeWysylac(wynik.uzytkownik), true)

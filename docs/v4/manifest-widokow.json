@@ -533,15 +533,11 @@
     "src/aplikacja/logowanie/PanelLogowania.tsx": {
       "zadanie": "V4-03",
       "powierzchnie": [
-        "Przycisk className=\"panel-logowania__zaloguj\" type=\"submit\" disabled={!wybranyUzytkownik}",
-        "div className=\"panel-logowania__konta\"",
+        "Przycisk className=\"panel-logowania__zaloguj\" type=\"submit\" disabled={czyTrwaLogowanie}",
         "div className=\"panel-logowania__wybor\"",
         "form className=\"panel-logowania__formularz\" onSubmit={obsluzLogowanie}",
         "img alt=\"Ultimate Pomagier\" className=\"panel-logowania__logo\" src=\"/logo-ultimate-pomagier.png\"",
-        "label className=\"panel-logowania__konto\" key={uzytkownik.id}",
-        "main className=\"panel-logowania\"",
-        "section aria-label=\"Dane wybranego użytkownika\" className=\"panel-logowania__profil\"",
-        "span className=\"panel-logowania__nazwa\""
+        "main className=\"panel-logowania\""
       ],
       "ukonczoneEtapy": [
         "V4-02",
@@ -644,6 +640,7 @@
     "src/kartoteki/uzytkownicy/WidokUzytkownikow.tsx": {
       "zadanie": "V4-21",
       "powierzchnie": [
+        "details className=\"uzytkownicy__karta\"",
         "form className=\"uzytkownicy__formularz\" onSubmit={zapiszNowegoUzytkownika}"
       ],
       "ukonczoneEtapy": [],
@@ -1405,6 +1402,30 @@
         "V4-14",
         "V4-15"
       ]
+    },
+    "src/kartoteki/uzytkownicy/OchronaKartotekiUzytkownikow.tsx": {
+      "zadanie": "V4-21",
+      "powierzchnie": [
+        "details"
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
+    },
+    "src/kartoteki/uzytkownicy/PanelOperacjiKont.tsx": {
+      "zadanie": "V4-21",
+      "powierzchnie": [
+        "details"
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
+    },
+    "src/kartoteki/uzytkownicy/PodgladUzytkownika.tsx": {
+      "zadanie": "V4-21",
+      "powierzchnie": [
+        "dialog ref={okno} className=\"uzytkownicy__okno-podgladu\" onCancel={(zdarzenie) => { zdarzenie.preventDefault(); zakoncz() }} aria-label=\"Tryb podglądu użytkownika\""
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     }
   },
   "realizacjaEtapow": {

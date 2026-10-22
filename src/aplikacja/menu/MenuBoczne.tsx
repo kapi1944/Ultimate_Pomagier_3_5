@@ -1,3 +1,4 @@
+import { czyMozeZarzadzacUzytkownikami } from '../../kartoteki/uzytkownicy/uprawnienia'
 import logoTabliczka from '../../../multimedia/logo_tabliczka_gold.png'
 import { RegulacjaSzerokosci } from '../../wspolne/komponenty/RegulacjaSzerokosci'
 import { pobierzUstawieniaAplikacji, zapiszUstawieniaAplikacji } from '../ustawienia/magazynUstawienAplikacji'
@@ -284,7 +285,7 @@ export default function MenuBoczne({
         </div>
         {bladPreferencji && <Komunikat status="error">{bladPreferencji}</Komunikat>}
         <nav aria-label="Moduły aplikacji">
-          <ul className="menu-boczne__lista">{pozycjeMenu.map((pozycja) => renderujPozycje(pozycja))}</ul>
+          <ul className="menu-boczne__lista">{pozycjeMenu.filter((pozycja) => pozycja.id !== 'administracja' || czyMozeZarzadzacUzytkownikami(zalogowanyUzytkownik)).map((pozycja) => renderujPozycje(pozycja))}</ul>
         </nav>
       </aside>
     </>

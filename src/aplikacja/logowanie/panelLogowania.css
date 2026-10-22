@@ -23,3 +23,6 @@
 .panel-logowania .panel-logowania__zaloguj:hover:not(:disabled) { background: var(--ui-akcent); box-shadow: 0 0 0 2px var(--ui-akcent); }
 @media (max-width: 760px) { .panel-logowania__formularz { grid-template-columns: minmax(0, 1fr); } .panel-logowania__formularz header { gap: 16px; } .panel-logowania__logo { width: 180px; } }
 @media (max-width: 440px) { .panel-logowania__konta { grid-template-columns: minmax(0, 1fr); } }
+.panel-logowania__wybor > label { display: grid; gap: 8px; }
+.panel-logowania__wybor input:not([type="checkbox"]) { width: 100%; min-width: 0; padding: 12px; border: 1px solid var(--ui-obramowanie); border-radius: var(--ui-promien-pola); background: var(--ui-pole); color: var(--ui-tekst); font: inherit; }
+.panel-logowania__wybor input:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }

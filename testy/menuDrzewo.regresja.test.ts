@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { pobierzIdRozwijalnychPozycji, pobierzSciezkeMenuDlaWidoku, pozycjeMenu } from '../src/aplikacja/menu/pozycjeMenu.ts'
 
 const nadrzedne = pozycjeMenu.map((pozycja) => pozycja.etykieta)
-assert.deepEqual(nadrzedne, ['PULPIT', 'SZKOLENIA ZAMKNIĘTE', 'SZKOLENIA OTWARTE', 'DOKUMENTY', 'NARZĘDZIA', 'ZAKUPY', 'KARTOTEKI', 'USTAWIENIA'])
+assert.deepEqual(nadrzedne, ['PULPIT', 'SZKOLENIA ZAMKNIĘTE', 'SZKOLENIA OTWARTE', 'DOKUMENTY', 'NARZĘDZIA', 'ZAKUPY', 'KARTOTEKI', 'ADMINISTRACJA', 'USTAWIENIA'])
 
 const narzedzia = pozycjeMenu.find((pozycja) => pozycja.id === 'narzedzia')
 assert.ok(narzedzia?.czyPrzelaczaPodmenu)
@@ -24,3 +24,5 @@ assert.ok(rozwijalne.includes('generator-dyplomow'))
 assert.deepEqual(pobierzSciezkeMenuDlaWidoku('dyplomy_kopie_robocze'), ['dokumenty', 'generator-dyplomow', 'dyplomy_kopie_robocze'])
 
 console.log('OK: hierarchia menu, poziomy i podsekcje kopii roboczych')
+
+assert.deepEqual(pobierzSciezkeMenuDlaWidoku('kartoteki_uzytkownicy'), ['administracja', 'kartoteki_uzytkownicy'])

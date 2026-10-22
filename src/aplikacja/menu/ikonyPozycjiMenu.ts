@@ -26,6 +26,7 @@ export function pobierzTypIkonyMenu(id: string): TypIkonyMenu {
   if (id === 'generator-checklist-paczek') return 'dokumenty'
   if (id === 'replikator_dokumentow') return 'replikator'
   if (id.startsWith('kartoteki')) return 'kartoteki'
+  if (id === 'administracja') return 'ustawienia'
   if (id === 'ustawienia') return 'ustawienia'
   if (id.startsWith('szkolenia')) return 'szkolenia'
   return 'pulpit'

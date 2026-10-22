@@ -21,3 +21,28 @@
 .uzytkownicy__sukces { color: #bbf7d0 !important; }
 .uzytkownicy__blad { color: #fecaca !important; }
 @media (max-width: 760px) { .uzytkownicy__formularz { grid-template-columns: 1fr; }.uzytkownicy__wiersz { grid-template-columns: auto minmax(0, 1fr); }.uzytkownicy__odznaki, .uzytkownicy__wiersz button { grid-column: 1 / -1; }.uzytkownicy fieldset { grid-column: auto; } }
+.uzytkownicy { max-width: 100%; min-width: 0; }
+.uzytkownicy > *, .uzytkownicy__import { min-width: 0; }
+.uzytkownicy__narzedzia { display: flex; flex-wrap: wrap; gap: 12px; }
+.uzytkownicy__narzedzia label { display: grid; gap: 5px; flex: 1 1 180px; min-width: 0; }
+.uzytkownicy__tabela { overflow: auto; max-width: 100%; max-height: 65vh; border: 1px solid var(--ui-obramowanie); }
+.uzytkownicy table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+.uzytkownicy th, .uzytkownicy td { text-align: left; vertical-align: top; padding: 9px; border-bottom: 1px solid var(--ui-obramowanie); min-width: 110px; max-width: 340px; overflow-wrap: anywhere; }
+.uzytkownicy th { background: var(--ui-panel); }
+.uzytkownicy td input:not([type="checkbox"]) { min-width: 160px; }
+.uzytkownicy input[type="checkbox"] { width: 18px; min-height: 18px; flex-shrink: 0; }
+.uzytkownicy td .avatar-uzytkownika { display: inline-flex; margin-right: 8px; }
+.uzytkownicy__import { display: grid; gap: 12px; padding: 14px; border: 1px dashed var(--ui-obramowanie); }
+.uzytkownicy summary { cursor: pointer; padding: 8px 0; }
+.uzytkownicy fieldset { min-width: 0; }
+.uzytkownicy button:disabled { cursor: default; opacity: .5; }
+.uzytkownicy__akcje { flex-wrap: wrap; }
+.uzytkownicy__okno-podgladu { color: var(--ui-tekst); background: var(--ui-panel); border: 1px solid var(--ui-akcent); width: min(900px, 90vw); max-height: 85vh; overflow: auto; }
+.uzytkownicy__okno-podgladu::backdrop { background: rgb(0 0 0 / .65); }
+.uzytkownicy__pasek-podgladu { position: sticky; top: 0; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; padding: 12px; background: var(--ui-panel); border-bottom: 2px solid var(--ui-akcent); z-index: 1; }
+.uzytkownicy__tabela[aria-label="Tabela kont"] table { min-width: 1800px; }
+.uzytkownicy__tabela[aria-label="Tabela kont"] th { white-space: nowrap; }
+.uzytkownicy__tabela[aria-label="Tabela kont"] th:first-child, .uzytkownicy__tabela[aria-label="Tabela kont"] td:first-child { min-width: 32px; width: 32px; }
+.uzytkownicy__tabela[aria-label="Tabela kont"] td:nth-child(2) { min-width: 230px; }
+.uzytkownicy__tabela[aria-label="Tabela kont"] td:nth-child(5) { min-width: 250px; }
+.uzytkownicy__tabela[aria-label="Tabela kont"] td:nth-child(9) { min-width: 220px; }
