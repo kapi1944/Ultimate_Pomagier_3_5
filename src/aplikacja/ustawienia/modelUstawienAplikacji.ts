@@ -38,6 +38,7 @@ export type UstawieniaAplikacji = {
     promienPol: number
     czasPrzejsciaMs: number
     skalaHover: number
+    skalaInterfejsu: number
   }
   nawigacja: {
     szerokoscMenu: number
@@ -85,6 +86,7 @@ export const domyslneUstawieniaAplikacji: UstawieniaAplikacji = {
     promienPol: 6,
     czasPrzejsciaMs: 150,
     skalaHover: 1,
+    skalaInterfejsu: 100,
   },
   nawigacja: {
     szerokoscMenu: 280,
@@ -221,6 +223,7 @@ export function normalizujUstawieniaAplikacji(dane: unknown): UstawieniaAplikacj
         1.05,
         domyslneUstawieniaAplikacji.wyglad.skalaHover,
       ),
+      skalaInterfejsu: normalizujSkaleInterfejsu(wyglad.skalaInterfejsu),
     },
     nawigacja: {
       szerokoscMenu: ograniczLiczbe(
@@ -315,4 +318,8 @@ export function normalizujUstawieniaAplikacji(dane: unknown): UstawieniaAplikacj
         : domyslneUstawieniaAplikacji.dostepnosc.ograniczAnimacje,
     },
   }
+}
+
+export function normalizujSkaleInterfejsu(wartosc: unknown): number {
+  return Math.round(ograniczLiczbe(wartosc, 70, 130, 100) / 5) * 5
 }

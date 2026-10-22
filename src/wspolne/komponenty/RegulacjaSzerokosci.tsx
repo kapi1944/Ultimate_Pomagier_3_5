@@ -14,7 +14,7 @@ type Wlasciwosci = {
 
 export function RegulacjaSzerokosci({ panel, obszar, zmienna, strona, minimum, maksimum, kluczZapisu, zapisz }: Wlasciwosci) {
   const uchwyt = useRef<HTMLDivElement>(null)
-  const gest = useRef<{ x: number; szerokosc: number } | null>(null)
+  const gest = useRef<{ x: number; szerokosc: number; skala: number } | null>(null)
   const [szerokosc, ustawSzerokosc] = useState(minimum)
   const [blad, ustawBlad] = useState(false)
 
@@ -72,17 +72,20 @@ export function RegulacjaSzerokosci({ panel, obszar, zmienna, strona, minimum, m
         if (!element) return
         zdarzenie.preventDefault()
         zdarzenie.currentTarget.focus()
-        const wartosc = element.getBoundingClientRect().width
-        gest.current = { x: zdarzenie.clientX, szerokosc: wartosc }
+        const wartosc = parseFloat(getComputedStyle(element).width)
+        gest.current = { x: zdarzenie.clientX, szerokosc: wartosc, skala: element.getBoundingClientRect().width / wartosc }
         ustawSzerokosc(wartosc)
         zdarzenie.currentTarget.setPointerCapture(zdarzenie.pointerId)
         zdarzenie.currentTarget.closest<HTMLElement>(obszar)?.setAttribute('data-regulacja-szerokosci', 'true')
       }}
       onPointerMove={(zdarzenie) => {
-        if (gest.current) zmien(gest.current.szerokosc + (zdarzenie.clientX - gest.current.x) * (strona === 'prawa' ? 1 : -1))
+        if (gest.current) zmien(gest.current.szerokosc + (zdarzenie.clientX - gest.current.x) / gest.current.skala * (strona === 'prawa' ? 1 : -1))
       }}
       onPointerUp={zakoncz} onPointerCancel={zakoncz} onLostPointerCapture={zakoncz}
-      onFocus={() => ustawSzerokosc(uchwyt.current?.closest<HTMLElement>(panel)?.getBoundingClientRect().width ?? minimum)}
+      onFocus={() => {
+        const element = uchwyt.current?.closest<HTMLElement>(panel)
+        ustawSzerokosc(element ? parseFloat(getComputedStyle(element).width) : minimum)
+      }}
       onKeyDown={(zdarzenie) => {
         if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(zdarzenie.key)) return
         zdarzenie.preventDefault()

@@ -29,6 +29,7 @@ import { czyNalezyPrzypomniecOPelnymBackupu, odczytajKopieLokalna, pobierzListeK
 import { analizujMigracjeStarszychDokumentow, wykonajMigracjeStarszychDokumentow, type RaportMigracjiStarszychDokumentow } from '../../wspolne/dokumenty/migracjaStarszychDokumentow'
 import { pobierzStanRejestruDokumentow } from '../../wspolne/dokumenty/rejestrDokumentow'
 import './widokUstawien.css'
+import { pobierzBladSkalowania, pobierzSkaleInterfejsu, zdarzenieZmianySkaliInterfejsu } from './skalaInterfejsu'
 import { GaleriaKomponentow } from '../../wspolne/komponenty/GaleriaKomponentow'
 
 const kluczPrzypieciaPaneluJakosci = 'ultimatePomagier.panelJakosciPrzypiety'
@@ -86,7 +87,12 @@ export default function WidokUstawien() {
 
   const [aktywnaZakladka, ustawAktywnaZakladke] = useState<ZakladkaUstawien>('OGOLNE')
   const [zapisaneUstawienia, ustawZapisaneUstawienia] = useState(pobierzUstawieniaAplikacji)
-  const [roboczeUstawienia, ustawRoboczeUstawienia] = useState(pobierzUstawieniaAplikacji)
+  const [roboczeUstawienia, ustawRoboczeUstawienia] = useState(() => {
+    const ustawienia = pobierzUstawieniaAplikacji()
+    ustawienia.wyglad.skalaInterfejsu = pobierzSkaleInterfejsu()
+    return ustawienia
+  })
+  const [bladSkalowania, ustawBladSkalowania] = useState(pobierzBladSkalowania)
 
   const [czyPrzypiete, ustawCzyPrzypiete] = useState(() => pobierzPreferencjePowloki(uzytkownikId).przypiete)
   const [czyWysuwanie, ustawCzyWysuwanie] = useState(() => pobierzPreferencjePowloki(uzytkownikId).wysuwanie)
@@ -116,6 +122,18 @@ export default function WidokUstawien() {
 
   const czySaNiezapisaneZmiany =
     JSON.stringify(zapisaneUstawienia) !== JSON.stringify(roboczeUstawienia)
+
+  useEffect(() => {
+    function odswiezSkale() {
+      const skala = pobierzSkaleInterfejsu()
+      ustawRoboczeUstawienia((obecne) => obecne.wyglad.skalaInterfejsu === skala ? obecne : {
+        ...obecne, wyglad: { ...obecne.wyglad, skalaInterfejsu: skala },
+      })
+      ustawBladSkalowania(pobierzBladSkalowania())
+    }
+    window.addEventListener(zdarzenieZmianySkaliInterfejsu, odswiezSkale)
+    return () => window.removeEventListener(zdarzenieZmianySkaliInterfejsu, odswiezSkale)
+  }, [])
 
   useEffect(() => {
     zastosujUstawieniaAplikacji(roboczeUstawienia)
@@ -550,6 +568,19 @@ export default function WidokUstawien() {
 
           <section className="ustawienia__karta ustawienia__siatka">
             <h2>Geometria i reakcje</h2>
+
+            <section className="ustawienia__skala ustawienia__wiersz--pelny" aria-labelledby="naglowek-skali-interfejsu">
+              <h3 id="naglowek-skali-interfejsu">Skala interfejsu</h3>
+              <div className="ustawienia__akcje">
+                <button type="button" aria-label="Zmniejsz skalę interfejsu" disabled={roboczeUstawienia.wyglad.skalaInterfejsu <= 70} onClick={() => zmienWyglad('skalaInterfejsu', roboczeUstawienia.wyglad.skalaInterfejsu - 5)}>–</button>
+                <input aria-label="Skala interfejsu" aria-describedby="opis-skali-interfejsu" type="range" min="70" max="130" step="5" value={roboczeUstawienia.wyglad.skalaInterfejsu} onChange={(zdarzenie) => zmienWyglad('skalaInterfejsu', Number(zdarzenie.target.value))} />
+                <button type="button" aria-label="Zwiększ skalę interfejsu" disabled={roboczeUstawienia.wyglad.skalaInterfejsu >= 130} onClick={() => zmienWyglad('skalaInterfejsu', roboczeUstawienia.wyglad.skalaInterfejsu + 5)}>+</button>
+                <output aria-live="polite">{roboczeUstawienia.wyglad.skalaInterfejsu}%</output>
+                <button type="button" onClick={() => zmienWyglad('skalaInterfejsu', 100)}>Przywróć 100%</button>
+              </div>
+              <p id="opis-skali-interfejsu">Ctrl + Plus / Minus: zmiana o 5%. Ctrl + 0: 100%. Podgląd na żywo; utrwal zmiany przyciskiem „Zapisz ustawienia”. Wyjście z ustawień odrzuca niezapisany podgląd.</p>
+              {bladSkalowania && <p role="alert">{bladSkalowania}</p>}
+            </section>
 
             <label className="ustawienia__pole">
               Gęstość interfejsu

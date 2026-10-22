@@ -3,6 +3,7 @@ import {
   normalizujUstawieniaAplikacji,
   type UstawieniaAplikacji,
 } from './modelUstawienAplikacji'
+import { zastosujSkaleInterfejsu } from './skalaInterfejsu'
 
 export const kluczUstawienAplikacji = 'ultimatePomagier.ustawieniaAplikacji.v1'
 export const zdarzenieZmianyUstawienAplikacji = 'ultimatePomagier:zmianaUstawienAplikacji'
@@ -34,6 +35,7 @@ export function zastosujUstawieniaAplikacji(ustawienia: UstawieniaAplikacji) {
   if (typeof document === 'undefined') return
 
   const root = document.documentElement
+  void zastosujSkaleInterfejsu(ustawienia.wyglad.skalaInterfejsu)
 
   root.dataset.uiPaleta = ustawienia.wyglad.paleta
   root.dataset.uiGestosc = ustawienia.wyglad.gestosc

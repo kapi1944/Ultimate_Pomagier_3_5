@@ -52,6 +52,8 @@ export function zmierzScenePdf(strony: HTMLElement[]): ScenaPdf {
   return { strony: strony.map((strona) => {
     const granice = strona.getBoundingClientRect()
     const skala = 210 / granice.width
+    // Style są mierzone przed zoomem i transformacją podglądu, geometria po nich.
+    const skalaStylu = 210 / parseFloat(window.getComputedStyle(strona).width)
     const elementy: ElementScenyPdf[] = []
     if (!opisyElementow.has(strona)) throw new Error('Strona nie ma modelu semantycznego PDF.')
     function odwiedz(element: Element, podkreslenieRodzica = false) {
@@ -77,7 +79,7 @@ export function zmierzScenePdf(strony: HTMLElement[]): ScenaPdf {
         [styl.borderLeftWidth, styl.borderLeftColor, styl.borderLeftStyle, x, y, x, y + wysokosc],
       ] as const
       for (const [gruboscCss, kolorCss, stylLinii, x, y, koniecX, koniecY] of boki) {
-        const grubosc = parseFloat(gruboscCss) * skala
+        const grubosc = parseFloat(gruboscCss) * skalaStylu
         const kolor = kolorPdf(kolorCss)
         if (grubosc && kolor && stylLinii !== 'none') elementy.push({ rodzaj: 'linia', x, y, koniecX, koniecY, grubosc, kolor, kreski: stylLinii === 'dashed' ? [grubosc * 3, grubosc * 2] : stylLinii === 'dotted' ? [grubosc, grubosc] : undefined })
       }
@@ -100,7 +102,7 @@ export function zmierzScenePdf(strony: HTMLElement[]): ScenaPdf {
           const tekst = opis.teksty[indeksTekstu++]
           if (tekst === undefined || tekst.length !== (dziecko as Text).length) throw new Error('Model tekstu PDF nie odpowiada pomiarowi.')
           const zakres = document.createRange()
-          const rozmiar = parseFloat(styl.fontSize) * skala * 72 / 25.4
+          const rozmiar = parseFloat(styl.fontSize) * skalaStylu * 72 / 25.4
           const pogrubienie = parseInt(styl.fontWeight) >= 600 || styl.fontWeight === 'bold'
           const kursywa = styl.fontStyle === 'italic'
           const stylPdf: StylTekstuPdf = pogrubienie ? kursywa ? 'bolditalic' : 'bold' : kursywa ? 'italic' : 'normal'

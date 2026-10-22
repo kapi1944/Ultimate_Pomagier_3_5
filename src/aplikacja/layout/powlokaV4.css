@@ -6,7 +6,7 @@
     --ui-warstwa-panelu: 40;
     --ui-warstwa-menu: 50;
     --ui-warstwa-tooltipu: 60;
-    height: 100dvh;
+    height: calc(100dvh / var(--ui-skala-przegladarki, 1));
     min-height: 0;
     overflow: hidden;
   }
@@ -53,6 +53,14 @@
   }
   @container obszar-roboczy (max-width: 1120px) {
     .uklad-aplikacji .szczegoly-panel-jakosci { top: var(--ui-wysokosc-naglowka, 80px); bottom: var(--ui-wysokosc-docka, 0px); }
+  }
+  @media (min-width: 761px) {
+    .uklad-aplikacji .szczegoly-panel-jakosci {
+      top: 0;
+      bottom: auto;
+      height: calc(var(--ui-wysokosc-obszaru, 100dvh) - 2 * var(--ui-page-padding));
+      max-height: calc(var(--ui-wysokosc-obszaru, 100dvh) - 2 * var(--ui-page-padding));
+    }
   }
   .uklad-aplikacji .pulpit-drawer { top: var(--ui-wysokosc-naglowka, 80px); bottom: var(--ui-wysokosc-docka, 0px); height: auto; z-index: var(--ui-warstwa-panelu); }
   .uklad-aplikacji .miarka-stanu__tooltip { z-index: var(--ui-warstwa-tooltipu); }
