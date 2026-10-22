@@ -6,6 +6,7 @@ import './naglowekAplikacji.css'
 import { OdznakaStatusu, Przycisk } from '../../wspolne/komponenty/ElementyInterfejsu'
 import { pobierzKontekstNawigacji } from '../menu/pozycjeMenu'
 import type { WidokNawigacji } from '../nawigacja/typyNawigacji'
+import { informacjeOWersji } from '../wersjaAplikacji'
 
 type WlasciwosciNaglowkaAplikacji = {
   aktywnyWidok: WidokNawigacji
@@ -24,7 +25,7 @@ export default function NaglowekAplikacji({ aktywnyWidok, czyMenuPrzypiete, czyD
   const kontekst = pobierzKontekstNawigacji(aktywnyWidok)
 
   return <header className="naglowek-aplikacji">
-    <div className="naglowek-aplikacji__lewa-strefa"><span className="naglowek-aplikacji__marka">Ultimate Pomagier V4</span><nav aria-label="Bieżąca sekcja"><ol>{kontekst.map((etykieta, indeks) => <li key={indeks} aria-current={indeks === kontekst.length - 1 ? 'page' : undefined}>{etykieta}</li>)}</ol></nav></div>
+    <div className="naglowek-aplikacji__lewa-strefa"><span className="naglowek-aplikacji__marka">{informacjeOWersji.nazwaProduktu}</span><nav aria-label="Bieżąca sekcja"><ol>{kontekst.map((etykieta, indeks) => <li key={indeks} aria-current={indeks === kontekst.length - 1 ? 'page' : undefined}>{etykieta}</li>)}</ol></nav></div>
     <div className="naglowek-aplikacji__statusy"><OdznakaStatusu status="info">{czyMenuPrzypiete ? 'Menu przypięte' : 'Menu zwijane'}</OdznakaStatusu><Przycisk aria-label={czyDockWidoczny ? 'Ukryj dock' : 'Pokaż dock'} aria-pressed={czyDockWidoczny} onClick={przelaczDock}><span className="naglowek-aplikacji__dock-etykieta">{czyDockWidoczny ? 'Ukryj dock' : 'Pokaż dock'}</span><span className="naglowek-aplikacji__dock-krotki" aria-hidden="true">Dock</span></Przycisk></div>
     <section aria-label="Panel zalogowanego użytkownika" className="naglowek-aplikacji__panel-uzytkownika" style={{ borderColor: kolorRoli }}>
       <button aria-label={`Otwórz profil użytkownika ${nazwa}`} className="naglowek-aplikacji__avatar" onClick={otworzProfil} type="button"><AvatarUzytkownika uzytkownik={zalogowanyUzytkownik} /></button>

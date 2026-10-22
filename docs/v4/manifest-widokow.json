@@ -1360,6 +1360,16 @@
         "V4-06"
       ],
       "wspoldzieloneZ": []
+    },
+    "src/aplikacja/desktop/PanelAktualizacji.tsx": {
+      "zadanie": "V4-22",
+      "powierzchnie": [
+        "window.confirm('Czy zapisano otwarte formularze i kopię bezpieczeństwa? Instalacja zamknie aplikację, a następnie uruchomi ją ponownie.')"
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": [
+        "V4-02"
+      ]
     }
   },
   "realizacjaEtapow": {

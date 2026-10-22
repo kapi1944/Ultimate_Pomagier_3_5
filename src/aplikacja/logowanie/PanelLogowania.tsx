@@ -1,3 +1,4 @@
+import { informacjeOWersji } from '../wersjaAplikacji'
 import { useEffect, useState, type FormEvent } from 'react'
 import type { Uzytkownik } from '../../kartoteki/uzytkownicy/typyUzytkownikow'
 import { etykietyOrganizacji, etykietyRol, metadaneOdznak, pobierzNazweWyswietlanaUzytkownika } from '../../kartoteki/uzytkownicy/typyUzytkownikow'
@@ -20,7 +21,7 @@ export default function PanelLogowania({ aktywniUzytkownicy, zalogujUzytkownika 
     ustawBlad('')
   }
   return <main className="panel-logowania"><form className="panel-logowania__formularz" onSubmit={obsluzLogowanie}>
-    <header><img alt="Ultimate Pomagier" className="panel-logowania__logo" src="/logo-ultimate-pomagier.png" /><h1>Ultimate Pomagier V4</h1><p>Wybierz konto i przejdź do swojego obszaru pracy.</p><Komunikat>Lokalny tryb demonstracyjny — konto jest wybierane na tym urządzeniu.</Komunikat></header>
+    <header><img alt="Ultimate Pomagier" className="panel-logowania__logo" src="/logo-ultimate-pomagier.png" /><h1>{informacjeOWersji.nazwaProduktu}</h1><p>Wybierz konto i przejdź do swojego obszaru pracy.</p><Komunikat>Lokalny tryb demonstracyjny — konto jest wybierane na tym urządzeniu.</Komunikat></header>
     <div className="panel-logowania__wybor">
       {aktywniUzytkownicy.length ? <fieldset aria-describedby={blad ? 'blad-logowania' : undefined} aria-invalid={Boolean(blad)}><legend>Aktywne konto</legend><div className="panel-logowania__konta">{aktywniUzytkownicy.map((uzytkownik) => <label className="panel-logowania__konto" key={uzytkownik.id}>
         <input type="radio" name="wybor-konta" value={uzytkownik.id} checked={idUzytkownika === uzytkownik.id} onChange={() => { ustawIdUzytkownika(uzytkownik.id); ustawBlad('') }} aria-label={`${pobierzNazweWyswietlanaUzytkownika(uzytkownik)} — ${etykietyRol[uzytkownik.rola]}`} />

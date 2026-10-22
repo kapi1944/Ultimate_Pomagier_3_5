@@ -1,0 +1,20 @@
+[package]
+name = "ultimate-pomagier"
+version = "4.0.0"
+description = "Ultimate Pomagier"
+edition = "2021"
+rust-version = "1.85"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+serde_json = "1"
+tauri = { version = "2", features = [] }
+tauri-plugin-updater = "2"
+tauri-plugin-single-instance = "2"
+
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1

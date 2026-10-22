@@ -2,6 +2,8 @@ import { register } from 'node:module'
 import assert from 'node:assert/strict'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
+import { pobierzInformacjeOWersji } from '../skrypty/informacjeOWersji.mjs'
+globalThis.__INFORMACJE_O_WERSJI__ = pobierzInformacjeOWersji()
 register('./loaderKomponentow.mjs', import.meta.url)
 const { default: PanelLogowania } = await import('../src/aplikacja/logowanie/PanelLogowania.tsx')
 const { pobierzUzytkownikow } = await import('../src/kartoteki/uzytkownicy/magazynUzytkownikow.ts')
@@ -15,6 +17,6 @@ assert.equal((zawartosc.match(/type="radio"/g) ?? []).length, konta.length)
 assert.equal((zawartosc.match(/checked=""/g) ?? []).length, 1)
 assert.match(zawartosc, /<fieldset[^>]*><legend>Aktywne konto<\/legend>/)
 assert.match(zawartosc, /aria-label="Rola:/)
-assert.match(zawartosc, /Ultimate Pomagier V4/)
+assert.match(zawartosc, /Ultimate Pomagier 4\.0/)
 assert.doesNotMatch(zawartosc.match(/<button[^>]*>/)[0], /disabled/)
 console.log('V4-03: aktywne konta, natywny wybór klawiaturą, role i pusty stan — OK.')

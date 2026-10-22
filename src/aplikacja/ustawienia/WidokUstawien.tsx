@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import PanelAktualizacji from '../desktop/PanelAktualizacji'
+import { informacjeOWersji } from '../wersjaAplikacji'
 import { useKontekstUzytkownika } from '../logowanie/useKontekstUzytkownika'
 import { pobierzIdRozwijalnychPozycji } from '../menu/pozycjeMenu'
 import {
@@ -425,6 +427,12 @@ export default function WidokUstawien() {
       </nav>
 
       {aktywnaZakladka === 'OGOLNE' && <>
+        <section className="ustawienia__karta" aria-label="Informacje o wydaniu">
+          <h2>{informacjeOWersji.nazwaProduktu}</h2>
+          <p>Wersja techniczna: {informacjeOWersji.wersja}</p>
+          <p>Commit: <code>{informacjeOWersji.commit}</code>{informacjeOWersji.zmienioneZrodla ? ' (zmienione źródła)' : ''}</p>
+        </section>
+        <PanelAktualizacji />
         <section className="ustawienia__karta">
           <h2>Menu boczne</h2>
 

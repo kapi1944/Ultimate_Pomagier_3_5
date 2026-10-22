@@ -1,3 +1,4 @@
+import { informacjeOWersji } from '../wersjaAplikacji'
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { useKontekstUzytkownika } from '../logowanie/useKontekstUzytkownika'
 import type { WidokNawigacji } from '../nawigacja/typyNawigacji'
@@ -251,7 +252,7 @@ export default function MenuBoczne({
           </div>
           <div className="menu-boczne__marka">
             <img alt="Ultimate Pomagier" className="menu-boczne__logo" src="/logo-ultimate-pomagier.png" />
-            <strong>Ultimate Pomagier V4</strong>
+            <strong>{informacjeOWersji.nazwaProduktu}</strong>
 
           </div>
           <fieldset className="menu-boczne__tryb">
