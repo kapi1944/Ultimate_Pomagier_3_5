@@ -741,7 +741,7 @@
         "ObszarZPanelemGeneratora idPanelu=\"panel-ukladu-checklisty\" kluczPrzypiecia=\"ultimate-pomagier.panel-generatora.checklisty-paczek.przypiety\" kluczWysuwania=\"ultimate-pomagier.panel-generatora.checklisty-paczek.wysuwanie\" tytulPanelu=\"Edytuj układ\"",
         "details",
         "details className=\"checklista-paczki__karta\"",
-        "details className=\"checklista-paczki__paczka\" key={paczka.id} open",
+        "details className=\"checklista-paczki__paczka\" id={'paczka-' + paczka.id} key={paczka.id} open",
         "details className=\"checklista-paczki__szczegoly-pozycji\""
       ],
       "ukonczoneEtapy": [],
@@ -1152,9 +1152,10 @@
     "src/moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokNowychSzczegolowOrganizacyjnych.tsx": {
       "zadanie": "V4-07",
       "powierzchnie": [
-        "aside aria-label=\"Panel kontroli jakosci\" className={`szczegoly-panel-jakosci${czyPanelJakosciOtwarty ? ' szczegoly-panel-jakosci--otwarty' : ''}${czyPanelJakosciPrzypiety ? ' szczegoly-panel-jakosci--przypiety' : ''}`} id={idPaneluJakosci} onKeyDown={obsluzKlawiszPaneluJakosci} onMouseEnter={otworzPanelJakosci} onMouseLeave={schowajPanelJakosciJesliOdpiety}",
+        "aside inert={!czyPanelJakosciOtwarty} aria-label=\"Panel kontroli jakosci\" className={`szczegoly-panel-jakosci${czyPanelJakosciOtwarty ? ' szczegoly-panel-jakosci--otwarty' : ''}${czyPanelJakosciPrzypiety ? ' szczegoly-panel-jakosci--przypiety' : ''}`} id={idPaneluJakosci} onKeyDown={obsluzKlawiszPaneluJakosci} onMouseEnter={otworzPanelJakosci} onMouseLeave={schowajPanelJakosciJesliOdpiety}",
         "button aria-label={czyPanelJakosciPrzypiety ? 'Odepnij panel kontroli jakosci' : 'Przypnij panel kontroli jakosci'} className=\"szczegoly-panel-jakosci__przycisk\" onClick={przelaczPrzypieciePaneluJakosci} title={czyPanelJakosciPrzypiety ? 'Odepnij panel' : 'Przypnij panel'} type=\"button\"",
         "button aria-label={czyWysuwaniePaneluJakosciWlaczone ? 'Wylacz automatyczne wysuwanie panelu jakosci' : 'Wlacz automatyczne wysuwanie panelu jakosci'} className=\"szczegoly-panel-jakosci__przycisk\" onClick={przelaczWysuwaniePaneluJakosci} title={czyWysuwaniePaneluJakosciWlaczone ? 'Wylacz wysuwanie' : 'Wlacz wysuwanie'} type=\"button\"",
+        "div className=\"szczegoly-panel-jakosci__naglowek\"",
         "div className=\"szczegoly-panel-jakosci__sterowanie\"",
         "div className=\"szczegoly-panel-jakosci__strefa-aktywacji\" onMouseEnter={otworzPanelJakosciZKrawedzi} aria-hidden=\"true\"",
         "section className={`widok szczegoly-organizacyjne${czyPanelJakosciPrzypiety ? ' szczegoly-organizacyjne--panel-przypiety' : ''}${czyPanelJakosciOtwarty ? ' szczegoly-organizacyjne--panel-otwarty' : ''}`}",
@@ -1369,6 +1370,23 @@
       "ukonczoneEtapy": [],
       "wspoldzieloneZ": [
         "V4-02"
+      ]
+    },
+    "src/moduly/zamkniete/pulpit/MonitorWysylek.tsx": {
+      "zadanie": "V4-04",
+      "powierzchnie": [
+        "details className=\"monitor-wysylek__dokumenty\""
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
+    },
+    "src/wspolne/dokumenty/TrescStopkiOrganizatora.tsx": {
+      "zadanie": "V4-09",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": [
+        "V4-10",
+        "V4-11"
       ]
     }
   },

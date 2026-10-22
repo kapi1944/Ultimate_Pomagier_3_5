@@ -1,6 +1,9 @@
 name: Instalator Windows
 
 on:
+  push:
+    branches:
+      - codex/integracja-v4-desktop
   workflow_dispatch:
     inputs:
       podpisane:

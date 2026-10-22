@@ -170,6 +170,7 @@ Właściciel pliku obejmuje wszystkie warunki renderowania, stany pusty/błąd/�
 | `src/moduly/zakupy/magazyn/WidokMapyMagazynu.tsx` | V4-19 | — | — | 2 |
 | `src/moduly/zakupy/magazyn/WidokStanowMagazynowych.tsx` | V4-19 | — | — | 1 |
 | `src/moduly/zamkniete/pulpit/FormularzZakupu.tsx` | V4-04 | — | V4-04 | 2 |
+| `src/moduly/zamkniete/pulpit/MonitorWysylek.tsx` | V4-04 | — | — | 1 |
 | `src/moduly/zamkniete/pulpit/WidokPulpitu.tsx` | V4-04 | — | V4-04 | 11 |
 | `src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/KartaGrupySzkoleniowej.tsx` | V4-07 | — | — | 1 |
 | `src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/KontekstBledowPol.tsx` | V4-07 | — | — | 0 |
@@ -185,7 +186,7 @@ Właściciel pliku obejmuje wszystkie warunki renderowania, stany pusty/błąd/�
 | `src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/SekcjaFormularza.tsx` | V4-07 | — | — | 0 |
 | `src/moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokKopiiRoboczychSzczegolowOrganizacyjnych.tsx` | V4-06 | — | V4-06 | 0 |
 | `src/moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokListySzczegolowOrganizacyjnych.tsx` | V4-06 | — | V4-06 | 3 |
-| `src/moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokNowychSzczegolowOrganizacyjnych.tsx` | V4-07 | — | — | 7 |
+| `src/moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokNowychSzczegolowOrganizacyjnych.tsx` | V4-07 | — | — | 8 |
 | `src/moduly/zamkniete/szkolenia/WidokSzkolenZamknietych.tsx` | V4-05 | — | V4-05 | 0 |
 | `src/moduly/zamkniete/szkolenia/generator_szczegolow/WidokGeneratoraSzczegolow.tsx` | V4-07 | — | — | 0 |
 | `src/wspolne/dokumenty/AkcjeEksportuPdf.tsx` | V4-09 | V4-10, V4-11, V4-12, V4-13, V4-14, V4-15 | — | 1 |
@@ -193,6 +194,7 @@ Właściciel pliku obejmuje wszystkie warunki renderowania, stany pusty/błąd/�
 | `src/wspolne/dokumenty/ElementPomocniczyEdytora.tsx` | V4-09 | V4-10, V4-11, V4-12, V4-13, V4-14, V4-15 | — | 0 |
 | `src/wspolne/dokumenty/PanelKontroliJakosciDokumentu.tsx` | V4-09 | V4-10, V4-11, V4-12, V4-13, V4-14, V4-15, V4-16, V4-21 | — | 9 |
 | `src/wspolne/dokumenty/RendererSwobodnychBlokow.tsx` | V4-09 | V4-10, V4-11, V4-12, V4-13, V4-14, V4-15, V4-16 | — | 0 |
+| `src/wspolne/dokumenty/TrescStopkiOrganizatora.tsx` | V4-09 | V4-10, V4-11 | — | 0 |
 | `src/wspolne/dokumenty/WidokKopiiRoboczychGeneratora.tsx` | V4-08 | V4-10, V4-11, V4-12, V4-13, V4-14, V4-15 | — | 0 |
 | `src/wspolne/komponenty/AkcjeRekordu.tsx` | V4-08 | V4-06, V4-20, V4-21 | V4-01, V4-06 | 0 |
 | `src/wspolne/komponenty/ElementyInterfejsu.tsx` | V4-22 | V4-01, V4-02, V4-03, V4-04, V4-05, V4-06, V4-07, V4-08, V4-09, V4-10, V4-11, V4-12, V4-13, V4-14, V4-15, V4-16, V4-17, V4-18, V4-19, V4-20, V4-21, V4-23 | V4-01, V4-02 | 5 |
