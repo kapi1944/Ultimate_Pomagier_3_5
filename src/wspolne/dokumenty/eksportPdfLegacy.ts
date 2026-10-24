@@ -2,19 +2,34 @@ import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
 import { pobierzStronyDokumentu, pobierzWymiaryStronyPdf, pobierzPodzialStronA4, utworzNazwePlikuPdf, type UstawieniaEksportuPdf } from './eksportPdf'
 
+function przywrocSkaleKopii(kopia: Document) {
+  kopia.documentElement.style.zoom = '1'
+  kopia.documentElement.style.setProperty('--ui-skala-przegladarki', '1')
+}
+
 export async function pobierzRasterPdfLegacy({ obszarDokumentu, nazwaPliku, orientacja = 'pionowa', format = 'a4', marginesMm = 12 }: UstawieniaEksportuPdf) {
   await document.fonts?.ready
   await Promise.all(Array.from(obszarDokumentu.querySelectorAll('img')).map((obraz) => obraz.decode()))
   const stronyDokumentu = pobierzStronyDokumentu(obszarDokumentu)
   const wymiaryStrony = pobierzWymiaryStronyPdf(orientacja, format)
   const pdf = new jsPDF({ orientation: wymiaryStrony.orientacjaJsPdf, unit: 'mm', format, compress: true })
+  const stylInterfejsu = document.documentElement.style
+  const skalaOkna = (Number(stylInterfejsu.getPropertyValue('--ui-skala-interfejsu')) || 1)
+    / (Number(stylInterfejsu.getPropertyValue('--ui-skala-przegladarki')) || 1)
+  // Odtwarzamy viewport sprzed natywnego zoomu, aby eksport nie zmieniał breakpointów dokumentu.
+  const oknoEksportu = {
+    windowWidth: Math.round(window.innerWidth * skalaOkna),
+    windowHeight: Math.round(window.innerHeight * skalaOkna),
+  }
 
   if (stronyDokumentu.length) {
     for (const [indeks, stronaDokumentu] of stronyDokumentu.entries()) {
       const kanwaStrony = await html2canvas(stronaDokumentu, {
+        ...oknoEksportu,
         backgroundColor: '#ffffff',
         scale: 2,
         useCORS: true,
+        onclone: przywrocSkaleKopii,
         ignoreElements: (element) => element.hasAttribute('data-pomin-w-eksporcie'),
       })
 
@@ -27,9 +42,11 @@ export async function pobierzRasterPdfLegacy({ obszarDokumentu, nazwaPliku, orie
   }
 
   const kanwa = await html2canvas(obszarDokumentu, {
+    ...oknoEksportu,
     backgroundColor: '#ffffff',
     scale: 2,
     useCORS: true,
+    onclone: przywrocSkaleKopii,
     ignoreElements: (element) => element.hasAttribute('data-pomin-w-eksporcie'),
   })
   const szerokoscDrukuMm = wymiaryStrony.szerokoscMm - marginesMm * 2

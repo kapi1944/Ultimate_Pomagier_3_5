@@ -121,7 +121,7 @@ test('generatory korzystają ze wspólnego układu paneli, paska akcji i jawnej 
   assert.match(ukladGeneratora, /container: panel-generatora \/ inline-size/)
   assert.match(ukladGeneratora, /@container panel-generatora \(max-width: 760px\)/)
   assert.match(ukladGeneratora, /generator-z-panelem--przypiety[\s\S]*padding-right: min\(var\(--szerokosc-panelu-generatora\)/)
-  assert.doesNotMatch(ukladGeneratora, /generator-z-panelem--otwarty \.generator-z-panelem__tresc[\s\S]{0,80}padding-right/)
+  assert.match(ukladGeneratora, /generator-z-panelem--otwarty \.generator-z-panelem__tresc[\s\S]{0,80}padding-right/)
   assert.match(wspolnyUklad, /czyOtwarty && czyPrzypiety && 'generator-z-panelem--przypiety'/)
   assert.doesNotMatch(ukladGeneratora, /uklad-aplikacji__kolumna-glowna:has/)
   assert.match(ukladGeneratora, /container: obszar-roboczy \/ inline-size/)

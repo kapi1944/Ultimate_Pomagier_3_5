@@ -117,17 +117,21 @@ Właściciel pliku obejmuje wszystkie warunki renderowania, stany pusty/błąd/�
 | Plik powierzchni | Właściciel kodu | Współdzielony z | Udział w ukończonych etapach | Liczba sygnatur |
 | --- | --- | --- | --- | --- |
 | `src/App.tsx` | V4-02 | — | — | 0 |
+| `src/aplikacja/desktop/PanelAktualizacji.tsx` | V4-22 | V4-02 | — | 1 |
 | `src/aplikacja/layout/NaglowekAplikacji.tsx` | V4-02 | — | V4-02 | 1 |
 | `src/aplikacja/layout/UkladAplikacji.tsx` | V4-02 | V4-03, V4-04, V4-05, V4-06, V4-07, V4-08, V4-09, V4-10, V4-11, V4-12, V4-13, V4-14, V4-15, V4-16, V4-17, V4-18, V4-19, V4-20, V4-21, V4-22, V4-23 | V4-02, V4-05 | 7 |
 | `src/aplikacja/logowanie/KontekstUzytkownika.tsx` | V4-02 | — | — | 0 |
-| `src/aplikacja/logowanie/PanelLogowania.tsx` | V4-03 | — | V4-02, V4-03 | 9 |
+| `src/aplikacja/logowanie/PanelLogowania.tsx` | V4-03 | — | V4-02, V4-03 | 5 |
 | `src/aplikacja/menu/IkonaMenu.tsx` | V4-02 | V4-04, V4-05, V4-06, V4-07, V4-08, V4-09, V4-10, V4-11, V4-12, V4-13, V4-14, V4-15, V4-16, V4-17, V4-18, V4-19, V4-20, V4-21, V4-22, V4-23 | — | 0 |
 | `src/aplikacja/menu/MenuBoczne.tsx` | V4-02 | V4-05 | V4-02, V4-05 | 1 |
 | `src/aplikacja/ustawienia/WidokUstawien.tsx` | V4-22 | V4-01, V4-02 | V4-01, V4-02 | 5 |
 | `src/kartoteki/WidokKartotek.tsx` | V4-20 | V4-21 | — | 7 |
 | `src/kartoteki/szablony_dokumentow/WidokSzablonowDokumentow.tsx` | V4-21 | V4-20 | — | 1 |
 | `src/kartoteki/uzytkownicy/WidokProfiluUzytkownika.tsx` | V4-21 | — | — | 1 |
-| `src/kartoteki/uzytkownicy/WidokUzytkownikow.tsx` | V4-21 | — | — | 1 |
+| `src/kartoteki/uzytkownicy/OchronaKartotekiUzytkownikow.tsx` | V4-21 | — | — | 1 |
+| `src/kartoteki/uzytkownicy/PanelOperacjiKont.tsx` | V4-21 | — | — | 1 |
+| `src/kartoteki/uzytkownicy/PodgladUzytkownika.tsx` | V4-21 | — | — | 1 |
+| `src/kartoteki/uzytkownicy/WidokUzytkownikow.tsx` | V4-21 | — | — | 2 |
 | `src/kartoteki/uzytkownicy/komponenty/AvatarUzytkownika.tsx` | V4-21 | V4-02, V4-03, V4-04, V4-07, V4-20 | — | 0 |
 | `src/kartoteki/uzytkownicy/komponenty/OdznakaRoli.tsx` | V4-21 | V4-02, V4-03, V4-04, V4-07, V4-20 | — | 0 |
 | `src/kartoteki/uzytkownicy/komponenty/OdznakaUzytkownika.tsx` | V4-21 | V4-02, V4-03, V4-04, V4-07, V4-20 | — | 0 |
@@ -156,7 +160,7 @@ Właściciel pliku obejmuje wszystkie warunki renderowania, stany pusty/błąd/�
 | `src/moduly/dokumenty/replikator_dokumentow/WidokReplikatoraDokumentow.tsx` | V4-16 | — | — | 4 |
 | `src/moduly/dokumenty/wspolne/GranicaBleduGeneratora.tsx` | V4-09 | V4-02, V4-10, V4-11, V4-12, V4-13, V4-14, V4-15 | — | 0 |
 | `src/moduly/dokumenty/wspolne/StatusZapisuDokumentu.tsx` | V4-09 | V4-10, V4-11, V4-12, V4-13, V4-14, V4-15 | — | 0 |
-| `src/moduly/dokumenty/wspolne/UkladGeneratoraDokumentu.tsx` | V4-09 | V4-10, V4-11, V4-12, V4-13, V4-14, V4-15 | — | 8 |
+| `src/moduly/dokumenty/wspolne/UkladGeneratoraDokumentu.tsx` | V4-09 | V4-10, V4-11, V4-12, V4-13, V4-14, V4-15 | — | 9 |
 | `src/moduly/dokumenty/wspolne/WyborZapisanegoUkladu.tsx` | V4-09 | V4-10, V4-11, V4-12, V4-13, V4-14, V4-15 | — | 0 |
 | `src/moduly/narzedzia/WidokNarzedzi.tsx` | V4-17 | — | — | 0 |
 | `src/moduly/narzedzia/poprawiacz_prezentacji/PodgladStrukturalny.tsx` | V4-17 | — | — | 0 |
@@ -169,6 +173,7 @@ Właściciel pliku obejmuje wszystkie warunki renderowania, stany pusty/błąd/�
 | `src/moduly/zakupy/magazyn/WidokMapyMagazynu.tsx` | V4-19 | — | — | 2 |
 | `src/moduly/zakupy/magazyn/WidokStanowMagazynowych.tsx` | V4-19 | — | — | 1 |
 | `src/moduly/zamkniete/pulpit/FormularzZakupu.tsx` | V4-04 | — | V4-04 | 2 |
+| `src/moduly/zamkniete/pulpit/MonitorWysylek.tsx` | V4-04 | — | — | 1 |
 | `src/moduly/zamkniete/pulpit/WidokPulpitu.tsx` | V4-04 | — | V4-04 | 11 |
 | `src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/KartaGrupySzkoleniowej.tsx` | V4-07 | — | — | 1 |
 | `src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/KontekstBledowPol.tsx` | V4-07 | — | — | 0 |
@@ -184,7 +189,7 @@ Właściciel pliku obejmuje wszystkie warunki renderowania, stany pusty/błąd/�
 | `src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/SekcjaFormularza.tsx` | V4-07 | — | — | 0 |
 | `src/moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokKopiiRoboczychSzczegolowOrganizacyjnych.tsx` | V4-06 | — | V4-06 | 0 |
 | `src/moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokListySzczegolowOrganizacyjnych.tsx` | V4-06 | — | V4-06 | 3 |
-| `src/moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokNowychSzczegolowOrganizacyjnych.tsx` | V4-07 | — | — | 7 |
+| `src/moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokNowychSzczegolowOrganizacyjnych.tsx` | V4-07 | — | — | 9 |
 | `src/moduly/zamkniete/szkolenia/WidokSzkolenZamknietych.tsx` | V4-05 | — | V4-05 | 0 |
 | `src/moduly/zamkniete/szkolenia/generator_szczegolow/WidokGeneratoraSzczegolow.tsx` | V4-07 | — | — | 0 |
 | `src/wspolne/dokumenty/AkcjeEksportuPdf.tsx` | V4-09 | V4-10, V4-11, V4-12, V4-13, V4-14, V4-15 | — | 1 |
@@ -192,10 +197,12 @@ Właściciel pliku obejmuje wszystkie warunki renderowania, stany pusty/błąd/�
 | `src/wspolne/dokumenty/ElementPomocniczyEdytora.tsx` | V4-09 | V4-10, V4-11, V4-12, V4-13, V4-14, V4-15 | — | 0 |
 | `src/wspolne/dokumenty/PanelKontroliJakosciDokumentu.tsx` | V4-09 | V4-10, V4-11, V4-12, V4-13, V4-14, V4-15, V4-16, V4-21 | — | 9 |
 | `src/wspolne/dokumenty/RendererSwobodnychBlokow.tsx` | V4-09 | V4-10, V4-11, V4-12, V4-13, V4-14, V4-15, V4-16 | — | 0 |
+| `src/wspolne/dokumenty/TrescStopkiOrganizatora.tsx` | V4-09 | V4-10, V4-11 | — | 0 |
 | `src/wspolne/dokumenty/WidokKopiiRoboczychGeneratora.tsx` | V4-08 | V4-10, V4-11, V4-12, V4-13, V4-14, V4-15 | — | 0 |
 | `src/wspolne/komponenty/AkcjeRekordu.tsx` | V4-08 | V4-06, V4-20, V4-21 | V4-01, V4-06 | 0 |
 | `src/wspolne/komponenty/ElementyInterfejsu.tsx` | V4-22 | V4-01, V4-02, V4-03, V4-04, V4-05, V4-06, V4-07, V4-08, V4-09, V4-10, V4-11, V4-12, V4-13, V4-14, V4-15, V4-16, V4-17, V4-18, V4-19, V4-20, V4-21, V4-23 | V4-01, V4-02 | 5 |
 | `src/wspolne/komponenty/GaleriaKomponentow.tsx` | V4-22 | V4-01 | V4-01 | 2 |
+| `src/wspolne/komponenty/RegulacjaSzerokosci.tsx` | V4-02 | V4-07, V4-09, V4-10, V4-11, V4-12, V4-13, V4-14, V4-15 | — | 0 |
 | `src/wspolne/telefon/PoleTelefonu.tsx` | V4-07 | V4-20, V4-21 | — | 0 |
 | `src/aplikacja/layout/DockAplikacji.tsx` | V4-02 | — | V4-02 | 0 |
 | `src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/KartaRejestruSzczegolow.tsx` | V4-06 | — | V4-06 | 0 |

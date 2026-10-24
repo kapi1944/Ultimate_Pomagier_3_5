@@ -23,6 +23,8 @@ jobs:
         run: npm ci
       - name: Testy
         run: npm test
+      - name: Testy konfiguracji desktopowej
+        run: npm run test:desktop
       - name: Lint
         run: npm run lint
       - name: Build

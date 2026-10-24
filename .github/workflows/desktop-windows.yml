@@ -1,0 +1,71 @@
+name: Instalator Windows
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      podpisane:
+        description: Podpisane stabilne wydanie (wybierz tag vX.Y.Z)
+        type: boolean
+        default: false
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  instalator:
+    runs-on: windows-2022
+    steps:
+      - name: Pobranie źródeł
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Konfiguracja Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Konfiguracja Rust MSVC
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+          components: rustfmt
+      - name: Instalacja zależności
+        run: npm ci
+      - name: Testy aplikacji
+        run: npm test
+      - name: Lint
+        run: npm run lint
+      - name: Testy Launchera
+        run: npm run test:launcher
+      - name: Testy pakietowania i aktualizacji
+        run: npm run test:desktop
+      - name: Formatowanie kodu Rust
+        run: cargo fmt --manifest-path src-tauri/Cargo.toml --check
+      - name: Build testowego instalatora (aktualizacje wyłączone)
+        if: ${{ !inputs.podpisane }}
+        run: npm run desktop:build
+      - name: Build podpisanego stabilnego instalatora
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.podpisane }}
+        env:
+          TAURI_UPDATER_PUBLIC_KEY: ${{ vars.TAURI_UPDATER_PUBLIC_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: npm run desktop:release
+      - name: Zachowanie instalatora i sum kontrolnych
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ultimate-Pomagier-Windows-${{ github.run_number }}
+          path: |
+            wydanie-desktop/testowe/Ultimate_Pomagier_*.exe*
+            wydanie-desktop/testowe/wersja.json
+            wydanie-desktop/podpisane/Ultimate_Pomagier_*.exe*
+            wydanie-desktop/podpisane/wersja.json
+            wydanie-desktop/podpisane/latest.json
+          if-no-files-found: error
+          retention-days: 30

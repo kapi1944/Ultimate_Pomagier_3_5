@@ -5,6 +5,7 @@ import { analizujMigracjeStarszychDokumentow, wykonajMigracjeStarszychDokumentow
 import { utworzNowyDokument } from '../src/wspolne/dokumenty/modelDokumentu.ts'
 import { kluczRejestruDokumentow, pobierzStanRejestruDokumentow } from '../src/wspolne/dokumenty/rejestrDokumentow.ts'
 import { kluczRepozytoriumDokumentow } from '../src/wspolne/dokumenty/repozytoriumDokumentow.ts'
+import { informacjeOWersji } from '../src/aplikacja/wersjaAplikacji.ts'
 
 const magazyn = new Map<string, string>()
 globalThis.localStorage = {
@@ -29,6 +30,8 @@ test('pełny i częściowy backup mają manifest oraz nie obejmują sesji', () =
   const pelny = utworzBackup()
   const czesciowy = utworzBackup(['DOKUMENTY'])
   assert.equal(pelny.manifest.wersjaFormatu, 1)
+  assert.equal(pelny.manifest.wersjaAplikacji, informacjeOWersji.wersja)
+  assert.equal(sprawdzBackup(JSON.stringify({ ...pelny, manifest: { ...pelny.manifest, wersjaAplikacji: 'ultimate-pomagier-3.5' } })).poprawny, true)
   assert.ok(pelny.manifest.sumaKontrolna)
   assert.ok(pelny.dane['ultimatePomagier.uzytkownicy.v1'])
   assert.equal(pelny.dane['ultimatePomagier.sesjaUzytkownika.v1'], undefined)

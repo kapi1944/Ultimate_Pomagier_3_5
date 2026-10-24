@@ -16,7 +16,7 @@ test('checklisty: bezpośrednie wejście przy quota zachowuje formularz, shell i
     const bledy = []
     strona.on('pageerror', (blad) => bledy.push(blad.stack || blad.message))
     await strona.goto(`${adres}/dokumenty/checklisty-paczek`)
-    await strona.getByRole('button', { name: 'Zaloguj', exact: true }).click()
+    await strona.getByRole('button', { name: 'Otwórz demonstrację Architekta', exact: true }).click()
     await strona.getByLabel('Tytuł szkolenia', { exact: true }).fill('Istniejąca checklista przed quota')
     await strona.getByRole('button', { name: 'Zapisz jako roboczą', exact: true }).click()
     const adresIstniejacej = strona.url()
@@ -57,7 +57,7 @@ test('checklisty: routing, formularz, zapis, stare dane, eksport i izolacja awar
     strona.on('requestfailed', (zadanie) => { if (!zadanie.failure()?.errorText.includes('ERR_ABORTED')) bledySieci.push(zadanie.url()) })
     strona.on('response', (odpowiedz) => { if (odpowiedz.status() >= 400) bledySieci.push(`${odpowiedz.status()} ${odpowiedz.url()}`) })
     await strona.goto(`${adres}/dokumenty/checklisty-paczek`)
-    await strona.getByRole('button', { name: 'Zaloguj', exact: true }).click()
+    await strona.getByRole('button', { name: 'Otwórz demonstrację Architekta', exact: true }).click()
     await strona.getByLabel('Tytuł szkolenia', { exact: true }).waitFor()
     assert.equal(await strona.getByLabel('Tytuł szkolenia', { exact: true }).inputValue(), '')
     assert.match(strona.url(), /checklisty-paczek\/[^/]+$/)
@@ -193,7 +193,7 @@ test('1.2.3: kompletowanie 30 egzemplarzy, dwie paczki, ponowienie zapisu, Pulpi
     const bledy = []
     strona.on('pageerror', (blad) => bledy.push(blad.message))
     await strona.goto(adres)
-    await strona.getByRole('button', { name: 'Zaloguj', exact: true }).click()
+    await strona.getByRole('button', { name: 'Otwórz demonstrację Architekta', exact: true }).click()
     const mail = await readFile(new URL('./fixtures/mailDyspozycjeMaterialowe.txt', import.meta.url), 'utf8')
     const identyfikatory = await strona.evaluate(async (tekstMaila) => {
       const { poczatkoweDaneFormularza, poczatkowaGrupa, poczatkowiAdresaci } = await import('/src/moduly/zamkniete/szczegoly_organizacyjne/danePoczatkowe.ts')
@@ -376,7 +376,7 @@ test('checklisty: pisanie nie zapisuje rejestru co znak, podpowiedzi zachowują 
   try {
     const strona = await przegladarka.newPage()
     await strona.goto(adres + '/dokumenty/checklisty-paczek')
-    await strona.getByRole('button', { name: 'Zaloguj', exact: true }).click()
+    await strona.getByRole('button', { name: 'Otwórz demonstrację Architekta', exact: true }).click()
     const tytul = strona.getByLabel('Tytuł szkolenia', { exact: true })
     await tytul.waitFor()
     await strona.evaluate(() => {

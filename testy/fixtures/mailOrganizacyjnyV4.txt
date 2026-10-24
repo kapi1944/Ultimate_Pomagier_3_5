@@ -1,0 +1,62 @@
+Temat: 28-29.10.2026 szczegóły organizacyjne, Polskie Zakłady Lotnicze, „Lean management i kaizen - system ciągłego doskonalenia w organizacji”, Mielec
+Nadawca:
+Dawid Chyła <d.chyla@szkolenia-semper.pl>
+Data: 22.10.2026, 10:00
+Adresat: Organizator <organizator@example.org>
+
+Grupa 1
+Data: 28-29.10.2026 r.
+Liczba godzin: 16
+
+"Lean management i kaizen - system ciągłego doskonalenia w organizacji"
+
+-Nazwa firmy:
+
+Polskie Zakłady Lotnicze Sp. z o.o.
+ul. Wojska Polskiego 3
+39-300 Mielec
+
+-NIP: 0000000000
+-Cena: 8.700,00 zł 23%
+-Termin płatności: 60 dni
+-Trener Prowadzący: dr Renata Stefaniuk
+-Liczba uczestników: 19 osób
+
+-Miejsce szkolenia zapewnione przez Zamawiającego:
+
+Hotel Bulwary
+ul. Rzeczna 8
+39-300 Mielec
+
+-Zakwaterowanie Trenera:
+Hotel Noclegowy
+ul. Hotelowa 20
+39-300 Mielec
+Zakwaterowanie od 27.10.2026 do 29.10.2026
+
+Materiały na adres:
+Odbiorca przesyłki
+ul. Dostawcza 15
+30-001 Kraków
+Kontakt: Anna Testowa
+
+Grupa 1
+Materiały szkoleniowe: online
+Lista obecności: drukuje Klient
+Ankiety: drukuje organizator
+
+Harmonogram szkolenia:
+28.10.2026 godz. 9:00 – rozpoczęcie
+29.10.2026 godz. 15:00 – zakończenie
+
+Program szkolenia:
+Tytuł szkolenia: Nagłówek modułu nie jest tytułem szkolenia
+Data: 01.11.2026
+Trener: Osoba z programu
+Miejsce szkolenia: Adres z programu
+
+--
+Z pozdrowieniami
+Dawid Chyła
+Specjalista ds. projektów dedykowanych
+Dział Szkoleń

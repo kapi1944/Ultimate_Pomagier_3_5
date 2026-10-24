@@ -105,11 +105,23 @@ body,
   min-height: 100%;
 }
 
+@media screen {
+  html { zoom: var(--ui-skala-przegladarki, 1); }
+}
+
+@media print {
+  html { zoom: 1 !important; }
+}
+
 body {
   min-width: 320px;
   min-height: 100vh;
   background: var(--ui-tlo);
   color: var(--ui-tekst);
+}
+
+@media screen {
+  body { min-height: calc(100vh / var(--ui-skala-przegladarki, 1)); }
 }
 
 button,

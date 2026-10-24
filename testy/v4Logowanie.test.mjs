@@ -2,19 +2,17 @@ import { register } from 'node:module'
 import assert from 'node:assert/strict'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
+import { pobierzInformacjeOWersji } from '../skrypty/informacjeOWersji.mjs'
+globalThis.__INFORMACJE_O_WERSJI__ = pobierzInformacjeOWersji()
 register('./loaderKomponentow.mjs', import.meta.url)
 const { default: PanelLogowania } = await import('../src/aplikacja/logowanie/PanelLogowania.tsx')
-const { pobierzUzytkownikow } = await import('../src/kartoteki/uzytkownicy/magazynUzytkownikow.ts')
-const pusta = renderToStaticMarkup(createElement(PanelLogowania, { aktywniUzytkownicy: [], zalogujUzytkownika: () => { throw new Error('Render nie powinien logować') } }))
-assert.match(pusta, /Brak aktywnych kont/)
-assert.match(pusta.match(/<button[^>]*>/)[0], /disabled=""/)
-assert.match(pusta.match(/<button[^>]*>/)[0], /type="submit"/)
-const konta = pobierzUzytkownikow().filter((konto) => konto.status === 'AKTYWNY').slice(0, 3)
-const zawartosc = renderToStaticMarkup(createElement(PanelLogowania, { aktywniUzytkownicy: konta, zalogujUzytkownika: () => { throw new Error('Wybór wymaga wysłania formularza') } }))
-assert.equal((zawartosc.match(/type="radio"/g) ?? []).length, konta.length)
-assert.equal((zawartosc.match(/checked=""/g) ?? []).length, 1)
-assert.match(zawartosc, /<fieldset[^>]*><legend>Aktywne konto<\/legend>/)
-assert.match(zawartosc, /aria-label="Rola:/)
-assert.match(zawartosc, /Ultimate Pomagier V4/)
-assert.doesNotMatch(zawartosc.match(/<button[^>]*>/)[0], /disabled/)
-console.log('V4-03: aktywne konta, natywny wybór klawiaturą, role i pusty stan — OK.')
+
+const zawartosc = renderToStaticMarkup(createElement(PanelLogowania, { otworzDemonstracje: () => { throw new Error('Render nie otwiera sesji') } }))
+assert.match(zawartosc, /Login lub adres e-mail/)
+assert.match(zawartosc, /type="password"/)
+assert.match(zawartosc, /autoComplete="current-password"/i)
+assert.match(zawartosc, /Zapamiętaj login/)
+assert.match(zawartosc, /Logowanie produkcyjne jest niedostępne/)
+assert.doesNotMatch(zawartosc, /type="radio"|Aktywne konto|Otwórz demonstrację/)
+assert.match(zawartosc, /Ultimate Pomagier 4\.0/)
+console.log('V4: formularz hasła, brak listy kont, brak pozorowanego uwierzytelniania — OK.')

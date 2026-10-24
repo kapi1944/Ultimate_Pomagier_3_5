@@ -11,7 +11,7 @@ test('menu: hierarchia, zawijanie, aktywność, klawiatura i zwijanie', { timeou
   try {
     const strona = await przegladarka.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 })
     await strona.goto(adres)
-    await strona.getByRole('button', { name: 'Zaloguj', exact: true }).click()
+    await strona.getByRole('button', { name: 'Otwórz demonstrację Architekta', exact: true }).click()
     const menu = strona.getByRole('complementary', { name: 'Menu główne' })
     await strona.getByRole('button', { name: 'Otwórz menu', exact: true }).click()
     await menu.getByRole('button', { name: /Przypnij Menu/ }).click()

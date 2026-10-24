@@ -1,0 +1,51 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "Ultimate Pomagier",
+  "version": "../package.json",
+  "identifier": "pl.ultimatepomagier.desktop",
+  "build": {
+    "beforeDevCommand": "npm run dev -- --host localhost --port 1420 --strictPort",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build && node skrypty/kontrolaTrybuFrontendu.mjs",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [{
+      "label": "main",
+      "title": "Ultimate Pomagier",
+      "width": 1440,
+      "height": 960,
+      "minWidth": 1024,
+      "minHeight": 700,
+      "useHttpsScheme": true,
+      "dragDropEnabled": false,
+      "zoomHotkeysEnabled": false
+    }],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost https://ipc.localhost; frame-src 'self' blob:; object-src 'self' blob:"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "createUpdaterArtifacts": false,
+    "icon": ["icons/icon.ico", "icons/128x128.png"],
+    "windows": {
+      "webviewInstallMode": { "type": "offlineInstaller", "silent": true },
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": ["Polish"],
+        "customLanguageFiles": { "Polish": "nsis/polski.nsh" },
+        "displayLanguageSelector": false,
+        "startMenuFolder": "Ultimate Pomagier"
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "",
+      "endpoints": ["https://github.com/kapi1944/Ultimate_Pomagier_3_5/releases/latest/download/latest.json"],
+      "windows": { "installMode": "passive" }
+    }
+  }
+}

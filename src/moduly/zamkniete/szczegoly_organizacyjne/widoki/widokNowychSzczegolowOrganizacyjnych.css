@@ -1498,3 +1498,14 @@ button.szczegoly-checklista__naglowek:hover {
   background: color-mix(in srgb, var(--ui-pole) 42%, transparent);
   padding: 5px 8px;
 }
+@media screen and (min-width: 761px) {
+  .szczegoly-organizacyjne--panel-otwarty {
+    grid-template-columns: minmax(0, 1fr) min(var(--szerokosc-panelu-jakosci), 45cqw);
+  }
+  .uklad-aplikacji .szczegoly-panel-jakosci {
+    position: sticky;
+    inset: 0 auto auto;
+    grid-column: 2;
+    width: min(var(--szerokosc-panelu-jakosci), 45cqw);
+  }
+}

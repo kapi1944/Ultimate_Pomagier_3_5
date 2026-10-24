@@ -119,6 +119,9 @@ try {
     Write-Host "============================================`n       ULTIMATE POMAGIER — LAUNCHER`n============================================"
     Write-Host '[1/5] Sprawdzanie środowiska...'
     if (-not (Test-Path -LiteralPath (Join-Path $katalogProjektu 'package.json'))) { throw 'Nieprawidłowy katalog projektu: brak package.json.' }
+    $pakiet = Get-Content -LiteralPath (Join-Path $katalogProjektu 'package.json') -Raw | ConvertFrom-Json
+    $wersjaMarketingowa = $pakiet.version -replace '\.0$', ''
+    Write-Host "[WERSJA] Ultimate Pomagier $wersjaMarketingowa"
     foreach ($polecenie in @('node', 'npm.cmd')) {
         if (-not (Get-Command $polecenie -ErrorAction SilentlyContinue)) { throw "Nie znaleziono $polecenie. Zainstaluj Node.js albo sprawdź konfigurację PATH." }
         & $polecenie --version

@@ -8,6 +8,13 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+src-tauri/target/
+src-tauri/gen/
+wydanie-desktop/
+.desktop-icons/
+.desktop-tools/
+*.key
+*.key.pub
 .launcher/
 dist
 dist-ssr

@@ -310,9 +310,10 @@ export default function UkladAplikacji() {
     if (!element || !obszar) return
     const obserwator = new ResizeObserver(() => {
       const geometria = obszar.getBoundingClientRect()
-      element.style.setProperty('--ui-wysokosc-naglowka', geometria.top + 'px')
-      element.style.setProperty('--ui-wysokosc-docka', Math.max(0, window.innerHeight - geometria.bottom) + 'px')
-      element.style.setProperty('--ui-wysokosc-obszaru', geometria.height + 'px')
+      const skala = Number(document.documentElement.style.getPropertyValue('--ui-skala-przegladarki')) || 1
+      element.style.setProperty('--ui-wysokosc-naglowka', geometria.top / skala + 'px')
+      element.style.setProperty('--ui-wysokosc-docka', Math.max(0, window.innerHeight - geometria.bottom) / skala + 'px')
+      element.style.setProperty('--ui-wysokosc-obszaru', geometria.height / skala + 'px')
     })
     obserwator.observe(obszar)
     return () => obserwator.disconnect()

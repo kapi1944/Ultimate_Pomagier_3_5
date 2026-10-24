@@ -32,11 +32,12 @@ export const daneStartoweUzytkownikow: Uzytkownik[] = [
 ]
 
 export function utworzPustyFormularz(): FormularzUzytkownika {
-  return { zwrot: '', tytulNaukowy: '', imie: '', nazwisko: '', pseudonim: '', emaile: [''], telefony: [normalizujTelefon({ prefiks: '+48', numer: '', krajIso2: 'PL' })], login: '', rola: 'PRACOWNIK', organizacja: 'SEMPER' as OrganizacjaUzytkownika, odznaki: [], status: 'AKTYWNY', kolorProfilu: '#38761d', aliasyHistoryczne: [], wymagaZmianyHasla: false }
+  return { zwrot: '', tytulNaukowy: '', imie: '', nazwisko: '', pseudonim: '', emaile: [''], telefony: [normalizujTelefon({ prefiks: '+48', numer: '', krajIso2: 'PL' })], login: '', rola: 'PRACOWNIK', organizacja: 'SEMPER' as OrganizacjaUzytkownika, odznaki: [], status: 'UTWORZONY', kolorProfilu: '#38761d', aliasyHistoryczne: [], wymagaZmianyHasla: false }
 }
 
 export function mapujUzytkownikaNaFormularz(uzytkownik: Uzytkownik): FormularzUzytkownika {
   const formularz = { ...uzytkownik, emaile: [...uzytkownik.emaile], telefony: uzytkownik.telefony.map(normalizujTelefon), odznaki: [...uzytkownik.odznaki], aliasyHistoryczne: [...uzytkownik.aliasyHistoryczne] }
+  Reflect.deleteProperty(formularz, 'statusUwierzytelniania')
   Reflect.deleteProperty(formularz, 'id')
   Reflect.deleteProperty(formularz, 'ostatnieLogowanie')
   Reflect.deleteProperty(formularz, 'email')

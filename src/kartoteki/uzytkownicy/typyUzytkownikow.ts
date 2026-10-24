@@ -19,7 +19,7 @@ export const odznakiUzytkownikow = ['WYSYLACZ', 'AKCEPTUJACY', 'EKSPORTER', 'ROZ
 
 export type OdznakaUzytkownika = (typeof odznakiUzytkownikow)[number]
 
-export const statusyUzytkownikow = ['AKTYWNY', 'ZABLOKOWANY', 'NIEAKTYWNY'] as const
+export const statusyUzytkownikow = ['UTWORZONY', 'OCZEKUJE_NA_AKTYWACJE', 'AKTYWNY', 'ZABLOKOWANY', 'NIEAKTYWNY'] as const
 
 export type StatusUzytkownika = (typeof statusyUzytkownikow)[number]
 
@@ -54,6 +54,7 @@ export type Uzytkownik = {
   przypisanyKlientId?: string
   przypisanyTrenerId?: string
   wymagaZmianyHasla: boolean
+  statusUwierzytelniania?: 'NIESKONFIGUROWANE' | 'OCZEKUJE_NA_AKTYWACJE' | 'SKONFIGUROWANE'
   wersjaUprawnien: number
   ostatnieLogowanie: string | null
   utworzono: string

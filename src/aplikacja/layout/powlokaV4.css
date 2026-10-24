@@ -6,12 +6,12 @@
     --ui-warstwa-panelu: 40;
     --ui-warstwa-menu: 50;
     --ui-warstwa-tooltipu: 60;
-    height: 100dvh;
+    height: calc(100dvh / var(--ui-skala-przegladarki, 1));
     min-height: 0;
     overflow: hidden;
   }
   .uklad-aplikacji .uklad-aplikacji__kolumna-glowna { height: 100%; margin-left: var(--ui-rail); transition: margin-left var(--ui-transition-ms); }
-  .uklad-aplikacji--menu-przypiete .uklad-aplikacji__kolumna-glowna { margin-left: var(--szerokosc-menu-bocznego); }
+  .uklad-aplikacji:has(.menu-boczne--otwarte) .uklad-aplikacji__kolumna-glowna { margin-left: var(--szerokosc-menu-bocznego); }
   .uklad-aplikacji .uklad-aplikacji__obszar-roboczy { min-height: 0; overflow: auto; overscroll-behavior: contain; padding: var(--ui-page-padding); isolation: isolate; scroll-padding-block: 16px; }
   .uklad-aplikacji .menu-boczne { z-index: var(--ui-warstwa-menu); width: var(--ui-rail); padding-top: 60px; transform: none; transition: width var(--ui-transition-ms) ease; background: var(--ui-panel); }
   .uklad-aplikacji .menu-boczne--otwarte { width: var(--szerokosc-menu-bocznego); }
@@ -54,11 +54,20 @@
   @container obszar-roboczy (max-width: 1120px) {
     .uklad-aplikacji .szczegoly-panel-jakosci { top: var(--ui-wysokosc-naglowka, 80px); bottom: var(--ui-wysokosc-docka, 0px); }
   }
+  @media (min-width: 761px) {
+    .uklad-aplikacji .szczegoly-panel-jakosci {
+      top: 0;
+      bottom: auto;
+      height: calc(var(--ui-wysokosc-obszaru, 100dvh) - 2 * var(--ui-page-padding));
+      max-height: calc(var(--ui-wysokosc-obszaru, 100dvh) - 2 * var(--ui-page-padding));
+    }
+  }
   .uklad-aplikacji .pulpit-drawer { top: var(--ui-wysokosc-naglowka, 80px); bottom: var(--ui-wysokosc-docka, 0px); height: auto; z-index: var(--ui-warstwa-panelu); }
   .uklad-aplikacji .miarka-stanu__tooltip { z-index: var(--ui-warstwa-tooltipu); }
   .powloka__pomin { position: fixed; top: -120px; left: 90px; z-index: 100; background: var(--ui-panel); color: var(--ui-tekst); border: 2px solid var(--ui-focus); padding: 12px; }
   .powloka__pomin:focus { top: 8px; }
   @media (max-width: 760px) {
+    .uklad-aplikacji { --szerokosc-menu-bocznego: var(--ui-menu-width, 280px); }
     .uklad-aplikacji .uklad-aplikacji__kolumna-glowna { margin-left: 0; }
     .uklad-aplikacji .menu-boczne { width: min(86vw, var(--szerokosc-menu-bocznego)); transform: translateX(-100%); transition: transform var(--ui-transition-ms); }
     .uklad-aplikacji .menu-boczne--otwarte { transform: translateX(0); }

@@ -206,11 +206,16 @@ const panelEdycji = renderToStaticMarkup(createElement(PanelEdycjiSwobodnychBlok
 assert.match(panelEdycji, /Edytuj układ szablonu<input[^>]*role="switch"[^>]*checked/)
 
 const listaBezOdstepu = { ...domyslne, odstepPodTerminemMm: 0 }
-assert.equal(pobierzWysokoscNaglowkaListy(domyslne), 62.8)
-assert.equal(pobierzWysokoscNaglowkaListy(listaBezOdstepu), 56)
+const wysokoscBezOdstepu = pobierzWysokoscNaglowkaListy(listaBezOdstepu)
+assert.ok(wysokoscBezOdstepu > 0)
+assert.equal(pobierzWysokoscNaglowkaListy(domyslne), wysokoscBezOdstepu + pobierzOdstepPodTerminemListy(domyslne))
+const dlugiTytul = { ...domyslne, tytulSzkolenia: 'Bardzo długi tytuł szkolenia '.repeat(30) }
+assert.ok(pobierzWysokoscNaglowkaListy(dlugiTytul) > pobierzWysokoscNaglowkaListy(domyslne))
+const wysokieLogo = { ...listaBezOdstepu, blokiSwobodne: listaBezOdstepu.blokiSwobodne.map((blok) => blok.id === 'lista-logo' ? { ...blok, yMm: 10, wysokoscMm: 80 } : blok) }
+assert.equal(pobierzWysokoscNaglowkaListy(wysokieLogo), 80)
 assert.equal(pobierzOdstepPodTerminemListy(listaBezOdstepu), 0)
 const listaZOdstepem = { ...domyslne, odstepPodTerminemMm: 2 }
-assert.equal(pobierzWysokoscNaglowkaListy(listaZOdstepem), 58)
+assert.equal(pobierzWysokoscNaglowkaListy(listaZOdstepem), wysokoscBezOdstepu + 2)
 assert.equal(deserializujDaneListyObecnosci(serializujDaneListyObecnosci(listaZOdstepem)).odstepPodTerminemMm, 2)
 assert.equal(deserializujDaneListyObecnosci(serializujDaneListyObecnosci(listaBezOdstepu)).odstepPodTerminemMm, 0)
 assert.equal(deserializujDaneListyObecnosci(JSON.stringify({ ...domyslne, odstepPodTerminemMm: -5 })).odstepPodTerminemMm, 0)
@@ -218,7 +223,7 @@ assert.equal(deserializujDaneListyObecnosci(JSON.stringify({ ...domyslne, odstep
 assert.equal(deserializujDaneListyObecnosci(JSON.stringify({ ...domyslne, odstepPodTerminemMm: 'błąd' })).odstepPodTerminemMm, undefined)
 assert.ok(pobierzLiczbeWierszyNaStronieListyObecnosci({ ...domyslne, odstepPodTerminemMm: 30 }) < pobierzLiczbeWierszyNaStronieListyObecnosci(domyslne))
 const htmlMalegoOdstepu = renderToStaticMarkup(createElement(Renderer, { dane: listaZOdstepem }))
-assert.ok(htmlMalegoOdstepu.includes('min-height:' + (58 / 1.9) + 'cqw'))
+assert.ok(htmlMalegoOdstepu.includes('min-height:' + ((wysokoscBezOdstepu + 2) / 1.9) + 'cqw'))
 assert.ok(renderToStaticMarkup(createElement(KontrolkiTytulu, { dane: listaZOdstepem, ustawDane: () => {} })).includes('Odstęp pod terminem i miejscem'))
 
 const { pobierzTrenerowZKartoteki } = await import('../src/kartoteki/trenerzyKartoteki.ts')

@@ -20,7 +20,7 @@ test('karty na drzwi: typografia, zapis, izolacja kart, szablony, druk i PDF', {
     const bledy = []
     strona.on('pageerror', (blad) => bledy.push(blad.message))
     await strona.goto(`${adres}/dokumenty/karta-na-drzwi`)
-    await strona.getByRole('button', { name: 'Zaloguj', exact: true }).click()
+    await strona.getByRole('button', { name: 'Otwórz demonstrację Architekta', exact: true }).click()
     async function otworzPanel() {
       if (await strona.locator('#panel-karty-na-drzwi').getAttribute('aria-hidden') === 'true') await strona.getByRole('button', { name: 'Edytuj układ', exact: true }).click()
       const przypnij = strona.getByRole('button', { name: '📌 Przypnij panel', exact: true })

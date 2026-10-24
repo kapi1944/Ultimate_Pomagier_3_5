@@ -1,4 +1,5 @@
 import { pobierzTrenerowZKartoteki } from '../../../../kartoteki/trenerzyKartoteki'
+import { pobierzUzytkownikow } from '../../../../kartoteki/uzytkownicy/magazynUzytkownikow'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   pobierzLokalizacjeZMagazynu,
@@ -16,7 +17,6 @@ import {
 import { zbudujBledyDanychKlienta, pobierzEfektywneStatusyPolOdbiorcy } from '../logikaDanychOdbiorcy'
 import { dodajGrupeDoListy, przetworzUsuniecieGrupy } from '../logikaGrupSzkoleniowych'
 import { zbudujBledyDynamicznychPolGrupy } from '../logikaPolDynamicznych'
-import { polaWymaganePoImporcie } from '../stale'
 import { czyKontoMozeWidziecKopie, pobierzAktywneKontoSzczegolow } from '../uzytkownicySzczegolow'
 import type {
   AutosaveSzczegolow,
@@ -54,6 +54,7 @@ import {
   zbudujWersjeRobocza,
 } from '../uslugi/magazynWersjiRoboczych'
 import { parsujMailaSzczegolow } from '../uslugi/parserMailaSzczegolow'
+import { przygotujMapowanieImportuMaila } from '../uslugi/mapowanieImportuMaila'
 import { czyKontoMozeEdytowacSzczegoly } from '../uzytkownicySzczegolow'
 import { pobierzIdPola } from '../komponenty/identyfikatoryPol'
 
@@ -736,33 +737,31 @@ export function useGeneratorSzczegolow() {
       return
     }
 
-    const wynik = parsujMailaSzczegolow(trescMaila)
-    ustawDaneFormularza((obecne) => scalDaneFormularza(obecne, wynik.daneFormularza))
+    const lokalizacje = pobierzLokalizacjeZMagazynu()
+    const wynik = parsujMailaSzczegolow(trescMaila, {
+      trenerzy: pobierzTrenerowZKartoteki(),
+      opiekunowie: pobierzUzytkownikow(),
+      czyLokalizacjaPotwierdzona: (miejsce) => Boolean(znajdzLokalizacjeDlaMiejsca(miejsce, lokalizacje)?.status_odmiany),
+    })
+    const mapowanie = przygotujMapowanieImportuMaila(wynik, daneFormularza, grupy, statusyPol)
+    ustawDaneFormularza((obecne) => scalDaneFormularza(obecne, mapowanie.daneFormularza))
     ustawGrupy((obecne) => {
-      const pierwsza = scalGrupe(obecne[0] ?? normalizujGrupe(), wynik.pierwszaGrupa)
-      if (wynik.daneFormularza.dyspozycjeMaterialowe) {
-        pierwsza.dyspozycjeMaterialowe = { ...pierwsza.dyspozycjeMaterialowe, ...wynik.daneFormularza.dyspozycjeMaterialowe }
-        pierwsza.zrodloImportuMaila = wynik.daneFormularza.zrodloImportuMaila
+      const pierwsza = scalGrupe(obecne[0] ?? normalizujGrupe(), mapowanie.pierwszaGrupa)
+      if (mapowanie.daneFormularza.dyspozycjeMaterialowe) {
+        pierwsza.dyspozycjeMaterialowe = { ...pierwsza.dyspozycjeMaterialowe, ...mapowanie.daneFormularza.dyspozycjeMaterialowe }
+        pierwsza.zrodloImportuMaila = mapowanie.daneFormularza.zrodloImportuMaila
       }
-      return [pierwsza, ...obecne.slice(1)]
+      const pozostale = obecne.slice(1)
+      mapowanie.pozostaleGrupy.forEach((grupa, indeks) => {
+        pozostale[indeks] = scalGrupe(pozostale[indeks] ?? normalizujGrupe(undefined, indeks + 1), grupa)
+      })
+      return [pierwsza, ...pozostale]
     })
     ustawRozpoznaneObszary(wynik.rozpoznaneObszary)
-    ustawStatusyPol(() => {
-      const statusy: StatusyPolImportu = {}
-      polaWymaganePoImporcie.forEach((pole) => {
-        statusy[pole] = 'brak'
-      })
-      wynik.rozpoznanePola.forEach((pole) => {
-        statusy[pole] = 'zaimportowane'
-      })
-      wynik.polaNiepewne.forEach((pole) => {
-        statusy[pole] = 'niepewne'
-      })
-      return statusy
-    })
+    ustawStatusyPol(mapowanie.statusyPol)
     ustawKomunikat(
       wynik.rozpoznaneObszary.length
-        ? `Import zakończony. Rozpoznano obszary: ${wynik.rozpoznaneObszary.join(', ')}.`
+        ? `Import zakończony. Rozpoznano obszary: ${wynik.rozpoznaneObszary.join(', ')}. ${wynik.ostrzezenia?.join(' ') ?? ''}${mapowanie.zachowanePola.length ? ' Zachowano pola uzupełnione ręcznie.' : ''}`
         : 'Import zakończony. Nie odnaleziono jawnie opisanych danych.',
     )
     dodajWpisHistoriiSzczegolow({

@@ -2,6 +2,9 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { readFileSync } from 'node:fs'
 import { parsujMailaSzczegolow } from '../src/moduly/zamkniete/szczegoly_organizacyjne/uslugi/parserMailaSzczegolow.ts'
+import { przygotujMapowanieImportuMaila } from '../src/moduly/zamkniete/szczegoly_organizacyjne/uslugi/mapowanieImportuMaila.ts'
+import { poczatkowaGrupa, poczatkoweDaneFormularza } from '../src/moduly/zamkniete/szczegoly_organizacyjne/danePoczatkowe.ts'
+import { daneStartoweUzytkownikow } from '../src/kartoteki/uzytkownicy/daneUzytkownikow.ts'
 
 const tytul = 'Wartościowanie stanowisk pracy'
 const tematZMetadanymi = `08.10.2026 szczegóły organizacyjne Urząd Miejski w Gdańsku, „${tytul}”, Kościerzyna, Potok`
@@ -70,7 +73,8 @@ for (const [otwarcie, zamkniecie] of [['„', '”'], ['"', '"'], ["'", "'"]]) {
 test('wzorzec szkolenie pt. w treści wygrywa z tematem, dowolny cytat w treści jest pomijany', () => {
   const wynik = parsujMailaSzczegolow(`Temat: „Inny tytuł szkolenia”\nZapraszamy na szkolenie pt. „${tytul}”.`)
   assert.equal(wynik.daneFormularza.tytulSzkolenia, tytul)
-  assert.ok(!wynik.polaNiepewne.includes('tytulSzkolenia'))
+  assert.ok(wynik.polaNiepewne.includes('tytulSzkolenia'))
+  assert.match(wynik.ostrzezenia?.join(' ') ?? '', /Inny tytuł szkolenia/)
   assert.equal(parsujMailaSzczegolow(`Proszę odpisać „Wszystko w porządku”`).daneFormularza.tytulSzkolenia, undefined)
   assert.equal(parsujMailaSzczegolow(`Tytuł szkolenia: Jawny tytuł\nSzkolenie pt. „${tytul}”`).daneFormularza.tytulSzkolenia, 'Jawny tytuł')
 })
@@ -137,7 +141,7 @@ for (const separator of [' ', '\n\n']) {
       miasto: 'Kościerzyna', kraj: 'Polska', imieNazwiskoOdbiorcy: 'Piotr Nowak', telefon: '+48 987 654 321', email: 'odbiorca@firma.pl',
     })
     assert.equal(wynik.daneFormularza.czyNabywcaJestOdbiorca, false)
-    assert.deepEqual(wynik.polaNiepewne, [])
+    assert.deepEqual(wynik.polaNiepewne, ['grupy.0.dataOd', 'grupy.0.dataDo'])
   })
 }
 
@@ -350,3 +354,227 @@ test('nierozstrzygnięta liczba nie zapisuje NaN ani nie połyka następnej etyk
   assert.equal(wynik.pierwszaGrupa.liczbaUczestnikow, undefined)
   assert.equal(wynik.pierwszaGrupa.liczbaGodzin, 8)
 })
+
+const mailReferencyjny = readFileSync(new URL('./fixtures/mailOrganizacyjnyV4.txt', import.meta.url), 'utf8')
+const trenerReferencyjny = { id: 'trener-kartoteka-17', imieNazwisko: 'Renata Stefaniuk', email: 'trener@example.org', telefon: '123456789' }
+const kartotekiReferencyjne = {
+  trenerzy: [trenerReferencyjny],
+  opiekunowie: daneStartoweUzytkownikow,
+  czyLokalizacjaPotwierdzona: (miejsce: string) => miejsce.endsWith('39-300 Mielec'),
+}
+
+test('referencyjna wiadomość V4 mapuje 11 oczekiwanych danych i rozdziela role adresów', () => {
+  const wynik = parsujMailaSzczegolow(mailReferencyjny, kartotekiReferencyjne)
+  assert.equal(wynik.daneFormularza.nazwaKlienta, 'Polskie Zakłady Lotnicze Sp. z o.o.')
+  assert.equal(wynik.daneFormularza.opiekunId, 'Dawid')
+  assert.equal(wynik.daneFormularza.tytulSzkolenia, 'Lean management i kaizen - system ciągłego doskonalenia w organizacji')
+  assert.deepEqual(wynik.pierwszaGrupa.trenerzy, [trenerReferencyjny])
+  assert.equal(wynik.pierwszaGrupa.miejsce, 'Hotel Bulwary, ul. Rzeczna 8, 39-300 Mielec')
+  assert.equal(wynik.pierwszaGrupa.cenaNetto, 8700)
+  assert.equal(wynik.pierwszaGrupa.vat, 'Nie – 23%')
+  assert.equal(wynik.pierwszaGrupa.dataOd, '2026-10-28')
+  assert.equal(wynik.pierwszaGrupa.dataDo, '2026-10-29')
+  assert.equal(wynik.pierwszaGrupa.liczbaUczestnikow, 19)
+  assert.equal(wynik.pierwszaGrupa.terminPlatnosci, 60)
+  assert.equal(wynik.daneFormularza.nabywca?.ulica, 'Wojska Polskiego')
+  assert.equal(wynik.daneFormularza.nabywca?.nrBudynku, '3')
+  assert.equal(wynik.daneFormularza.nabywca?.nip, '0000000000')
+  assert.equal(wynik.daneFormularza.odbiorcaPaczki?.ulica, 'Dostawcza')
+  assert.equal(wynik.daneFormularza.odbiorcaPaczki?.miasto, 'Kraków')
+  assert.equal(wynik.daneFormularza.dyspozycjeMaterialowe?.listaObecnosci?.sposobPrzygotowania, 'drukuje_klient')
+  assert.deepEqual(wynik.polaNiepewne, [])
+})
+
+for (const prefiks of ['dr', 'mgr', 'prof.', 'dr hab.', 'inż.', 'prof. dr hab. inż.']) {
+  test(`dopasowuje trenera niezależnie od prefiksu ${prefiks}`, () => {
+    const wynik = parsujMailaSzczegolow(`Prowadzący szkolenie: ${prefiks} Renata Stefaniuk`, kartotekiReferencyjne)
+    assert.deepEqual(wynik.pierwszaGrupa.trenerzy, [trenerReferencyjny])
+    assert.ok(!wynik.polaNiepewne.includes('grupy.0.trenerzy'))
+  })
+}
+
+test('dwóch trenerów o tej samej nazwie i brak rekordu wymagają jednego wyboru, email rozstrzyga', () => {
+  const drugi = { ...trenerReferencyjny, id: 'inny-trener', email: 'inny@example.org' }
+  for (const trenerzy of [[], [trenerReferencyjny, drugi]]) {
+    const wynik = parsujMailaSzczegolow('Trener: dr Renata Stefaniuk', { trenerzy })
+    assert.equal(wynik.pierwszaGrupa.trenerzy?.[0].imieNazwisko, 'Renata Stefaniuk')
+    assert.notEqual(wynik.pierwszaGrupa.trenerzy?.[0].id, trenerReferencyjny.id)
+    assert.deepEqual(wynik.polaNiepewne, ['grupy.0.trenerzy'])
+    assert.match(wynik.ostrzezenia?.join(' ') ?? '', /wybierz właściwą osobę/)
+  }
+  const wynik = parsujMailaSzczegolow('Trener: dr Renata Stefaniuk <inny@example.org>', { trenerzy: [trenerReferencyjny, drugi] })
+  assert.deepEqual(wynik.pierwszaGrupa.trenerzy, [drugi])
+})
+
+test('jawny opiekun wygrywa z nadawcą, stopka jest źródłem zapasowym, a obcy nadawca nie wystarcza', () => {
+  assert.equal(parsujMailaSzczegolow(`${mailReferencyjny}\n`, kartotekiReferencyjne).daneFormularza.opiekunId, 'Dawid')
+  const jawny = parsujMailaSzczegolow(`Nadawca: Dawid Chyła <d.chyla@szkolenia-semper.pl>\nOpiekun szkolenia: k.zaremba@szkolenia-semper.pl`, kartotekiReferencyjne)
+  assert.equal(jawny.daneFormularza.opiekunId, 'Kamila')
+  const stopka = parsujMailaSzczegolow('Nadawca: Klient <klient@example.org>\nProgram szkolenia:\nModuł 1\n--\nDawid Chyła\nSpecjalista ds. projektów dedykowanych\nDział Szkoleń\nTrener: Fałszywy Trener', kartotekiReferencyjne)
+  assert.equal(stopka.daneFormularza.opiekunId, 'Dawid')
+  assert.equal(stopka.pierwszaGrupa.trenerzy, undefined)
+  assert.equal(parsujMailaSzczegolow('Nadawca: Dawid Chyła <obcy@example.org>', kartotekiReferencyjne).daneFormularza.opiekunId, undefined)
+  const nieznany = parsujMailaSzczegolow('Nadawca: Dawid Chyła <d.chyla@szkolenia-semper.pl>\nOpiekun: Inna Osoba', kartotekiReferencyjne)
+  assert.equal(nieznany.daneFormularza.opiekunId, undefined)
+  assert.deepEqual(nieznany.polaNiepewne, ['opiekunId'])
+})
+
+for (const termin of ['28-29.10.2026 r.', '28.10.2026 - 29.10.2026', '28–29 października 2026', '28-29.10.2026', '2026-10-28 – 2026-10-29']) {
+  test(`poprawny zakres dat ${termin} potwierdzony przez temat`, () => {
+    const wynik = parsujMailaSzczegolow(`Temat: 28-29.10.2026\nData: ${termin}`)
+    assert.equal(wynik.pierwszaGrupa.dataOd, '2026-10-28')
+    assert.equal(wynik.pierwszaGrupa.dataDo, '2026-10-29')
+    assert.deepEqual(wynik.polaNiepewne, [])
+  })
+}
+
+test('jednodniowy termin potwierdzony tematem nie wymaga akceptacji', () => {
+  const wynik = parsujMailaSzczegolow('Temat: 28.10.2026\nData: 28.10.2026')
+  assert.equal(wynik.pierwszaGrupa.dataDo, '2026-10-28')
+  assert.deepEqual(wynik.polaNiepewne, [])
+})
+
+for (const termin of ['31.02.2026', '29.02.2026', '32-33.10.2026', '29-28.10.2026', '31.02.2026 - 01.03.2026']) {
+  test(`odrzuca nieprawidłowy termin ${termin}`, () => {
+    const wynik = parsujMailaSzczegolow(`Data szkolenia: ${termin}`)
+    assert.equal(wynik.pierwszaGrupa.dataOd, undefined)
+    assert.equal(wynik.pierwszaGrupa.dataDo, undefined)
+    assert.ok(wynik.polaNiepewne.includes('grupy.0.dataOd'))
+  })
+}
+
+test('konflikt dat pokazuje oba źródła, a daty hotelu, nagłówka i programu nie zmieniają terminu', () => {
+  const wynik = parsujMailaSzczegolow(mailReferencyjny.replace('Data: 28-29.10.2026 r.', 'Data: 29-30.10.2026 r.'), kartotekiReferencyjne)
+  assert.equal(wynik.pierwszaGrupa.dataOd, '2026-10-29')
+  assert.equal(wynik.pierwszaGrupa.dataDo, '2026-10-30')
+  assert.deepEqual(wynik.polaNiepewne, ['grupy.0.dataOd', 'grupy.0.dataDo'])
+  assert.match(wynik.ostrzezenia?.join(' ') ?? '', /temat 2026-10-28 – 2026-10-29; treść 2026-10-29 – 2026-10-30/)
+})
+
+for (const kwota of ['8.700,00 zł', '8700,00 zł', '8 700,00 PLN', '8700 zł', '8.700 zł', '8.700,00 zł 23%', '8.700,00 zł VAT 23%']) {
+  test(`rozpoznaje kwotę ${kwota} i oddziela VAT`, () => {
+    const wynik = parsujMailaSzczegolow(`Cena netto: ${kwota}`)
+    assert.equal(wynik.pierwszaGrupa.cenaNetto, 8700)
+    assert.equal(wynik.pierwszaGrupa.vat, kwota.includes('23%') ? 'Nie – 23%' : undefined)
+    assert.deepEqual(wynik.polaNiepewne, [])
+  })
+}
+
+test('ogólna cena bez rodzaju wymaga potwierdzenia, brutto nie staje się netto, VAT ma własne źródło', () => {
+  assert.deepEqual(parsujMailaSzczegolow('Cena: 8700 zł').polaNiepewne, ['grupy.0.cenaNetto'])
+  assert.equal(parsujMailaSzczegolow('Cena: 8700 zł brutto 23%').pierwszaGrupa.cenaNetto, undefined)
+  assert.equal(parsujMailaSzczegolow('Cena brutto: 8700 zł').pierwszaGrupa.cenaNetto, undefined)
+  assert.equal(parsujMailaSzczegolow('Cena: VAT 23%').pierwszaGrupa.cenaNetto, undefined)
+  const wynik = parsujMailaSzczegolow('Cena: 8700 zł 23%\nVAT: ZW 100%')
+  assert.equal(wynik.pierwszaGrupa.vat, 'ZW – 100%')
+  assert.ok(wynik.polaNiepewne.includes('grupy.0.vat'))
+})
+
+test('nazwy i adresy nie przechodzą między klientem, miejscem i wysyłką także przy powtórzeniu adresu', () => {
+  const bezKlienta = parsujMailaSzczegolow('Materiały na adres:\nNazwa firmy: Firma dostawy\nul. Dostawcza 1\n00-001 Warszawa\nMiejsce szkolenia:\nHotel Bulwary\nul. Rzeczna 8\n39-300 Mielec', kartotekiReferencyjne)
+  assert.equal(bezKlienta.daneFormularza.nazwaKlienta, undefined)
+  assert.equal(bezKlienta.pierwszaGrupa.miejsce, 'Hotel Bulwary, ul. Rzeczna 8, 39-300 Mielec')
+  assert.equal(bezKlienta.daneFormularza.odbiorcaPaczki?.nazwaFirmy, 'Firma dostawy')
+  const powtorzony = parsujMailaSzczegolow('Nazwa firmy:\nFirma klienta\nul. Rzeczna 8\n39-300 Mielec\nMiejsce szkolenia:\nHotel Bulwary\nul. Rzeczna 8\n39-300 Mielec\nMateriały na adres:\nFirma wysyłki\nul. Rzeczna 8\n39-300 Mielec', kartotekiReferencyjne)
+  assert.equal(powtorzony.daneFormularza.nazwaKlienta, 'Firma klienta')
+  assert.equal(powtorzony.pierwszaGrupa.miejsce, 'Hotel Bulwary, ul. Rzeczna 8, 39-300 Mielec')
+  assert.equal(powtorzony.daneFormularza.odbiorcaPaczki?.nazwaFirmy, 'Firma wysyłki')
+  const niepewne = parsujMailaSzczegolow('Miejsce szkolenia: Nieznana miejscowość', { czyLokalizacjaPotwierdzona: () => false })
+  assert.deepEqual(niepewne.polaNiepewne, ['grupy.0.miejsce'])
+})
+
+for (const prefiks of ['-', '–', '—']) {
+  test(`normalizuje prefiks ${prefiks}, niewidoczne separatory i wielkość liter`, () => {
+    const wynik = parsujMailaSzczegolow(`${prefiks}NAZWA\u00a0 FIRMY :\n\nFirma Testowa\n${prefiks}TRENER\u200b PROWADZĄCY : dr Renata Stefaniuk\n${prefiks}CENA : 8\u202f700,00 PLN 23%`, kartotekiReferencyjne)
+    assert.equal(wynik.daneFormularza.nazwaKlienta, 'Firma Testowa')
+    assert.equal(wynik.pierwszaGrupa.trenerzy?.[0].id, trenerReferencyjny.id)
+    assert.equal(wynik.pierwszaGrupa.cenaNetto, 8700)
+  })
+}
+
+test('ponowny import chroni ręczne poprawki i wyczyszczenia, nie zmienia dalszych grup ani statusów', () => {
+  const wynik = parsujMailaSzczegolow(mailReferencyjny, kartotekiReferencyjne)
+  const pierwszy = przygotujMapowanieImportuMaila(wynik, structuredClone(poczatkoweDaneFormularza), [structuredClone(poczatkowaGrupa)], {})
+  const dane = { ...structuredClone(poczatkoweDaneFormularza), ...pierwszy.daneFormularza, nazwaKlienta: 'Ręczny klient', tytulSzkolenia: '', nabywca: { ...poczatkoweDaneFormularza.nabywca, ...pierwszy.daneFormularza.nabywca, ulica: 'Ręczna' } }
+  const grupy = [{ ...structuredClone(poczatkowaGrupa), ...pierwszy.pierwszaGrupa, cenaNetto: 9999, trenerzy: [{ ...trenerReferencyjny, id: 'reczny-trener' }] }, { ...structuredClone(poczatkowaGrupa), id: 'grupa-2', cenaNetto: 777 }]
+  const przed = structuredClone({ dane, grupy })
+  const statusy = { ...pierwszy.statusyPol, nazwaKlienta: 'reczne' as const, tytulSzkolenia: 'reczne' as const, 'nabywca.ulica': 'reczne' as const, 'grupy.0.cenaNetto': 'reczne' as const, 'grupy.0.trenerzy': 'reczne' as const, 'grupy.1.cenaNetto': 'reczne' as const }
+  const ponowny = przygotujMapowanieImportuMaila(wynik, dane, grupy, statusy)
+  assert.equal(ponowny.daneFormularza.nazwaKlienta, undefined)
+  assert.equal(ponowny.daneFormularza.tytulSzkolenia, undefined)
+  assert.equal(ponowny.daneFormularza.nabywca?.ulica, undefined)
+  assert.equal(ponowny.pierwszaGrupa.cenaNetto, undefined)
+  assert.equal(ponowny.pierwszaGrupa.trenerzy, undefined)
+  assert.equal(ponowny.pierwszaGrupa.dataOd, '2026-10-28')
+  assert.equal(ponowny.statusyPol['grupy.1.cenaNetto'], 'reczne')
+  assert.equal(ponowny.statusyPol.nazwaKlienta, 'reczne')
+  assert.equal(ponowny.statusyPol['grupy.0.dataOd'], 'zaimportowane')
+  assert.deepEqual({ dane, grupy }, przed)
+  const bezStatusu = przygotujMapowanieImportuMaila(wynik, dane, grupy, {})
+  assert.equal(bezStatusu.pierwszaGrupa.cenaNetto, undefined)
+  assert.equal(bezStatusu.daneFormularza.nazwaKlienta, undefined)
+})
+
+test('odrębne grupy mają własnych trenerów, terminy i ceny, a brak pola nie dziedziczy go z sąsiedniej grupy', () => {
+  const wynik = parsujMailaSzczegolow(`Tytuł szkolenia: Szkolenie wielu grup
+Grupa 1
+Data: 28-29.10.2026
+Trener: Renata Stefaniuk
+Cena netto: 8700
+Grupa 2
+Data: 30-31.10.2026
+Cena netto: 2000
+Grupa 3
+Prowadzący szkolenie: Renata Stefaniuk
+Liczba uczestników: 10`, kartotekiReferencyjne)
+  assert.equal(wynik.pierwszaGrupa.cenaNetto, 8700)
+  assert.equal(wynik.pozostaleGrupy?.[0].cenaNetto, 2000)
+  assert.equal(wynik.pozostaleGrupy?.[0].dataOd, '2026-10-30')
+  assert.equal(wynik.pozostaleGrupy?.[0].trenerzy, undefined)
+  assert.equal(wynik.pozostaleGrupy?.[1].cenaNetto, undefined)
+  assert.equal(wynik.pozostaleGrupy?.[1].dataOd, undefined)
+  assert.equal(wynik.pozostaleGrupy?.[1].trenerzy?.[0].id, trenerReferencyjny.id)
+  assert.ok(wynik.rozpoznanePola.includes('grupy.1.cenaNetto'))
+  assert.ok(wynik.rozpoznanePola.includes('grupy.2.trenerzy'))
+  const mapowanie = przygotujMapowanieImportuMaila(wynik, structuredClone(poczatkoweDaneFormularza), [structuredClone(poczatkowaGrupa)], {})
+  assert.equal(mapowanie.pozostaleGrupy[0].cenaNetto, 2000)
+  assert.equal(mapowanie.statusyPol['grupy.2.trenerzy'], 'zaimportowane')
+})
+
+test('niezerowy ręczny opiekun nie uzyskuje niepewności po nieudanym dopasowaniu ponownego importu', () => {
+  const wynik = parsujMailaSzczegolow('Opiekun: Nieznana Osoba', kartotekiReferencyjne)
+  const mapowanie = przygotujMapowanieImportuMaila(wynik, { ...structuredClone(poczatkoweDaneFormularza), opiekunId: 'Kamila' }, [structuredClone(poczatkowaGrupa)], { opiekunId: 'reczne' })
+  assert.equal(mapowanie.statusyPol.opiekunId, 'reczne')
+  assert.equal(mapowanie.daneFormularza.opiekunId, undefined)
+})
+
+test('niejednoznaczny opiekun nie zostaje przypisany, a nierozpoznanego nadawcę może zastąpić podpis', () => {
+  const opiekun = daneStartoweUzytkownikow.find((osoba) => osoba.id === 'Dawid')!
+  const dwaRekordy = parsujMailaSzczegolow('Opiekun: Dawid Chyła', { opiekunowie: [opiekun, { ...opiekun, id: 'drugi-opiekun', email: 'inny@szkolenia-semper.pl', emaile: ['inny@szkolenia-semper.pl'] }] })
+  assert.equal(dwaRekordy.daneFormularza.opiekunId, undefined)
+  assert.deepEqual(dwaRekordy.polaNiepewne, ['opiekunId'])
+  const zPodpisu = parsujMailaSzczegolow('Nadawca: Inna Osoba <nieznany@szkolenia-semper.pl>\n\nTreść wiadomości\n--\nDawid Chyła\nDział Szkoleń', kartotekiReferencyjne)
+  assert.equal(zPodpisu.daneFormularza.opiekunId, 'Dawid')
+})
+
+test('wykrywa sprzeczne terminy wewnątrz treści i nie zgaduje stawki VAT nieobsługiwanej przez model', () => {
+  const wynik = parsujMailaSzczegolow('Data od: 28.10.2026\nData do: 29.10.2026\nTermin: 30-31.10.2026\nCena netto: 8700 zł VAT 8%')
+  assert.equal(wynik.pierwszaGrupa.dataOd, '2026-10-28')
+  assert.ok(wynik.polaNiepewne.includes('grupy.0.dataOd'))
+  assert.ok(wynik.polaNiepewne.includes('grupy.0.vat'))
+  assert.equal(wynik.pierwszaGrupa.vat, undefined)
+  for (const wartosc of ['123%', '170%', 'nie wiadomo']) {
+    const nieznanaStawka = parsujMailaSzczegolow(`VAT: ${wartosc}`)
+    assert.equal(nieznanaStawka.pierwszaGrupa.vat, undefined)
+    assert.deepEqual(nieznanaStawka.polaNiepewne, ['grupy.0.vat'])
+  }
+})
+
+for (const [otwarcie, zamkniecie] of [['„', '”'], ['“', '”'], ['"', '"'], ['«', '»'], ['‘', '’']]) {
+  test(`usuwa wyłącznie zewnętrzne cudzysłowy ${otwarcie}${zamkniecie} i potwierdza tytuł w temacie`, () => {
+    const nazwa = 'Lean management i kaizen - system ciągłego doskonalenia w organizacji'
+    const wynik = parsujMailaSzczegolow(`Temat: 28-29.10.2026, ${otwarcie}${nazwa}${zamkniecie}, Klient, Mielec\nTytuł szkolenia: ${otwarcie}${nazwa}${zamkniecie}\nData: 28-29.10.2026`)
+    assert.equal(wynik.daneFormularza.tytulSzkolenia, nazwa)
+    assert.deepEqual(wynik.polaNiepewne, [])
+  })
+}

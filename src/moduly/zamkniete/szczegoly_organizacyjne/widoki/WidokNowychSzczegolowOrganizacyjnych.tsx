@@ -1,3 +1,4 @@
+import { RegulacjaSzerokosci } from '../../../../wspolne/komponenty/RegulacjaSzerokosci'
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent, type ReactNode } from 'react'
 import { pobierzLokalizacjeZMagazynu } from '../../../../kartoteki/lokalizacje/magazynLokalizacji'
 import type { Dokument } from '../../../../wspolne/dokumenty/modelDokumentu'
@@ -1084,8 +1085,11 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
         id={idPaneluJakosci}
         onKeyDown={obsluzKlawiszPaneluJakosci}
         onMouseEnter={otworzPanelJakosci}
-        onMouseLeave={schowajPanelJakosciJesliOdpiety}
+        onMouseLeave={(zdarzenie) => {
+          if (!zdarzenie.currentTarget.closest('[data-regulacja-szerokosci]')) schowajPanelJakosciJesliOdpiety()
+        }}
       >
+        <RegulacjaSzerokosci panel=".szczegoly-panel-jakosci" obszar=".szczegoly-organizacyjne" zmienna="--szerokosc-panelu-jakosci" strona="lewa" minimum={280} maksimum={600} kluczZapisu="ultimatePomagier.panelJakosci.szerokosc" />
         <div className="szczegoly-panel-jakosci__naglowek">
           <h2>Kontrola jakości</h2>
           <button type="button" onClick={() => {

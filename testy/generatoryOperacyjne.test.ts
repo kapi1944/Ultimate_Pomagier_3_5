@@ -73,7 +73,10 @@ test('kolumny podpisów nie są ściskane; przełączanie dni zachowuje osoby i 
   const strony = podzielListeObecnosciNaStrony({ ...dane, daty: ['1', '2', '3', '4', '5'] })
   assert.equal(strony.length, 6)
   assert.ok(strony.every((strona) => strona.datyPodpisow.length <= 3))
-  assert.deepEqual(strony.slice(0, 3).map((strona) => strona.indeksPierwszegoWiersza), [0, 27, 54])
+  for (const poczatek of [0, 3]) {
+    assert.deepEqual(strony.slice(poczatek, poczatek + 3).flatMap((strona) => strona.uczestnicy), dane.uczestnicy)
+    assert.deepEqual(strony.slice(poczatek, poczatek + 3).map((strona) => strona.indeksPierwszegoWiersza), [0, 28, 56])
+  }
   const dlugie = { ...dane, uczestnicy: dane.uczestnicy.map((osoba) => ({ ...osoba, imieINazwisko: 'Bardzo długie nazwisko '.repeat(6) })) }
   assert.ok(podzielListeObecnosciNaStrony(dlugie).length > 3)
 })

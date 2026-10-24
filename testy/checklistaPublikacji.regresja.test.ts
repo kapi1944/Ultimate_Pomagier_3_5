@@ -135,6 +135,7 @@ test('kliknięcie błędu przekazuje pole, przewija je i odświeża timer podśw
   const wywolania: string[] = []
   const timery = new Map<number, () => void>()
   let kolejnyTimer = 1
+  let czyOgraniczycRuch = false
   const poprzednieGlobalne = {
     CustomEvent: globalThis.CustomEvent,
     HTMLButtonElement: globalThis.HTMLButtonElement,
@@ -159,7 +160,7 @@ test('kliknięcie błędu przekazuje pole, przewija je i odświeża timer podśw
   class PoleTestowe {
     classList = { add: (nazwa: string) => wywolania.push(`dodaj:${nazwa}`), remove: (nazwa: string) => wywolania.push(`usun:${nazwa}`) }
     focus() { wywolania.push('fokus') }
-    scrollIntoView() { wywolania.push('przewin') }
+    scrollIntoView(opcje: ScrollIntoViewOptions) { wywolania.push(`przewin:${opcje.behavior}`) }
   }
 
   const poleTestowe = new PoleTestowe()
@@ -173,6 +174,7 @@ test('kliknięcie błędu przekazuje pole, przewija je i odświeża timer podśw
     document: { getElementById: (id: string) => (id === pobierzIdPola('odbiorca.email') ? poleTestowe : null) },
     requestAnimationFrame: (wykonaj: FrameRequestCallback) => { wykonaj(0); return 0 },
     window: {
+      matchMedia: (zapytanie: string) => { assert.equal(zapytanie, '(prefers-reduced-motion: reduce)'); return { matches: czyOgraniczycRuch } },
       dispatchEvent: (zdarzenie: ZdarzenieWlasne) => { wywolania.push(`zdarzenie:${zdarzenie.detail.pole}`); return true },
       clearTimeout: (id: number) => { wywolania.push(`anuluj:${id}`); timery.delete(id) },
       setTimeout: (wykonaj: () => void) => { const id = kolejnyTimer++; timery.set(id, () => { timery.delete(id); wykonaj() }); return id },
@@ -188,6 +190,13 @@ test('kliknięcie błędu przekazuje pole, przewija je i odświeża timer podśw
     timery.get(2)?.()
     assert.equal(timery.size, 0)
     assert.equal(wywolania.filter((wywolanie) => wywolanie === 'usun:szczegoly-pole--wskazane').length, 1)
+    assert.equal(wywolania.filter((wywolanie) => wywolanie === 'przewin:smooth').length, 2)
+    assert.equal(wywolania.filter((wywolanie) => wywolanie === 'fokus').length, 2)
+    assert.equal(wywolania.filter((wywolanie) => wywolanie === 'zdarzenie:odbiorca.email').length, 2)
+    czyOgraniczycRuch = true
+    przejdzDoPolaFormularza('odbiorca.email', 'dane-klienta')
+    assert.ok(wywolania.includes('przewin:instant'))
+    timery.get(3)?.()
   } finally {
     Object.assign(globalThis, poprzednieGlobalne)
   }

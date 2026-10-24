@@ -15,7 +15,7 @@ test('monitor na Pulpicie: źródła, filtry, statusy, responsywność, ogranicz
     strona.on('pageerror', (blad) => bledy.push(blad.message))
     await strona.clock.install({ time: new Date('2026-10-20T10:00:00Z') })
     await strona.goto(adres)
-    await strona.getByRole('button', { name: 'Zaloguj', exact: true }).click()
+    await strona.getByRole('button', { name: 'Otwórz demonstrację Architekta', exact: true }).click()
     // Dane trafiają wyłącznie do osobnego kontekstu przeglądarki testowej.
     await strona.evaluate(async () => {
       const { poczatkoweDaneFormularza, poczatkowaGrupa, poczatkowiAdresaci } = await import('/src/moduly/zamkniete/szczegoly_organizacyjne/danePoczatkowe.ts')

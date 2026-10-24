@@ -1,3 +1,4 @@
+import { informacjeOWersji } from '../../aplikacja/wersjaAplikacji'
 import {
   kluczRejestruDokumentow,
   pobierzStanRejestruDokumentowBezZapisu,
@@ -105,7 +106,7 @@ export function utworzBackup(kategorie: KategoriaBackupu[] = ['WSZYSTKO'], czyPo
       liczba[nazwaSekcji(kategoria)] += rejestrProgramow.dokumenty.length
     }
   })
-  const backup: BackupDanych = { manifest: { wersjaFormatu: wersjaFormatuBackupu, utworzono: new Date().toISOString(), wersjaAplikacji: 'ultimate-pomagier-3.5', sekcje, liczbaRekordow: liczba, schematy: { rejestrDokumentow: 3, backup: wersjaFormatuBackupu }, sumaKontrolna: sumaKontrolna(dane) }, dane }
+  const backup: BackupDanych = { manifest: { wersjaFormatu: wersjaFormatuBackupu, utworzono: new Date().toISOString(), wersjaAplikacji: informacjeOWersji.wersja, sekcje, liczbaRekordow: liczba, schematy: { rejestrDokumentow: 3, backup: wersjaFormatuBackupu }, sumaKontrolna: sumaKontrolna(dane) }, dane }
   if (czyPelny && czyPotwierdzonyPrzezUzytkownika) localStorage.setItem(kluczOstatniegoPelnegoBackupu, backup.manifest.utworzono)
   return backup
 }

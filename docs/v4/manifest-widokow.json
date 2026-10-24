@@ -533,15 +533,11 @@
     "src/aplikacja/logowanie/PanelLogowania.tsx": {
       "zadanie": "V4-03",
       "powierzchnie": [
-        "Przycisk className=\"panel-logowania__zaloguj\" type=\"submit\" disabled={!wybranyUzytkownik}",
-        "div className=\"panel-logowania__konta\"",
+        "Przycisk className=\"panel-logowania__zaloguj\" type=\"submit\" disabled={czyTrwaLogowanie}",
         "div className=\"panel-logowania__wybor\"",
         "form className=\"panel-logowania__formularz\" onSubmit={obsluzLogowanie}",
         "img alt=\"Ultimate Pomagier\" className=\"panel-logowania__logo\" src=\"/logo-ultimate-pomagier.png\"",
-        "label className=\"panel-logowania__konto\" key={uzytkownik.id}",
-        "main className=\"panel-logowania\"",
-        "section aria-label=\"Dane wybranego użytkownika\" className=\"panel-logowania__profil\"",
-        "span className=\"panel-logowania__nazwa\""
+        "main className=\"panel-logowania\""
       ],
       "ukonczoneEtapy": [
         "V4-02",
@@ -644,6 +640,7 @@
     "src/kartoteki/uzytkownicy/WidokUzytkownikow.tsx": {
       "zadanie": "V4-21",
       "powierzchnie": [
+        "details className=\"uzytkownicy__karta\"",
         "form className=\"uzytkownicy__formularz\" onSubmit={zapiszNowegoUzytkownika}"
       ],
       "ukonczoneEtapy": [],
@@ -900,7 +897,8 @@
     "src/moduly/dokumenty/wspolne/UkladGeneratoraDokumentu.tsx": {
       "zadanie": "V4-09",
       "powierzchnie": [
-        "aside aria-hidden={!czyOtwarty} aria-label={tytul} className={polaczKlasy('generator-panel-ustawien', czyOtwarty && 'generator-panel-ustawien--otwarty', className)} id={id} inert={!czyOtwarty} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}",
+        "RegulacjaSzerokosci panel=\".generator-panel-ustawien\" obszar=\".generator-z-panelem\" zmienna=\"--szerokosc-panelu-generatora\" strona=\"lewa\" minimum={280} maksimum={640} kluczZapisu={`ultimatePomagier.panel.${id}.szerokosc`}",
+        "aside aria-hidden={!czyOtwarty} aria-label={tytul} className={polaczKlasy('generator-panel-ustawien', czyOtwarty && 'generator-panel-ustawien--otwarty', className)} id={id} inert={!czyOtwarty} onMouseEnter={onMouseEnter} onMouseLeave={(zdarzenie) => { if (!zdarzenie.currentTarget.closest('[data-regulacja-szerokosci]')) onMouseLeave?.() }}",
         "button aria-label={`Zamknij: ${tytul}`} className=\"generator-panel-ustawien__zamknij\" onClick={zamknij} type=\"button\"",
         "button aria-pressed={czyPrzypiety} className=\"generator-panel-ustawien__przycisk\" onClick={przelaczPrzypiecie} title={czyPrzypiety ? 'Odepnij panel ustawień' : 'Przypnij panel ustawień'} type=\"button\"",
         "button aria-pressed={czyWysuwanieWlaczone} className=\"generator-panel-ustawien__przycisk\" onClick={przelaczWysuwanie} title={czyWysuwanieWlaczone ? 'Wyłącz wysuwanie z prawej krawędzi' : 'Włącz wysuwanie z prawej krawędzi'} type=\"button\"",
@@ -1154,9 +1152,11 @@
     "src/moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokNowychSzczegolowOrganizacyjnych.tsx": {
       "zadanie": "V4-07",
       "powierzchnie": [
-        "aside aria-label=\"Panel kontroli jakosci\" className={`szczegoly-panel-jakosci${czyPanelJakosciOtwarty ? ' szczegoly-panel-jakosci--otwarty' : ''}${czyPanelJakosciPrzypiety ? ' szczegoly-panel-jakosci--przypiety' : ''}`} id={idPaneluJakosci} onKeyDown={obsluzKlawiszPaneluJakosci} onMouseEnter={otworzPanelJakosci} onMouseLeave={schowajPanelJakosciJesliOdpiety}",
+        "RegulacjaSzerokosci panel=\".szczegoly-panel-jakosci\" obszar=\".szczegoly-organizacyjne\" zmienna=\"--szerokosc-panelu-jakosci\" strona=\"lewa\" minimum={280} maksimum={600} kluczZapisu=\"ultimatePomagier.panelJakosci.szerokosc\"",
+        "aside inert={!czyPanelJakosciOtwarty} aria-label=\"Panel kontroli jakosci\" className={`szczegoly-panel-jakosci${czyPanelJakosciOtwarty ? ' szczegoly-panel-jakosci--otwarty' : ''}${czyPanelJakosciPrzypiety ? ' szczegoly-panel-jakosci--przypiety' : ''}`} id={idPaneluJakosci} onKeyDown={obsluzKlawiszPaneluJakosci} onMouseEnter={otworzPanelJakosci} onMouseLeave={(zdarzenie) => { if (!zdarzenie.currentTarget.closest('[data-regulacja-szerokosci]')) schowajPanelJakosciJesliOdpiety() }}",
         "button aria-label={czyPanelJakosciPrzypiety ? 'Odepnij panel kontroli jakosci' : 'Przypnij panel kontroli jakosci'} className=\"szczegoly-panel-jakosci__przycisk\" onClick={przelaczPrzypieciePaneluJakosci} title={czyPanelJakosciPrzypiety ? 'Odepnij panel' : 'Przypnij panel'} type=\"button\"",
         "button aria-label={czyWysuwaniePaneluJakosciWlaczone ? 'Wylacz automatyczne wysuwanie panelu jakosci' : 'Wlacz automatyczne wysuwanie panelu jakosci'} className=\"szczegoly-panel-jakosci__przycisk\" onClick={przelaczWysuwaniePaneluJakosci} title={czyWysuwaniePaneluJakosciWlaczone ? 'Wylacz wysuwanie' : 'Wlacz wysuwanie'} type=\"button\"",
+        "div className=\"szczegoly-panel-jakosci__naglowek\"",
         "div className=\"szczegoly-panel-jakosci__sterowanie\"",
         "div className=\"szczegoly-panel-jakosci__strefa-aktywacji\" onMouseEnter={otworzPanelJakosciZKrawedzi} aria-hidden=\"true\"",
         "section className={`widok szczegoly-organizacyjne${czyPanelJakosciPrzypiety ? ' szczegoly-organizacyjne--panel-przypiety' : ''}${czyPanelJakosciOtwarty ? ' szczegoly-organizacyjne--panel-otwarty' : ''}`}",
@@ -1361,6 +1361,72 @@
       "ukonczoneEtapy": [
         "V4-06"
       ],
+      "wspoldzieloneZ": []
+    },
+    "src/aplikacja/desktop/PanelAktualizacji.tsx": {
+      "zadanie": "V4-22",
+      "powierzchnie": [
+        "window.confirm('Czy zapisano otwarte formularze i kopię bezpieczeństwa? Instalacja zamknie aplikację, a następnie uruchomi ją ponownie.')"
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": [
+        "V4-02"
+      ]
+    },
+    "src/moduly/zamkniete/pulpit/MonitorWysylek.tsx": {
+      "zadanie": "V4-04",
+      "powierzchnie": [
+        "details className=\"monitor-wysylek__dokumenty\""
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
+    },
+    "src/wspolne/dokumenty/TrescStopkiOrganizatora.tsx": {
+      "zadanie": "V4-09",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": [
+        "V4-10",
+        "V4-11"
+      ]
+    },
+    "src/wspolne/komponenty/RegulacjaSzerokosci.tsx": {
+      "zadanie": "V4-02",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": [
+        "V4-07",
+        "V4-09",
+        "V4-10",
+        "V4-11",
+        "V4-12",
+        "V4-13",
+        "V4-14",
+        "V4-15"
+      ]
+    },
+    "src/kartoteki/uzytkownicy/OchronaKartotekiUzytkownikow.tsx": {
+      "zadanie": "V4-21",
+      "powierzchnie": [
+        "details"
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
+    },
+    "src/kartoteki/uzytkownicy/PanelOperacjiKont.tsx": {
+      "zadanie": "V4-21",
+      "powierzchnie": [
+        "details"
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
+    },
+    "src/kartoteki/uzytkownicy/PodgladUzytkownika.tsx": {
+      "zadanie": "V4-21",
+      "powierzchnie": [
+        "dialog ref={okno} className=\"uzytkownicy__okno-podgladu\" onCancel={(zdarzenie) => { zdarzenie.preventDefault(); zakoncz() }} aria-label=\"Tryb podglądu użytkownika\""
+      ],
+      "ukonczoneEtapy": [],
       "wspoldzieloneZ": []
     }
   },

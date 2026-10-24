@@ -1,0 +1,6 @@
+.regulacja-szerokosci { position: absolute; top: 0; bottom: 0; width: 8px; z-index: 5; cursor: col-resize; touch-action: none; user-select: none; }
+.regulacja-szerokosci--lewa { left: 0; }
+.regulacja-szerokosci--prawa { right: 0; }
+.regulacja-szerokosci:hover, .regulacja-szerokosci:focus-visible { background: color-mix(in srgb, var(--ui-akcent) 35%, transparent); }
+[data-regulacja-szerokosci], [data-regulacja-szerokosci] * { transition: none !important; cursor: col-resize !important; user-select: none !important; }
+@media (max-width: 760px), print { .regulacja-szerokosci { display: none; } }
