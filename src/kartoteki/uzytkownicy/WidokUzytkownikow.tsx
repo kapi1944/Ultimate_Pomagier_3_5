@@ -7,6 +7,9 @@ import { czyMozeZarzadzacUzytkownikami } from './uprawnienia'
 import PanelOperacjiKont from './PanelOperacjiKont'
 import { etykietyOrganizacji, etykietyRol, metadaneOdznak, roleUzytkownikow, type FormularzUzytkownika, type OdznakaUzytkownika as TypOdznakiUzytkownika, type Telefon } from './typyUzytkownikow'
 import './widokUzytkownikow.css'
+import { czyTrybDemonstracyjny } from '../../aplikacja/logowanie/uwierzytelnianie'
+import { wykonajOperacjeTozsamosci } from '../../aplikacja/logowanie/klientTozsamosci'
+import { sprawdzStruktureUzytkownika } from './walidacjaUzytkownikow'
 
 type WlasciwosciWidokuUzytkownikow = {
   otworzProfil: (uzytkownikId: string) => void
@@ -23,10 +26,20 @@ export default function WidokUzytkownikow({ otworzProfil }: WlasciwosciWidokuUzy
     ustawFormularz((poprzedni) => ({ ...poprzedni, [pole]: wartosc }))
   }
 
-  function zapiszNowegoUzytkownika(zdarzenie: FormEvent<HTMLFormElement>) {
+  async function zapiszNowegoUzytkownika(zdarzenie: FormEvent<HTMLFormElement>) {
     zdarzenie.preventDefault()
     if (!zalogowanyUzytkownik) return
-    const wynik = utworzUzytkownikaPrzezAdministratora(zalogowanyUzytkownik, { ...formularz, telefony: formularz.telefony.filter((telefon) => telefon.numer.trim()) })
+    const profil = { ...formularz, telefony: formularz.telefony.filter((telefon) => telefon.numer.trim()) }
+    if (!czyTrybDemonstracyjny) {
+      try {
+        const konto = await wykonajOperacjeTozsamosci('utworz-konto', { profil })
+        if (!sprawdzStruktureUzytkownika(konto)) throw new Error('Nieprawidłowa odpowiedź usługi kont.')
+        ustawFormularz(utworzPustyFormularz()); ustawBlad(''); ustawKomunikat(`Utworzono konto ${konto.login}. W profilu wygeneruj kod, aby właściciel ustawił hasło.`)
+        await odswiezUzytkownika(); ustawWersjeListy((obecna) => obecna + 1)
+      } catch (blad) { ustawBlad(blad instanceof Error ? blad.message : 'Nie udało się utworzyć konta.') }
+      return
+    }
+    const wynik = utworzUzytkownikaPrzezAdministratora(zalogowanyUzytkownik, profil)
     if (!wynik.uzytkownik) {
       ustawBlad(wynik.blad ?? 'Nie udało się utworzyć użytkownika.')
       ustawKomunikat('')
@@ -44,13 +57,13 @@ export default function WidokUzytkownikow({ otworzProfil }: WlasciwosciWidokuUzy
   }
 
   return <section className="widok uzytkownicy" data-wersja-listy={wersjaListy}>
-    <header><h1>Użytkownicy</h1><p>Centralna lista kont działających w lokalnym trybie demonstracyjnym.</p></header>
+    <header><h1>Użytkownicy</h1><p>{czyTrybDemonstracyjny ? 'Centralna lista kont działających w lokalnym trybie demonstracyjnym.' : 'Lokalna kartoteka kont. Hasła są weryfikowane w zaufanej warstwie aplikacji.'}</p></header>
     {komunikat && <p aria-live="polite" className="uzytkownicy__sukces">{komunikat}</p>}
     {blad && <p aria-live="assertive" className="uzytkownicy__blad">{blad}</p>}
 
     <details className="uzytkownicy__karta"><summary>Utwórz pojedyncze konto</summary>
       <h2>Utwórz konto</h2>
-      <p>Konto wymaga konfiguracji przyszłej usługi tożsamości. Nie przypisujemy haseł lokalnych.</p>
+      <p>{czyTrybDemonstracyjny ? 'Konto demonstracyjne nie otrzymuje rzeczywistego hasła.' : 'Po utworzeniu konta wygeneruj w jego profilu kod resetowania. Hasło ustali właściciel konta. Dostęp wymaga aktywnego statusu konta.'}</p>
       <form className="uzytkownicy__formularz" onSubmit={zapiszNowegoUzytkownika}>
         <label>Zwrot<select value={formularz.zwrot} onChange={(zdarzenie) => zmienPole('zwrot', zdarzenie.target.value as FormularzUzytkownika['zwrot'])}><option value="">Brak</option><option value="Pan">Pan</option><option value="Pani">Pani</option></select></label>
         <label>Imię<input required value={formularz.imie} onChange={(zdarzenie) => zmienPole('imie', zdarzenie.target.value)} /></label>

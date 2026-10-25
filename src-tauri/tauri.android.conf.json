@@ -1,0 +1,10 @@
+{
+  "app": {
+    "windows": [{ "label": "main", "title": "Ultimate Pomagier", "useHttpsScheme": true }]
+  },
+  "bundle": {
+    "targets": "all",
+    "android": { "minSdkVersion": 26, "autoIncrementVersionCode": false }
+  },
+  "plugins": { "updater": { "pubkey": "", "endpoints": [] } }
+}

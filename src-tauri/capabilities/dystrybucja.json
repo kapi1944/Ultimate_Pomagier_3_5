@@ -1,0 +1,8 @@
+{
+  "identifier": "dystrybucja",
+  "description": "Otwieranie wyłącznie publicznych instalatorów Pomagiera w przeglądarce systemowej",
+  "windows": ["main", "obszar"],
+  "permissions": [
+    { "identifier": "opener:allow-open-url", "allow": [{ "url": "https://github.com/kapi1944/Ultimate_Pomagier_3_5/releases/download/*" }] }
+  ]
+}

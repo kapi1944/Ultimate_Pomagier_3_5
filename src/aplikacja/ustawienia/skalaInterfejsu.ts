@@ -1,6 +1,7 @@
 import { isTauri } from '@tauri-apps/api/core'
 import { getCurrentWebview } from '@tauri-apps/api/webview'
 import { normalizujSkaleInterfejsu } from './modelUstawienAplikacji'
+import { rozpoznajPlatforme } from '../desktop/rejestrWydan'
 
 export const zdarzenieZmianySkaliInterfejsu = 'ultimatePomagier:zmianaSkaliInterfejsu'
 let skalaInterfejsu = 100
@@ -16,7 +17,7 @@ export function zastosujSkaleInterfejsu(wartosc: number): Promise<void> {
   if (czyZastosowano && skala === skalaInterfejsu && !bladSkalowania) return kolejkaSkalowania
   czyZastosowano = true
   skalaInterfejsu = skala
-  const czyDesktop = isTauri()
+  const czyDesktop = isTauri() && !['android', 'ios'].includes(rozpoznajPlatforme(navigator.userAgent))
   document.documentElement.style.setProperty('--ui-skala-interfejsu', String(skala / 100))
   // CSS zoom obejmuje też portale; desktop używa wyłącznie natywnego zoomu WebView.
   document.documentElement.style.setProperty('--ui-skala-przegladarki', czyDesktop ? '1' : String(skala / 100))

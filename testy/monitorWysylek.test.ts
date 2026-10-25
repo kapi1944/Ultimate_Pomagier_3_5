@@ -208,7 +208,7 @@ test('1.2.2: postęp paczki respektuje wymaganą ilość i ręczne ustawienia za
   assert.equal(zbudujWysylkiMonitora([szkolenie], [dokument], {})[0].liczbaGotowych, 1)
 })
 
-test('1.2.2: tworzenie z Pulpitu jest idempotentne, wysyłka dotyczy jednej paczki i chroni historię', async () => {
+test('1.2.2: tworzenie z Pulpitu jest idempotentne, wysyłka dotyczy jednej paczki i chroni historię', async (kontekst) => {
   const magazyn = new Map<string, string>()
   Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: {
     getItem: (klucz: string) => magazyn.get(klucz) ?? null,
@@ -217,6 +217,10 @@ test('1.2.2: tworzenie z Pulpitu jest idempotentne, wysyłka dotyczy jednej pacz
   } })
   const { repozytoriumWspolnychDokumentow } = await import('../src/wspolne/dokumenty/rejestrDokumentow.ts')
   const { pobierzUzytkownikow } = await import('../src/kartoteki/uzytkownicy/magazynUzytkownikow.ts')
+  const { ustawProjekcjeKont } = await import('../src/aplikacja/logowanie/projekcjaKont.ts')
+  const { daneStartoweUzytkownikow } = await import('../src/kartoteki/uzytkownicy/daneUzytkownikow.ts')
+  ustawProjekcjeKont(daneStartoweUzytkownikow, [], null)
+  kontekst.after(() => ustawProjekcjeKont([], [], null))
   const { otworzLubUtworzChecklistePulpitu, oznaczWysylkeChecklisty } = await import('../src/moduly/zamkniete/pulpit/uslugi/checklistyPulpitu.ts')
   const { pobierzSzczegolyDoChecklisty, pobierzChecklistyPaczek, zapiszChecklistePaczki, pobierzChecklistePaczki } = await import('../src/moduly/dokumenty/generatory/checklisty_paczek/rejestrChecklistPaczek.ts')
   const dane = szczegoly()

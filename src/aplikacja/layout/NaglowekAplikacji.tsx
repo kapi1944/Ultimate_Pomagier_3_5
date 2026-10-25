@@ -7,6 +7,8 @@ import { OdznakaStatusu, Przycisk } from '../../wspolne/komponenty/ElementyInter
 import { pobierzKontekstNawigacji } from '../menu/pozycjeMenu'
 import type { WidokNawigacji } from '../nawigacja/typyNawigacji'
 import { informacjeOWersji } from '../wersjaAplikacji'
+import { czyTrybDemonstracyjny } from '../logowanie/uwierzytelnianie'
+import { useEffect, useState } from 'react'
 
 type WlasciwosciNaglowkaAplikacji = {
   aktywnyWidok: WidokNawigacji
@@ -19,6 +21,12 @@ type WlasciwosciNaglowkaAplikacji = {
 
 export default function NaglowekAplikacji({ aktywnyWidok, czyMenuPrzypiete, czyDockWidoczny, przelaczDock, otworzProfil, wyloguj }: WlasciwosciNaglowkaAplikacji) {
   const { zalogowanyUzytkownik } = useKontekstUzytkownika()
+  const [czyOnline, ustawCzyOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine)
+  useEffect(() => {
+    const aktualizuj = () => ustawCzyOnline(navigator.onLine)
+    window.addEventListener('online', aktualizuj); window.addEventListener('offline', aktualizuj)
+    return () => { window.removeEventListener('online', aktualizuj); window.removeEventListener('offline', aktualizuj) }
+  }, [])
   if (!zalogowanyUzytkownik) return null
   const nazwa = pobierzNazweWyswietlanaUzytkownika(zalogowanyUzytkownik)
   const kolorRoli = koloryRol[pobierzNadrzednaRoleUzytkownika(zalogowanyUzytkownik)]
@@ -26,7 +34,7 @@ export default function NaglowekAplikacji({ aktywnyWidok, czyMenuPrzypiete, czyD
 
   return <header className="naglowek-aplikacji">
     <div className="naglowek-aplikacji__lewa-strefa"><span className="naglowek-aplikacji__marka">{informacjeOWersji.nazwaProduktu}</span><nav aria-label="Bieżąca sekcja"><ol>{kontekst.map((etykieta, indeks) => <li key={indeks} aria-current={indeks === kontekst.length - 1 ? 'page' : undefined}>{etykieta}</li>)}</ol></nav></div>
-    <div className="naglowek-aplikacji__statusy"><OdznakaStatusu status="warning">Demonstracja lokalna</OdznakaStatusu><OdznakaStatusu status="info">{czyMenuPrzypiete ? 'Menu przypięte' : 'Menu zwijane'}</OdznakaStatusu><Przycisk aria-label={czyDockWidoczny ? 'Ukryj dock' : 'Pokaż dock'} aria-pressed={czyDockWidoczny} onClick={przelaczDock}><span className="naglowek-aplikacji__dock-etykieta">{czyDockWidoczny ? 'Ukryj dock' : 'Pokaż dock'}</span><span className="naglowek-aplikacji__dock-krotki" aria-hidden="true">Dock</span></Przycisk></div>
+    <div className="naglowek-aplikacji__statusy"><OdznakaStatusu status={czyTrybDemonstracyjny ? "warning" : "info"}>{czyTrybDemonstracyjny ? "Demonstracja lokalna" : czyOnline ? "Konto lokalne" : "Brak internetu — praca lokalna"}</OdznakaStatusu><OdznakaStatusu status="info">{czyMenuPrzypiete ? 'Menu przypięte' : 'Menu zwijane'}</OdznakaStatusu><Przycisk aria-label={czyDockWidoczny ? 'Ukryj dock' : 'Pokaż dock'} aria-pressed={czyDockWidoczny} onClick={przelaczDock}><span className="naglowek-aplikacji__dock-etykieta">{czyDockWidoczny ? 'Ukryj dock' : 'Pokaż dock'}</span><span className="naglowek-aplikacji__dock-krotki" aria-hidden="true">Dock</span></Przycisk></div>
     <section aria-label="Panel zalogowanego użytkownika" className="naglowek-aplikacji__panel-uzytkownika" style={{ borderColor: kolorRoli }}>
       <button aria-label={`Otwórz profil użytkownika ${nazwa}`} className="naglowek-aplikacji__avatar" onClick={otworzProfil} type="button"><AvatarUzytkownika uzytkownik={zalogowanyUzytkownik} /></button>
       <button className="naglowek-aplikacji__dane" onClick={otworzProfil} type="button"><strong>{nazwa}</strong><OdznakaRoli kompaktowa rola={zalogowanyUzytkownik.rola} /></button>

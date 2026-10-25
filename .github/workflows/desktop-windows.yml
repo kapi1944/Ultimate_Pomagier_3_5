@@ -1,6 +1,11 @@
 name: Instalator Windows
 
 on:
+  workflow_call:
+    inputs:
+      podpisane:
+        type: boolean
+        required: true
   push:
     branches:
       - main
@@ -67,5 +72,6 @@ jobs:
             wydanie-desktop/podpisane/Ultimate_Pomagier_*.exe*
             wydanie-desktop/podpisane/wersja.json
             wydanie-desktop/podpisane/latest.json
+            wydanie-desktop/podpisane/wydanie-windows.json
           if-no-files-found: error
           retention-days: 30

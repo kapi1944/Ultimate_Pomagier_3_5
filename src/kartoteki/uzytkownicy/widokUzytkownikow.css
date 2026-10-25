@@ -29,6 +29,10 @@
 .uzytkownicy table { border-collapse: collapse; width: 100%; font-size: .9rem; }
 .uzytkownicy th, .uzytkownicy td { text-align: left; vertical-align: top; padding: 9px; border-bottom: 1px solid var(--ui-obramowanie); min-width: 110px; max-width: 340px; overflow-wrap: anywhere; }
 .uzytkownicy th { background: var(--ui-panel); }
+.uzytkownicy th[aria-sort] button:hover { background: color-mix(in srgb, var(--ui-powierzchnia), var(--ui-tekst) 8%); }
+.uzytkownicy th:is([aria-sort="ascending"], [aria-sort="descending"]) button { background: #f2c94c; border-color: #f2c94c; color: #202b25; }
+.uzytkownicy th:is([aria-sort="ascending"], [aria-sort="descending"]) button:hover { background: color-mix(in srgb, #f2c94c, white 12%); }
+.uzytkownicy th[aria-sort] button:focus-visible { outline: 3px solid var(--ui-focus); outline-offset: 3px; }
 .uzytkownicy td input:not([type="checkbox"]) { min-width: 160px; }
 .uzytkownicy input[type="checkbox"] { width: 18px; min-height: 18px; flex-shrink: 0; }
 .uzytkownicy td .avatar-uzytkownika { display: inline-flex; margin-right: 8px; }

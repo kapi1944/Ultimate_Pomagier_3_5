@@ -9,6 +9,9 @@ import PoleTelefonu from '../../wspolne/telefon/PoleTelefonu'
 import { etykietyOrganizacji, etykietyRol, metadaneOdznak, pobierzNazweWyswietlanaUzytkownika, type FormularzUzytkownika, type OdznakaUzytkownika as TypOdznaki, type Uzytkownik, statusyUzytkownikow } from './typyUzytkownikow'
 import { mapujUzytkownikaNaFormularz, roleUzytkownikow, tytulyNaukowe, zwroty } from './daneUzytkownikow'
 import './widokProfiluUzytkownika.css'
+import PanelResetowaniaHasel from './PanelResetowaniaHasel'
+import PanelZmianyHasla from './PanelZmianyHasla'
+import { czyTrybDemonstracyjny } from '../../aplikacja/logowanie/uwierzytelnianie'
 
 type WlasciwosciWidokuProfilu = {
   uzytkownikId?: string | null
@@ -37,7 +40,7 @@ export default function WidokProfiluUzytkownika({ uzytkownikId, wybierzProfil, u
   if (!zalogowanyUzytkownik || !przegladany || !czyMozePrzegladacProfil(zalogowanyUzytkownik, przegladany)) return <main className="widok profil-uzytkownika"><p>Nie masz uprawnień do wyświetlenia tego profilu.</p></main>
   const uzytkownikProfilu = przegladany
   const uzytkownikZalogowany = zalogowanyUzytkownik
-  const czyMozeEdytowac = czyMozeEdytowacProfil(zalogowanyUzytkownik, przegladany)
+  const czyMozeEdytowac = czyTrybDemonstracyjny && czyMozeEdytowacProfil(zalogowanyUzytkownik, przegladany)
   const czyDaneAdministracyjne = czyMoznaPokazacDaneAdministracyjne(zalogowanyUzytkownik, przegladany)
   const dostepniUzytkownicy = uzytkownicy.filter((uzytkownik) => czyMozePrzegladacProfil(zalogowanyUzytkownik, uzytkownik))
   const aktualnyFormularz = formularz ?? mapujUzytkownikaNaFormularz(przegladany)
@@ -60,6 +63,8 @@ export default function WidokProfiluUzytkownika({ uzytkownikId, wybierzProfil, u
     {komunikat && <p aria-live="polite" className="profil-uzytkownika__sukces">{komunikat}</p>}
     {blad && <p aria-live="assertive" className="profil-uzytkownika__blad">{blad}</p>}
     <header className="profil-uzytkownika__naglowek"><AvatarUzytkownika uzytkownik={przegladany} /><div><h1>{przegladany.imie} {przegladany.nazwisko}</h1>{przegladany.pseudonim && <p>{przegladany.pseudonim}</p>}<OdznakaRoli rola={przegladany.rola} /><span>{etykietyOrganizacji[przegladany.organizacja]} · {przegladany.status}</span></div>{czyMozeEdytowac && !czyEdycja && <button onClick={rozpocznijEdycje} type="button">Edytuj profil</button>}</header>
+    <PanelResetowaniaHasel key={przegladany.id} konta={[przegladany]} />
+    <PanelZmianyHasla key={`haslo-${przegladany.id}`} uzytkownikId={przegladany.id} />
     {czyEdycja ? <form className="profil-uzytkownika__formularz" onSubmit={zapisz}>
       <section><h2>Dane osobowe</h2><div className="profil-uzytkownika__siatka">
         <Pole etykieta="Zwrot"><select onChange={(zdarzenie) => zmienPole('zwrot', zdarzenie.target.value as FormularzUzytkownika['zwrot'])} value={aktualnyFormularz.zwrot}>{['', ...zwroty].map((zwrot) => <option key={zwrot} value={zwrot}>{zwrot || 'Wybierz'}</option>)}</select></Pole>
@@ -77,6 +82,6 @@ export default function WidokProfiluUzytkownika({ uzytkownikId, wybierzProfil, u
       {czyMozeZarzadzacUzytkownikami(zalogowanyUzytkownik) && <section><h2>Uprawnienia</h2><label><input checked={aktualnyFormularz.wymagaZmianyHasla} onChange={(zdarzenie) => zmienPole('wymagaZmianyHasla', zdarzenie.target.checked)} type="checkbox" /> Wymaga zmiany hasła</label><fieldset><legend>Odznaki</legend>{(Object.keys(metadaneOdznak) as TypOdznaki[]).map((odznaka) => <label key={odznaka}><input checked={aktualnyFormularz.odznaki.includes(odznaka)} onChange={(zdarzenie) => zmienPole('odznaki', zdarzenie.target.checked ? [...aktualnyFormularz.odznaki, odznaka] : aktualnyFormularz.odznaki.filter((wartosc) => wartosc !== odznaka))} type="checkbox" />{metadaneOdznak[odznaka].etykieta}</label>)}</fieldset></section>}
       <div className="profil-uzytkownika__akcje"><button onClick={anuluj} type="button">Anuluj</button><button type="submit">Zapisz</button></div>
     </form> : <div className="profil-uzytkownika__kolumny"><section><h2>Dane kontaktowe</h2><p>{przegladany.emaile.join(', ')}</p><p>{przegladany.telefony.map((telefon) => `${telefon.prefiks} ${telefon.numer}`).join(', ')}</p></section><section><h2>Dane organizacyjne</h2>{czyDaneAdministracyjne ? <><p>Login: {przegladany.login}</p><p>Status: {przegladany.status}</p><p>Kolor profilu: {przegladany.kolorProfilu}</p></> : <p>{etykietyOrganizacji[przegladany.organizacja]}</p>}</section><section><h2>Odznaki i uprawnienia</h2>{przegladany.odznaki.length ? <div className="profil-uzytkownika__odznaki">{przegladany.odznaki.map((odznaka) => <OdznakaUzytkownika key={odznaka} odznaka={odznaka} />)}</div> : <p>Ten użytkownik nie ma dodatkowych odznak.</p>}</section>{czyDaneAdministracyjne && <section><h2>Informacje systemowe</h2><p>Ostatnie logowanie: {przegladany.ostatnieLogowanie ?? 'Brak'}</p><p>Utworzono: {przegladany.utworzono}</p><p>Zaktualizowano: {przegladany.zaktualizowano}</p><p>Wersja uprawnień: {przegladany.wersjaUprawnien}</p></section>}</div>}
-    {czyDaneAdministracyjne && <section><h2>Historia i aktywność</h2><p>Ostatnie logowanie demonstracyjne: {przegladany.ostatnieLogowanie ?? 'Brak'}</p><p>Konfiguracja uwierzytelniania: {przegladany.statusUwierzytelniania ?? 'NIESKONFIGUROWANE'}</p><ul>{pobierzHistorieKont().filter((wpis) => wpis.uzytkownikId === przegladany.id).slice(-30).reverse().map((wpis, indeks) => <li key={indeks}>{wpis.czas} · {wpis.operacja} · {wpis.pola.join(', ')} · {wpis.wynik}</li>)}</ul></section>}
+    {czyDaneAdministracyjne && <section><h2>Historia i aktywność</h2><p>Ostatnie logowanie: {przegladany.ostatnieLogowanie ?? 'Brak'}</p><p>Konfiguracja uwierzytelniania: {przegladany.statusUwierzytelniania ?? 'NIESKONFIGUROWANE'}</p><ul>{pobierzHistorieKont().filter((wpis) => wpis.uzytkownikId === przegladany.id).slice(-30).reverse().map((wpis, indeks) => <li key={indeks}>{wpis.czas} · {wpis.operacja} · {wpis.pola.join(', ')} · {wpis.wynik}</li>)}</ul></section>}
   </main>
 }

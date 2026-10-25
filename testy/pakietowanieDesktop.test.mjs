@@ -56,7 +56,7 @@ test('stała tożsamość magazynu, osobny profil development i brak dostępu zd
   assert.notEqual(rozwojowa.identifier, konfiguracja.identifier)
   assert.equal(waliduj({ ...konfiguracja, ...rozwojowa }), true, JSON.stringify(waliduj.errors))
   const uprawnienia = odczytaj('src-tauri/capabilities/desktop.json')
-  assert.deepEqual(uprawnienia.windows, ['main'])
+  assert.deepEqual(uprawnienia.windows, ['main', 'obszar'])
   assert.equal(uprawnienia.remote, undefined)
   assert.ok(!uprawnienia.permissions.some((wpis) => /fs:|shell:|http:|process:/.test(wpis)))
 })

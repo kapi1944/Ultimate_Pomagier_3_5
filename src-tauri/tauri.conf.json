@@ -12,6 +12,7 @@
   "app": {
     "windows": [{
       "label": "main",
+      "create": false,
       "title": "Ultimate Pomagier",
       "width": 1440,
       "height": 960,
@@ -22,7 +23,7 @@
       "zoomHotkeysEnabled": false
     }],
     "security": {
-      "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost https://ipc.localhost; frame-src 'self' blob:; object-src 'self' blob:"
+      "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost https://ipc.localhost https://api.github.com; frame-src 'self' blob:; object-src 'self' blob:"
     }
   },
   "bundle": {

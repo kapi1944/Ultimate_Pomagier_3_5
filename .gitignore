@@ -9,8 +9,15 @@ lerna-debug.log*
 
 node_modules
 src-tauri/target/
+src-tauri/konta/target/
 src-tauri/gen/
 wydanie-desktop/
+wydanie-android/
+wydanie-web/
+wydanie-publikacja/
+*.jks
+*.keystore
+keystore.properties
 .desktop-icons/
 .desktop-tools/
 *.key

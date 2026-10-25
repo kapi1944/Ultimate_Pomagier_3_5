@@ -1,0 +1,12 @@
+.wersje { min-width: 0; display: grid; gap: 16px; }
+.wersje__platformy { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 16px; margin-top: 16px; }
+.wersje__platforma { min-width: 0; border: 1px solid var(--ui-obramowanie); border-radius: var(--ui-promien-karty); padding: 16px; }
+.wersje__platforma--zalecana { border: 2px solid var(--ui-akcent); }
+.wersje__dane { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 12px; }
+.wersje__dane dt { color: var(--ui-tekst-drugi); }
+.wersje__dane dd { margin: 4px 0 0; overflow-wrap: anywhere; }
+.wersje__opis { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 160px; overflow: auto; }
+.wersje__skrot { overflow-wrap: anywhere; }
+.wersje summary { cursor: pointer; padding-block: 12px; }
+.wersje button { min-height: 44px; }
+.wersje__historia { padding-block: 16px; border-top: 1px solid var(--ui-obramowanie); }

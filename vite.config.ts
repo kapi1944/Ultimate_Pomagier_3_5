@@ -12,7 +12,7 @@ export default defineConfig(({ mode: trybVite, command: polecenie }) => {
   if (polecenie === 'build' && trybVite === 'demonstracyjny') throw new Error('Demonstracja jest dostępna wyłącznie w serwerze deweloperskim: npm run dev:demo.')
   const trybFrontendu = okreslTrybFrontendu(trybVite, loadEnv(trybVite, process.cwd(), 'VITE_'))
   return {
-    server: { watch: { ignored: ['**/src-tauri/target/**', '**/wydanie-desktop/**'] } },
+    server: { watch: { ignored: ['**/src-tauri/target/**', '**/src-tauri/konta/target/**', '**/src-tauri/gen/**', '**/.desktop-tools/**', '**/.desktop-icons/**', '**/wydanie-desktop/**', '**/wydanie-android/**', '**/wydanie-web/**', '**/wydanie-publikacja/**'] } },
     define: { __INFORMACJE_O_WERSJI__: JSON.stringify(informacjeOWersji) },
     plugins: [react(), {
       name: 'informacje-o-wydaniu',

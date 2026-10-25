@@ -25,6 +25,8 @@ jobs:
         run: npm test
       - name: Testy konfiguracji desktopowej
         run: npm run test:desktop
+      - name: Testy rejestru i dystrybucji
+        run: npm run test:dystrybucja
       - name: Lint
         run: npm run lint
       - name: Build

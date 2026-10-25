@@ -1,0 +1,33 @@
+name: Zatwierdzenie publikacji przygotowanego wydania
+
+on:
+  workflow_dispatch:
+    inputs:
+      zatwierdzam:
+        description: Zatwierdzam publikację po sprawdzeniu szkicu, podpisów, instalacji i zachowania danych
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  publikacja:
+    if: ${{ inputs.zatwierdzam && startsWith(github.ref, 'refs/tags/v') }}
+    runs-on: ubuntu-24.04
+    environment: wydania-produkcyjne
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Publikacja wyłącznie istniejącego szkicu po akceptacji
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node skrypty/zatwierdzWydanie.mjs

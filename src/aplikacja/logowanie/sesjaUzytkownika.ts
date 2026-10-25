@@ -1,6 +1,7 @@
 import { pobierzUzytkownika, zarejestrujLogowanieDemonstracyjne } from '../../kartoteki/uzytkownicy/magazynUzytkownikow'
 import { czyKontoJestAktywne, type Uzytkownik } from '../../kartoteki/uzytkownicy/typyUzytkownikow'
 import { czyTrybDemonstracyjny } from './uwierzytelnianie'
+import { pobierzProjekcjeKont } from './projekcjaKont'
 
 export const kluczSesjiUzytkownika = 'ultimatePomagier.sesjaUzytkownika.v1'
 export type SesjaUzytkownika = { uzytkownikId: string; wersjaUprawnien: number; dataUtworzenia: string; tryb: 'DEMONSTRACYJNY' }
@@ -37,6 +38,7 @@ export function pobierzSesje() {
   return { ...sesja }
 }
 export function pobierzZalogowanegoUzytkownika(): Uzytkownik | null {
+  if (!czyTrybDemonstracyjny) return pobierzProjekcjeKont().tozsamosc
   const sesja = pobierzSesje()
   return sesja ? pobierzUzytkownika(sesja.uzytkownikId) ?? null : null
 }

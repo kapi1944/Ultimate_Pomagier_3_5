@@ -526,14 +526,18 @@
     },
     "src/aplikacja/logowanie/KontekstUzytkownika.tsx": {
       "zadanie": "V4-02",
-      "powierzchnie": [],
+      "powierzchnie": [
+        "window.alert('Nie udało się unieważnić sesji. Spróbuj wylogować się ponownie.')"
+      ],
       "ukonczoneEtapy": [],
       "wspoldzieloneZ": []
     },
     "src/aplikacja/logowanie/PanelLogowania.tsx": {
       "zadanie": "V4-03",
       "powierzchnie": [
+        "OknoDialogowe otwarty={czyWersjeOtwarte} zamknij={() => ustawCzyWersjeOtwarte(false)} tytul=\"Aktualizacje i wersje\"",
         "Przycisk className=\"panel-logowania__zaloguj\" type=\"submit\" disabled={czyTrwaLogowanie}",
+        "details",
         "div className=\"panel-logowania__wybor\"",
         "form className=\"panel-logowania__formularz\" onSubmit={obsluzLogowanie}",
         "img alt=\"Ultimate Pomagier\" className=\"panel-logowania__logo\" src=\"/logo-ultimate-pomagier.png\"",
@@ -1425,6 +1429,32 @@
       "zadanie": "V4-21",
       "powierzchnie": [
         "dialog ref={okno} className=\"uzytkownicy__okno-podgladu\" onCancel={(zdarzenie) => { zdarzenie.preventDefault(); zakoncz() }} aria-label=\"Tryb podglądu użytkownika\""
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
+    },
+    "src/kartoteki/uzytkownicy/PanelResetowaniaHasel.tsx": {
+      "zadanie": "V4-21",
+      "powierzchnie": [
+        "dialog className=\"resetowanie-hasel\" ref={okno} aria-labelledby={zbiorczy ? 'tytul-resetu-zbiorczego' : 'tytul-resetu'} onCancel={(zdarzenie) => { zdarzenie.preventDefault(); zamknij() }}"
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
+    },
+    "src/aplikacja/desktop/PanelWersji.tsx": {
+      "zadanie": "V4-22",
+      "powierzchnie": [
+        "details"
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": [
+        "V4-03"
+      ]
+    },
+    "src/kartoteki/uzytkownicy/PanelZmianyHasla.tsx": {
+      "zadanie": "V4-21",
+      "powierzchnie": [
+        "form className=\"profil-uzytkownika__formularz\" onSubmit={(zdarzenie) => { void zmien(zdarzenie) }}"
       ],
       "ukonczoneEtapy": [],
       "wspoldzieloneZ": []

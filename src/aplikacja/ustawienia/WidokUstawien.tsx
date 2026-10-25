@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import PanelAktualizacji from '../desktop/PanelAktualizacji'
+import PanelWersji from '../desktop/PanelWersji'
 import { informacjeOWersji } from '../wersjaAplikacji'
 import { useKontekstUzytkownika } from '../logowanie/useKontekstUzytkownika'
 import { pobierzIdRozwijalnychPozycji } from '../menu/pozycjeMenu'
@@ -44,6 +44,7 @@ type ZakladkaUstawien =
   | 'ZADANIA'
   | 'DOSTEPNOSC'
   | 'DANE'
+  | 'WERSJE'
 
 const etykietyPalet: Record<PaletaInterfejsu, string> = {
   EMERALD_DARK: 'Emerald Dark',
@@ -424,6 +425,7 @@ export default function WidokUstawien() {
       <nav aria-label="Kategorie ustawień" className="ustawienia__zakladki">
         {([
           ['OGOLNE', 'Ogólne'],
+          ['WERSJE', 'Aktualizacje i wersje'],
           ['WYGLAD', 'Wygląd'],
           ['NAWIGACJA', 'Nawigacja'],
           ['PULPIT', 'Pulpit'],
@@ -444,13 +446,13 @@ export default function WidokUstawien() {
         ))}
       </nav>
 
+      {aktywnaZakladka === 'WERSJE' && <PanelWersji />}
       {aktywnaZakladka === 'OGOLNE' && <>
         <section className="ustawienia__karta" aria-label="Informacje o wydaniu">
           <h2>{informacjeOWersji.nazwaProduktu}</h2>
           <p>Wersja techniczna: {informacjeOWersji.wersja}</p>
           <p>Commit: <code>{informacjeOWersji.commit}</code>{informacjeOWersji.zmienioneZrodla ? ' (zmienione źródła)' : ''}</p>
         </section>
-        <PanelAktualizacji />
         <section className="ustawienia__karta">
           <h2>Menu boczne</h2>
 

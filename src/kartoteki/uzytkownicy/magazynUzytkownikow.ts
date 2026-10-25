@@ -1,4 +1,5 @@
 import { czyTrybDemonstracyjny } from '../../aplikacja/logowanie/uwierzytelnianie'
+import { pobierzProjekcjeKont } from '../../aplikacja/logowanie/projekcjaKont'
 import { czyTrwaPodgladUzytkownika } from './stanPodgladuUzytkownika'
 import { pobierzSesje } from '../../aplikacja/logowanie/sesjaUzytkownika'
 import { daneStartoweUzytkownikow, utworzIdUzytkownika } from './daneUzytkownikow'
@@ -49,6 +50,7 @@ export function wykonajMigracjeBazyUzytkownikow(uzytkownicy: Uzytkownik[]) {
 }
 
 function pobierzBaze(): BazaUzytkownikow {
+  if (!czyTrybDemonstracyjny) { const projekcja = pobierzProjekcjeKont(); return { wersja: 2, uzytkownicy: projekcja.konta, historia: projekcja.historia } }
   if (typeof localStorage === 'undefined') return { wersja: 2, uzytkownicy: daneStartoweUzytkownikow.map(skopiujUzytkownika), historia: [] }
   const zapis = localStorage.getItem(kluczMagazynuUzytkownikow)
   if (zapis === null) {
@@ -95,6 +97,7 @@ export type ZmianaKonta = { id: string; dane: Partial<FormularzUzytkownika>; now
 export type WynikZapisuKont = { blad?: string; liczba?: number; uzytkownik?: Uzytkownik }
 
 export function zatwierdzZmianyKont(wykonujacy: Uzytkownik | null, zmiany: ZmianaKonta[], oczekiwanyStan: string, operacja = 'EDYCJA_ZBIORCZA', wlasnyProfil = false): WynikZapisuKont {
+  if (!czyTrybDemonstracyjny) return { blad: 'Edycja kartoteki lokalnej jest dostępna wyłącznie w DEMO. Reset haseł korzysta z zaufanej warstwy kont.' }
   try {
     if (czyTrwaPodgladUzytkownika()) return { blad: 'Operacje modyfikujące konta są zablokowane w podglądzie.' }
     const baza = pobierzBaze()

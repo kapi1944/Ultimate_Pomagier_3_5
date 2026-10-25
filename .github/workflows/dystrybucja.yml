@@ -1,0 +1,123 @@
+name: Przygotowanie Windows, Android i WEB
+
+on:
+  workflow_dispatch:
+    inputs:
+      opis_zmian:
+        description: Opis rzeczywistych zmian tego wydania (uruchom na tagu vX.Y.Z)
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    uses: ./.github/workflows/desktop-windows.yml
+    with:
+      podpisane: true
+    secrets: inherit
+
+  android:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: '12266719'
+      - name: Instalacja narzędzi Android
+        run: sdkmanager 'ndk;27.2.12479018' 'platforms;android-36' 'build-tools;36.0.0'
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+      - run: npm ci
+      - run: npm run test:dystrybucja
+      - name: Przygotowanie zatwierdzonego klucza w katalogu tymczasowym
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          node --input-type=module -e 'import { writeFileSync } from "node:fs"; import { join } from "node:path"; if (!process.env.ANDROID_KEYSTORE_BASE64) throw new Error("Brak klucza Android"); writeFileSync(join(process.env.RUNNER_TEMP, "pomagier.jks"), Buffer.from(process.env.ANDROID_KEYSTORE_BASE64, "base64"), { mode: 0o600 });'
+      - name: Budowanie i weryfikacja produkcyjnego APK
+        env:
+          NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.2.12479018
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/pomagier.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_CERT_SHA256: ${{ vars.ANDROID_CERT_SHA256 }}
+        run: npm run android:release
+      - name: Usunięcie tymczasowej kopii klucza
+        if: always()
+        run: |
+          node --input-type=module -e 'import { rmSync } from "node:fs"; import { join } from "node:path"; rmSync(join(process.env.RUNNER_TEMP, "pomagier.jks"), { force: true });'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ultimate-Pomagier-Android
+          path: |
+            wydanie-android/podpisane/Ultimate_Pomagier_*.apk*
+            wydanie-android/podpisane/wydanie-android.json
+          if-no-files-found: error
+          retention-days: 30
+
+  web:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run lint
+      - run: npm run web:release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ultimate-Pomagier-WEB
+          path: wydanie-web/
+          if-no-files-found: error
+          retention-days: 30
+
+  szkic:
+    needs: [windows, android, web]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: Ultimate-Pomagier-*
+          path: wydanie-publikacja/pobrane
+          merge-multiple: true
+      - name: Połączenie i sprawdzenie rzeczywistych artefaktów
+        env:
+          POMAGIER_OPIS_ZMIAN: ${{ inputs.opis_zmian }}
+        run: |
+          node skrypty/dystrybucja.mjs zbierz wydanie-publikacja/pobrane wydanie-publikacja
+          node --input-type=module -e 'import { writeFileSync } from "node:fs"; writeFileSync("wydanie-publikacja/zmiany.md", process.env.POMAGIER_OPIS_ZMIAN);'
+          node skrypty/dystrybucja.mjs polacz wydanie-publikacja wydanie-publikacja/zmiany.md
+      - name: Przygotowanie prywatnego szkicu wydania do akceptacji
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node --input-type=module -e 'import { execFileSync } from "node:child_process"; import { readdirSync, readFileSync } from "node:fs"; const manifest = JSON.parse(readFileSync("wydanie-publikacja/rejestr-wydania.json")); const tag = `v${manifest.wersja}`; if (process.env.GITHUB_REF !== `refs/tags/${tag}`) throw new Error("Wybierz dokładny tag wydania"); const pliki = readdirSync("wydanie-publikacja").filter(nazwa => /\.(exe|apk|zip|sig|sha256)$/.test(nazwa) || ["latest.json", "rejestr-wydania.json"].includes(nazwa)).map(nazwa => `wydanie-publikacja/${nazwa}`); execFileSync("gh", ["release", "create", tag, "--draft", "--verify-tag", "--title", `Ultimate Pomagier ${manifest.wersja}`, "--notes-file", "wydanie-publikacja/opis-wydania.md", ...pliki], { stdio: "inherit" });'

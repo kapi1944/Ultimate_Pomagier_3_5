@@ -5,8 +5,8 @@ import PanelLogowania from './aplikacja/logowanie/PanelLogowania'
 import { useKontekstUzytkownika } from './aplikacja/logowanie/useKontekstUzytkownika'
 
 function ZawartoscAplikacji() {
-  const { zalogowanyUzytkownik, zaloguj } = useKontekstUzytkownika()
-  return zalogowanyUzytkownik ? <UkladAplikacji /> : <PanelLogowania otworzDemonstracje={() => zaloguj('administrator-kacper-madej')} />
+  const { zalogowanyUzytkownik, zaloguj, odswiezUzytkownika } = useKontekstUzytkownika()
+  return zalogowanyUzytkownik ? <UkladAplikacji /> : <PanelLogowania otworzDemonstracje={() => zaloguj('administrator-kacper-madej')} poUwierzytelnieniu={odswiezUzytkownika} />
 }
 
 export default function App() {

@@ -15,14 +15,29 @@
     "test": "node --import ./testy/rejestrujLoaderTs.mjs testy/parserMailaSzczegolow.regresja.test.ts && node testy/parserProgramu.regresja.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/wygladListyProgramu.regresja.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/replikatorDokumentow.regresja.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/kartotekaSzablonowDokumentow.regresja.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/danePoczatkoweSzczegolow.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/kopieRobocze.regresja.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/repozytoriumDokumentow.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/autosaveProgramowSzkolen.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/rdzenProgramowSzkolen.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/pipelineImportuProgramu.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/modelDokumentu.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/rejestrWspolnychDokumentow.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/migracjaStarszychDokumentow.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/migracjaDanych.regresja.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/backupMigracjaRestore.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/eksportPdf.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/eksportPdfSemantyczny.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/workflowStatusowSzczegolow.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/modelListyObecnosci.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/wygladListyObecnosci.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/generowanieListObecnosciZeSzczegolow.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/grupySzkoleniowe.regresja.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/porownanieWersjiSzczegolow.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/daneOdbiorcy.regresja.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/checklistaPublikacji.regresja.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/listySzczegolowOrganizacyjnych.test.ts && node --import ./testy/rejestrujLoaderTs.mjs --import ./testy/srodowiskoDemoKont.mjs testy/uzytkownicySesje.regresja.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/menuDrzewo.regresja.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/narzedzia.regresja.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/zakupy.regresja.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/stanyMagazynowe.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/mapaMagazynu.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/pptxPoprawiacz.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/telefonyMiedzynarodowe.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/kopieRoboczeGeneratorow.regresja.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/checklistaPaczki.regresja.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/domkniecieWidokowDokumentow.regresja.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/integracjaSzczegolowZDokumentami.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/fabrykiDokumentowZeSzczegolow.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/menuIkony.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/paginatorProgramu.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/trybyRenderowaniaProgramu.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/presetyProgramu.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/wersjonowanieDokumentow.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/widoczneWpisyHistorii.regresja.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/zrodlaProgramu.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/programyUprawnienia.regresja.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/pulpit.regresja.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/monitorWysylek.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/modelAnkiety.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/kartaNaDrzwiSwobodneBloki.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/dyplomySeryjne.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/v4Rejestr.test.mjs && node --import ./testy/rejestrujLoaderTs.mjs testy/v4Motywy.test.mjs && node --import ./testy/rejestrujLoaderTs.mjs testy/skalaInterfejsu.test.mjs && node --import ./testy/rejestrujLoaderTs.mjs testy/v4Powloka.test.mjs && node --import ./testy/rejestrujLoaderTs.mjs testy/v4Logowanie.test.mjs && node --import ./testy/rejestrujLoaderTs.mjs testy/v4Pulpit.test.mjs && node --import ./testy/rejestrujLoaderTs.mjs testy/v4Szkolenia.test.mjs && node --import ./testy/rejestrujLoaderTs.mjs --import ./testy/srodowiskoDemoKont.mjs testy/v4RejestrySzczegolow.test.mjs && npm run test:konta",
     "preview": "vite preview",
     "desktop:dev": "tauri dev --config src-tauri/tauri.dev.conf.json",
+    "desktop:demo": "node skrypty/uruchomDemoDesktop.mjs",
     "desktop:build": "node skrypty/budujDesktop.mjs",
     "desktop:release": "node skrypty/budujDesktop.mjs --podpisane",
+    "android:init": "node skrypty/budujAndroid.mjs --inicjalizuj",
+    "android:build:test": "node skrypty/budujAndroid.mjs --testowy",
+    "android:release": "node skrypty/budujAndroid.mjs",
+    "web:release": "npm run build && node skrypty/dystrybucja.mjs web",
+    "test:dystrybucja": "node --import ./testy/rejestrujLoaderTs.mjs --test testy/rejestrWydan.test.ts testy/platformyNatywne.test.ts && node --test testy/dystrybucja.test.mjs",
+    "test:dystrybucja:przegladarka": "node --test testy/dystrybucja.przegladarka.test.mjs",
     "test:desktop": "node --test testy/pakietowanieDesktop.test.mjs && node --import ./testy/rejestrujLoaderTs.mjs --test testy/aktualizacjeDesktop.test.ts && node --test testy/wersjaAplikacji.test.mjs",
     "test:konta": "node --import ./testy/rejestrujLoaderTs.mjs --import ./testy/srodowiskoDemoKont.mjs testy/modernizacjaKont.test.ts && node --import ./testy/rejestrujLoaderTs.mjs --import ./testy/srodowiskoDemoKont.mjs testy/uzytkownicySesje.regresja.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/uwierzytelnianieProdukcyjne.test.ts",
     "dev:demo": "vite --mode demonstracyjny --host 127.0.0.1",
-    "build:demo": "tsc -b && vite build --mode demonstracyjny"
+    "build:demo": "tsc -b && vite build --mode demonstracyjny",
+    "konta": "node skrypty/kontaLokalne.mjs",
+    "test:reset-hasel": "node --import ./testy/rejestrujLoaderTs.mjs testy/resetowanieHasel.test.ts && node --import ./testy/rejestrujLoaderTs.mjs --import ./testy/srodowiskoDemoKont.mjs testy/resetowanieHasel.test.ts && node skrypty/kontaLokalne.mjs --testy",
+    "test:konta:desktop": "npm run build && node skrypty/kontaLokalne.mjs --buduj-desktop-testowy && node --test testy/kontaDesktop.natywne.test.mjs",
+    "test:konta:demo": "node --test testy/kontaDesktop.demo.test.mjs",
+    "test:reset-hasel:przegladarka": "node skrypty/kontaLokalne.mjs --buduj-usluge-testowa && node --import ./testy/rejestrujLoaderTs.mjs --test testy/resetowanieHasel.przegladarka.test.mjs"
   },
   "dependencies": {
+    "@tauri-apps/api": "^2.12.4",
+    "@tauri-apps/plugin-opener": "^2.7.2",
+    "@tauri-apps/plugin-updater": "^2.14.0",
     "@tiptap/extension-placeholder": "^3.27.1",
     "@tiptap/extension-underline": "^3.27.1",
     "@tiptap/pm": "^3.27.1",
@@ -34,25 +49,23 @@
     "jszip": "^3.10.2",
     "pdfjs-dist": "^6.2.108",
     "react": "^19.2.6",
-    "react-dom": "^19.2.6",
-    "@tauri-apps/api": "^2.12.4",
-    "@tauri-apps/plugin-updater": "^2.14.0"
+    "react-dom": "^19.2.6"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@tauri-apps/cli": "^2.12.4",
     "@types/node": "^24.12.3",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "@xmldom/xmldom": "^0.9.12",
+    "ajv": "^8.20.0",
     "eslint": "^10.3.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",
-    "vite": "^8.0.12",
-    "@tauri-apps/cli": "^2.12.4",
-    "ajv": "^8.20.0"
+    "vite": "^8.0.12"
   }
 }

@@ -6,7 +6,7 @@ export type WartoscKontekstuUzytkownika = {
   aktywniUzytkownicy: Uzytkownik[]
   zaloguj: (uzytkownikId: string) => boolean
   wyloguj: () => void
-  odswiezUzytkownika: () => void
+  odswiezUzytkownika: () => Promise<void>
 }
 
 export const KontekstUzytkownika = createContext<WartoscKontekstuUzytkownika | null>(null)

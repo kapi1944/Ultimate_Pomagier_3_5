@@ -1,4 +1,4 @@
 {
   "identifier": "pl.ultimatepomagier.desktop.dev",
-  "app": { "windows": [{ "label": "main", "title": "Ultimate Pomagier — development", "useHttpsScheme": false, "dragDropEnabled": false }] }
+  "app": { "windows": [{ "label": "main", "create": false, "title": "Ultimate Pomagier — development", "useHttpsScheme": false, "dragDropEnabled": false }] }
 }

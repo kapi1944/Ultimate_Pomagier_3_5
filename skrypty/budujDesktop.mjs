@@ -5,6 +5,7 @@ import { resolve, join } from 'node:path'
 import { createHash } from 'node:crypto'
 import { pobierzInformacjeOWersji } from './informacjeOWersji.mjs'
 import { sprawdzKonfiguracjeDesktop, sprawdzFrontendDesktop } from './kontrolaTrybuFrontendu.mjs'
+import { opiszPlik } from './dystrybucja.mjs'
 
 const katalog = fileURLToPath(new URL('../', import.meta.url))
 export const adresStabilnegoWydania = 'https://github.com/kapi1944/Ultimate_Pomagier_3_5/releases/latest/download/latest.json'
@@ -72,6 +73,11 @@ async function buduj() {
     const podpis = (await readFile(`${zrodlo}.sig`, 'utf8')).trim()
     if (!podpis) throw new Error('Brak podpisu aktualizacji.')
     await copyFile(`${zrodlo}.sig`, join(katalogArtefaktow, `${nazwa}.sig`))
+    const metadanePodpisu = await opiszPlik(`${zrodlo}.sig`, {})
+    const metadaneInstalatora = await opiszPlik(join(katalogArtefaktow, nazwa), {
+      platforma: 'windows', architektura: 'x86_64', typ: 'exe', podpis: { rodzaj: 'tauri', sha256: metadanePodpisu.sha256 },
+    })
+    await writeFile(join(katalogArtefaktow, 'wydanie-windows.json'), JSON.stringify({ wersja: pakiet.version, commit: informacjeOWersji.commit, pliki: [metadaneInstalatora] }, null, 2))
     await writeFile(join(katalogArtefaktow, 'latest.json'), JSON.stringify({
       version: pakiet.version,
       notes: `Stabilne wydanie Ultimate Pomagier ${pakiet.version}`,

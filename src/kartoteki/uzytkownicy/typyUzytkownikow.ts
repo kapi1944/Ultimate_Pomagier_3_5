@@ -54,6 +54,9 @@ export type Uzytkownik = {
   przypisanyKlientId?: string
   przypisanyTrenerId?: string
   wymagaZmianyHasla: boolean
+  stanResetowaniaHasla?: 'NORMALNY' | 'RESET_OCZEKUJACY' | 'RESET_WYGASLY' | 'RESET_WYMAGANY'
+  resetZainicjowano?: string
+  resetWygasa?: string
   statusUwierzytelniania?: 'NIESKONFIGUROWANE' | 'OCZEKUJE_NA_AKTYWACJE' | 'SKONFIGUROWANE'
   wersjaUprawnien: number
   ostatnieLogowanie: string | null

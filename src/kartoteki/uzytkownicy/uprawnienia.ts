@@ -1,5 +1,11 @@
 import type { OdznakaUzytkownika, RolaUzytkownika, Uzytkownik } from './typyUzytkownikow'
-import { czyJestArchitektem, czyJestPracownikiemWewnetrznym, czyKontoJestAktywne } from './typyUzytkownikow'
+import { czyJestArchitektem, czyJestPracownikiemWewnetrznym, czyKontoJestAktywne, pobierzPoziomRoli } from './typyUzytkownikow'
+
+export const uprawnienieResetowaniaHasla = 'users.password.reset'
+// Dostępność interfejsu; zaufana warstwa sprawdza ponownie sesję i aktualne role.
+export function czyMozeResetowacHaslo(wykonujacy: Uzytkownik | null | undefined, konto: Uzytkownik) {
+  return Boolean(wykonujacy && czyMozeZarzadzacUzytkownikami(wykonujacy) && wykonujacy.id !== konto.id && pobierzPoziomRoli(wykonujacy.rola) > pobierzPoziomRoli(konto.rola))
+}
 
 export function czyMaRole(uzytkownik: Uzytkownik | null | undefined, rola: RolaUzytkownika) { return czyKontoJestAktywne(uzytkownik) && uzytkownik?.rola === rola }
 export function czyMaOdznake(uzytkownik: Uzytkownik | null | undefined, odznaka: OdznakaUzytkownika) { return czyKontoJestAktywne(uzytkownik) && Boolean(uzytkownik?.odznaki.includes(odznaka)) }
