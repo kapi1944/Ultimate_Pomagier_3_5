@@ -7,7 +7,7 @@ import { pobierzUzytkownikow } from '../../../kartoteki/uzytkownicy/magazynUzytk
 import { pobierzNazweUzytkownika, pobierzNazweWyswietlanaUzytkownika, type Uzytkownik } from '../../../kartoteki/uzytkownicy/typyUzytkownikow'
 import { pobierzChecklistyPaczek, pobierzSzczegolyDoChecklisty } from '../../dokumenty/generatory/checklisty_paczek/rejestrChecklistPaczek'
 import { czyPozycjaJestAktywna } from '../../dokumenty/generatory/checklisty_paczek/modelChecklistyPaczki'
-import { pobierzEtykietyOsiCzasu, pobierzGraniceDniaPracyNaOsi, pobierzStanWskaznikaCzasu, pozycjaGodzinyNaOsi, type ZakresDniaPracy } from './logika/czasDnia'
+import { czyDzienPracy, pobierzEtykietyOsiCzasu, pobierzGraniceDniaPracyNaOsi, pobierzStanWskaznikaCzasu, pozycjaGodzinyNaOsi, type ZakresDniaPracy } from './logika/czasDnia'
 import { formularzZZadania, type FormularzZadania, type TrybFormularzaZadania } from './logika/formularzZadania'
 import { aktualizujKadrMiniatury, przygotujMiniatureZadania } from './logika/miniaturyZadan'
 import { czyWysylkaWymagaDodatkowegoPotwierdzenia, liczbaDniWidocznosciPaczki } from './logika/paczki'
@@ -528,6 +528,7 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
   const zachowaniePrzewijania: ScrollBehavior = ustawieniaAplikacji.dostepnosc.ograniczAnimacje || (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) ? 'auto' : 'smooth'
   const widoczneKafelki = ustawieniaAplikacji.pulpit.widoczneKafelki
   const zakresDniaPracy: ZakresDniaPracy = {
+    dniPracy: ustawieniaAplikacji.pulpit.dniPracy,
     poczatek: ustawieniaAplikacji.pulpit.poczatekDnia,
     koniec: ustawieniaAplikacji.pulpit.koniecDnia,
   }
@@ -560,6 +561,7 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
   const czyObserwowanyJestZalogowanym = wybranyUzytkownikId === zalogowanyUzytkownik?.id
   const wskaznikCzasu = pobierzStanWskaznikaCzasu(teraz, zakresDniaPracy)
   const etykietyOsi = pobierzEtykietyOsiCzasu(zakresDniaPracy)
+  const czyWybranyDzienPracy = czyDzienPracy(new Date(data + 'T12:00:00'), zakresDniaPracy)
   const graniceDniaPracy = pobierzGraniceDniaPracyNaOsi(zakresDniaPracy)
 
   function odswiezStan() { ustawStan(pobierzStanPulpitu()) }
@@ -980,14 +982,14 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
           <input aria-label="Wybierz datę planu" onChange={(zdarzenie) => ustawDate(zdarzenie.target.value)} type="date" value={data} />
         </div>
       </div>
-      <div className="pulpit-os-czasu__przewijanie" tabIndex={0} role="region" aria-label="Oś dnia — przewijanie poziome"><div className="pulpit-os-czasu" aria-label={'Dobowa oś czasu od 00:00 do 23:59; dzień pracy od ' + zakresDniaPracy.poczatek + ' do ' + zakresDniaPracy.koniec}>
+      <div className="pulpit-os-czasu__przewijanie" tabIndex={0} role="region" aria-label="Oś dnia — przewijanie poziome"><div className="pulpit-os-czasu" aria-label={czyWybranyDzienPracy ? 'Dobowa oś czasu od 00:00 do 23:59; dzień pracy od ' + zakresDniaPracy.poczatek + ' do ' + zakresDniaPracy.koniec : 'Dobowa oś czasu od 00:00 do 23:59; dzień wolny'}>
         <div className="pulpit-os-czasu__miniatury">
           {zadaniaGodzinowe.map((zadanie) => <MiniaturaZadaniaNaOsi key={'miniatura-' + zadanie.id} otworz={() => otworzZadanie(zadanie)} zakresDniaPracy={zakresDniaPracy} zadanie={zadanie} />)}
         </div>
         <div className="pulpit-os-czasu__linia">
-          <div className="pulpit-os-czasu__odcinek pulpit-os-czasu__odcinek--przed-praca" style={{ width: graniceDniaPracy.poczatek + '%' }} />
+          {czyWybranyDzienPracy ? <><div className="pulpit-os-czasu__odcinek pulpit-os-czasu__odcinek--przed-praca" style={{ width: graniceDniaPracy.poczatek + '%' }} />
           <div className="pulpit-os-czasu__odcinek pulpit-os-czasu__odcinek--praca" style={{ left: graniceDniaPracy.poczatek + '%', width: graniceDniaPracy.koniec - graniceDniaPracy.poczatek + '%' }} />
-          <div className="pulpit-os-czasu__odcinek pulpit-os-czasu__odcinek--po-pracy" style={{ left: graniceDniaPracy.koniec + '%', width: 100 - graniceDniaPracy.koniec + '%' }} />
+          <div className="pulpit-os-czasu__odcinek pulpit-os-czasu__odcinek--po-pracy" style={{ left: graniceDniaPracy.koniec + '%', width: 100 - graniceDniaPracy.koniec + '%' }} /></> : <div className="pulpit-os-czasu__odcinek pulpit-os-czasu__odcinek--po-pracy" style={{ width: '100%' }} />}
           <div className="pulpit-os-czasu__postep" style={{ width: wskaznikCzasu.pozycja + '%' }} />
           {data === dataTekstowa(teraz) && <div className="pulpit-os-czasu__wskaznik" style={{ left: wskaznikCzasu.pozycja + '%' }}>
             <span className={'pulpit-os-czasu__etykieta-teraz pulpit-os-czasu__etykieta-teraz--' + wskaznikCzasu.wyrownanieEtykiety.toLocaleLowerCase('pl')}>{wskaznikCzasu.etykieta}</span>
@@ -999,8 +1001,8 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
             const klasaKrawedzi = pozycja <= 5 ? ' pulpit-os-czasu__etykieta--lewo' : pozycja >= 95 ? ' pulpit-os-czasu__etykieta--prawo' : ''
             return <span className={'pulpit-os-czasu__etykieta' + klasaKrawedzi} key={etykieta} style={{ left: pozycja + '%' }}>{etykieta}</span>
           })}
-          <span className="pulpit-os-czasu__etykieta-pracy" style={{ left: graniceDniaPracy.poczatek + '%' }}>Start pracy {zakresDniaPracy.poczatek}</span>
-          <span className="pulpit-os-czasu__etykieta-pracy" style={{ left: graniceDniaPracy.koniec + '%' }}>Koniec pracy {zakresDniaPracy.koniec}</span>
+          {czyWybranyDzienPracy ? <><span className="pulpit-os-czasu__etykieta-pracy" style={{ left: graniceDniaPracy.poczatek + '%' }}>Start pracy {zakresDniaPracy.poczatek}</span>
+          <span className="pulpit-os-czasu__etykieta-pracy" style={{ left: graniceDniaPracy.koniec + '%' }}>Koniec pracy {zakresDniaPracy.koniec}</span></> : <span className="pulpit-os-czasu__etykieta-pracy" style={{ left: 0 }}>Dzień wolny</span>}
         </div>
         <div className="pulpit-os-czasu__zadania">{zadaniaGodzinowe.map((zadanie) => <MarkerDeadline key={zadanie.id} otworz={() => otworzZadanie(zadanie)} zakresDniaPracy={zakresDniaPracy} uzytkownicy={uzytkownicy} zadanie={zadanie} />)}</div>
       </div></div>

@@ -1,4 +1,5 @@
 export type ZakresDniaPracy = {
+  dniPracy?: number[]
   poczatek: string
   koniec: string
 }
@@ -14,7 +15,7 @@ const skalaCzasuPozaPraca = 0.5
 const liczbaMinutDoby = 24 * 60
 
 export type StanWskaznikaCzasu = {
-  etykieta: 'PREFAJRANT' | 'TERAZ' | 'FAJRANT'
+  etykieta: 'PREFAJRANT' | 'TERAZ' | 'FAJRANT' | 'DZIEŃ WOLNY'
   pozycja: number
   wyrownanieEtykiety: 'POCZATEK' | 'SRODEK' | 'KONIEC'
 }
@@ -82,6 +83,10 @@ export function pobierzStanWskaznikaCzasu(
       ? 'KONIEC'
       : 'SRODEK'
 
+  if (!czyDzienPracy(teraz, zakres)) {
+    return { etykieta: 'DZIEŃ WOLNY', pozycja, wyrownanieEtykiety }
+  }
+
   if (minuty < poczatek) {
     return { etykieta: 'PREFAJRANT', pozycja, wyrownanieEtykiety }
   }
@@ -125,4 +130,8 @@ export function pobierzEtykietyOsiCzasu(
 ) {
   void _zakres
   return [...etykietyOsiCzasu]
+}
+
+export function czyDzienPracy(data: Date, zakres: ZakresDniaPracy = domyslnyZakresDniaPracy) {
+  return (zakres.dniPracy ?? [1, 2, 3, 4, 5]).includes(data.getDay())
 }

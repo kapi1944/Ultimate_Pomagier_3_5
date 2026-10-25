@@ -45,6 +45,7 @@ export type UstawieniaAplikacji = {
     wysokoscPrzyciskuMenu: 'KOMPAKTOWA' | 'STANDARDOWA' | 'DUZA'
   }
   pulpit: {
+    dniPracy: number[]
     poczatekDnia: string
     koniecDnia: string
     widoczneKafelki: {
@@ -93,6 +94,7 @@ export const domyslneUstawieniaAplikacji: UstawieniaAplikacji = {
     wysokoscPrzyciskuMenu: 'STANDARDOWA',
   },
   pulpit: {
+    dniPracy: [1, 2, 3, 4, 5],
     poczatekDnia: '07:45',
     koniecDnia: '16:00',
     widoczneKafelki: {
@@ -239,6 +241,9 @@ export function normalizujUstawieniaAplikacji(dane: unknown): UstawieniaAplikacj
       ),
     },
     pulpit: {
+      dniPracy: Array.isArray(pulpit.dniPracy) && pulpit.dniPracy.every((dzien: unknown) => typeof dzien === 'number' && Number.isInteger(dzien) && dzien >= 0 && dzien <= 6)
+        ? [...new Set<number>(pulpit.dniPracy)]
+        : [...domyslneUstawieniaAplikacji.pulpit.dniPracy],
       poczatekDnia,
       koniecDnia,
       widoczneKafelki: {

@@ -95,6 +95,29 @@ test('wskaźnik czasu pokazuje TERAZ od 07:45 do 15:59', () => {
   assert.equal(pobierzStanWskaznikaCzasu(new Date('2026-07-22T15:59:00')).etykieta, 'TERAZ')
 })
 
+test('domyślnie praca trwa od poniedziałku do piątku, a weekend jest wolny', () => {
+  for (let dzien = 19; dzien <= 25; dzien++) {
+    const data = new Date(2026, 9, dzien, 12)
+    const roboczy = data.getDay() >= 1 && data.getDay() <= 5
+    assert.equal(pobierzStanWskaznikaCzasu(data).etykieta, roboczy ? 'TERAZ' : 'DZIEŃ WOLNY')
+  }
+  assert.equal(pobierzStanWskaznikaCzasu(new Date(2026, 9, 24, 12), { poczatek: '08:00', koniec: '16:00', dniPracy: [6] }).etykieta, 'TERAZ')
+  assert.equal(pobierzStanWskaznikaCzasu(new Date(2026, 9, 19, 12), { poczatek: '08:00', koniec: '16:00', dniPracy: [] }).etykieta, 'DZIEŃ WOLNY')
+})
+
+test('starsze ustawienia dostają pięć dni pracy; własny wybór przechodzi eksport i import', () => {
+  const stare = normalizujUstawieniaAplikacji({ pulpit: { poczatekDnia: '08:00', koniecDnia: '17:00' } })
+  assert.deepEqual(stare.pulpit.dniPracy, [1, 2, 3, 4, 5])
+  assert.equal(stare.pulpit.poczatekDnia, '08:00')
+  for (const dniPracy of [[6, 0], [], [1, 2, 3, 4, 5, 6, 0]]) {
+    const wlasne = normalizujUstawieniaAplikacji({ pulpit: { dniPracy } })
+    const wynik = importujUstawieniaAplikacji(eksportujUstawieniaAplikacji(wlasne))
+    assert.equal(wynik.ok, true)
+    if (wynik.ok) assert.deepEqual(wynik.ustawienia.pulpit.dniPracy, dniPracy)
+  }
+  assert.deepEqual(normalizujUstawieniaAplikacji({ pulpit: { dniPracy: [7] } }).pulpit.dniPracy, [1, 2, 3, 4, 5])
+})
+
 test('wskaźnik czasu pokazuje FAJRANT od 16:00', () => {
   assert.deepEqual(pobierzStanWskaznikaCzasu(new Date('2026-07-22T16:00:00')), {
     etykieta: 'FAJRANT',

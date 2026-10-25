@@ -664,6 +664,15 @@ export default function WidokUstawien() {
           <section className="ustawienia__karta ustawienia__siatka">
             <h2>Godziny pracy</h2>
 
+            <fieldset><legend>Dni pracy</legend>
+              {(['Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota', 'Niedziela'] as const).map((nazwa, indeks) => {
+                const dzien = (indeks + 1) % 7
+                return <label key={dzien}>
+                  <input type="checkbox" checked={roboczeUstawienia.pulpit.dniPracy.includes(dzien)} onChange={(zdarzenie) => zmienPulpit('dniPracy', zdarzenie.target.checked ? [...roboczeUstawienia.pulpit.dniPracy, dzien] : roboczeUstawienia.pulpit.dniPracy.filter((wybrany) => wybrany !== dzien))} />{nazwa}
+                </label>
+              })}
+            </fieldset>
+
             <label className="ustawienia__pole">
               Początek dnia
               <input type="time" value={roboczeUstawienia.pulpit.poczatekDnia} onChange={(zdarzenie) => zmienPulpit('poczatekDnia', zdarzenie.target.value)} />
