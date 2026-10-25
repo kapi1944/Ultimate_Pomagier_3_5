@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { walidujHaslo } from '../src/wspolne/walidacja/walidatoryDanych.ts'
 import test from 'node:test'
 import { daneStartoweUzytkownikow } from '../src/kartoteki/uzytkownicy/daneUzytkownikow.ts'
 import { czyMozeResetowacHaslo, uprawnienieResetowaniaHasla } from '../src/kartoteki/uzytkownicy/uprawnienia.ts'
@@ -10,6 +11,18 @@ import { unzipSync, strFromU8 } from 'fflate'
 const architekt = daneStartoweUzytkownikow.find((konto) => konto.rola === 'ARCHITEKT')!
 const administrator = daneStartoweUzytkownikow.find((konto) => konto.rola === 'ADMINISTRATOR')!
 const pracownik = daneStartoweUzytkownikow.find((konto) => konto.rola === 'PRACOWNIK')!
+
+test('walidacja nowych haseł: długość, spacje, polskie litery i bajty UTF-8', () => {
+  for (const [haslo, poprawne] of [
+    ['abcdefg', false], ['abcdefgh', true], ['abcdefghij', true],
+    ['abcd efgh', false], [' abcdefgh', false], ['abcdefgh ', false],
+    ['zażółćgę', true], ['😀'.repeat(7), false], ['😀'.repeat(8), true],
+    ['a'.repeat(1024), true], ['a'.repeat(1025), false],
+    ['ą'.repeat(512), true], ['ą'.repeat(513), false],
+    ['abcd\tefgh', false], ['abcd\nefgh', false],
+    ['abcd\u0085efgh', false], ['abcd\ufeffefgh', false],
+  ] as const) assert.equal(walidujHaslo(haslo), poprawne)
+})
 
 test('widoczność users.password.reset respektuje hierarchię i zakaz resetu własnego konta', () => {
   assert.equal(uprawnienieResetowaniaHasla, 'users.password.reset')

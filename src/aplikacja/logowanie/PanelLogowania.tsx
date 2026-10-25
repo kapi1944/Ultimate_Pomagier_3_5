@@ -1,3 +1,4 @@
+import { walidujHaslo } from '../../wspolne/walidacja/walidatoryDanych'
 import { informacjeOWersji } from '../wersjaAplikacji'
 import { useEffect, useState, type FormEvent } from 'react'
 import './panelLogowania.css'
@@ -54,6 +55,7 @@ export default function PanelLogowania({ otworzDemonstracje, poUwierzytelnieniu 
         ustawZgode(wynik.zgoda); ustawKod(''); ustawEtap('haslo'); return
       }
       if (etap === 'haslo' || etap === 'konfiguracja') {
+        if (!walidujHaslo(haslo)) throw new Error('Minimum 8 znaków, bez spacji. Polskie znaki są dozwolone. Maksymalnie 1024 bajty.')
         if (haslo !== powtorzoneHaslo) { ustawBlad('Podane hasła są różne.'); return }
         if (etap === 'konfiguracja' && przeniesDane) await przeniesDaneDoKonta(daneDziedziczone)
         await wykonajOperacjeTozsamosci(etap === 'konfiguracja' ? 'pierwsza-konfiguracja' : 'ustaw-haslo', { zgoda, login, imie, nazwisko, haslo, powtorzoneHaslo, zapamietajSesje, kartoteka: etap === 'konfiguracja' && przeniesKonta ? kartotekaDziedziczona : null })
@@ -80,8 +82,8 @@ export default function PanelLogowania({ otworzDemonstracje, poUwierzytelnieniu 
       {etap === 'konfiguracja' && <><p>Utwórz pierwsze konto na tym urządzeniu. Otrzyma rolę Architekt i uprawnienia do konfiguracji. Logowanie i zapis danych działają bez internetu.</p><label>Imię<input autoComplete="given-name" required value={imie} onChange={(zdarzenie) => ustawImie(zdarzenie.target.value)} /></label><label>Nazwisko<input autoComplete="family-name" required value={nazwisko} onChange={(zdarzenie) => ustawNazwisko(zdarzenie.target.value)} /></label>{Object.keys(daneDziedziczone).length > 0 && <label><input type="checkbox" checked={przeniesDane} onChange={(zdarzenie) => ustawPrzeniesDane(zdarzenie.target.checked)} />Przenieś istniejące dane tego urządzenia ({Object.keys(daneDziedziczone).length} zapisów) do tego konta. Oryginał pozostanie zachowany. Zaznacz tylko, jeśli dane należą do Ciebie.</label>}</>}
       <label>Login lub adres e-mail<input name="username" autoComplete="username" required readOnly={etap === 'haslo'} value={login} onChange={(zdarzenie) => ustawLogin(zdarzenie.target.value)} /></label>
       {etap === 'kod' ? <><label>Kod jednorazowy<input autoComplete="off" autoCapitalize="none" spellCheck={false} required value={kod} onChange={(zdarzenie) => ustawKod(zdarzenie.target.value)} /></label><p>Kod otrzymasz od uprawnionej osoby. Jeśli wygasł lub został zablokowany, poproś ją o nowy kod. Kod jest ważny 24 godziny; po weryfikacji masz 10 minut na ustawienie hasła.</p></> : <>
-        <label>{etap === 'haslo' || etap === 'konfiguracja' ? 'Nowe hasło' : 'Hasło'}<input name="password" type={pokazHaslo ? 'text' : 'password'} autoComplete={etap === 'haslo' || etap === 'konfiguracja' ? 'new-password' : 'current-password'} minLength={etap === 'haslo' || etap === 'konfiguracja' ? 15 : undefined} required value={haslo} onChange={(zdarzenie) => ustawHaslo(zdarzenie.target.value)} /></label>
-        {(etap === 'haslo' || etap === 'konfiguracja') && <><label>Powtórz nowe hasło<input type={pokazHaslo ? 'text' : 'password'} autoComplete="new-password" required value={powtorzoneHaslo} onChange={(zdarzenie) => ustawPowtorzoneHaslo(zdarzenie.target.value)} /></label><p>Co najmniej 15 znaków, najwyżej 1024 bajty. Możesz użyć spacji i polskich liter. Wybierz inne hasło niż dotychczasowe.</p></>}
+        <label>{etap === 'haslo' || etap === 'konfiguracja' ? 'Nowe hasło' : 'Hasło'}<input name="password" type={pokazHaslo ? 'text' : 'password'} autoComplete={etap === 'haslo' || etap === 'konfiguracja' ? 'new-password' : 'current-password'} minLength={etap === 'haslo' || etap === 'konfiguracja' ? 8 : undefined} pattern={etap === 'haslo' || etap === 'konfiguracja' ? String.raw`[^\s\u0085]+` : undefined} required value={haslo} onChange={(zdarzenie) => ustawHaslo(zdarzenie.target.value)} /></label>
+        {(etap === 'haslo' || etap === 'konfiguracja') && <><label>Powtórz nowe hasło<input type={pokazHaslo ? 'text' : 'password'} autoComplete="new-password" required value={powtorzoneHaslo} onChange={(zdarzenie) => ustawPowtorzoneHaslo(zdarzenie.target.value)} /></label><p>Minimum 8 znaków, bez spacji. Polskie znaki są dozwolone. Wybierz inne hasło niż dotychczasowe.</p></>}
         <button type="button" aria-pressed={pokazHaslo} onClick={() => ustawPokazHaslo(!pokazHaslo)}>{pokazHaslo ? 'Ukryj hasło' : 'Pokaż hasło'}</button>
       </>}
       <label><input type="checkbox" checked={zapamietaj} onChange={(zdarzenie) => { ustawZapamietaj(zdarzenie.target.checked); if (!zdarzenie.target.checked) zapamietajLogin('', false) }} />Zapamiętaj login</label>

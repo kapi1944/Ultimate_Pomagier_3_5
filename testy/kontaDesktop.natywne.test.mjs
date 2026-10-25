@@ -41,7 +41,7 @@ test('Windows WebView2: pierwsza konfiguracja offline, profile, trwałość, zmi
     await Promise.race([new Promise((rozwiaz) => { if (proces.exitCode !== null) rozwiaz(); else proces.once('exit', rozwiaz) }), odczekaj(10000).then(() => { throw new Error('Nie zamknięto aplikacji Windows.') })])
   }
   async function operacja(strona, operacja, dane = {}) { return strona.evaluate(({ operacja, dane }) => window.__TAURI_INTERNALS__.invoke('operacja_konta', { operacja, dane }), { operacja, dane }) }
-  const haslo = 'pierwsze własne hasło testowe 123', nowe = 'zmienione własne hasło testowe 456'
+  const haslo = 'pierwsze-własne-hasło-testowe-123', nowe = 'zmienione-własne-hasło-testowe-456'
   try {
     await uruchom()
     let strona = await znajdz('Pierwsza konfiguracja konta lokalnego')

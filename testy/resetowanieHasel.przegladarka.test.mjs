@@ -10,8 +10,8 @@ import { request } from 'node:http'
 const wymagaj = createRequire(import.meta.url)
 const { chromium } = wymagaj(process.env.POMAGIER_PLAYWRIGHT || 'playwright')
 const adres = 'http://127.0.0.1:47831'
-const haslo = 'pierwsze hasło osoby testowej 123'
-const noweHaslo = 'drugie hasło osoby testowej 456'
+const haslo = 'pierwsze-hasło-osoby-testowej-123'
+const noweHaslo = 'drugie-hasło-osoby-testowej-456'
 const program = resolve('src-tauri/konta/target/debug', process.platform === 'win32' ? 'pomagier-konta.exe' : 'pomagier-konta')
 function konto(id, login, rola, nazwisko) {
   return { id, login, rola, imie: 'Osoba', nazwisko, pseudonim: login, zwrot: '', tytulNaukowy: '', email: `${login}@example.test`, emaile: [`${login}@example.test`], telefony: [], organizacja: rola === 'GOSC' ? 'ZEWNETRZNY' : 'SEMPER', status: 'AKTYWNY', odznaki: [], aliasyHistoryczne: [], kolorProfilu: '#334155', wymagaZmianyHasla: false, wersjaUprawnien: 1, ostatnieLogowanie: null, utworzono: '2026-10-25T00:00:00Z', zaktualizowano: '2026-10-25T00:00:00Z' }
@@ -97,6 +97,17 @@ test('Chrome na Windows: zaufana usługa, reset zbiorczy, formularz właściciel
     await osoba.getByLabel('Kod jednorazowy', { exact: true }).fill(kodPracownika)
     await osoba.getByRole('button', { name: 'Zweryfikuj kod', exact: true }).click()
     await osoba.getByRole('heading', { name: '🔐 Ustaw nowe hasło', exact: true }).waitFor()
+    await osoba.getByText('Minimum 8 znaków, bez spacji. Polskie znaki są dozwolone.', { exact: false }).waitFor()
+    const poleHasla = osoba.getByLabel('Nowe hasło', { exact: true })
+    assert.equal(await poleHasla.getAttribute('minlength'), '8')
+    for (const [proba, poprawne] of [['abcdefg', false], ['abcdefgh', true], ['abcdefghij', true], ['abcd efgh', false], ['zażółćgę', true]]) {
+      await poleHasla.fill(proba)
+      assert.equal(await poleHasla.evaluate((pole) => pole.checkValidity()), poprawne)
+    }
+    await poleHasla.fill('ą'.repeat(513))
+    await osoba.getByLabel('Powtórz nowe hasło', { exact: true }).fill('ą'.repeat(513))
+    await osoba.getByRole('button', { name: 'Ustaw hasło i zaloguj', exact: true }).click()
+    await osoba.getByRole('alert').filter({ hasText: 'Maksymalnie 1024 bajty.' }).waitFor()
     await osoba.getByLabel('Nowe hasło', { exact: true }).fill(haslo)
     await osoba.getByLabel('Powtórz nowe hasło', { exact: true }).fill('inne testowe hasło 999')
     await osoba.getByRole('button', { name: 'Ustaw hasło i zaloguj', exact: true }).click()

@@ -37,5 +37,5 @@ export function walidujLogin(login: string) {
 }
 
 export function walidujHaslo(haslo: string) {
-  return haslo.length >= 6 && wzorzecBezSpacji.test(haslo)
+  return [...haslo].length >= 8 && new TextEncoder().encode(haslo).byteLength <= 1024 && !/[\s\u0085]/u.test(haslo)
 }

@@ -1,3 +1,4 @@
+import { walidujHaslo } from '../../wspolne/walidacja/walidatoryDanych'
 import { useState, type FormEvent } from 'react'
 import { wykonajOperacjeTozsamosci } from '../../aplikacja/logowanie/klientTozsamosci'
 import { czyTrybDemonstracyjny } from '../../aplikacja/logowanie/uwierzytelnianie'
@@ -17,6 +18,7 @@ export default function PanelZmianyHasla({ uzytkownikId }: { uzytkownikId: strin
   async function zmien(zdarzenie: FormEvent<HTMLFormElement>) {
     zdarzenie.preventDefault(); ustawZajety(true); ustawKomunikat('')
     try {
+      if (!walidujHaslo(haslo)) throw new Error('Minimum 8 znaków, bez spacji. Polskie znaki są dozwolone. Maksymalnie 1024 bajty.')
       await wykonajOperacjeTozsamosci('zmien-haslo', { dotychczasoweHaslo, haslo, powtorzoneHaslo })
       ustawKomunikat('Hasło zostało zmienione. Pozostałe sesje zostały unieważnione.'); ustawOtwarty(false)
       await odswiezUzytkownika()
@@ -27,9 +29,9 @@ export default function PanelZmianyHasla({ uzytkownikId }: { uzytkownikId: strin
     {komunikat && <p role="status">{komunikat}</p>}
     {!otwarty ? <button type="button" onClick={() => { ustawOtwarty(true); ustawKomunikat('') }}>Zmień własne hasło</button> : <form className="profil-uzytkownika__formularz" onSubmit={(zdarzenie) => { void zmien(zdarzenie) }}>
       <label>Dotychczasowe hasło<input autoComplete="current-password" type={pokaz ? 'text' : 'password'} required value={dotychczasoweHaslo} onChange={(zdarzenie) => ustawDotychczasoweHaslo(zdarzenie.target.value)} /></label>
-      <label>Nowe hasło<input autoComplete="new-password" type={pokaz ? 'text' : 'password'} minLength={15} required value={haslo} onChange={(zdarzenie) => ustawHaslo(zdarzenie.target.value)} /></label>
+      <label>Nowe hasło<input autoComplete="new-password" type={pokaz ? 'text' : 'password'} minLength={8} pattern={String.raw`[^\s\u0085]+`} required value={haslo} onChange={(zdarzenie) => ustawHaslo(zdarzenie.target.value)} /></label>
       <label>Powtórz nowe hasło<input autoComplete="new-password" type={pokaz ? 'text' : 'password'} required value={powtorzoneHaslo} onChange={(zdarzenie) => ustawPowtorzoneHaslo(zdarzenie.target.value)} /></label>
-      <p>Co najmniej 15 znaków, najwyżej 1024 bajty. Dozwolone są spacje i polskie litery.</p>
+      <p>Minimum 8 znaków, bez spacji. Polskie znaki są dozwolone.</p>
       <button type="button" aria-pressed={pokaz} onClick={() => ustawPokaz(!pokaz)}>{pokaz ? 'Ukryj hasła' : 'Pokaż hasła'}</button>
       <button type="button" disabled={zajety} onClick={() => { wyczysc(); ustawOtwarty(false) }}>Anuluj</button><button type="submit" disabled={zajety}>Zapisz nowe hasło</button>
     </form>}
