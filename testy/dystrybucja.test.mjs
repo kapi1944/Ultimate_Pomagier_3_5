@@ -4,7 +4,7 @@ import { mkdtemp, writeFile, readFile, mkdir } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { numerWersjiAndroid, opiszPlik, polaczMetadane, zbierzArtefakty } from '../skrypty/dystrybucja.mjs'
-import { sprawdzRaportApk, czyBladDowiazaniaAndroid } from '../skrypty/budujAndroid.mjs'
+import { sprawdzRaportApk, czyBladDowiazaniaAndroid, sprawdzBibliotekiApk } from '../skrypty/budujAndroid.mjs'
 import { sprawdzSzkicPublikacji } from '../skrypty/zatwierdzWydanie.mjs'
 
 test('versionCode wzrasta i nie dopuszcza kolizji ani przekroczenia zakresu', () => {
@@ -42,6 +42,32 @@ test('produkcja odrzuca debug APK, obcy certyfikat, pakiet i numer kompilacji', 
   assert.equal(sprawdzRaportApk(raport, odcisk, '4.0.0', 4000000), odcisk)
   for (const zmiany of [{ debugowalny: true }, { identyfikator: 'inna.aplikacja' }, { wersja: '3.0.0' }, { versionCode: 1 }, { podpis: '' }, { podpis: `${raport.podpis}\nCN=Android Debug` }]) assert.throws(() => sprawdzRaportApk({ ...raport, ...zmiany }, odcisk, '4.0.0', 4000000))
   assert.throws(() => sprawdzRaportApk(raport, 'b'.repeat(64), '4.0.0', 4000000))
+})
+
+test('APK wymaga kompletu bibliotek właściwej architektury i segmentów ELF zgodnych ze stronami 16 KB', () => {
+  function biblioteka(wyrownanie = 16384n, architektura = 183) {
+    const dane = Buffer.alloc(120)
+    dane.writeUInt32BE(0x7f454c46)
+    dane[4] = 2; dane[5] = 1
+    dane.writeUInt16LE(architektura, 18)
+    dane.writeBigUInt64LE(64n, 32)
+    dane.writeUInt16LE(56, 54); dane.writeUInt16LE(1, 56)
+    dane.writeUInt32LE(1, 64)
+    dane.writeBigUInt64LE(wyrownanie, 112)
+    return dane
+  }
+  const pliki = { 'AndroidManifest.xml': new Uint8Array([1]), 'lib/arm64-v8a/libpomagier_aplikacja.so': biblioteka(), 'lib/arm64-v8a/libc++_shared.so': biblioteka() }
+  assert.doesNotThrow(() => sprawdzBibliotekiApk(pliki, 'arm64-v8a'))
+  for (const nazwa of ['lib/arm64-v8a/libpomagier_aplikacja.so', 'lib/arm64-v8a/libc++_shared.so']) {
+    assert.throws(() => sprawdzBibliotekiApk({ ...pliki, [nazwa]: biblioteka(4096n) }, 'arm64-v8a'), /16 KB/)
+    const niekompletne = { ...pliki }; delete niekompletne[nazwa]
+    assert.throws(() => sprawdzBibliotekiApk(niekompletne, 'arm64-v8a'), /niekompletny/)
+  }
+  assert.throws(() => sprawdzBibliotekiApk({ ...pliki, 'lib/arm64-v8a/libpomagier_aplikacja.so': biblioteka(16384n, 62) }, 'arm64-v8a'), /architektura/)
+  assert.throws(() => sprawdzBibliotekiApk({ ...pliki, 'lib/x86_64/obca.so': biblioteka(16384n, 62) }, 'arm64-v8a'), /architektura/)
+  assert.throws(() => sprawdzBibliotekiApk({ ...pliki, 'lib/arm64-v8a/libpomagier_aplikacja.so': Buffer.alloc(1) }, 'arm64-v8a'), /architektura/)
+  const uszkodzona = biblioteka(); uszkodzona.writeBigUInt64LE(999999n, 32)
+  assert.throws(() => sprawdzBibliotekiApk({ ...pliki, 'lib/arm64-v8a/libpomagier_aplikacja.so': uszkodzona }, 'arm64-v8a'), /nagłówki/)
 })
 
 test('manifest powstaje z rzeczywistych trzech plików i odrzuca uszkodzenie lub mieszanie commitów', async () => {

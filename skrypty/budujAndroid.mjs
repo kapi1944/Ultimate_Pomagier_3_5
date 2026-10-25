@@ -46,6 +46,29 @@ export function sprawdzRaportApk(raport, certyfikat, wersja, numer) {
   return odcisk
 }
 
+export function sprawdzBibliotekiApk(zawartosc, abi) {
+  if (!zawartosc['AndroidManifest.xml'] || !zawartosc[`lib/${abi}/libpomagier_aplikacja.so`]?.length
+    || !zawartosc[`lib/${abi}/libc++_shared.so`]?.length) throw new Error('APK jest niekompletny: brak manifestu lub wymaganej biblioteki natywnej.')
+  for (const [nazwa, dane] of Object.entries(zawartosc).filter(([nazwa]) => nazwa.startsWith('lib/') && nazwa.endsWith('.so'))) {
+    const biblioteka = Buffer.from(dane)
+    if (!nazwa.startsWith(`lib/${abi}/`) || biblioteka.length < 64 || biblioteka.readUInt32BE(0) !== 0x7f454c46
+      || biblioteka[4] !== 2 || biblioteka[5] !== 1 || biblioteka.readUInt16LE(18) !== (abi === 'arm64-v8a' ? 183 : 62)) throw new Error(`Nieprawidłowa architektura biblioteki: ${nazwa}.`)
+    const poczatek = biblioteka.readBigUInt64LE(32)
+    const rozmiar = biblioteka.readUInt16LE(54)
+    const liczba = biblioteka.readUInt16LE(56)
+    if (rozmiar < 56 || liczba === 0 || poczatek + BigInt(rozmiar * liczba) > BigInt(biblioteka.length)) throw new Error(`Nieprawidłowe nagłówki ELF: ${nazwa}.`)
+    let segmenty = 0
+    for (let indeks = 0; indeks < liczba; indeks++) {
+      const pozycja = Number(poczatek) + indeks * rozmiar
+      if (biblioteka.readUInt32LE(pozycja) !== 1) continue
+      segmenty++
+      if (biblioteka.readBigUInt64LE(pozycja + 48) < 16384n
+        || biblioteka.readBigUInt64LE(pozycja + 8) % 16384n !== biblioteka.readBigUInt64LE(pozycja + 16) % 16384n) throw new Error(`Biblioteka nie obsługuje stron 16 KB: ${nazwa}.`)
+    }
+    if (!segmenty) throw new Error(`Brak segmentów ładowalnych ELF: ${nazwa}.`)
+  }
+}
+
 export async function przygotujAndroid({ tylkoInicjalizacja = false, testowy = false, architektura = 'aarch64' } = {}) {
   if (!['aarch64', 'x86_64'].includes(architektura)) throw new Error('Obsługiwane architektury: aarch64 i x86_64.')
   const sdk = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT
@@ -87,7 +110,7 @@ export async function przygotujAndroid({ tylkoInicjalizacja = false, testowy = f
   if (kandydaci.length !== 1) throw new Error('Nie znaleziono dokładnie jednego świeżego APK wybranej architektury.')
   const zawartosc = unzipSync(new Uint8Array(await readFile(kandydaci[0])))
   const abi = architektura === 'aarch64' ? 'arm64-v8a' : 'x86_64'
-  if (!zawartosc['AndroidManifest.xml'] || !zawartosc[`lib/${abi}/libpomagier_aplikacja.so`]?.length) throw new Error('APK jest niekompletny: brak manifestu lub natywnej aplikacji wybranej architektury.')
+  sprawdzBibliotekiApk(zawartosc, abi)
   if (testowy) {
     await copyFile(kandydaci[0], join(katalog, `Ultimate_Pomagier_TESTOWY_${architektura === 'aarch64' ? 'arm64' : 'x64'}.apk`))
     console.log('Przygotowano wyłącznie debug APK do testów. Nie jest wydaniem produkcyjnym.')
@@ -96,12 +119,13 @@ export async function przygotujAndroid({ tylkoInicjalizacja = false, testowy = f
   const narzedzia = join(sdk, 'build-tools', process.env.ANDROID_BUILD_TOOLS_VERSION || '36.0.0')
   const rozszerzenie = process.platform === 'win32' ? '.exe' : ''
   const wyrownany = join(katalog, 'wyrownany.apk')
-  wykonaj(join(narzedzia, `zipalign${rozszerzenie}`), ['-f', '-p', '4', kandydaci[0], wyrownany])
+  wykonaj(join(narzedzia, `zipalign${rozszerzenie}`), ['-f', '-P', '16', '4', kandydaci[0], wyrownany])
   const sciezka = join(katalog, `Ultimate_Pomagier_${pakiet.version}_Android_${architektura === 'aarch64' ? 'arm64' : 'x64'}.apk`)
   const podpisywacz = ['-jar', join(narzedzia, 'lib/apksigner.jar')]
   wykonaj('java', [...podpisywacz, 'sign', '--ks', resolve(process.env.ANDROID_KEYSTORE_PATH), '--ks-key-alias', process.env.ANDROID_KEY_ALIAS,
     '--ks-pass', 'env:ANDROID_KEYSTORE_PASSWORD', '--key-pass', 'env:ANDROID_KEY_PASSWORD', '--out', sciezka, wyrownany])
   const podpis = wykonaj('java', [...podpisywacz, 'verify', '--verbose', '--print-certs', sciezka], { encoding: 'utf8' })
+  wykonaj(join(narzedzia, `zipalign${rozszerzenie}`), ['-c', '-P', '16', '4', sciezka])
   const badging = wykonaj(join(narzedzia, `aapt${rozszerzenie}`), ['dump', 'badging', sciezka], { encoding: 'utf8' })
   const danePakietu = /package: name='([^']+)' versionCode='(\d+)' versionName='([^']+)'/.exec(badging)
   if (!danePakietu) throw new Error('Nie udało się odczytać manifestu APK.')
