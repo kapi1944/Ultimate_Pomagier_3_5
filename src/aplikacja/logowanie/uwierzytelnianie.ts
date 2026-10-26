@@ -1,6 +1,6 @@
 import { wykonajOperacjeTozsamosci } from './klientTozsamosci'
 import { sprawdzStruktureUzytkownika } from '../../kartoteki/uzytkownicy/walidacjaUzytkownikow'
-export const czyTrybDemonstracyjny = import.meta.env?.DEV === true && import.meta.env?.MODE === 'demonstracyjny' && import.meta.env?.VITE_TRYB_DEMONSTRACYJNY === 'true'
+export const czyTrybDemonstracyjny = import.meta.env?.POMAGIER_SERWER_DEMONSTRACYJNY === true && import.meta.env?.DEV === true && import.meta.env?.PROD === false && import.meta.env?.MODE === 'demonstracyjny' && import.meta.env?.VITE_TRYB_DEMONSTRACYJNY === 'true'
 export type PotwierdzonaTozsamosc = { uzytkownikId: string; wersjaUprawnien: number; wygasa: string }
 export type WynikUwierzytelnienia = { status: 'POTWIERDZONO'; tozsamosc: PotwierdzonaTozsamosc } | { status: 'ODRZUCONO' | 'NIEDOSTEPNE'; komunikat: string }
 

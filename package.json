@@ -4,8 +4,9 @@
   "version": "4.0.0",
   "type": "module",
   "scripts": {
-    "pretest": "node --import ./testy/rejestrujLoaderTs.mjs testy/zapisRejestruPrzyBrakuMiejsca.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/swobodneBlokiDokumentu.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/wspolnyStandardGeneratorow.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/generatoryOperacyjne.test.ts && node --import ./testy/rejestrujLoaderTs.mjs --test testy/indeksLokalizacjiSzczegolow.test.ts",
+    "pretest": "node --import ./testy/rejestrujLoaderTs.mjs testy/zapisRejestruPrzyBrakuMiejsca.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/swobodneBlokiDokumentu.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/wspolnyStandardGeneratorow.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/generatoryOperacyjne.test.ts && node --import ./testy/rejestrujLoaderTs.mjs --test testy/indeksLokalizacjiSzczegolow.test.ts && npm run test:bezpieczenstwo",
     "dev": "vite",
+    "test:bezpieczenstwo": "node --test testy/izolacjaTrybuDemo.test.mjs testy/bezpieczenstwoZaleznosci.test.mjs",
     "test:szczegoly:przegladarka": "node --test testy/wydajnoscSzczegolow.przegladarka.test.mjs",
     "test:checklisty:przegladarka": "node --test testy/checklistyPaczek.przegladarka.test.mjs",
     "test:monitor": "node --import ./testy/rejestrujLoaderTs.mjs testy/monitorWysylek.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/pulpit.regresja.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/v4Pulpit.test.mjs",
@@ -39,11 +40,11 @@
     "@tauri-apps/api": "^2.12.4",
     "@tauri-apps/plugin-opener": "^2.7.2",
     "@tauri-apps/plugin-updater": "^2.14.0",
-    "@tiptap/extension-placeholder": "^3.27.1",
-    "@tiptap/extension-underline": "^3.27.1",
-    "@tiptap/pm": "^3.27.1",
-    "@tiptap/react": "^3.27.1",
-    "@tiptap/starter-kit": "^3.27.1",
+    "@tiptap/extension-placeholder": "~3.32.0",
+    "@tiptap/extension-underline": "~3.32.0",
+    "@tiptap/pm": "~3.32.0",
+    "@tiptap/react": "~3.32.0",
+    "@tiptap/starter-kit": "~3.32.0",
     "fflate": "0.8.3",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
@@ -67,6 +68,6 @@
     "globals": "^17.6.0",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",
-    "vite": "^8.0.12"
+    "vite": "~8.1.6"
   }
 }

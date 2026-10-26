@@ -8,12 +8,15 @@ import { okreslTrybFrontendu } from './skrypty/kontrolaTrybuFrontendu.mjs'
 const informacjeOWersji = pobierzInformacjeOWersji()
 
 // https://vite.dev/config/
-export default defineConfig(({ mode: trybVite, command: polecenie }) => {
+export default defineConfig(({ mode: trybVite, command: polecenie, isPreview: czyPodglad }) => {
   if (polecenie === 'build' && trybVite === 'demonstracyjny') throw new Error('Demonstracja jest dostępna wyłącznie w serwerze deweloperskim: npm run dev:demo.')
   const trybFrontendu = okreslTrybFrontendu(trybVite, loadEnv(trybVite, process.cwd(), 'VITE_'))
   return {
     server: { watch: { ignored: ['**/src-tauri/target/**', '**/src-tauri/konta/target/**', '**/src-tauri/gen/**', '**/.desktop-tools/**', '**/.desktop-icons/**', '**/wydanie-desktop/**', '**/wydanie-android/**', '**/wydanie-web/**', '**/wydanie-publikacja/**'] } },
-    define: { __INFORMACJE_O_WERSJI__: JSON.stringify(informacjeOWersji) },
+    define: {
+      __INFORMACJE_O_WERSJI__: JSON.stringify(informacjeOWersji),
+      'import.meta.env.POMAGIER_SERWER_DEMONSTRACYJNY': JSON.stringify(polecenie === 'serve' && !czyPodglad && trybFrontendu.tryb === 'demonstracyjny'),
+    },
     plugins: [react(), {
       name: 'informacje-o-wydaniu',
       transformIndexHtml(html) {
