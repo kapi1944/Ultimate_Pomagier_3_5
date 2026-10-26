@@ -1,9 +1,8 @@
 import { pobierzTrenerowZKartoteki } from '../../../../kartoteki/trenerzyKartoteki'
 import { pobierzUzytkownikow } from '../../../../kartoteki/uzytkownicy/magazynUzytkownikow'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
   pobierzLokalizacjeZMagazynu,
-  pobierzPotwierdzonyMiejscownikLokalizacji,
   znajdzLokalizacjeDlaMiejsca,
 } from '../../../../kartoteki/lokalizacje/magazynLokalizacji'
 import {
@@ -57,6 +56,7 @@ import { parsujMailaSzczegolow } from '../uslugi/parserMailaSzczegolow'
 import { przygotujMapowanieImportuMaila } from '../uslugi/mapowanieImportuMaila'
 import { czyKontoMozeEdytowacSzczegoly } from '../uzytkownicySzczegolow'
 import { pobierzIdPola } from '../komponenty/identyfikatoryPol'
+import { zbudujIndeksLokalizacjiSzczegolow, type IndeksLokalizacjiSzczegolow } from '../uslugi/indeksLokalizacjiSzczegolow'
 
 
 const etykietySekcji: Record<KluczSekcjiSzczegolow, string> = {
@@ -351,14 +351,97 @@ function pobierzWidoczneKopieRobocze(konto: ReturnType<typeof pobierzAktywneKont
   return pobierzKopieRobocze().filter((kopia) => czyKontoMozeWidziecKopie(konto, kopia))
 }
 
-export function zbudujProblemyWalidacji(dane: DaneFormularza, grupy: GrupaSzkoleniowa[]): ProblemWalidacji[] {
+function zbudujProblemyWalidacjiGrupy(grupa: GrupaSzkoleniowa, indeks: number, indeksLokalizacji: IndeksLokalizacjiSzczegolow): ProblemWalidacji[] {
   const problemy: ProblemWalidacji[] = []
-  const lokalizacje = pobierzLokalizacjeZMagazynu()
+  function dodaj(sekcja: string, pole: string, komunikat: string, czyBlokuje = true, poziom: ProblemWalidacji['poziom'] = 'blad', polaPowiazane?: string[]) {
+    problemy.push({ sekcja, pole, idDocelowy: pobierzIdPola(pole, grupa.id), polaPowiazane, komunikat, poziom, czyBlokuje })
+  }
+
+  const nazwaGrupy = `Grupa ${indeks + 1}`
+
+  if (!grupa.trenerzy.length || !grupa.trenerzy[0]?.imieNazwisko.trim()) {
+    dodaj('Grupy szkoleniowe', `grupy.${indeks}.trenerzy`, `${nazwaGrupy}: wybierz trenera`)
+  }
+
+  if (!grupa.formaSzkolenia) {
+    dodaj('Grupy szkoleniowe', `grupy.${indeks}.formaSzkolenia`, `${nazwaGrupy}: wybierz formę szkolenia`)
+  }
+
+  if (!grupa.dataOd) {
+    dodaj('Grupy szkoleniowe', `grupy.${indeks}.dataOd`, `${nazwaGrupy}: wpisz datę od`)
+  }
+
+  if (!grupa.dataDo) {
+    dodaj('Grupy szkoleniowe', `grupy.${indeks}.dataDo`, `${nazwaGrupy}: wpisz datę do`)
+  }
+
+  if (grupa.dataOd && grupa.dataDo && grupa.dataDo < grupa.dataOd) {
+    dodaj('Grupy szkoleniowe', `grupy.${indeks}.dataDo`, `${nazwaGrupy}: data do nie może być wcześniejsza niż data od`, true, 'blad', [`grupy.${indeks}.dataOd`])
+  }
+
+  if (!Number.isFinite(grupa.liczbaUczestnikow) || grupa.liczbaUczestnikow < 1) {
+    dodaj('Grupy szkoleniowe', `grupy.${indeks}.liczbaUczestnikow`, `${nazwaGrupy}: wpisz liczbę uczestników minimum 1`)
+  }
+
+  if (!Number.isFinite(grupa.liczbaGodzin) || grupa.liczbaGodzin < 0) {
+    dodaj('Grupy szkoleniowe', `grupy.${indeks}.liczbaGodzin`, `${nazwaGrupy}: liczba godzin nie może być ujemna`)
+  }
+
+  const bledyDynamiczne = zbudujBledyDynamicznychPolGrupy(grupa)
+  bledyDynamiczne.forEach((blad) => {
+    dodaj('Grupy szkoleniowe', `grupy.${indeks}.${blad.pole}`, `${nazwaGrupy}: ${blad.komunikat}`)
+  })
+
+  if (!Number.isFinite(grupa.cenaNetto)) {
+    dodaj('Grupy szkoleniowe', `grupy.${indeks}.cenaNetto`, `${nazwaGrupy}: cena nie może zawierać liter`)
+  } else if (grupa.cenaNetto <= 0) {
+    dodaj('Grupy szkoleniowe', `grupy.${indeks}.cenaNetto`, `${nazwaGrupy}: wpisz cenę netto`)
+  }
+
+  if (!Number.isFinite(grupa.terminPlatnosci) || grupa.terminPlatnosci < 0) {
+    dodaj('Grupy szkoleniowe', `grupy.${indeks}.terminPlatnosci`, `${nazwaGrupy}: termin płatności nie może być ujemny`)
+  }
+
+
+  const lokalizacja = grupa.formaSzkolenia === 'Online' ? null : indeksLokalizacji.znajdz(grupa.miejsce)
+  if (lokalizacja && !lokalizacja.status_odmiany) {
+    dodaj('Grupy szkoleniowe', `grupy.${indeks}.miejsce`, 'Odmiana nazwy tej lokalizacji nie została jeszcze potwierdzona.')
+  }
+
+  return problemy
+}
+
+function utworzWalidatorGrupy(indeksLokalizacji: IndeksLokalizacjiSzczegolow) {
+  const wyniki = new WeakMap<GrupaSzkoleniowa, { indeks: number; problemy: ProblemWalidacji[] }>()
+  return (grupa: GrupaSzkoleniowa, indeks: number) => {
+    const poprzedni = wyniki.get(grupa)
+    if (poprzedni?.indeks === indeks) return poprzedni.problemy
+    const problemy = zbudujProblemyWalidacjiGrupy(grupa, indeks, indeksLokalizacji)
+    wyniki.set(grupa, { indeks, problemy })
+    return problemy
+  }
+}
+
+function utworzPamiecBledowPol() {
+  let poprzednie: Record<string, string> = {}
+  return (problemy: ProblemWalidacji[]) => {
+    const wynik: Record<string, string> = {}
+    problemy.forEach(({ pole, polaPowiazane, komunikat }) => {
+      ;[pole, ...(polaPowiazane ?? [])].forEach((kluczPola) => {
+        wynik[kluczPola] ??= komunikat
+      })
+    })
+    if (Object.keys(wynik).length === Object.keys(poprzednie).length && Object.entries(wynik).every(([pole, komunikat]) => poprzednie[pole] === komunikat)) return poprzednie
+    poprzednie = wynik
+    return wynik
+  }
+}
+
+function zbudujProblemyWalidacjiDanych(dane: DaneFormularza): ProblemWalidacji[] {
+  const problemy: ProblemWalidacji[] = []
 
   function dodaj(sekcja: string, pole: string, komunikat: string, czyBlokuje = true, poziom: ProblemWalidacji['poziom'] = 'blad', polaPowiazane?: string[]) {
-    const dopasowanieGrupy = /^grupy\.(\d+)\./.exec(pole)
-    const grupa = dopasowanieGrupy ? grupy[Number(dopasowanieGrupy[1])] : undefined
-    problemy.push({ sekcja, pole, idDocelowy: grupa ? pobierzIdPola(pole, grupa.id) : undefined, polaPowiazane, komunikat, poziom, czyBlokuje })
+    problemy.push({ sekcja, pole, polaPowiazane, komunikat, poziom, czyBlokuje })
   }
 
   if (!dane.tytulSzkolenia.trim()) {
@@ -375,65 +458,6 @@ export function zbudujProblemyWalidacji(dane: DaneFormularza, grupy: GrupaSzkole
 
   problemy.push(...zbudujBledyDanychKlienta(dane))
 
-  if (!grupy.length) {
-    dodaj('Grupy szkoleniowe', 'Grupy', 'Dodaj co najmniej jedną grupę szkoleniową')
-  }
-
-  grupy.forEach((grupa, indeks) => {
-    const nazwaGrupy = `Grupa ${indeks + 1}`
-
-    if (!grupa.trenerzy.length || !grupa.trenerzy[0]?.imieNazwisko.trim()) {
-      dodaj('Grupy szkoleniowe', `grupy.${indeks}.trenerzy`, `${nazwaGrupy}: wybierz trenera`)
-    }
-
-    if (!grupa.formaSzkolenia) {
-      dodaj('Grupy szkoleniowe', `grupy.${indeks}.formaSzkolenia`, `${nazwaGrupy}: wybierz formę szkolenia`)
-    }
-
-    if (!grupa.dataOd) {
-      dodaj('Grupy szkoleniowe', `grupy.${indeks}.dataOd`, `${nazwaGrupy}: wpisz datę od`)
-    }
-
-    if (!grupa.dataDo) {
-      dodaj('Grupy szkoleniowe', `grupy.${indeks}.dataDo`, `${nazwaGrupy}: wpisz datę do`)
-    }
-
-    if (grupa.dataOd && grupa.dataDo && grupa.dataDo < grupa.dataOd) {
-      dodaj('Grupy szkoleniowe', `grupy.${indeks}.dataDo`, `${nazwaGrupy}: data do nie może być wcześniejsza niż data od`, true, 'blad', [`grupy.${indeks}.dataOd`])
-    }
-
-    if (!Number.isFinite(grupa.liczbaUczestnikow) || grupa.liczbaUczestnikow < 1) {
-      dodaj('Grupy szkoleniowe', `grupy.${indeks}.liczbaUczestnikow`, `${nazwaGrupy}: wpisz liczbę uczestników minimum 1`)
-    }
-
-    if (!Number.isFinite(grupa.liczbaGodzin) || grupa.liczbaGodzin < 0) {
-      dodaj('Grupy szkoleniowe', `grupy.${indeks}.liczbaGodzin`, `${nazwaGrupy}: liczba godzin nie może być ujemna`)
-    }
-
-    const bledyDynamiczne = zbudujBledyDynamicznychPolGrupy(grupa)
-    bledyDynamiczne.forEach((blad) => {
-      dodaj('Grupy szkoleniowe', `grupy.${indeks}.${blad.pole}`, `${nazwaGrupy}: ${blad.komunikat}`)
-    })
-
-    if (!Number.isFinite(grupa.cenaNetto)) {
-      dodaj('Grupy szkoleniowe', `grupy.${indeks}.cenaNetto`, `${nazwaGrupy}: cena nie może zawierać liter`)
-    } else if (grupa.cenaNetto <= 0) {
-      dodaj('Grupy szkoleniowe', `grupy.${indeks}.cenaNetto`, `${nazwaGrupy}: wpisz cenę netto`)
-    }
-
-    if (!Number.isFinite(grupa.terminPlatnosci) || grupa.terminPlatnosci < 0) {
-      dodaj('Grupy szkoleniowe', `grupy.${indeks}.terminPlatnosci`, `${nazwaGrupy}: termin płatności nie może być ujemny`)
-    }
-
-
-    const lokalizacja = grupa.formaSzkolenia === 'Online' ? null : znajdzLokalizacjeDlaMiejsca(grupa.miejsce, lokalizacje)
-    const miejscownik = lokalizacja ? pobierzPotwierdzonyMiejscownikLokalizacji(lokalizacja.klucz_lokalizacji) : null
-
-    if (miejscownik?.blad) {
-      dodaj('Grupy szkoleniowe', `grupy.${indeks}.miejsce`, miejscownik.blad)
-    }
-  })
-
   if (dane.dodatkoweWymogi.wczesniejszyPrzyjazdTrenera && dane.dodatkoweWymogi.minutyWczesniej < 0) {
     dodaj('Dodatkowe wymogi', 'dodatkoweWymogi.minutyWczesniej', 'Wcześniejszy przyjazd trenera: wpisz liczbę minut minimum 0')
   }
@@ -449,6 +473,15 @@ export function zbudujProblemyWalidacji(dane: DaneFormularza, grupy: GrupaSzkole
   }
 
   return problemy
+}
+
+export function zbudujProblemyWalidacji(dane: DaneFormularza, grupy: GrupaSzkoleniowa[], indeksLokalizacji = zbudujIndeksLokalizacjiSzczegolow(pobierzLokalizacjeZMagazynu())): ProblemWalidacji[] {
+  return [...zbudujProblemyWalidacjiDanych(dane), ...zbudujProblemyWalidacjiGrup(grupy, indeksLokalizacji)]
+}
+
+function zbudujProblemyWalidacjiGrup(grupy: GrupaSzkoleniowa[], indeksLokalizacji: IndeksLokalizacjiSzczegolow): ProblemWalidacji[] {
+  if (!grupy.length) return [{ sekcja: 'Grupy szkoleniowe', pole: 'Grupy', komunikat: 'Dodaj co najmniej jedną grupę szkoleniową', poziom: 'blad', czyBlokuje: true }]
+  return grupy.flatMap((grupa, indeks) => zbudujProblemyWalidacjiGrupy(grupa, indeks, indeksLokalizacji))
 }
 
 function czyPoleNalezyDoSekcji(pole: string, klucz: KluczSekcjiSzczegolow) {
@@ -549,6 +582,18 @@ function czySekcjeWymaganeKompletne(modelSekcyjny: ModelSekcyjnySzczegolow) {
   return wymaganeSekcjeDoPublikacji.every((klucz) => modelSekcyjny[klucz].wynikWalidacji && modelSekcyjny[klucz].statusKompletnosci === 'kompletna')
 }
 
+function zbierzProblemyModelu(model: ModelSekcyjnySzczegolow) {
+  const widziane = new Set<string>()
+  return Object.values(model)
+    .flatMap((sekcja) => [...sekcja.bledyKrytyczne, ...sekcja.ostrzezenia])
+    .filter((problem) => {
+      const klucz = `${problem.sekcja}:${problem.pole}:${problem.kodBledu ?? problem.komunikat}`
+      if (widziane.has(klucz)) return false
+      widziane.add(klucz)
+      return true
+    })
+}
+
 export function useGeneratorSzczegolow() {
   const aktywneKonto = useMemo(() => pobierzAktywneKontoSzczegolow(), [])
   const stanPoczatkowy = useMemo(() => pobierzStanPoczatkowy(), [])
@@ -556,6 +601,8 @@ export function useGeneratorSzczegolow() {
   const [grupy, ustawGrupy] = useState<GrupaSzkoleniowa[]>(stanPoczatkowy.grupy)
   const [adresaci, ustawAdresaci] = useState<DaneAdresatow>(stanPoczatkowy.adresaci)
   const [statusyPol, ustawStatusyPol] = useState<StatusyPolImportu>(stanPoczatkowy.statusyPol)
+  const aktualneStatusyPol = useRef(statusyPol)
+  useLayoutEffect(() => { aktualneStatusyPol.current = statusyPol }, [statusyPol])
   const [aktywnaKopiaId, ustawAktywnaKopiaId] = useState<string | null>(stanPoczatkowy.aktywnaKopiaId)
   const [zrodloOpublikowanegoId, ustawZrodloOpublikowanegoId] = useState<string | undefined>(stanPoczatkowy.zrodloOpublikowanegoId)
   const [trescMaila, ustawTrescMaila] = useState('')
@@ -567,7 +614,11 @@ export function useGeneratorSzczegolow() {
   const [autosaveDoDecyzji, ustawAutosaveDoDecyzji] = useState<AutosaveSzczegolow | null>(() => pobierzAutosaveSzczegolow())
   const [czyAutosaveAktywny, ustawCzyAutosaveAktywny] = useState(() => !pobierzAutosaveSzczegolow())
   const czyPominacNastepnyAutosave = useRef(true)
-  const podstawoweProblemyWalidacji = useMemo(() => zbudujProblemyWalidacji(daneFormularza, grupy), [daneFormularza, grupy])
+  const [indeksLokalizacji, ustawIndeksLokalizacji] = useState(() => zbudujIndeksLokalizacjiSzczegolow(pobierzLokalizacjeZMagazynu()))
+  const problemyDanych = useMemo(() => zbudujProblemyWalidacjiDanych(daneFormularza), [daneFormularza])
+  const walidujGrupe = useMemo(() => utworzWalidatorGrupy(indeksLokalizacji), [indeksLokalizacji])
+  const problemyGrup = useMemo(() => grupy.length ? grupy.flatMap(walidujGrupe) : zbudujProblemyWalidacjiGrup(grupy, indeksLokalizacji), [grupy, walidujGrupe, indeksLokalizacji])
+  const podstawoweProblemyWalidacji = useMemo(() => [...problemyDanych, ...problemyGrup], [problemyDanych, problemyGrup])
   const efektywneStatusyPol = useMemo(
     () => pobierzEfektywneStatusyPolOdbiorcy(daneFormularza, statusyPol),
     [daneFormularza, statusyPol],
@@ -576,26 +627,9 @@ export function useGeneratorSzczegolow() {
     () => zbudujModelSekcyjny(daneFormularza, grupy, adresaci, efektywneStatusyPol, podstawoweProblemyWalidacji),
     [daneFormularza, grupy, adresaci, efektywneStatusyPol, podstawoweProblemyWalidacji],
   )
-  const problemyWalidacji = useMemo(() => {
-    const widziane = new Set<string>()
-    return Object.values(modelSekcyjny)
-      .flatMap((sekcja) => [...sekcja.bledyKrytyczne, ...sekcja.ostrzezenia])
-      .filter((problem) => {
-        const klucz = `${problem.sekcja}:${problem.pole}:${problem.kodBledu ?? problem.komunikat}`
-        if (widziane.has(klucz)) return false
-        widziane.add(klucz)
-        return true
-      })
-  }, [modelSekcyjny])
-  const bledyPol = useMemo(() => {
-    const wynik: Record<string, string> = {}
-    podstawoweProblemyWalidacji.forEach(({ pole, polaPowiazane, komunikat }) => {
-      ;[pole, ...(polaPowiazane ?? [])].forEach((kluczPola) => {
-        wynik[kluczPola] ??= komunikat
-      })
-    })
-    return wynik
-  }, [podstawoweProblemyWalidacji])
+  const problemyWalidacji = useMemo(() => zbierzProblemyModelu(modelSekcyjny), [modelSekcyjny])
+  const zapamietajBledyPol = useMemo(() => utworzPamiecBledowPol(), [])
+  const bledyPol = useMemo(() => zapamietajBledyPol(podstawoweProblemyWalidacji), [zapamietajBledyPol, podstawoweProblemyWalidacji])
   const polaNiepewne = useMemo(() => Object.entries(statusyPol).filter(([, status]) => status === 'niepewne').map(([pole]) => pole), [statusyPol])
   const ostrzezeniaWalidacji = useMemo(() => problemyWalidacji.filter((problem) => !problem.czyBlokuje), [problemyWalidacji])
   const bledyKrytyczne = useMemo(() => problemyWalidacji.filter((problem) => problem.czyBlokuje), [problemyWalidacji])
@@ -630,20 +664,20 @@ export function useGeneratorSzczegolow() {
     })
   }, [czyAutosaveAktywny, daneFormularza, grupy, adresaci, statusyPol, aktywnaKopiaId, zrodloOpublikowanegoId])
 
-  function oznaczPoleRecznie(pole: string) {
-    ustawStatusyPol((obecne) => ({ ...obecne, [pole]: 'reczne' }))
-  }
+  const oznaczPoleRecznie = useCallback(function oznaczPoleRecznie(pole: string) {
+    ustawStatusyPol((obecne) => obecne[pole] === 'reczne' ? obecne : { ...obecne, [pole]: 'reczne' })
+  }, [])
 
-  function cofnijStatusJesliNiekompletne(dane: DaneFormularza, grupyDoSprawdzenia: GrupaSzkoleniowa[], statusyDoSprawdzenia: StatusyPolImportu) {
+  const cofnijStatusJesliNiekompletne = useCallback(function cofnijStatusJesliNiekompletne(dane: DaneFormularza, grupyDoSprawdzenia: GrupaSzkoleniowa[], statusyDoSprawdzenia: StatusyPolImportu) {
     if (dane.status !== 'PEŁNE') {
       return dane
     }
 
-    const problemy = zbudujProblemyWalidacji(dane, grupyDoSprawdzenia)
+    const problemy = zbudujProblemyWalidacji(dane, grupyDoSprawdzenia, indeksLokalizacji)
     const model = zbudujModelSekcyjny(dane, grupyDoSprawdzenia, adresaci, statusyDoSprawdzenia, problemy)
 
     return czySekcjeWymaganeKompletne(model) ? dane : { ...dane, status: 'NIEPEŁNE' as const }
-  }
+  }, [adresaci, indeksLokalizacji])
 
   function aktualizujDane(aktualizacja: (dane: DaneFormularza) => DaneFormularza, pole?: string) {
     if (!czyMoznaEdytowac) {
@@ -658,12 +692,13 @@ export function useGeneratorSzczegolow() {
     }
   }
 
-  function aktualizujGrupe(id: string, aktualizacja: (grupa: GrupaSzkoleniowa) => GrupaSzkoleniowa, pole?: string) {
+  const aktualizujGrupe = useCallback(function aktualizujGrupe(id: string, aktualizacja: (grupa: GrupaSzkoleniowa) => GrupaSzkoleniowa, pole?: string) {
     if (!czyMoznaEdytowac) {
       ustawKomunikat('Ten formularz jest dostępny tylko do podglądu dla bieżącego konta.')
       return
     }
 
+    const statusyDoWalidacji = aktualneStatusyPol.current
     ustawGrupy((obecne) => {
       const nastepneGrupy = obecne.map((grupa, indeks) => {
         if (grupa.id !== id) {
@@ -673,14 +708,14 @@ export function useGeneratorSzczegolow() {
         return normalizujGrupe(aktualizacja(grupa), indeks)
       })
 
-      ustawDaneFormularza((dane) => cofnijStatusJesliNiekompletne(dane, nastepneGrupy, statusyPol))
+      ustawDaneFormularza((dane) => cofnijStatusJesliNiekompletne(dane, nastepneGrupy, statusyDoWalidacji))
       return nastepneGrupy
     })
 
     if (pole) {
       oznaczPoleRecznie(pole)
     }
-  }
+  }, [czyMoznaEdytowac, cofnijStatusJesliNiekompletne, oznaczPoleRecznie])
 
   function dodajGrupe() {
     if (!czyMoznaEdytowac) {
@@ -691,7 +726,7 @@ export function useGeneratorSzczegolow() {
     ustawGrupy(dodajGrupeDoListy)
   }
 
-  function duplikujGrupe(id: string) {
+  const duplikujGrupe = useCallback(function duplikujGrupe(id: string) {
     if (!czyMoznaEdytowac) {
       ustawKomunikat('Ten formularz jest dostępny tylko do podglądu dla bieżącego konta.')
       return
@@ -715,15 +750,38 @@ export function useGeneratorSzczegolow() {
 
       return [...obecne.slice(0, indeks + 1), kopia, ...obecne.slice(indeks + 1)].map(normalizujGrupe)
     })
-  }
+  }, [czyMoznaEdytowac])
 
-  function usunGrupe(id: string, czyPotwierdzone: boolean) {
+  const usunGrupe = useCallback(function usunGrupe(id: string, czyPotwierdzone: boolean) {
     if (!czyMoznaEdytowac) {
       ustawKomunikat('Ten formularz jest dostępny tylko do podglądu dla bieżącego konta.')
       return
     }
 
     ustawGrupy((obecne) => przetworzUsuniecieGrupy(obecne, id, czyPotwierdzone))
+  }, [czyMoznaEdytowac])
+
+  const odswiezLokalizacje = useCallback(() => {
+    const lokalizacje = pobierzLokalizacjeZMagazynu()
+    ustawIndeksLokalizacji((obecny) => obecny.czyAktualny(lokalizacje) ? obecny : zbudujIndeksLokalizacjiSzczegolow(lokalizacje))
+  }, [])
+
+  useEffect(() => {
+    window.addEventListener('storage', odswiezLokalizacje)
+    window.addEventListener('focus', odswiezLokalizacje)
+    return () => {
+      window.removeEventListener('storage', odswiezLokalizacje)
+      window.removeEventListener('focus', odswiezLokalizacje)
+    }
+  }, [odswiezLokalizacje])
+
+  function sprawdzJakosc() {
+    const aktualneLokalizacje = pobierzLokalizacjeZMagazynu()
+    const aktualnyIndeks = indeksLokalizacji.czyAktualny(aktualneLokalizacje) ? indeksLokalizacji : zbudujIndeksLokalizacjiSzczegolow(aktualneLokalizacje)
+    const problemy = zbudujProblemyWalidacji(daneFormularza, grupy, aktualnyIndeks)
+    const model = zbudujModelSekcyjny(daneFormularza, grupy, adresaci, efektywneStatusyPol, problemy)
+    ustawIndeksLokalizacji(aktualnyIndeks)
+    return { problemy: zbierzProblemyModelu(model), czyKompletny: czySekcjeWymaganeKompletne(model) }
   }
 
   function obsluzImportMaila() {
@@ -779,14 +837,15 @@ export function useGeneratorSzczegolow() {
       return
     }
 
-    if (problemyWalidacji.some((problem) => problem.komunikat === 'Odmiana nazwy tej lokalizacji nie została jeszcze potwierdzona.')) {
+    const kontrola = sprawdzJakosc()
+    if (kontrola.problemy.some((problem) => problem.komunikat === 'Odmiana nazwy tej lokalizacji nie została jeszcze potwierdzona.')) {
       ustawKomunikat('Potwierdź odmianę lokalizacji przed zapisaniem formularza.')
       return
     }
 
     const daneDoZapisu: DaneFormularza = {
       ...daneFormularza,
-      status: czyFormularzKompletny ? 'PEŁNE' : 'NIEPEŁNE',
+      status: kontrola.czyKompletny ? 'PEŁNE' : 'NIEPEŁNE',
     }
     const wersja = zbudujWersjeRobocza(daneDoZapisu, grupy, adresaci, statusyPol, aktywneKonto, {
       id: aktywnaKopiaId,
@@ -850,7 +909,8 @@ export function useGeneratorSzczegolow() {
   }
 
   function eksportujJson() {
-    if (bledyKrytyczne.length || polaNiepewne.length) {
+    const kontrola = sprawdzJakosc()
+    if (kontrola.problemy.some((problem) => problem.czyBlokuje) || polaNiepewne.length) {
       ustawKomunikat('Eksport zablokowany: usuń błędy krytyczne i zaakceptuj pola niepewne.')
       return
     }
@@ -880,12 +940,14 @@ export function useGeneratorSzczegolow() {
       return
     }
 
-    if (!czyFormularzKompletny) {
+    const kontrola = sprawdzJakosc()
+    if (!kontrola.czyKompletny) {
       ustawKomunikat('Uzupełnij wymagane pola przed publikacją szczegółów organizacyjnych.')
       return
     }
 
-    if (ostrzezeniaWalidacji.length && !window.confirm(`Wykryto ostrzeżenia: ${ostrzezeniaWalidacji.length}. Czy mimo to opublikować szczegóły?`)) {
+    const aktualneOstrzezenia = kontrola.problemy.filter((problem) => !problem.czyBlokuje)
+    if (aktualneOstrzezenia.length && !window.confirm(`Wykryto ostrzeżenia: ${aktualneOstrzezenia.length}. Czy mimo to opublikować szczegóły?`)) {
       ustawKomunikat('Publikacja przerwana przez użytkownika po ostrzeżeniach.')
       return
     }
@@ -1002,6 +1064,9 @@ export function useGeneratorSzczegolow() {
   return {
     daneFormularza,
     grupy,
+    indeksLokalizacji,
+    odswiezLokalizacje,
+    sprawdzJakosc,
     adresaci,
     statusyPol: efektywneStatusyPol,
     trescMaila,

@@ -1,5 +1,5 @@
 import { RegulacjaSzerokosci } from '../../../../wspolne/komponenty/RegulacjaSzerokosci'
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent, type ReactNode } from 'react'
 import { pobierzLokalizacjeZMagazynu } from '../../../../kartoteki/lokalizacje/magazynLokalizacji'
 import type { Dokument } from '../../../../wspolne/dokumenty/modelDokumentu'
 import { utworzDokumentZeSzczegolow } from '../../../../wspolne/integracje/szczegolyDoDokumentow'
@@ -125,6 +125,7 @@ type PodgladWzoruKlienta = {
 
 function wybierzPodpowiedziMiejscowosci(miejscowosci: string[], wartosc: string) {
   const fraza = wartosc.trim().toLocaleLowerCase('pl')
+  if (!fraza) return miejscowosci.slice(0, 50)
   return miejscowosci.filter((miejscowosc) => !fraza || miejscowosc.toLocaleLowerCase('pl').includes(fraza)).slice(0, 50)
 }
 
@@ -135,7 +136,7 @@ function czyWersjaMaPoprzednia(wersje: WpisHistoriiSzczegolow[], wersjaId: strin
 
 function PolaFirmy({ tytul, prefix, dane, disabled, statusyPol, aktualizujPole, miejscowosciDoPodpowiedzi, elementNaglowka }: WlasciwosciPolFirmy) {
   const czyNabywca = prefix === 'nabywca'
-  const podpowiedziMiasta = wybierzPodpowiedziMiejscowosci(miejscowosciDoPodpowiedzi, dane.miasto)
+  const podpowiedziMiasta = useMemo(() => wybierzPodpowiedziMiejscowosci(miejscowosciDoPodpowiedzi, dane.miasto), [miejscowosciDoPodpowiedzi, dane.miasto])
 
   return (
     <section className="szczegoly-kolumna-danych">
@@ -267,11 +268,11 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
   const aktywnaWersja = generator.kopieRobocze.find((kopia) => kopia.id === generator.aktywnaKopiaId) ?? null
   const szczegolyOrganizacyjneId = generator.zrodloOpublikowanegoId ?? aktywnaWersja?.id ?? null
 
-  function utworzChecklisteDlaGrupy(grupaId: string) {
+  const utworzChecklisteDlaGrupy = useCallback(function utworzChecklisteDlaGrupy(grupaId: string) {
     if (!aktywnaWersja) return
     utworzDokumentZeSzczegolow(aktywnaWersja, 'checklista', grupaId, aktywnaWersja.autorId)
     ustawOdswiezaczDokumentow((obecny) => obecny + 1)
-  }
+  }, [aktywnaWersja])
   const [podgladyWzorowKlienta, ustawPodgladyWzorowKlienta] = useState<Record<string, PodgladWzoruKlienta>>({})
   const [porownywanaWersjaId, ustawPorownywanaWersjaId] = useState<string | null>(null)
   const [czyHistoriaRozwinieta, ustawCzyHistoriaRozwinieta] = useState(false)
@@ -282,7 +283,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
     () => [...new Set(pobierzLokalizacjeZMagazynu().map((lokalizacja) => lokalizacja.nazwa))].sort((pierwsza, druga) => pierwsza.localeCompare(druga, 'pl')),
     [],
   )
-  const podpowiedziMiastaPaczki = wybierzPodpowiedziMiejscowosci(miejscowosciDoPodpowiedzi, generator.daneFormularza.odbiorcaPaczki.miasto)
+  const podpowiedziMiastaPaczki = useMemo(() => wybierzPodpowiedziMiejscowosci(miejscowosciDoPodpowiedzi, generator.daneFormularza.odbiorcaPaczki.miasto), [miejscowosciDoPodpowiedzi, generator.daneFormularza.odbiorcaPaczki.miasto])
   const liczbaUkrytychWpisowHistorii = pobierzLiczbeUkrytychWpisowHistorii(generator.historiaSzczegolow)
   const widoczneWpisyHistorii = pobierzWidoczneWpisyHistorii(generator.historiaSzczegolow, czyHistoriaRozwinieta)
   const wersjeHistorii = generator.historiaSzczegolow.filter((wpis) => wpis.typ === 'wersja')
@@ -564,6 +565,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
           akcje={
             <>
               <button ref={przyciskJakosci} aria-controls={idPaneluJakosci} aria-expanded={czyPanelJakosciOtwarty} type="button" onClick={() => {
+                generator.sprawdzJakosc()
                 ustawCzyPanelJakosciOtwarty(true)
                 requestAnimationFrame(() => document.getElementById(idPaneluJakosci)?.querySelector<HTMLButtonElement>('button')?.focus())
               }}>Kontrola jakości</button>
@@ -675,6 +677,9 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
                 liczbaGrup={generator.grupy.length}
                 key={grupa.id}
                 statusyPol={generator.statusyPol}
+                bledyPol={generator.bledyPol}
+                indeksLokalizacji={generator.indeksLokalizacji}
+                odswiezLokalizacje={generator.odswiezLokalizacje}
                 trenerzyKartoteki={generator.trenerzyKartoteki}
                 utworzChecklistePaczki={utworzChecklisteDlaGrupy}
                 duplikujGrupe={generator.duplikujGrupe}

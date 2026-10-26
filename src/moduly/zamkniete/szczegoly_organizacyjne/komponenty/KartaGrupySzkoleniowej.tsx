@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { memo, useEffect, useMemo, useState } from 'react'
 import {
-  pobierzLokalizacjeZMagazynu,
   ustawPotwierdzonyMiejscownikLokalizacji,
-  znajdzLokalizacjeDlaMiejsca,
 } from '../../../../kartoteki/lokalizacje/magazynLokalizacji'
+import type { IndeksLokalizacjiSzczegolow } from '../uslugi/indeksLokalizacjiSzczegolow'
+import { DostawcaBledowPol } from './KontekstBledowPol'
+import type { BledyPolFormularza } from './stanBledowPol'
 import { etykietyStatusowPol, klasyStatusowPol } from '../stale'
 import type {
   FormaSzkolenia,
@@ -27,6 +28,9 @@ type WlasciwosciKartyGrupy = {
   indeks: number
   liczbaGrup: number
   statusyPol: StatusyPolImportu
+  bledyPol: BledyPolFormularza
+  indeksLokalizacji: IndeksLokalizacjiSzczegolow
+  odswiezLokalizacje: () => void
   trenerzyKartoteki: TrenerKartoteki[]
   aktualizujGrupe: (id: string, aktualizacja: (grupa: GrupaSzkoleniowa) => GrupaSzkoleniowa, pole?: string) => void
   duplikujGrupe: (id: string) => void
@@ -226,12 +230,34 @@ function PolePrzelacznika({
   )
 }
 
-export default function KartaGrupySzkoleniowej({
+function KartaGrupySzkoleniowej(wlasciwosci: WlasciwosciKartyGrupy) {
+  const przedrostek = `grupy.${wlasciwosci.indeks}.`
+  const bledyGrupy = Object.fromEntries(Object.entries(wlasciwosci.bledyPol).filter(([pole]) => pole.startsWith(przedrostek)))
+  return <DostawcaBledowPol bledyPol={bledyGrupy}><ZawartoscKartyGrupy {...wlasciwosci} /></DostawcaBledowPol>
+}
+
+export default memo(KartaGrupySzkoleniowej, (poprzednie, nastepne) => {
+  const przedrostek = `grupy.${nastepne.indeks}.`
+  function czyPolaRowne(pierwsze: Readonly<Record<string, string | undefined>>, drugie: Readonly<Record<string, string | undefined>>) {
+    return [...new Set([...Object.keys(pierwsze), ...Object.keys(drugie)])]
+      .every((pole) => !pole.startsWith(przedrostek) || pierwsze[pole] === drugie[pole])
+  }
+  return poprzednie.grupa === nastepne.grupa && poprzednie.indeks === nastepne.indeks
+    && poprzednie.liczbaGrup === nastepne.liczbaGrup && poprzednie.trenerzyKartoteki === nastepne.trenerzyKartoteki
+    && poprzednie.indeksLokalizacji === nastepne.indeksLokalizacji && poprzednie.odswiezLokalizacje === nastepne.odswiezLokalizacje
+    && poprzednie.aktualizujGrupe === nastepne.aktualizujGrupe && poprzednie.duplikujGrupe === nastepne.duplikujGrupe
+    && poprzednie.usunGrupe === nastepne.usunGrupe && poprzednie.utworzChecklistePaczki === nastepne.utworzChecklistePaczki
+    && czyPolaRowne(poprzednie.statusyPol, nastepne.statusyPol) && czyPolaRowne(poprzednie.bledyPol, nastepne.bledyPol)
+})
+
+function ZawartoscKartyGrupy({
   grupa,
   indeks,
   liczbaGrup,
   statusyPol,
   trenerzyKartoteki,
+  indeksLokalizacji,
+  odswiezLokalizacje,
   aktualizujGrupe,
   duplikujGrupe,
   usunGrupe,
@@ -250,7 +276,6 @@ export default function KartaGrupySzkoleniowej({
     window.addEventListener('szczegoly:otworz-pole', otworzGrupeDlaPola)
     return () => window.removeEventListener('szczegoly:otworz-pole', otworzGrupeDlaPola)
   }, [indeks])
-  const [wersjaLokalizacji, ustawWersjeLokalizacji] = useState(0)
   const [poprawionyMiejscownik, ustawPoprawionyMiejscownik] = useState('')
   const wybranyTrener = grupa.trenerzy[0]
   const kluczWybranegoTrenera = `${grupa.id}:${wybranyTrener?.id ?? ''}:${wybranyTrener?.imieNazwisko ?? ''}`
@@ -259,27 +284,28 @@ export default function KartaGrupySzkoleniowej({
     wartosc: wybranyTrener?.imieNazwisko ?? '',
   })
   const wartoscWyszukiwanegoTrenera = wyszukiwanyTrener.klucz === kluczWybranegoTrenera ? wyszukiwanyTrener.wartosc : wybranyTrener?.imieNazwisko ?? ''
-  const lokalizacje = useMemo(() => {
-    void wersjaLokalizacji
-    return pobierzLokalizacjeZMagazynu()
-  }, [wersjaLokalizacji])
   const trenerzyDoWyboru = useMemo(() => {
     const trenerzyImportowani = grupa.trenerzy.filter((trener) => !trenerzyKartoteki.some((pozycja) => pozycja.id === trener.id))
     return [...trenerzyKartoteki, ...trenerzyImportowani].sort((pierwszy, drugi) => pierwszy.imieNazwisko.localeCompare(drugi.imieNazwisko, 'pl'))
   }, [grupa.trenerzy, trenerzyKartoteki])
-  const etykietyTrenerow = useMemo(() => new Map(trenerzyDoWyboru.map((trener) => {
-    const czyPowtorzonaNazwa = trenerzyDoWyboru.filter((osoba) => osoba.imieNazwisko.toLocaleLowerCase('pl') === trener.imieNazwisko.toLocaleLowerCase('pl')).length > 1
-    return [trener.id, czyPowtorzonaNazwa ? `${trener.imieNazwisko} (${trener.email || trener.telefon || 'brak kontaktu'})` : trener.imieNazwisko]
-  })), [trenerzyDoWyboru])
-  const wybranaLokalizacja = useMemo(() => znajdzLokalizacjeDlaMiejsca(grupa.miejsce, lokalizacje), [grupa.miejsce, lokalizacje])
-  const lokalizacjeDoPodpowiedzi = useMemo(() => {
-    const fraza = grupa.miejsce.trim().toLocaleLowerCase('pl')
-    return lokalizacje.filter((lokalizacja) => !fraza || lokalizacja.nazwa.toLocaleLowerCase('pl').includes(fraza)).slice(0, 50)
-  }, [grupa.miejsce, lokalizacje])
+  const etykietyTrenerow = useMemo(() => {
+    const liczbyNazw = new Map<string, number>()
+    for (const trener of trenerzyDoWyboru) {
+      const nazwa = trener.imieNazwisko.toLocaleLowerCase('pl')
+      liczbyNazw.set(nazwa, (liczbyNazw.get(nazwa) ?? 0) + 1)
+    }
+    return new Map(trenerzyDoWyboru.map((trener) => {
+      const czyPowtorzonaNazwa = (liczbyNazw.get(trener.imieNazwisko.toLocaleLowerCase('pl')) ?? 0) > 1
+      return [trener.id, czyPowtorzonaNazwa ? `${trener.imieNazwisko} (${trener.email || trener.telefon || 'brak kontaktu'})` : trener.imieNazwisko]
+    }))
+  }, [trenerzyDoWyboru])
+  const indeksTrenerow = useMemo(() => new Map([...etykietyTrenerow].map(([id, etykieta]) => [id, etykieta.toLocaleLowerCase('pl')])), [etykietyTrenerow])
+  const wybranaLokalizacja = useMemo(() => indeksLokalizacji.znajdz(grupa.miejsce), [grupa.miejsce, indeksLokalizacji])
+  const lokalizacjeDoPodpowiedzi = useMemo(() => indeksLokalizacji.podpowiedz(grupa.miejsce), [grupa.miejsce, indeksLokalizacji])
   const trenerzyDoPodpowiedzi = useMemo(() => {
     const fraza = wartoscWyszukiwanegoTrenera.trim().toLocaleLowerCase('pl')
-    return trenerzyDoWyboru.filter((trener) => !fraza || etykietyTrenerow.get(trener.id)?.toLocaleLowerCase('pl').includes(fraza)).slice(0, 50)
-  }, [trenerzyDoWyboru, etykietyTrenerow, wartoscWyszukiwanegoTrenera])
+    return trenerzyDoWyboru.filter((trener) => !fraza || indeksTrenerow.get(trener.id)?.includes(fraza)).slice(0, 50)
+  }, [trenerzyDoWyboru, indeksTrenerow, wartoscWyszukiwanegoTrenera])
   const czyMechanizmPodzielonejPlatnosci = czyCenaWymagaMpp(grupa)
   const zasadyGodzinNiestandardowych = pobierzZasadyPolaDynamicznego(grupa, 'nazwaNiestandardowychGodzin')
   const poleMiejsca = `grupy.${indeks}.miejsce`
@@ -368,7 +394,7 @@ export default function KartaGrupySzkoleniowej({
 
     ustawPotwierdzonyMiejscownikLokalizacji(wybranaLokalizacja.klucz_lokalizacji, miejscownik)
     ustawPoprawionyMiejscownik('')
-    ustawWersjeLokalizacji((obecna) => obecna + 1)
+    odswiezLokalizacje()
     aktualizujGrupe(grupa.id, (obecna) => ({ ...obecna, miejsce: obecna.miejsce }), `grupy.${indeks}.miejsce`)
   }
 

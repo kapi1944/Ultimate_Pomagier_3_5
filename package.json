@@ -4,8 +4,9 @@
   "version": "4.0.0",
   "type": "module",
   "scripts": {
-    "pretest": "node --import ./testy/rejestrujLoaderTs.mjs testy/zapisRejestruPrzyBrakuMiejsca.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/swobodneBlokiDokumentu.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/wspolnyStandardGeneratorow.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/generatoryOperacyjne.test.ts",
+    "pretest": "node --import ./testy/rejestrujLoaderTs.mjs testy/zapisRejestruPrzyBrakuMiejsca.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/swobodneBlokiDokumentu.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/wspolnyStandardGeneratorow.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/generatoryOperacyjne.test.ts && node --import ./testy/rejestrujLoaderTs.mjs --test testy/indeksLokalizacjiSzczegolow.test.ts",
     "dev": "vite",
+    "test:szczegoly:przegladarka": "node --test testy/wydajnoscSzczegolow.przegladarka.test.mjs",
     "test:checklisty:przegladarka": "node --test testy/checklistyPaczek.przegladarka.test.mjs",
     "test:monitor": "node --import ./testy/rejestrujLoaderTs.mjs testy/monitorWysylek.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/pulpit.regresja.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/v4Pulpit.test.mjs",
     "test:monitor:przegladarka": "node --test testy/monitorWysylek.przegladarka.test.mjs",

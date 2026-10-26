@@ -202,3 +202,20 @@ Nie deklaruj gotowego produkcyjnego uwierzytelniania.
 ## Weryfikacja wykonania tego etapu
 
 Wyniki kontroli zostaną uzupełnione po zakończeniu testów. Budowanie frontendów i testy konfiguracji nie tworzą instalatorów. Nie uruchomiono native desktop:build/desktop:release ani workflow GitHub Actions.
+
+### Archiwalne uzupełnienie odzyskane w etapie 4.3.1
+
+Powyższy akapit jest historycznym stanem raportu. W niezacommitowanej wersji starszego katalogu zapisano później poniższe wyniki dotyczące kodu utrwalonego w `82c2ed1c7f0f49b7d797ec983172863ce6faa5f8` („rozbudowa”). To zapis wcześniejszej weryfikacji, a nie wyniki ponownie uzyskane dla aktualnego `main`.
+
+| Kontrola historyczna | Wynik zapisany w odzyskanym raporcie |
+| --- | --- |
+| Testy pakowania | 8/8; bez tworzenia instalatora |
+| `npm run test:desktop` | 13/13 |
+| `npm test`, `npm run lint`, `npm run build` | Kod wyjścia 0 |
+| Osobny build demonstracyjny | Build zakończony, manifest odrzucony przez bramkę produkcyjną |
+| Chrome | Sprawdzone dev, dev:demo i oba buildy przez preview; testowe porty nie potwierdzały izolacji domyślnych środowisk |
+| `git diff --check` | Bez błędów |
+
+Archiwalny zapis odnotowywał zastanie nowego HEAD `82c2ed1` z przygotowanymi zmianami i logo, bez potwierdzenia źródła commita. Logo nie należało do ówczesnego zadania. Do plików tamtej implementacji należała również deklaracja `skrypty/kontrolaTrybuFrontendu.d.mts`.
+
+W tamtym etapie nie zweryfikowano natywnego logowania Windows/WebView2, aktywacji ani resetu haseł i nie uruchamiano pakowania NSIS ani publikacji. Opis demonstracyjnego buildu dotyczy wyłącznie dawnej konfiguracji — obecna V4 celowo odrzuca taki build. Oryginał uzupełnienia zachowano w kopii etapu 4.3.0, bez jej modyfikowania.

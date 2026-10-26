@@ -127,7 +127,7 @@ export default function PanelWykrytychProblemow({
                       {czyMaBledy && (
                         <ul hidden={!czyRozwinieta} id={idListyBledow}>
                           {pozycja.bledy.map((blad) => (
-                            <li className={`szczegoly-problem szczegoly-problem--${blad.poziom}`} key={`${pozycja.klucz}-${blad.pole}`}>
+                            <li className={`szczegoly-problem szczegoly-problem--${blad.poziom}`} key={`${pozycja.klucz}-${blad.pole}-${blad.kodBledu ?? blad.komunikat}`}>
                               <button className="szczegoly-checklista__blad" type="button" onClick={() => przejdzDoPolaFormularza(blad.pole, pozycja.idSekcjiFormularza, blad.idDocelowy)}>
                                 {blad.komunikat}
                               </button>
