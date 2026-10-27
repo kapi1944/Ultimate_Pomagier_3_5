@@ -4,9 +4,10 @@ import { odczytajObiektySlajdu } from '../pptx/slajdyPptx'
 import { czyObiektPowiazany, dopasujTekstDoPola, ustawGeometrie, zapiszZmianyPptx } from '../pptx/zmianyPptx'
 import { potomkowieXml } from '../pptx/xmlPptx'
 import { czyNumeracjaWzorca } from '../pptx/wzorcePptx'
-import { analizujUklad, bezpiecznyObszar, czyNumerSlajdu, czyObiektGlowny, czyOkladka, czyPrzeciecie, znajdzNaglowek } from '../analiza/analizujUklad'
+import { analizujUklad, bezpiecznyObszar, czyBialaNumeracja, czyNumerSlajdu, czyObiektGlowny, czyOkladka, czyPrzeciecie, czySeparatorNaglowka, znajdzNaglowek } from '../analiza/analizujUklad'
+import { poprawProfilSemper } from './profilSemper'
 
-export type UstawieniaKorekty = { szerokoscCm: number; wysokoscCm: number; czyKorygowacUklad: boolean; czyUsuwacDuplikaty: boolean }
+export type UstawieniaKorekty = { szerokoscCm: number; wysokoscCm: number; czyKorygowacUklad: boolean; czyUsuwacDuplikaty: boolean; profil?: 'semper' }
 
 function przeskalujObiekt(obiekt: ObiektSlajdu, szerokosc: number, wysokosc: number, nowaSzerokosc: number, nowaWysokosc: number, czyWzorzec: boolean) {
   const geometria = obiekt.geometria
@@ -67,9 +68,7 @@ function poprawSlajd(slajd: SlajdPptx) {
   }
   let poczatekTresci = naglowek?.geometria ? naglowek.geometria.y + naglowek.geometria.cy + odstep : obszar.gora
   if (naglowek) {
-    const separatory = obiekty.filter((obiekt) => obiekt.typ === 'linia' && obiekt.geometria!.cy < 60000
-      && obiekt.geometria!.cx > slajd.szerokosc * .25 && obiekt.geometria!.y >= naglowek.geometria!.y
-      && obiekt.geometria!.y < poczatekTresci + slajd.wysokosc * .05)
+    const separatory = obiekty.filter((obiekt) => czySeparatorNaglowka(obiekt, naglowek, slajd))
     for (const separator of separatory) {
       const nowaY = Math.max(separator.geometria!.y, poczatekTresci)
       zmien(separator, { ...separator.geometria!, y: nowaY })
@@ -120,6 +119,15 @@ export async function korygujUklad(model: ModelPptx, ustawienia: UstawieniaKorek
       if (!/^ppt\/(slides|slideLayouts|slideMasters)\/[^/]+\.xml$/.test(czesc)) continue
       const slajd = kopia.slajdy.find((pozycja) => pozycja.czesc === czesc)
       for (const obiekt of odczytajObiektySlajdu(dokument)) {
+        if (ustawienia.profil === 'semper' && nowaSzerokosc === szerokosc) {
+          if (!slajd && obiekt.geometria && czyObiektGlowny(obiekt)) {
+            const geometria = { ...obiekt.geometria }
+            if (geometria.y > wysokosc * .8) geometria.y += nowaWysokosc - wysokosc
+            else if (geometria.cy > wysokosc * .45 && geometria.y + geometria.cy >= wysokosc - 100) geometria.cy += nowaWysokosc - wysokosc
+            ustawGeometrie(obiekt, geometria)
+          }
+          continue
+        }
         if (slajd && czyOkladka(slajd) && obiekt.geometria && czyObiektGlowny(obiekt)) {
           const skala = Math.min(nowaSzerokosc / szerokosc, nowaWysokosc / wysokosc)
           ustawGeometrie(obiekt, { x: (nowaSzerokosc - szerokosc * skala) / 2 + obiekt.geometria.x * skala, y: (nowaWysokosc - wysokosc * skala) / 2 + obiekt.geometria.y * skala, cx: obiekt.geometria.cx * skala, cy: obiekt.geometria.cy * skala })
@@ -132,17 +140,20 @@ export async function korygujUklad(model: ModelPptx, ustawienia: UstawieniaKorek
   const poprawki = new Map<string, Document>()
   for (const slajd of wymiarowany.slajdy) {
     const przed = new XMLSerializer().serializeToString(slajd.dokument)
-    if (ustawienia.czyUsuwacDuplikaty && czyNumeracjaWzorca(slajd)) {
+    if (ustawienia.profil === 'semper' && ustawienia.czyKorygowacUklad) {
+      const wynikProfilu = poprawProfilSemper(slajd, ustawienia.czyUsuwacDuplikaty)
+      zmienione += wynikProfilu.zmienione; duplikaty += wynikProfilu.duplikaty
+    } else if (ustawienia.czyUsuwacDuplikaty && czyNumeracjaWzorca(slajd)) {
       for (const obiekt of slajd.obiekty) {
         const geometria = obiekt.geometria
-        if (!geometria || !czyObiektGlowny(obiekt) || czyNumerSlajdu(obiekt) || !/^\d{1,5}$/.test(obiekt.tekst.trim())
+        if (!geometria || !czyObiektGlowny(obiekt) || czyNumerSlajdu(obiekt) || czyBialaNumeracja(obiekt) || !/^\d{1,5}$/.test(obiekt.tekst.trim())
           || geometria.y < slajd.wysokosc * .8 || geometria.cx > slajd.szerokosc * .15 || geometria.cy > slajd.wysokosc * .12) continue
         if (czyObiektPowiazany(slajd.dokument, obiekt.id)) continue
         obiekt.element.parentNode?.removeChild(obiekt.element); duplikaty++
       }
       slajd.obiekty = odczytajObiektySlajdu(slajd.dokument)
     }
-    if (ustawienia.czyKorygowacUklad) zmienione += poprawSlajd(slajd)
+    if (ustawienia.czyKorygowacUklad && ustawienia.profil !== 'semper') zmienione += poprawSlajd(slajd)
     if (przed !== new XMLSerializer().serializeToString(slajd.dokument)) poprawki.set(slajd.czesc, slajd.dokument)
   }
   const wynik = poprawki.size ? await zapiszZmianyPptx(wymiarowany, poprawki) : wymiarowany

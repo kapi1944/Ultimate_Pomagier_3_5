@@ -4,7 +4,8 @@ import type { ModelPptx } from '../pptx/modelPptx'
 
 export async function otworzPdfPrezentacji(bufor: ArrayBuffer) {
   const biblioteka = await import('pdfjs-dist/legacy/build/pdf.mjs')
-  if (!biblioteka.GlobalWorkerOptions.workerSrc) biblioteka.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/legacy/build/pdf.worker.min.mjs', import.meta.url).toString()
+  const { default: adresPracownikaPdf } = await import('pdfjs-dist/legacy/build/pdf.worker.min.mjs?url')
+  biblioteka.GlobalWorkerOptions.workerSrc = adresPracownikaPdf
   const zadanie = biblioteka.getDocument({ data: new Uint8Array(bufor.slice(0)) })
   try { return await zadanie.promise }
   catch (blad) { await zadanie.destroy(); throw blad }

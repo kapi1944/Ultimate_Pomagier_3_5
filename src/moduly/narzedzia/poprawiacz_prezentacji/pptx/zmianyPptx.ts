@@ -11,7 +11,9 @@ export function czyObiektPowiazany(dokument: Document, id: string) {
 export function dopasujTekstDoPola(obiekt: ObiektSlajdu, tekst = obiekt.tekst) {
   const wlasciwosci = potomkowieXml(obiekt.element, 'bodyPr')[0]
   if (!wlasciwosci || !tekst.trim() || !obiekt.geometria) return
-  const rozmiary = [...potomkowieXml(obiekt.element, 'rPr'), ...potomkowieXml(obiekt.element, 'defRPr')].map((element) => Number(element.getAttribute('sz'))).filter((rozmiar) => rozmiar > 0)
+  const odczytajRozmiary = (nazwa: string) => potomkowieXml(obiekt.element, nazwa).map((element) => Number(element.getAttribute('sz'))).filter((rozmiar) => rozmiar > 0)
+  const rozmiaryFragmentow = odczytajRozmiary('rPr')
+  const rozmiary = rozmiaryFragmentow.length ? rozmiaryFragmentow : odczytajRozmiary('defRPr')
   const czcionka = Math.max(...(rozmiary.length ? rozmiary : [1800])) / 100 * 12700
   const dostepnaSzerokosc = Math.max(1, obiekt.geometria.cx - Number(wlasciwosci.getAttribute('lIns') || 91440) - Number(wlasciwosci.getAttribute('rIns') || 91440))
   const dostepnaWysokosc = Math.max(1, obiekt.geometria.cy - Number(wlasciwosci.getAttribute('tIns') || 45720) - Number(wlasciwosci.getAttribute('bIns') || 45720))

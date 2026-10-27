@@ -10,6 +10,8 @@ import { wypelnijSzablonOkladki } from '../src/moduly/narzedzia/poprawiacz_preze
 import { przygotujPlanDruku, domyslneUstawieniaDruku, dopasujProporcjonalnie, obszaryNaStronie, odczytajZakresSlajdow } from '../src/moduly/narzedzia/poprawiacz_prezentacji/eksport/planDruku'
 import { wygenerujKompletZip } from '../src/moduly/narzedzia/poprawiacz_prezentacji/eksport/eksportMaterialow'
 import { potomkowieXml } from '../src/moduly/narzedzia/poprawiacz_prezentacji/pptx/xmlPptx'
+import { analizujPrezentacje } from '../src/moduly/narzedzia/poprawiacz_prezentacji/analiza/analizujPrezentacje'
+import { bezpiecznyObszar } from '../src/moduly/narzedzia/poprawiacz_prezentacji/analiza/analizujUklad'
 import { ksztaltTestowy, utworzFixturePptx, xmlSlajdu, przestrzenRelacji, przestrzenPrezentacji } from './fixturePptx'
 
 Object.defineProperty(globalThis, 'DOMParser', { value: DOMParser, configurable: true })
@@ -143,4 +145,86 @@ test('komplet ZIP zawiera poprawne pliki, instrukcje druku i odrzuca duplikaty n
   assert.equal(await archiwum.file('druk.pdf')!.async('string'), 'PDF')
   assert.match(await archiwum.file('USTAWIENIA_DRUKU.txt')!.async('string'), /dwustronnie/)
   await assert.rejects(() => wygenerujKompletZip([pliki[0], pliki[0]], ''), /Powtórzona nazwa/)
+})
+
+test('naglowek bez placeholdera i separator zapisany jako prostokat zachowuja odstep', async () => {
+  const archiwum = await JSZip.loadAsync(await utworzFixturePptx())
+  const naglowek = ksztaltTestowy(20, 500000, 400000, 9000000, 1000000, 'Pierwszy wiersz\nDrugi wiersz', 'FFFFFF')
+    .replace('<a:r>', '<a:r><a:rPr sz="2800"/>')
+  archiwum.file('ppt/slides/slide3.xml', xmlSlajdu(naglowek
+    + ksztaltTestowy(21, 500000, 950000, 9000000, 10000, '', 'CCCCCC')
+    + ksztaltTestowy(22, 500000, 1600000, 6000000, 1000000, 'Treść', 'FFFFFF')))
+  const model = await otworzPptx(await archiwum.generateAsync({ type: 'arraybuffer' }))
+  const wynik = await korygujUklad(model, { szerokoscCm: 10000000 / 360000, wysokoscCm: 6000000 / 360000, czyKorygowacUklad: true, czyUsuwacDuplikaty: false })
+  const [tytul, separator] = wynik.model.slajdy[0].obiekty
+  assert.ok(separator.geometria!.y >= tytul.geometria!.y + tytul.geometria!.cy + 45000)
+})
+
+async function utworzPrzypadekProfiluSemper() {
+  const archiwum = await JSZip.loadAsync(await readFile(new URL('../public/szablony/prezentacje/semper-poziom.pptx', import.meta.url)))
+  const naglowek = ksztaltTestowy(104, 600000, 666750, 10287000, 685800, 'Nagłówek pierwszy\nNagłówek drugi', 'FFFFFF')
+    .replace('<a:r>', '<a:r><a:rPr sz="2600"/>')
+  const bialyNumer = ksztaltTestowy(108, 11000000, 6500000, 500000, 200000, '12', '333333')
+    .replace('<a:r>', '<a:r><a:rPr><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill></a:rPr>')
+  archiwum.file('ppt/slides/slide2.xml', xmlSlajdu(
+    ksztaltTestowy(100, 0, 0, 12192000, 6858000, '', 'FFFFFF')
+    + ksztaltTestowy(101, 0, 0, 12192000, 128016)
+    + ksztaltTestowy(102, 8500000, 0, 3600000, 6858000, '', '1A2F46')
+    + ksztaltTestowy(103, 600000, 323850, 8572500, 209550, 'ETYKIETA', 'FFFFFF')
+    + naglowek + ksztaltTestowy(105, 600000, 1438279, 10972800, 9525, '', 'CCCCCC')
+    + ksztaltTestowy(106, 600000, 6429379, 10972800, 9525, '', 'CCCCCC')
+    + ksztaltTestowy(107, 11049000, 361950, 533400, 266700, '16', 'FFFFFF')
+    + bialyNumer + bialyNumer.replaceAll('108', '110').replace('x="11000000" y="6500000"', 'x="1000000" y="2700000"')
+    + ksztaltTestowy(109, 600000, 2500000, 6000000, 1000000, 'Treść', 'FFFFFF')))
+  return otworzPptx(await archiwum.generateAsync({ type: 'arraybuffer' }))
+}
+
+test('profil SEMPER odsłania oba paski, usuwa obce numery i zachowuje biala numeracje oraz geometrie okladki', async () => {
+  const model = await utworzPrzypadekProfiluSemper()
+  const ustawienia = { szerokoscCm: 12192000 / 360000, wysokoscCm: 20.5, czyKorygowacUklad: true, czyUsuwacDuplikaty: true, profil: 'semper' as const }
+  const wynik = await korygujUklad(model, ustawienia)
+  const slajd = wynik.model.slajdy[1]
+  for (const id of ['100', '101', '106', '107']) assert.ok(!slajd.obiekty.some((obiekt) => obiekt.id === id), id)
+  assert.deepEqual(slajd.obiekty.find((obiekt) => obiekt.id === '108')!.geometria, model.slajdy[1].obiekty.find((obiekt) => obiekt.id === '108')!.geometria)
+  assert.equal(slajd.obiekty.find((obiekt) => obiekt.id === '110')!.geometria!.y, 2880000)
+  assert.ok(!analizujPrezentacje(wynik.model).problemy.some((problem) => problem.numerSlajdu === 2 && problem.typ === 'NUMERACJA'))
+  const panel = slajd.obiekty.find((obiekt) => obiekt.id === '102')!.geometria!
+  const obszar = bezpiecznyObszar(slajd)
+  assert.ok(panel.y > obszar.gora && panel.y + panel.cy < obszar.dol)
+  const naglowek = slajd.obiekty.find((obiekt) => obiekt.id === '104')!.geometria!
+  assert.ok(slajd.obiekty.find((obiekt) => obiekt.id === '105')!.geometria!.y >= naglowek.y + naglowek.cy + 72000)
+  for (const obiekt of model.slajdy[0].obiekty.filter((obiekt) => obiekt.typ === 'obraz')) {
+    assert.deepEqual(wynik.model.slajdy[0].obiekty.find((pozycja) => pozycja.id === obiekt.id)!.geometria, obiekt.geometria)
+  }
+  const ponownie = await korygujUklad(wynik.model, ustawienia)
+  assert.equal(await ponownie.model.archiwum.file(slajd.czesc)!.async('string'), await wynik.model.archiwum.file(slajd.czesc)!.async('string'))
+})
+
+test('profil SEMPER respektuje wylaczenie usuwania numerow', async () => {
+  const model = await utworzPrzypadekProfiluSemper()
+  const wynik = await korygujUklad(model, { szerokoscCm: 12192000 / 360000, wysokoscCm: 20.5, czyKorygowacUklad: true, czyUsuwacDuplikaty: false, profil: 'semper' })
+  assert.ok(wynik.model.slajdy[1].obiekty.some((obiekt) => obiekt.id === '107'))
+  assert.equal(wynik.duplikaty, 0)
+})
+
+test('duze pole z cytatem nie jest naglowkiem i zachowuje polozenie tekstu', async () => {
+  const model = await utworzPrzypadekProfiluSemper()
+  const archiwum = await JSZip.loadAsync(model.buforZrodlowy)
+  const cytat = ksztaltTestowy(200, 3048856, 615417, 6097712, 5632311, 'Długi cytat z dokumentu. '.repeat(40), 'FFFFFF')
+    .replace('<a:r>', '<a:r><a:rPr sz="2600"/>')
+  archiwum.file('ppt/slides/slide2.xml', xmlSlajdu(cytat))
+  const zCytatem = await otworzPptx(await archiwum.generateAsync({ type: 'arraybuffer' }))
+  const wynik = await korygujUklad(zCytatem, { szerokoscCm: 12192000 / 360000, wysokoscCm: 20.5, czyKorygowacUklad: true, czyUsuwacDuplikaty: true, profil: 'semper' })
+  assert.deepEqual(wynik.model.slajdy[1].obiekty[0].geometria, zCytatem.slajdy[1].obiekty[0].geometria)
+})
+
+test('mapowanie nie zmniejsza tekstu przez nieuzywany styl listy o wiekszej czcionce', async () => {
+  const archiwum = await JSZip.loadAsync(await utworzFixturePptx())
+  const tekst = ksztaltTestowy(200, 500000, 2000000, 5544615, 626120, 'Ekspert', 'FFFFFF')
+    .replace('<a:r>', '<a:r><a:rPr sz="1600"/>')
+    .replace('<a:lstStyle/>', '<a:lstStyle><a:lvl2pPr><a:defRPr sz="2800"/></a:lvl2pPr></a:lstStyle>')
+  archiwum.file('ppt/slides/slide3.xml', xmlSlajdu(tekst))
+  const model = await otworzPptx(await archiwum.generateAsync({ type: 'arraybuffer' }))
+  const wynik = await zastosujMapowanie(model, pusteDaneOkladki, [{ idObiektu: '200', pole: '', wartoscReczna: 'Ekspert Merytoryczny: Radosław Pawełek\nr.pawelek@szkolenia-semper.pl' }])
+  assert.equal(potomkowieXml(wynik.slajdy[0].obiekty[0].element, 'normAutofit')[0].getAttribute('fontScale'), '100000')
 })

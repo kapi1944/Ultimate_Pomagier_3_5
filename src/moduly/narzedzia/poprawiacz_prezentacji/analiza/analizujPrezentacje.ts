@@ -1,7 +1,7 @@
 import type { ProblemPrezentacji, TypPoprawki, WynikAnalizyPrezentacji } from '../modele/modelPrezentacji'
 import type { ModelPptx, ObiektSlajdu, SlajdPptx } from '../pptx/modelPptx'
 import { emuNaProcent } from '../pptx/geometriaPptx'
-import { czyNumerSlajdu } from './analizujUklad'
+import { czyBialaNumeracja, czyNumerSlajdu } from './analizujUklad'
 
 export function wykryjReguleSemper(obiekt: ObiektSlajdu, slajd: Pick<SlajdPptx, 'szerokosc' | 'wysokosc'>): TypPoprawki | null {
   const geometria = obiekt.geometria
@@ -13,7 +13,7 @@ export function wykryjReguleSemper(obiekt: ObiektSlajdu, slajd: Pick<SlajdPptx, 
   if (x >= 0 && x <= 2 && y >= 0 && y <= 2.5 && cx >= 94 && cy <= 3.5
     && obiekt.wypelnienie === '#087F8C' && obiekt.ksztalt === 'rect') return 'GÓRNY_PASEK'
   if (x >= 82 && y >= 84 && x + cx <= 100.1 && y + cy <= 100.1 && cx <= 12 && cy <= 10
-    && /^\d{1,3}$/.test(obiekt.tekst.trim())) return 'NUMERACJA'
+    && /^\d{1,3}$/.test(obiekt.tekst.trim()) && !czyBialaNumeracja(obiekt)) return 'NUMERACJA'
   return null
 }
 

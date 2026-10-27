@@ -13,6 +13,7 @@ export default function PanelPrzygotowania({ model, czyZajety, ustawZajety, zmie
   const [wysokosc, ustawWysokosc] = useState(model ? model.slajdy[0].wysokosc / 360000 : 19.05)
   const [czyKorekta, ustawCzyKorekta] = useState(true)
   const [czyDuplikaty, ustawCzyDuplikaty] = useState(true)
+  const [profil, ustawProfil] = useState<'semper' | undefined>()
   const [komunikat, ustawKomunikat] = useState('')
   const [blad, ustawBlad] = useState('')
   const [szczegoly, ustawSzczegoly] = useState(pobierzSzczegolyDoGeneratorow)
@@ -39,13 +40,13 @@ export default function PanelPrzygotowania({ model, czyZajety, ustawZajety, zmie
       <p>Aktualny slajd: {(model.slajdy[0].szerokosc / 360000).toLocaleString('pl-PL', { maximumFractionDigits: 3 })} × {(model.slajdy[0].wysokosc / 360000).toLocaleString('pl-PL', { maximumFractionDigits: 3 })} cm.</p>
       <fieldset disabled={czyZajety} className="poprawiacz-prezentacji__pola">
         <legend>Docelowe wymiary slajdu</legend>
-        <label>Szerokość (cm)<input type="number" min="5" max="100" step="0.01" value={szerokosc} onChange={(zdarzenie) => ustawSzerokosc(zdarzenie.target.valueAsNumber)} /></label>
-        <label>Wysokość (cm)<input type="number" min="5" max="100" step="0.01" value={wysokosc} onChange={(zdarzenie) => ustawWysokosc(zdarzenie.target.valueAsNumber)} /></label>
-        <button type="button" onClick={() => ustawWysokosc(20.5)}>Profil SEMPER: wysokość 20,5 cm</button>
+        <label>Szerokość (cm)<input type="number" min="5" max="100" step="0.01" value={szerokosc} onChange={(zdarzenie) => { ustawSzerokosc(zdarzenie.target.valueAsNumber); ustawProfil(undefined) }} /></label>
+        <label>Wysokość (cm)<input type="number" min="5" max="100" step="0.01" value={wysokosc} onChange={(zdarzenie) => { ustawWysokosc(zdarzenie.target.valueAsNumber); ustawProfil(undefined) }} /></label>
+        <button type="button" onClick={() => { ustawWysokosc(20.5); ustawProfil('semper') }}>Profil SEMPER: wysokość 20,5 cm</button>
         <label className="poprawiacz-prezentacji__wybor"><input type="checkbox" role="switch" checked={czyKorekta} onChange={(zdarzenie) => ustawCzyKorekta(zdarzenie.target.checked)} />Koryguj kolizje z nagłówkiem, separatorami i stopką</label>
         <label className="poprawiacz-prezentacji__wybor"><input type="checkbox" role="switch" checked={czyDuplikaty} onChange={(zdarzenie) => ustawCzyDuplikaty(zdarzenie.target.checked)} />Usuń dodatkowe numery, jeśli wzorzec zapewnia numerację</label>
         <button type="button" onClick={() => void wykonaj(async () => {
-          const wynik = await korygujUklad(model, { szerokoscCm: szerokosc, wysokoscCm: wysokosc, czyKorygowacUklad: czyKorekta, czyUsuwacDuplikaty: czyDuplikaty })
+          const wynik = await korygujUklad(model, { szerokoscCm: szerokosc, wysokoscCm: wysokosc, czyKorygowacUklad: czyKorekta, czyUsuwacDuplikaty: czyDuplikaty, profil })
           zmienModel(wynik.model)
           ustawKomunikat(`Zastosowano wymiary. Zmienione obiekty: ${wynik.zmienione}; usunięte duplikaty: ${wynik.duplikaty}; uwagi do kontroli: ${wynik.uwagi.length}. Sprawdź wygląd po renderowaniu PDF.`)
         })}>Zastosuj wymiary i korektę</button>
