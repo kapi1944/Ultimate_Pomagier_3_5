@@ -165,6 +165,9 @@ Właściciel pliku obejmuje wszystkie warunki renderowania, stany pusty/błąd/�
 | `src/moduly/dokumenty/wspolne/UkladGeneratoraDokumentu.tsx` | V4-09 | V4-10, V4-11, V4-12, V4-13, V4-14, V4-15 | — | 9 |
 | `src/moduly/dokumenty/wspolne/WyborZapisanegoUkladu.tsx` | V4-09 | V4-10, V4-11, V4-12, V4-13, V4-14, V4-15 | — | 0 |
 | `src/moduly/narzedzia/WidokNarzedzi.tsx` | V4-17 | — | — | 0 |
+| `src/moduly/narzedzia/poprawiacz_prezentacji/PanelPrzygotowania.tsx` | V4-17 | — | — | 1 |
+| `src/moduly/narzedzia/poprawiacz_prezentacji/eksport/PanelEksportu.tsx` | V4-17 | — | — | 1 |
+| `src/moduly/narzedzia/poprawiacz_prezentacji/eksport/PodgladWydruku.tsx` | V4-17 | — | — | 0 |
 | `src/moduly/narzedzia/poprawiacz_prezentacji/PodgladStrukturalny.tsx` | V4-17 | — | — | 0 |
 | `src/moduly/narzedzia/poprawiacz_prezentacji/WidokPoprawiaczaPrezentacji.tsx` | V4-17 | — | — | 1 |
 | `src/moduly/narzedzia/poprawiacz_prezentacji/analiza/PanelAnalizy.tsx` | V4-17 | — | — | 1 |

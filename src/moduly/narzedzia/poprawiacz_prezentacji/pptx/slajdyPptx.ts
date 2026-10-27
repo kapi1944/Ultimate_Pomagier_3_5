@@ -42,17 +42,19 @@ export function odczytajObiektySlajdu(dokument: Document): ObiektSlajdu[] {
   function odczytajDzieci(rodzic: Element, sciezka: string, uklad: UkladGrupy) {
     dzieciXml(rodzic).forEach((element, indeks) => {
       if (!przestrzeniePptx.prezentacja.includes(element.namespaceURI ?? '')) return
-      const typy: Record<string, ObiektSlajdu['typ']> = { sp: 'ksztalt', pic: 'obraz', graphicFrame: 'ramka', grpSp: 'grupa' }
+      const typy: Record<string, ObiektSlajdu['typ']> = { sp: 'ksztalt', pic: 'obraz', graphicFrame: 'ramka', grpSp: 'grupa', cxnSp: 'linia' }
       const typ = typy[element.localName]
       if (!typ) return
       const klucz = `${sciezka}/${indeks}`
       const wlasciwosci = dzieckoXml(element, typ === 'grupa' ? 'grpSpPr' : 'spPr')
       const transformacja = typ === 'ramka' ? dzieckoXml(element, 'xfrm') : dzieckoXml(wlasciwosci, 'xfrm')
-      const geometriaLokalna = odczytajGeometrie(transformacja)
+      const geometriaLokalna = odczytajGeometrie(transformacja, typ === 'linia')
       const dane = potomkowieXml(element, 'cNvPr')[0]
       const tabela = potomkowieXml(element, 'tbl')[0]
+      const pole = potomkowieXml(element, 'ph')[0]
       obiekty.push({
         klucz, id: dane?.getAttribute('id') ?? '', nazwa: dane?.getAttribute('name') ?? '', typ,
+        pole: pole ? { typ: pole.getAttribute('type') || 'body', indeks: pole.getAttribute('idx') || '0' } : null,
         geometria: przeliczGeometrie(geometriaLokalna, uklad),
         tekst: typ === 'grupa' ? '' : odczytajTekst(element),
         wypelnienie: odczytajKolor(wlasciwosci), linia: odczytajKolor(dzieckoXml(wlasciwosci, 'ln')),
@@ -84,5 +86,5 @@ export function odczytajObiektySlajdu(dokument: Document): ObiektSlajdu[] {
 }
 
 export function utworzSlajd(dokument: Document, czesc: string, numer: number, szerokosc: number, wysokosc: number): SlajdPptx {
-  return { dokument, czesc, numer, szerokosc, wysokosc, obiekty: odczytajObiektySlajdu(dokument) }
+  return { dokument, czesc, numer, szerokosc, wysokosc, obiekty: odczytajObiektySlajdu(dokument), elementyWzorca: [], czescUkladu: null, czescWzorca: null }
 }

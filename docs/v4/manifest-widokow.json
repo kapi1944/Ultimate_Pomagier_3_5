@@ -940,6 +940,28 @@
       "ukonczoneEtapy": [],
       "wspoldzieloneZ": []
     },
+    "src/moduly/narzedzia/poprawiacz_prezentacji/eksport/PanelEksportu.tsx": {
+      "zadanie": "V4-17",
+      "powierzchnie": [
+        "details open"
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
+    },
+    "src/moduly/narzedzia/poprawiacz_prezentacji/eksport/PodgladWydruku.tsx": {
+      "zadanie": "V4-17",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
+    },
+    "src/moduly/narzedzia/poprawiacz_prezentacji/PanelPrzygotowania.tsx": {
+      "zadanie": "V4-17",
+      "powierzchnie": [
+        "details"
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
+    },
     "src/moduly/narzedzia/poprawiacz_prezentacji/PodgladStrukturalny.tsx": {
       "zadanie": "V4-17",
       "powierzchnie": [],

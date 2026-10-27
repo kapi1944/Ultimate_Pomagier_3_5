@@ -8,6 +8,9 @@ import { zastosujPoprawki } from './operacje/zastosujPoprawki'
 import { pobierzKopiePptx, zapiszPptx } from './pptx/zapiszPptx'
 import PodgladStrukturalny from './PodgladStrukturalny'
 import PanelAnalizy from './analiza/PanelAnalizy'
+import PanelPrzygotowania from './PanelPrzygotowania'
+import PanelEksportu from './eksport/PanelEksportu'
+import { pusteDaneOkladki } from './operacje/mapowanieDanych'
 import './poprawiaczPrezentacji.css'
 
 const operacjePoczatkowe: OperacjaPrezentacji[] = [
@@ -22,10 +25,12 @@ export default function WidokPoprawiaczaPrezentacji() {
   const [indeksSlajdu, ustawIndeksSlajdu] = useState(0)
   const [czyPotwierdzenie, ustawCzyPotwierdzenie] = useState(false)
   const [kopia, ustawKopie] = useState<{ plik: Blob; nazwa: string } | null>(null)
+  const [czyPrzygotowanie, ustawCzyPrzygotowanie] = useState(false)
+  const [daneOkladki, ustawDaneOkladki] = useState(pusteDaneOkladki)
   const polePliku = useRef<HTMLInputElement>(null)
   const modal = useRef<HTMLDialogElement>(null)
   const operacjaWToku = useRef(false)
-  const czyZajety = dane.stan === 'ANALIZOWANIE' || dane.stan === 'MODYFIKOWANIE'
+  const czyZajety = czyPrzygotowanie || dane.stan === 'ANALIZOWANIE' || dane.stan === 'MODYFIKOWANIE'
   const wybrane = operacje.filter((operacja) => operacja.czyWybrana).map((operacja) => operacja.id)
   const trafienia = dane.analiza?.problemy.filter((problem) => wybrane.includes(problem.typ)) ?? []
   const numerySlajdow = [...new Set(trafienia.map((problem) => problem.numerSlajdu))]
@@ -38,7 +43,7 @@ export default function WidokPoprawiaczaPrezentacji() {
   }, [czyPotwierdzenie])
 
   function wybierzPliki(pliki: File[]) {
-    if (operacjaWToku.current) return
+    if (operacjaWToku.current || czyZajety) return
     const kolejnyStan = zmienStanPoprawiacza(dane, { typ: 'WYBIERZ_PLIK', pliki })
     wyslijAkcje({ typ: 'WYBIERZ_PLIK', pliki })
     if (!kolejnyStan.blad) {
@@ -123,8 +128,10 @@ export default function WidokPoprawiaczaPrezentacji() {
             <h2>Gotowe</h2><p>Usunięto: {dane.raport.paski} pasków; {dane.raport.numery} numerów.</p>
             <p>Zmodyfikowano: {dane.raport.slajdy.length} slajdów. Ponowna analiza potwierdziła liczbę usuniętych elementów.</p>
             {kopia && <button type="button" onClick={() => pobierzKopiePptx(kopia.plik, kopia.nazwa)}>Pobierz poprawioną kopię PPTX</button>}
-            <p className="narzedzia__opis">Kopia może służyć do dalszego przygotowania do druku w PowerPoint. Narzędzie nie zmienia ustawień druku.</p>
+            <p className="narzedzia__opis">Dalsze przygotowanie materiałów jest dostępne w panelu Eksport i druk.</p>
           </section>}
+          <PanelPrzygotowania key={dane.model ? dane.prezentacja?.nazwa : 'okladka'} model={dane.model} czyZajety={czyZajety} ustawZajety={ustawCzyPrzygotowanie}
+            daneOkladki={daneOkladki} ustawDaneOkladki={ustawDaneOkladki} zmienModel={(model) => { wyslijAkcje({ typ: 'ZAKONCZ_ANALIZE', model, analiza: analizujPrezentacje(model) }); ustawKopie(null) }} />
         </div>
         <section className="narzedzia__panel" aria-labelledby="poprawiacz-podglad">
           <h2 id="poprawiacz-podglad">Podgląd strukturalny slajdu</h2>
@@ -138,6 +145,7 @@ export default function WidokPoprawiaczaPrezentacji() {
           </> : <div className="poprawiacz-prezentacji__podglad"><IkonaMenu typ="prezentacja" /><p>Podgląd pojawi się po przeanalizowaniu prezentacji.</p></div>}
         </section>
       </div>
+      <PanelEksportu key={dane.prezentacja?.nazwa ?? 'okladka'} model={dane.model} nazwa={dane.prezentacja?.nazwa ?? 'SEMPER.pptx'} daneOkladki={daneOkladki} czyZajety={czyZajety} ustawZajety={ustawCzyPrzygotowanie} />
       <dialog ref={modal} className="poprawiacz-prezentacji__modal" aria-labelledby="poprawiacz-potwierdzenie" onCancel={() => ustawCzyPotwierdzenie(false)}>
         <h2 id="poprawiacz-potwierdzenie">Potwierdź poprawki</h2>
         <p>Zmodyfikowanych zostanie {numerySlajdow.length} slajdów. Oryginalny plik na dysku nie zostanie nadpisany.</p>

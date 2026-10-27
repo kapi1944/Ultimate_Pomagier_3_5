@@ -5,6 +5,7 @@ import { otworzPptx } from '../pptx/otworzPptx'
 import { analizujPrezentacje } from '../analiza/analizujPrezentacje'
 import { parsujXmlPptx } from '../pptx/xmlPptx'
 import { odczytajObiektySlajdu } from '../pptx/slajdyPptx'
+import { czyObiektPowiazany } from '../pptx/zmianyPptx'
 
 export type RaportPoprawek = { paski: number; numery: number; slajdy: number[] }
 
@@ -23,9 +24,7 @@ export async function zastosujPoprawki(model: ModelPptx, wybrane: TypPoprawki[])
     for (const problem of trafienia.filter((pozycja) => pozycja.numerSlajdu === numer)) {
       const obiekt = obiekty.find((pozycja) => pozycja.klucz === problem.kluczObiektu)
       if (!obiekt?.element.parentNode) throw new Error('Nie odnaleziono wskazanego obiektu slajdu.')
-      const wezly = Array.from(dokument.getElementsByTagName('*'))
-      if (obiekt.id && wezly.some((element) => Array.from(element.attributes).some((atrybut) =>
-        (['spid', 'spId'].includes(atrybut.localName) || (['stCxn', 'endCxn'].includes(element.localName) && atrybut.localName === 'id')) && atrybut.value === obiekt.id))) {
+      if (czyObiektPowiazany(dokument, obiekt.id)) {
         throw new Error(`Obiekt na slajdzie ${numer} jest używany przez animację lub połączenie. Nie zmieniono pliku.`)
       }
       obiekt.element.parentNode.removeChild(obiekt.element)

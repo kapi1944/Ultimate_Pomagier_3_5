@@ -5,6 +5,8 @@ use tauri::Manager;
 mod konta_desktop;
 #[cfg(desktop)]
 mod ochrona_lokalna;
+#[cfg(desktop)]
+mod prezentacje;
 
 #[cfg(mobile)]
 struct StanKont {
@@ -104,6 +106,7 @@ pub fn uruchom() {
     let konstruktor = konstruktor.invoke_handler(tauri::generate_handler![
         czy_aktualizacje_dostepne,
         informacje_o_platformie,
+        prezentacje::renderuj_prezentacje,
         konta_desktop::operacja_konta,
         konta_desktop::otworz_obszar_konta,
         konta_desktop::otworz_logowanie,

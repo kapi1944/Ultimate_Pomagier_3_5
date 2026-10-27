@@ -85,6 +85,36 @@ fn sprawdz_okno(okno: &WebviewWindow, stan: &StanKont) -> Result<(), String> {
     Ok(())
 }
 
+pub fn sprawdz_sesje_prezentacji(okno: &WebviewWindow, stan: &StanKont) -> Result<(), String> {
+    if cfg!(feature = "demo-desktop") && okno.label() == "main" {
+        return Ok(());
+    }
+    sprawdz_okno(okno, stan)?;
+    if okno.label() != "obszar" {
+        return Err("Zaloguj się, aby renderować prezentację.".into());
+    }
+    let mut magazyn = stan
+        .magazyn
+        .lock()
+        .map_err(|_| "Usługa kont jest niedostępna.")?;
+    let sesja = stan.sesja.lock().map_err(|_| "Sesja jest niedostępna.")?;
+    let tozsamosc = magazyn
+        .as_mut()
+        .ok_or("Usługa kont jest niedostępna.")?
+        .wykonaj(sesja.as_deref(), "sesja", &Value::Null)?
+        .dane;
+    if tozsamosc["id"].as_str()
+        != stan
+            .konto_okna
+            .lock()
+            .map_err(|_| "Profil jest niedostępny.")?
+            .as_deref()
+    {
+        return Err("Sesja nie należy do tego profilu danych.".into());
+    }
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn operacja_konta(
     okno: WebviewWindow,

@@ -2,6 +2,7 @@ import JSZip from 'jszip'
 import type { ModelPptx } from './modelPptx'
 import { ustalKolejnoscSlajdow } from './relacjePptx'
 import { utworzSlajd } from './slajdyPptx'
+import { uzupelnijWzorceSlajdu } from './wzorcePptx'
 import { liczbaXml, parsujXmlPptx, potomkowieXml, przestrzeniePptx } from './xmlPptx'
 
 export async function otworzPptx(bufor: ArrayBuffer): Promise<ModelPptx> {
@@ -29,5 +30,6 @@ export async function otworzPptx(bufor: ArrayBuffer): Promise<ModelPptx> {
     if (!dokument) throw new Error(`Brak części slajdu: ${czesc}.`)
     return utworzSlajd(dokument, czesc, indeks + 1, szerokosc, wysokosc)
   })
+  for (const slajd of slajdy) uzupelnijWzorceSlajdu({ czesciXml }, slajd)
   return { archiwum, buforZrodlowy: bufor, czesciXml, slajdy }
 }

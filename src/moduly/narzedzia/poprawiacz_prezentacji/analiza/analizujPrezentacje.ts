@@ -1,10 +1,11 @@
 import type { ProblemPrezentacji, TypPoprawki, WynikAnalizyPrezentacji } from '../modele/modelPrezentacji'
 import type { ModelPptx, ObiektSlajdu, SlajdPptx } from '../pptx/modelPptx'
 import { emuNaProcent } from '../pptx/geometriaPptx'
+import { czyNumerSlajdu } from './analizujUklad'
 
 export function wykryjReguleSemper(obiekt: ObiektSlajdu, slajd: Pick<SlajdPptx, 'szerokosc' | 'wysokosc'>): TypPoprawki | null {
   const geometria = obiekt.geometria
-  if (!geometria || !obiekt.czyProstaGeometria || obiekt.typ !== 'ksztalt') return null
+  if (!geometria || !obiekt.czyProstaGeometria || obiekt.typ !== 'ksztalt' || czyNumerSlajdu(obiekt)) return null
   const x = emuNaProcent(geometria.x, slajd.szerokosc)
   const y = emuNaProcent(geometria.y, slajd.wysokosc)
   const cx = emuNaProcent(geometria.cx, slajd.szerokosc)

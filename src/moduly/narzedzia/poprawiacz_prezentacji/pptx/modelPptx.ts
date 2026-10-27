@@ -6,7 +6,8 @@ export type ObiektSlajdu = {
   klucz: string
   id: string
   nazwa: string
-  typ: 'ksztalt' | 'obraz' | 'ramka' | 'grupa'
+  typ: 'ksztalt' | 'obraz' | 'ramka' | 'grupa' | 'linia'
+  pole: { typ: string; indeks: string } | null
   geometria: GeometriaPptx | null
   tekst: string
   wypelnienie: string | null
@@ -25,6 +26,9 @@ export type SlajdPptx = {
   wysokosc: number
   dokument: Document
   obiekty: ObiektSlajdu[]
+  elementyWzorca: ObiektSlajdu[]
+  czescUkladu: string | null
+  czescWzorca: string | null
 }
 
 export type ModelPptx = {
