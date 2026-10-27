@@ -13,6 +13,14 @@ export function czyBladDowiazaniaAndroid(system, blad) {
   return system === 'win32' && /Failed to create a symbolic link/.test(blad) && /Creation symbolic link is not allowed for this system/.test(blad)
 }
 
+export async function przygotujBibliotekeCppAndroid(katalogNdk, katalogAndroid, architektura, system = process.platform) {
+  const katalogNarzedzi = { win32: 'windows-x86_64', linux: 'linux-x86_64', darwin: 'darwin-x86_64' }[system]
+  if (!katalogNarzedzi) throw new Error('Nieobsługiwany system narzędzi Android NDK.')
+  const katalogBibliotek = join(katalogAndroid, 'app/src/main/jniLibs', architektura === 'aarch64' ? 'arm64-v8a' : 'x86_64')
+  await mkdir(katalogBibliotek, { recursive: true })
+  await copyFile(join(katalogNdk, 'toolchains/llvm/prebuilt', katalogNarzedzi, 'sysroot/usr/lib', `${architektura}-linux-android`, 'libc++_shared.so'), join(katalogBibliotek, 'libc++_shared.so'))
+}
+
 async function budujTauriLubGradle(cli, argumenty, { testowy, architektura }) {
   const blad = await new Promise((zakoncz, odrzuc) => {
     let wyjscieBledow = ''
@@ -33,8 +41,6 @@ async function budujTauriLubGradle(cli, argumenty, { testowy, architektura }) {
   await mkdir(katalogBibliotek, { recursive: true })
   const katalogKompilacji = process.env.CARGO_TARGET_DIR ? resolve(process.env.CARGO_TARGET_DIR) : join(katalogProjektu, 'src-tauri/target')
   await copyFile(join(katalogKompilacji, `${architektura}-linux-android`, profil, 'libpomagier_aplikacja.so'), join(katalogBibliotek, 'libpomagier_aplikacja.so'))
-  const katalogNdk = process.env.NDK_HOME
-  await copyFile(join(katalogNdk, 'toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib', `${architektura}-linux-android`, 'libc++_shared.so'), join(katalogBibliotek, 'libc++_shared.so'))
   console.log('Pakowanie skompilowanej biblioteki przez Gradle, bez dowiązań i bez zmiany uprawnień Windows.')
   const rodzaj = testowy ? 'Debug' : 'Release'
   wykonaj('java', ['-classpath', join(katalogAndroid, 'gradle/wrapper/gradle-wrapper.jar'), 'org.gradle.wrapper.GradleWrapperMain', `assemble${wariant}${rodzaj}`, '-x', `rustBuild${wariant}${rodzaj}`, '--no-daemon', '--console=plain'], { cwd: katalogAndroid, stdio: 'inherit' })
@@ -47,8 +53,8 @@ export function sprawdzRaportApk(raport, certyfikat, wersja, numer) {
 }
 
 export function sprawdzBibliotekiApk(zawartosc, abi) {
-  if (!zawartosc['AndroidManifest.xml'] || !zawartosc[`lib/${abi}/libpomagier_aplikacja.so`]?.length
-    || !zawartosc[`lib/${abi}/libc++_shared.so`]?.length) throw new Error('APK jest niekompletny: brak manifestu lub wymaganej biblioteki natywnej.')
+  const brakujacePliki = ['AndroidManifest.xml', `lib/${abi}/libpomagier_aplikacja.so`, `lib/${abi}/libc++_shared.so`].filter((nazwa) => !zawartosc[nazwa]?.length)
+  if (brakujacePliki.length) throw new Error(`APK jest niekompletny: brak lub pusty plik ${brakujacePliki.join(', ')}.`)
   for (const [nazwa, dane] of Object.entries(zawartosc).filter(([nazwa]) => nazwa.startsWith('lib/') && nazwa.endsWith('.so'))) {
     const biblioteka = Buffer.from(dane)
     if (!nazwa.startsWith(`lib/${abi}/`) || biblioteka.length < 64 || biblioteka.readUInt32BE(0) !== 0x7f454c46
@@ -97,6 +103,7 @@ export async function przygotujAndroid({ tylkoInicjalizacja = false, testowy = f
   await mkdir(katalog, { recursive: true })
   const konfiguracja = join(katalog, 'konfiguracja.json')
   await writeFile(konfiguracja, JSON.stringify({ bundle: { android: { versionCode: numer } } }))
+  await przygotujBibliotekeCppAndroid(process.env.NDK_HOME, join(katalogProjektu, 'src-tauri/gen/android'), architektura)
   const poczatek = Date.now()
   await budujTauriLubGradle(cli, ['android', 'build', '--ci', '--apk', '--target', architektura, '--config', konfiguracja, ...(testowy ? ['--debug'] : [])], { testowy, architektura })
   await sprawdzFrontendDesktop(join(katalogProjektu, 'dist'))

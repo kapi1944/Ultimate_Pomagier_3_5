@@ -4,7 +4,7 @@ import { mkdtemp, writeFile, readFile, mkdir } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { numerWersjiAndroid, opiszPlik, polaczMetadane, zbierzArtefakty } from '../skrypty/dystrybucja.mjs'
-import { sprawdzRaportApk, czyBladDowiazaniaAndroid, sprawdzBibliotekiApk } from '../skrypty/budujAndroid.mjs'
+import { sprawdzRaportApk, czyBladDowiazaniaAndroid, sprawdzBibliotekiApk, przygotujBibliotekeCppAndroid } from '../skrypty/budujAndroid.mjs'
 import { sprawdzSzkicPublikacji } from '../skrypty/zatwierdzWydanie.mjs'
 
 test('versionCode wzrasta i nie dopuszcza kolizji ani przekroczenia zakresu', () => {
@@ -20,6 +20,25 @@ test('pakowanie przez kopiowanie JNI dotyczy wyłącznie odmowy dowiązań Windo
   assert.equal(czyBladDowiazaniaAndroid('linux', blad), false)
   assert.equal(czyBladDowiazaniaAndroid('win32', 'error: could not compile ultimate-pomagier'), false)
   assert.equal(czyBladDowiazaniaAndroid('win32', 'Failed to create a symbolic link: file not found'), false)
+})
+
+test('pakowanie Androida otrzymuje bibliotekę C++ z właściwego NDK także na Linuxie bez odmowy dowiązań', async () => {
+  const katalog = await mkdtemp(join(tmpdir(), 'pomagier-biblioteka-cpp-'))
+  for (const [system, katalogNarzedzi, architektura, abi] of [
+    ['linux', 'linux-x86_64', 'aarch64', 'arm64-v8a'],
+    ['win32', 'windows-x86_64', 'aarch64', 'arm64-v8a'],
+    ['linux', 'linux-x86_64', 'x86_64', 'x86_64'],
+  ]) {
+    const katalogNdk = join(katalog, 'ndk')
+    const katalogAndroid = join(katalog, `${system}-${architektura}`)
+    const katalogZrodla = join(katalogNdk, 'toolchains/llvm/prebuilt', katalogNarzedzi, 'sysroot/usr/lib', `${architektura}-linux-android`)
+    await mkdir(katalogZrodla, { recursive: true })
+    const biblioteka = `biblioteka NDK ${system} ${architektura}`
+    await writeFile(join(katalogZrodla, 'libc++_shared.so'), biblioteka)
+    await przygotujBibliotekeCppAndroid(katalogNdk, katalogAndroid, architektura, system)
+    assert.equal(await readFile(join(katalogAndroid, 'app/src/main/jniLibs', abi, 'libc++_shared.so'), 'utf8'), biblioteka)
+  }
+  await assert.rejects(przygotujBibliotekeCppAndroid(join(katalog, 'brak-ndk'), join(katalog, 'niekompletny'), 'aarch64', 'linux'), /ENOENT/)
 })
 
 test('zbieranie artefaktów obsługuje podkatalogi upload-artifact i odrzuca kolizje nazw', async () => {
