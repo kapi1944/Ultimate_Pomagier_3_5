@@ -35,6 +35,7 @@ jobs:
       - uses: android-actions/setup-android@v3
         with:
           cmdline-tools-version: '12266719'
+          packages: 'platform-tools'
       - name: Instalacja narzędzi Android
         run: sdkmanager 'ndk;27.2.12479018' 'platforms;android-36' 'build-tools;36.0.0'
       - uses: dtolnay/rust-toolchain@stable
