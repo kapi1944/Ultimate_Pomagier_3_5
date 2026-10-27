@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { numerWersjiAndroid, opiszPlik, polaczMetadane, zbierzArtefakty } from '../skrypty/dystrybucja.mjs'
 import { sprawdzRaportApk, czyBladDowiazaniaAndroid, sprawdzBibliotekiApk, przygotujBibliotekeCppAndroid } from '../skrypty/budujAndroid.mjs'
-import { sprawdzSzkicPublikacji } from '../skrypty/zatwierdzWydanie.mjs'
+import { sprawdzSzkicPublikacji, pobierzSzkicWydania } from '../skrypty/zatwierdzWydanie.mjs'
 
 test('versionCode wzrasta i nie dopuszcza kolizji ani przekroczenia zakresu', () => {
   assert.equal(numerWersjiAndroid('4.0.0'), 4000000)
@@ -89,6 +89,22 @@ test('APK wymaga kompletu bibliotek właściwej architektury i segmentów ELF zg
   assert.throws(() => sprawdzBibliotekiApk({ ...pliki, 'lib/arm64-v8a/libpomagier_aplikacja.so': uszkodzona }, 'arm64-v8a'), /nagłówki/)
 })
 
+test('odczyt prywatnego szkicu działa, gdy endpoint opublikowanego wydania po tagu zwraca 404', () => {
+  const repozytorium = 'kapi1944/Ultimate_Pomagier_3_5'
+  const szkic = { id: 123, tag_name: 'v4.0.0', draft: true }
+  const wywolania = []
+  function wykonaj(program, argumenty) {
+    assert.equal(program, 'gh')
+    wywolania.push(argumenty)
+    if (argumenty[0] === 'release' && argumenty[1] === 'view') return '123\n'
+    if (argumenty[0] === 'api' && argumenty[1] === `repos/${repozytorium}/releases/123`) return JSON.stringify(szkic)
+    throw new Error('GitHub: Not Found (HTTP 404)')
+  }
+  assert.deepEqual(pobierzSzkicWydania('v4.0.0', repozytorium, wykonaj), szkic)
+  assert.deepEqual(wywolania[0], ['release', 'view', 'v4.0.0', '--repo', repozytorium, '--json', 'databaseId', '--jq', '.databaseId'])
+  for (const identyfikator of ['', 'null', '0', 'niepoprawny']) assert.throws(() => pobierzSzkicWydania('v4.0.0', repozytorium, () => identyfikator), /identyfikatora szkicu/)
+})
+
 test('manifest powstaje z rzeczywistych trzech plików i odrzuca uszkodzenie lub mieszanie commitów', async () => {
   const katalog = await mkdtemp(join(tmpdir(), 'pomagier-dystrybucja-'))
   const wersja = '4.0.0'; const commit = 'b'.repeat(40)
@@ -114,6 +130,12 @@ test('manifest powstaje z rzeczywistych trzech plików i odrzuca uszkodzenie lub
   assets.push({ name: 'plik.exe.sig', state: 'uploaded', size: 10, digest: `sha256:${manifest.pliki.find((plik) => plik.platforma === 'windows').podpis.sha256}` }, { name: 'latest.json', state: 'uploaded', size: 100 })
   const szkic = { draft: true, prerelease: false, tag_name: 'v4.0.0', assets, body: await readFile(join(katalog, 'opis-wydania.md'), 'utf8') }
   assert.equal(sprawdzSzkicPublikacji(szkic, 'v4.0.0', repozytorium).pliki.length, 3)
+  const etykietaSzkicu = 'untagged-' + 'a'.repeat(20)
+  const szkicPrywatny = { ...szkic, html_url: `https://github.com/${repozytorium}/releases/tag/${etykietaSzkicu}`,
+    assets: assets.map((plik) => ({ ...plik, ...(plik.browser_download_url ? { browser_download_url: plik.browser_download_url.replace('/v4.0.0/', `/${etykietaSzkicu}/`) } : {}) })) }
+  assert.equal(sprawdzSzkicPublikacji(szkicPrywatny, 'v4.0.0', repozytorium).pliki.length, 3)
+  assert.throws(() => sprawdzSzkicPublikacji({ ...szkicPrywatny, html_url: `https://github.com/obcy/projekt/releases/tag/${etykietaSzkicu}` }, 'v4.0.0', repozytorium), /niekompletne lub zmienione/)
+  assert.throws(() => sprawdzSzkicPublikacji({ ...szkicPrywatny, html_url: `https://github.com/${repozytorium}/releases/tag/untagged-bbbbbbbbbbbbbbbbbbbb` }, 'v4.0.0', repozytorium), /niekompletne lub zmienione/)
   assert.throws(() => sprawdzSzkicPublikacji({ ...szkic, assets: assets.slice(1) }, 'v4.0.0', repozytorium), /niekompletne lub zmienione/)
   assert.throws(() => sprawdzSzkicPublikacji({ ...szkic, draft: false }, 'v4.0.0', repozytorium), /Brak przygotowanego/)
   const metadane = JSON.parse(await readFile(join(katalog, 'wydanie-web.json'), 'utf8'))

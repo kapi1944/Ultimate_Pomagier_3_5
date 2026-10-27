@@ -2,6 +2,12 @@ import { execFileSync } from 'node:child_process'
 import { pathToFileURL } from 'node:url'
 import { resolve } from 'node:path'
 
+export function pobierzSzkicWydania(tag, repozytorium, wykonaj = execFileSync) {
+  const identyfikator = wykonaj('gh', ['release', 'view', tag, '--repo', repozytorium, '--json', 'databaseId', '--jq', '.databaseId'], { encoding: 'utf8', windowsHide: true }).trim()
+  if (!/^[1-9]\d*$/.test(identyfikator)) throw new Error('Nie udało się ustalić identyfikatora szkicu wydania.')
+  return JSON.parse(wykonaj('gh', ['api', `repos/${repozytorium}/releases/${identyfikator}`], { encoding: 'utf8', windowsHide: true }))
+}
+
 export function sprawdzSzkicPublikacji(wydanie, tag, repozytorium) {
   if (!wydanie.draft || wydanie.prerelease || wydanie.tag_name !== tag || !/^v\d+\.\d+\.\d+$/.test(tag)
     || typeof wydanie.body !== 'string' || !Array.isArray(wydanie.assets)) throw new Error('Brak przygotowanego stabilnego szkicu.')
@@ -10,12 +16,15 @@ export function sprawdzSzkicPublikacji(wydanie, tag, repozytorium) {
   const manifest = JSON.parse(fragment[1])
   if (manifest.schemat !== 1 || `v${manifest.wersja}` !== tag || manifest.kanal !== 'stabilna' || !/^[a-f0-9]{40}$/.test(manifest.commit)
     || !Array.isArray(manifest.pliki) || new Set(manifest.pliki.map((plik) => plik.platforma)).size !== 3) throw new Error('Niekompletny manifest szkicu.')
+  const prefiksSzkicu = `https://github.com/${repozytorium}/releases/tag/`
+  const etykietaSzkicu = typeof wydanie.html_url === 'string' && wydanie.html_url.startsWith(prefiksSzkicu) ? wydanie.html_url.slice(prefiksSzkicu.length) : ''
+  const etykietaPobierania = /^untagged-[a-f0-9]+$/.test(etykietaSzkicu) ? etykietaSzkicu : tag
   for (const plik of manifest.pliki) {
     const artefakt = wydanie.assets.find((element) => element.name === plik.nazwa)
     if (!/^[a-zA-Z0-9_.-]+$/.test(plik.nazwa) || !/^[a-f0-9]{64}$/.test(plik.sha256)
       || !artefakt || artefakt.state !== 'uploaded' || artefakt.size !== plik.rozmiar || artefakt.size <= 0
       || artefakt.digest !== `sha256:${plik.sha256}`
-      || artefakt.browser_download_url !== `https://github.com/${repozytorium}/releases/download/${tag}/${plik.nazwa}`) throw new Error('Pliki szkicu są niekompletne lub zmienione.')
+      || artefakt.browser_download_url !== `https://github.com/${repozytorium}/releases/download/${etykietaPobierania}/${plik.nazwa}`) throw new Error('Pliki szkicu są niekompletne lub zmienione.')
     if (plik.platforma === 'windows') {
       const podpis = wydanie.assets.find((element) => element.name === `${plik.nazwa}.sig`)
       if (plik.podpis?.rodzaj !== 'tauri' || !podpis || podpis.state !== 'uploaded' || podpis.size <= 0 || podpis.digest !== `sha256:${plik.podpis.sha256}`) throw new Error('Brak zgodnego podpisu Windows.')
@@ -33,7 +42,7 @@ if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.m
     if (process.env.GITHUB_EVENT_NAME !== 'workflow_dispatch') throw new Error('Publikacja wymaga ręcznego zatwierdzenia workflow.')
     const tag = process.env.GITHUB_REF_NAME
     const repozytorium = process.env.GITHUB_REPOSITORY
-    const wydanie = JSON.parse(execFileSync('gh', ['api', `repos/${repozytorium}/releases/tags/${tag}`], { encoding: 'utf8', windowsHide: true }))
+    const wydanie = pobierzSzkicWydania(tag, repozytorium)
     const manifest = sprawdzSzkicPublikacji(wydanie, tag, repozytorium)
     const commit = execFileSync('git', ['rev-parse', `${tag}^{commit}`], { encoding: 'utf8', windowsHide: true }).trim()
     if (commit !== manifest.commit) throw new Error('Tag nie wskazuje commita przygotowanych instalatorów.')
