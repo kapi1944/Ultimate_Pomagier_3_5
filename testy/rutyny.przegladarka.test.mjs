@@ -26,6 +26,29 @@ test('rutyna na pulpicie: tworzenie, wykonanie, cofnięcie, restart i małe ekra
     assert.match(await karta.innerText(), /Wykonano 1 z 1/)
     assert.match(await karta.innerText(), /Wszystko zrobione!/)
     assert.equal(await karta.getByRole('progressbar').first().getAttribute('aria-valuenow'), '100')
+    for (const paleta of ['EMERALD_DARK', 'SOFT_GREY', 'DARK_GRAY']) {
+      await strona.evaluate((wartosc) => { document.documentElement.dataset.uiPaleta = wartosc }, paleta)
+      const kolory = await karta.evaluate((element) => {
+        const styl = getComputedStyle(element)
+        function kontrast(kolor, tlo) {
+          function jasnosc(wartosc) {
+            const skladowe = wartosc.match(/[\d.]+/g).slice(0, 3).map(Number).map((kanal) => { const liczba = kanal / 255; return liczba <= .04045 ? liczba / 12.92 : ((liczba + .055) / 1.055) ** 2.4 })
+            return skladowe[0] * .2126 + skladowe[1] * .7152 + skladowe[2] * .0722
+          }
+          const pierwszy = jasnosc(kolor); const drugi = jasnosc(tlo)
+          return (Math.max(pierwszy, drugi) + .05) / (Math.min(pierwszy, drugi) + .05)
+        }
+        return {
+          tlo: styl.backgroundColor,
+          panel: styl.getPropertyValue('--ui-panel').trim(),
+          kontrasty: ['h2', 'p', '.rutyny-postep__sukces'].map((selektor) => kontrast(getComputedStyle(element.querySelector(selektor)).color, styl.backgroundColor)),
+        }
+      })
+      const oczekiwaneTlo = await strona.evaluate((kolor) => { const element = document.createElement('span'); element.style.color = kolor; document.body.append(element); const wynik = getComputedStyle(element).color; element.remove(); return wynik }, kolory.panel)
+      assert.equal(kolory.tlo, oczekiwaneTlo, `Tło karty w motywie ${paleta}`)
+      assert.ok(kolory.kontrasty.every((kontrast) => kontrast >= 4.5), `Czytelny tekst i komunikat sukcesu w motywie ${paleta}: ${kolory.kontrasty}`)
+      if (process.env.POMAGIER_ZRZUT) await karta.screenshot({ path: `${process.env.POMAGIER_ZRZUT}-${paleta}.png` })
+    }
     await strona.reload()
     await karta.getByText('Wykonano 1 z 1').first().waitFor()
     await karta.getByRole('button', { name: 'Zobacz wszystkie' }).click()
