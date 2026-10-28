@@ -61,6 +61,7 @@ export type StanPulpitu = {
   zadaniaReczne: ZadaniePulpitu[]
   wyslanePaczki: Record<string, string>
   zapotrzebowaniaZakupowe: ZapotrzebowanieZakupowe[]
+  rutyny?: import('../logika/rutyny').StanRutyn
 }
 
 export type StatusZapotrzebowaniaZakupowego = 'ZGLOSZONE' | 'DO_ZAKUPU' | 'W_REALIZACJI' | 'KUPIONE' | 'ANULOWANE' | 'ZAMKNIETE' | 'ARCHIWALNE'

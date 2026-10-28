@@ -156,6 +156,7 @@ export function pobierzStanPulpitu(): StanPulpitu {
       zapotrzebowaniaZakupowe: (Array.isArray(stan.zapotrzebowaniaZakupowe) ? stan.zapotrzebowaniaZakupowe : [])
         .map(normalizujZapotrzebowanieZakupowe)
         .filter((zapotrzebowanie): zapotrzebowanie is ZapotrzebowanieZakupowe => Boolean(zapotrzebowanie)),
+      rutyny: stan.rutyny,
     }
   } catch {
     return pustyStan()

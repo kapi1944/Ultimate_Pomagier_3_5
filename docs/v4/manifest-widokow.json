@@ -1027,6 +1027,18 @@
       "ukonczoneEtapy": [],
       "wspoldzieloneZ": []
     },
+    "src/moduly/zamkniete/pulpit/DailyRoutines.tsx": {
+      "zadanie": "V4-04",
+      "powierzchnie": [
+        "Pasek wystapienia={zakladka === 'Dzisiaj' ? dzienne : tygodniowe}",
+        "button type=\"button\" key={nazwa} aria-current={zakladka === nazwa ? 'page' : undefined} onClick={() => ustawZakladke(nazwa)}",
+        "details",
+        "form className=\"rutyny-formularz\" onSubmit={zapiszFormularz}",
+        "nav className=\"rutyny-zakladki\" aria-label=\"Widoki rutyn\""
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
+    },
     "src/moduly/zamkniete/pulpit/FormularzZakupu.tsx": {
       "zadanie": "V4-04",
       "powierzchnie": [

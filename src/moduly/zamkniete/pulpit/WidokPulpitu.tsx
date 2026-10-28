@@ -15,6 +15,7 @@ import { zbudujWysylkiMonitora } from './logika/monitorWysylek'
 import { otworzLubUtworzChecklistePulpitu, oznaczWysylkeChecklisty } from './uslugi/checklistyPulpitu'
 import type { WysylkaMonitora } from './logika/monitorWysylek'
 import MonitorWysylek from './MonitorWysylek'
+import WidokRutyn from './DailyRoutines'
 import { generujZadaniaAutomatyczne } from './logika/zadaniaAutomatyczne'
 import { czyMoznaZmienicKontekstPulpitu } from './logika/kontekstPulpitu'
 import { obliczLicznikiPulpitu } from './logika/podsumowaniePulpitu'
@@ -884,6 +885,8 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
       <div><h1>Pulpit</h1><p>Centrum bieżącej pracy: zadania, blokady i nadchodzące wysyłki.</p></div>
       {czyArchitekt && <label className="pulpit__wybor-kontekstu" htmlFor="pulpit-kontekst-uzytkownika">Kontekst użytkownika<select id="pulpit-kontekst-uzytkownika" onChange={(zdarzenie) => ustawWybranegoUzytkownikaId(zdarzenie.target.value)} value={wybranyUzytkownikId}>{aktywniUzytkownicy.map((uzytkownik) => <option key={uzytkownik.id} value={uzytkownik.id}>{pobierzNazweWyswietlanaUzytkownika(uzytkownik)}</option>)}</select></label>}
     </header>
+
+    <WidokRutyn otworzMonitor={() => { ustawFiltr('PACZKI'); window.setTimeout(() => document.querySelector('.monitor-wysylek')?.scrollIntoView({ block: 'start' }), 0) }} />
 
     <section aria-label="Podsumowanie" className="pulpit-kafelki">
       {widoczneKafelki.doZrobienia && (

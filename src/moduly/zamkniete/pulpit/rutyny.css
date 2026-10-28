@@ -1,0 +1,27 @@
+.daily-routines { margin: 1rem 0; padding: 1rem; border: 1px solid var(--kolor-obramowania, #cbd5e1); border-radius: 12px; background: var(--kolor-powierzchni, #fff); }
+.daily-routines__naglowek, .rutyny-postep__liczby, .rutyny-zarzadzanie { display: flex; justify-content: space-between; align-items: center; gap: .75rem; flex-wrap: wrap; }
+.daily-routines h2, .daily-routines h3 { margin: .25rem 0 .75rem; }
+.daily-routines button, .daily-routines select, .daily-routines input, .daily-routines textarea { font: inherit; }
+.daily-routines button, .daily-routines select { min-height: 40px; padding: .4rem .7rem; }
+.daily-routines input[type=checkbox] { width: 20px; height: 20px; flex: none; }
+.rutyny-postep__tor { height: 12px; overflow: hidden; background: #e2e8f0; border-radius: 8px; margin-top: .5rem; }
+.rutyny-postep__tor span { display: block; height: 100%; background: #dc2626; }
+.rutyny-postep--POMARANCZOWY .rutyny-postep__tor span { background: #d97706; }
+.rutyny-postep--ZIELONY .rutyny-postep__tor span, .rutyny-postep--UKONCZONE .rutyny-postep__tor span { background: #16803c; }
+.rutyny-postep--UKONCZONE .rutyny-postep__tor { outline: 2px solid #c69a27; outline-offset: 2px; }
+.rutyny-postep__sukces { font-weight: 700; color: #166534; }
+.rutyny-lista { list-style: none; padding: 0; margin: .75rem 0; }
+.rutyny-lista li { display: flex; align-items: center; flex-wrap: wrap; gap: .6rem; padding: .45rem 0; border-bottom: 1px solid #e2e8f0; }
+.rutyny-lista label { display: flex; align-items: center; gap: .6rem; flex: 1 1 14rem; cursor: pointer; }
+.rutyny-lista small { display: block; color: #526176; }
+.rutyny-zalegle, .rutyny-blad { color: #a32121; font-weight: 600; }
+.rutyny-modul { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #cbd5e1; }
+.rutyny-zakladki, .rutyny-szablony { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; }
+.rutyny-zakladki [aria-current=page] { font-weight: 700; border-bottom: 3px solid #2563eb; }
+.rutyny-zarzadzanie { border-bottom: 1px solid #e2e8f0; padding: .5rem 0; }
+.rutyny-formularz { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: .8rem; margin-top: 1rem; }
+.rutyny-formularz h3, .rutyny-formularz fieldset, .rutyny-formularz p, .rutyny-formularz > div { grid-column: 1 / -1; }
+.rutyny-formularz > label:not(:has(input[type=checkbox])) { display: grid; gap: .3rem; }
+.rutyny-formularz input:not([type=checkbox]), .rutyny-formularz select, .rutyny-formularz textarea { width: 100%; min-width: 0; min-height: 40px; box-sizing: border-box; }
+.rutyny-formularz fieldset label { display: inline-flex; align-items: center; gap: .25rem; margin: .25rem .7rem .25rem 0; }
+.daily-routines :focus-visible { outline: 3px solid #2563eb; outline-offset: 2px; }
