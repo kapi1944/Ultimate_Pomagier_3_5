@@ -7,6 +7,9 @@ import { fileURLToPath } from 'node:url'
 export function pobierzInformacjeOWersji() {
   const katalog = new URL('../', import.meta.url)
   const pakiet = JSON.parse(readFileSync(new URL('package.json', katalog), 'utf8'))
+  const { zgodnoscDanych } = JSON.parse(readFileSync(new URL('konfiguracja-aktualizacji.json', katalog), 'utf8'))
+  const kanal = process.env.POMAGIER_KANAL_AKTUALIZACJI || 'stabilny'
+  if (!['stabilny', 'testowy'].includes(kanal) || !Number.isSafeInteger(zgodnoscDanych) || zgodnoscDanych < 1) throw new Error('Nieprawidłowa konfiguracja zgodności danych lub kanału aktualizacji.')
   const git = (...argumenty) => execFileSync('git', argumenty, { cwd: katalog, encoding: 'utf8' }).trim()
   const katalogZrodel = fileURLToPath(new URL('src/', katalog))
   const skrotZrodel = createHash('sha256')
@@ -18,6 +21,9 @@ export function pobierzInformacjeOWersji() {
   return {
     nazwaProduktu: `Ultimate Pomagier ${pakiet.version.split('.').slice(0, 2).join('.')}`,
     wersja: pakiet.version,
+    numerKompilacji: process.env.GITHUB_RUN_NUMBER || git('rev-list', '--count', 'HEAD'),
+    kanal,
+    zgodnoscDanych,
     commit: git('rev-parse', 'HEAD'),
     zmienioneZrodla: git('status', '--porcelain', '--untracked-files=all') !== '',
     zrodlaSha256: skrotZrodel.digest('hex'),

@@ -7,7 +7,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 import Ajv from 'ajv'
-import { przygotujKonfiguracjeWydania, nazwaInstalatora, adresStabilnegoWydania } from '../skrypty/budujDesktop.mjs'
+import { przygotujKonfiguracjeWydania, nazwaInstalatora, adresKanalowWydan } from '../skrypty/budujDesktop.mjs'
 import { okreslTrybFrontendu, sprawdzManifestProdukcyjny, sprawdzFrontendDesktop } from '../skrypty/kontrolaTrybuFrontendu.mjs'
 
 const odczytaj = (sciezka) => JSON.parse(readFileSync(new URL(`../${sciezka}`, import.meta.url), 'utf8'))
@@ -29,7 +29,7 @@ test('konfiguracja NSIS odpowiada schematowi zainstalowanego Tauri 2', () => {
   assert.equal(waliduj(konfiguracja), true, JSON.stringify(waliduj.errors))
   assert.equal(konfiguracja.version, '../package.json')
   assert.match(readFileSync(new URL('../src-tauri/Cargo.toml', import.meta.url), 'utf8'), new RegExp(`version = "${pakiet.version.replaceAll('.', '\\.')}"`))
-  assert.equal(nazwaInstalatora(pakiet.version), 'Ultimate_Pomagier_4.0_Setup.exe')
+  assert.equal(nazwaInstalatora(pakiet.version), `Ultimate_Pomagier_${pakiet.version === '4.0.0' ? '4.0' : pakiet.version}_Setup.exe`)
   for (const ikona of konfiguracja.bundle.icon) assert.ok(existsSync(new URL(`../src-tauri/${ikona}`, import.meta.url)))
 })
 
@@ -66,18 +66,24 @@ test('pakiet testowy nie ma aktywnych aktualizacji', () => {
   assert.equal(wynik.bundle.createUpdaterArtifacts, false)
   assert.deepEqual(wynik.plugins.updater.endpoints, [])
   assert.equal(wynik.plugins.updater.pubkey, '')
+  assert.equal(konfiguracja.plugins.updater.requireSignedVersion, true)
+  assert.equal(wynik.plugins.updater.requireSignedVersion, true)
 })
 
 test('podpisany build odrzuca brak kluczy, zły klucz, rozjazd wersji i źródła rozwojowe', () => {
-  const opcje = { podpisane: true, tag: 'v4.0.0', czysteZrodla: true, kluczPubliczny, kluczPrywatny: 'testowy-klucz' }
-  for (const zmiany of [{ czysteZrodla: false }, { kluczPubliczny: '' }, { kluczPrywatny: '' }, { kluczPubliczny: 'placeholder' }, { tag: 'main' }, { tag: 'v4.0.0-rc.1' }, { tag: 'v4.0.1' }]) {
+  const opcje = { podpisane: true, tag: `v${pakiet.version}`, czysteZrodla: true, kluczPubliczny, kluczPrywatny: 'testowy-klucz' }
+  for (const zmiany of [{ czysteZrodla: false }, { kluczPubliczny: '' }, { kluczPrywatny: '' }, { kluczPubliczny: 'placeholder' }, { tag: 'main' }, { tag: `v${pakiet.version}-rc.1` }, { tag: 'v999.0.0' }, { kanal: 'nieznany' }]) {
     assert.throws(() => przygotujKonfiguracjeWydania(pakiet, konfiguracja, { ...opcje, ...zmiany }))
   }
-  assert.throws(() => przygotujKonfiguracjeWydania({ version: '4.0.1' }, konfiguracja, opcje))
+  assert.throws(() => przygotujKonfiguracjeWydania({ version: '999.0.0' }, konfiguracja, opcje))
   const wynik = przygotujKonfiguracjeWydania(pakiet, konfiguracja, opcje)
   assert.equal(wynik.bundle.createUpdaterArtifacts, true)
   assert.equal(wynik.plugins.updater.pubkey, kluczPubliczny)
-  assert.deepEqual(wynik.plugins.updater.endpoints, [adresStabilnegoWydania])
+  assert.equal(wynik.plugins.updater.requireSignedVersion, true)
+  assert.deepEqual(wynik.plugins.updater.endpoints, [adresKanalowWydan])
+  const testowy = przygotujKonfiguracjeWydania(pakiet, konfiguracja, { ...opcje, kanal: 'testowy' })
+  assert.equal(testowy.plugins.updater.pubkey, kluczPubliczny)
+  assert.equal(testowy.plugins.updater.requireSignedVersion, true)
   assert.equal(waliduj({ ...konfiguracja, bundle: { ...konfiguracja.bundle, ...wynik.bundle }, plugins: wynik.plugins }), true, JSON.stringify(waliduj.errors))
 })
 

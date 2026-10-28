@@ -16,6 +16,8 @@ jobs:
     uses: ./.github/workflows/desktop-windows.yml
     with:
       podpisane: true
+      kanal: stabilny
+      opis_zmian: ${{ inputs.opis_zmian }}
     secrets: inherit
 
   android:
@@ -121,4 +123,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          node --input-type=module -e 'import { execFileSync } from "node:child_process"; import { readdirSync, readFileSync } from "node:fs"; const manifest = JSON.parse(readFileSync("wydanie-publikacja/rejestr-wydania.json")); const tag = `v${manifest.wersja}`; if (process.env.GITHUB_REF !== `refs/tags/${tag}`) throw new Error("Wybierz dokładny tag wydania"); const pliki = readdirSync("wydanie-publikacja").filter(nazwa => /\.(exe|apk|zip|sig|sha256)$/.test(nazwa) || ["latest.json", "rejestr-wydania.json"].includes(nazwa)).map(nazwa => `wydanie-publikacja/${nazwa}`); execFileSync("gh", ["release", "create", tag, "--draft", "--verify-tag", "--title", `Ultimate Pomagier ${manifest.wersja}`, "--notes-file", "wydanie-publikacja/opis-wydania.md", ...pliki], { stdio: "inherit" });'
+          node --input-type=module -e 'import { execFileSync } from "node:child_process"; import { readdirSync, readFileSync } from "node:fs"; const manifest = JSON.parse(readFileSync("wydanie-publikacja/rejestr-wydania.json")); const tag = `v${manifest.wersja}`; if (process.env.GITHUB_REF !== `refs/tags/${tag}`) throw new Error("Wybierz dokładny tag wydania"); const pliki = readdirSync("wydanie-publikacja").filter(nazwa => /\.(exe|apk|zip|sig|sha256)$/.test(nazwa) || ["latest.json", "windows-stabilny.json", "rejestr-wydania.json"].includes(nazwa)).map(nazwa => `wydanie-publikacja/${nazwa}`); execFileSync("gh", ["release", "create", tag, "--draft", "--verify-tag", "--title", `Ultimate Pomagier ${manifest.wersja}`, "--notes-file", "wydanie-publikacja/opis-wydania.md", ...pliki], { stdio: "inherit" });'

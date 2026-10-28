@@ -45,6 +45,7 @@
   "plugins": {
     "updater": {
       "pubkey": "",
+      "requireSignedVersion": true,
       "endpoints": ["https://github.com/kapi1944/Ultimate_Pomagier_3_5/releases/latest/download/latest.json"],
       "windows": { "installMode": "passive" }
     }

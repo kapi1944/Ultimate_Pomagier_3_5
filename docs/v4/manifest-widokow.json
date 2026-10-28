@@ -1392,6 +1392,7 @@
     "src/aplikacja/desktop/PanelAktualizacji.tsx": {
       "zadanie": "V4-22",
       "powierzchnie": [
+        "details",
         "window.confirm('Czy zapisano otwarte formularze i kopię bezpieczeństwa? Instalacja zamknie aplikację, a następnie uruchomi ją ponownie.')"
       ],
       "ukonczoneEtapy": [],

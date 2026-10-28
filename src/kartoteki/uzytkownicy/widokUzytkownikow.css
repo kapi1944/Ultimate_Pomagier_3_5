@@ -35,7 +35,7 @@
 .uzytkownicy th[aria-sort] button:focus-visible { outline: 3px solid var(--ui-focus); outline-offset: 3px; }
 .uzytkownicy td input:not([type="checkbox"]) { min-width: 160px; }
 .uzytkownicy input[type="checkbox"] { width: 18px; min-height: 18px; flex-shrink: 0; }
-.uzytkownicy td .avatar-uzytkownika { display: inline-flex; margin-right: 8px; }
+.uzytkownicy td .avatar-uzytkownika { display: inline-grid; place-items: center; vertical-align: middle; flex: none; margin-right: 8px; padding: 0; text-align: center; line-height: 1; }
 .uzytkownicy__import { display: grid; gap: 12px; padding: 14px; border: 1px dashed var(--ui-obramowanie); }
 .uzytkownicy summary { cursor: pointer; padding: 8px 0; }
 .uzytkownicy fieldset { min-width: 0; }

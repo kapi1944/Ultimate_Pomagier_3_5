@@ -76,7 +76,7 @@ export async function zbierzArtefakty(zrodlo, cel) {
   const nazwy = new Set()
   for (const sciezka of await readdir(zrodlo, { recursive: true })) {
     const nazwa = sciezka.split(/[\\/]/).at(-1)
-    if (!/\.(exe|apk|zip|sig|sha256)$/.test(nazwa) && !/^(latest|wydanie-(windows|android|web))\.json$/.test(nazwa)) continue
+    if (!/\.(exe|apk|zip|sig|sha256)$/.test(nazwa) && !/^(latest|windows-(stabilny|testowy)|wydanie-(windows|android|web))\.json$/.test(nazwa)) continue
     if (!(await stat(join(zrodlo, sciezka))).isFile()) continue
     if (nazwy.has(nazwa)) throw new Error('Artefakty zawierają powtórzone nazwy plików.')
     nazwy.add(nazwa)

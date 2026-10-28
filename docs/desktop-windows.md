@@ -37,7 +37,7 @@ Pakiet testowy powstaje w `wydanie-desktop/testowe/Ultimate_Pomagier_4.0_Setup.e
 
 `npm run desktop:dev` używa Vite na `localhost:1420` ze strictPort, osobnego identyfikatora `pl.ultimatepomagier.desktop.dev` i osobnego profilu WebView2. Nie zmienia domyślnego portu launchera przeglądarkowego. Plik `src-tauri/tauri.dev.conf.json` służy tylko developmentowi, nigdy wydaniu.
 
-Workflow `.github/workflows/desktop-windows.yml` buduje na `windows-2022`. Działa ręcznie, po push na `main` oraz dla PR do `main`, bez filtrów ścieżek. Testy aplikacji, lint, launcher, konfiguracja desktopowa i format Rust muszą przejść przed budowaniem. Artefakt `Ultimate-Pomagier-Windows-<numer uruchomienia>` zawiera rzeczywisty instalator i sumę SHA-256; wygasa po 30 dniach. Konfiguracja workflow nie oznacza wykonanego przebiegu CI. Workflow nie publikuje wydań ani nie wykonuje push.
+Workflow `.github/workflows/desktop-windows.yml` buduje na `windows-2022`. Działa ręcznie, po push na `main` oraz dla PR do `main`, bez filtrów ścieżek. Testy aplikacji, lint, launcher, konfiguracja desktopowa, dystrybucja i format Rust muszą przejść przed budowaniem. Artefakt `Ultimate-Pomagier-Windows-<numer uruchomienia>` zawiera rzeczywisty instalator i sumę SHA-256; wygasa po 30 dniach. Push i PR przygotowują pakiet bez aktualizacji. Ręczne uruchomienie na tagu z `podpisane=true` przygotowuje podpisany pakiet wybranego kanału. Dodatkowe `publikuj=true` uruchamia publikację po udanym buildzie i przejściu ochrony środowiska `aktualizacje-windows`. Konfiguracja workflow nie oznacza wykonanego przebiegu CI.
 
 ## Logowanie i demonstracja
 
@@ -47,20 +47,15 @@ Usługa tożsamości nie jest podłączona: produkcyjne logowanie zwraca `NIEDOS
 
 Odciski SHA-256 źródeł `src/` i panelu logowania trafiają do wspólnego `wersja.json`, wraz z wersją, commitem i oznaczeniem zmienionych źródeł. Kontrola Tauri porównuje te same metadane z frontendem przed przygotowaniem artefaktu. Vite pomija obserwację `src-tauri/target/` i `wydanie-desktop/`, żeby równoległa kompilacja Rust i zapis instalatora nie blokowały serwera deweloperskiego na Windows.
 
-## Podpisane stabilne aktualizacje
+## Podpisane aktualizacje Windows
 
-1. Właściciel wydania generuje klucze Tauri poza repozytorium, np. `npm run tauri -- signer generate -w C:\BezpieczneKlucze\pomagier.key`. Zachowuje prywatny klucz i jego hasło w bezpiecznym miejscu. Nie generujemy zastępczego klucza produkcyjnego podczas implementacji.
-2. W GitHub Actions należy skonfigurować zmienną `TAURI_UPDATER_PUBLIC_KEY` z zawartością publicznego pliku `.pub` oraz sekrety `TAURI_SIGNING_PRIVATE_KEY` i `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. Lokalnie te same zmienne przekazuje się wyłącznie procesowi budowania. Prywatny klucz nigdy nie jest zapisywany w pliku konfiguracji ani artefakcie.
-3. Po pozytywnych testach właściciel tworzy stabilny tag `v4.0.0`, wskazujący zatwierdzony commit. Uruchamia workflow na tym tagu z opcją `podpisane` albo lokalnie `npm run desktop:release`. Skrypt odrzuca lokalne zmiany, brak kluczy, niepoprawny format klucza publicznego, inny tag i niezgodne wersje.
-4. Pakiet podpisany powstaje w `wydanie-desktop/podpisane/`, razem z `.sig`, SHA-256 i `latest.json`. Właściciel sprawdza instalację i aktualizację na danych testowych, następnie osobno publikuje te pliki jako assets stabilnego GitHub Release dla danego tagu. Nie należy oznaczać prerelease jako Latest. Nie publikuje się JSON wskazującego nieistniejący albo nieprzetestowany instalator.
-5. Zainstalowany pakiet odczytuje wersję przez API Tauri. Ustawienia → Ogólne → Wersja desktopowa umożliwiają ręczne sprawdzenie `https://github.com/kapi1944/Ultimate_Pomagier_3_5/releases/latest/download/latest.json`. Brak klucza wyłącza tę funkcję. Błąd sieci lub brak manifestu pozostawia obecną wersję.
-6. Natywny updater porównuje SemVer i odrzuca prerelease oraz wersje równe/starsze. Interfejs dodatkowo dopuszcza wyłącznie `X.Y.Z`. Sprawdzenie nie pobiera instalatora i nie zamyka aplikacji.
-7. Użytkownik wybiera „Pobierz i zainstaluj” po zapisaniu formularzy i backupu. Tauri pobiera plik i **obowiązkowo sprawdza podpis** zapisanym kluczem publicznym. Dopiero poprawny wynik pozwala uruchomić instalator. Brak/błędny podpis zatrzymuje operację. Nie ma fallbacku do niepodpisanej aktualizacji.
-8. Na Windows plugin uruchamia NSIS w trybie aktualizacji i `passive`, następnie kończy aplikację. Instalator ponownie ją uruchamia (`restartAfterInstall: true`). Wybór „Później” zwalnia zasób i nie instaluje niczego.
+Windows workflow przygotowuje i testuje artefakty; nigdy sam nie publikuje produkcji. Wspólny workflow dystrybucji przekazuje przez workflow_call podpisane=true, kanal=stabilny oraz opis_zmian i przygotowuje szkic Windows/Android/WEB. Osobny workflow publikacja-wydania wymaga ręcznej akceptacji oraz środowiska wydania-produkcyjne. Po sprawdzeniu trzech platform, podpisu, zgodności metadanych i rosnącej wersji publikuje istniejący szkic, a następnie aktualizuje windows-stabilny.json w technicznym prerelease windows-aktualizacje.
 
-Repozytorium jest publiczne (sprawdzono 2026-10-22); kanał aktualizacji nie wymaga tokenu GitHub na komputerze współpracownika. Jeśli wydania staną się prywatne, należy zaprojektować inny dostęp do dystrybucji. Nie należy umieszczać tokenu repozytorium w aplikacji.
+Klucze Tauri przekazuje się przez istniejące sekrety i zmienną publicznego klucza; nie wolno zastępować użytej wcześniej pary. Wersja X.Y.Z musi być wyższa niż wszystkie poprzednie wydania obu kanałów. Pierwsza instalacja z wyłączonym updaterem wymaga ręcznej instalacji podpisanego pakietu bez usuwania danych. Samo przygotowanie szkicu nie potwierdza odbioru instalacji ani zachowania danych.
 
-Podpis Tauri w `.sig` służy autentyczności aktualizacji. To osobny mechanizm od podpisu Authenticode pliku EXE. Certyfikat Windows nie został dostarczony, więc SmartScreen może ostrzegać przed pierwszą instalacją. Suma SHA-256 sama nie zastępuje podpisu. Komputer końcowy nigdy nie pobiera commitów Git ani nie wykonuje npm.
+Panel pozwala wybrać kanał stabilny lub testowy, obejrzeć opis, pobrać podpisany pakiet i osobno zatwierdzić instalację po zapisaniu formularzy i kopii danych. Wersja, kanał, commit i zgodność danych są sprawdzane przed pobieraniem. Kanał testowy jest obsługiwany przez build i klienta; centralny proces publikacji produkcyjnej obsługuje wyłącznie stabilne wspólne wydania. Nie ma niezależnego publikatora produkcyjnego Windows.
+
+Migracja URL repozytorium wymaga potwierdzenia kompatybilności istniejących instalacji. Do tego czasu zachowujemy dotychczasowy endpoint i identyfikator pl.ultimatepomagier.desktop. Nie wolno uznawać samego przekierowania GitHub za test aktualizacji.
 
 ## Dane i granice aktualizacji
 
@@ -83,7 +78,7 @@ Wymagane na standardowym koncie Windows i danych testowych:
 - odrzucenie uszkodzonej paczki, podpisu innym kluczem i brakującego podpisu; błąd sieci, „Później”, ponowna próba, restart po instalacji;
 - oddzielenie profilu przeglądarki, desktop development i desktop production; kontrolowany import istniejącego backupu.
 
-Testy jednostkowe w `testy/aktualizacjeDesktop.test.ts` sprawdzają porównanie wersji i kolejność operacji z atrapą błędu podpisu. Nie zastępują kryptograficznego testu natywnego updatera. Testy pakietowania sprawdzają rzeczywisty schemat zainstalowanego Tauri, konfigurację i blokady wydania. Wynik budowania i ograniczenia konkretnego wykonania są raportowane przy dostarczeniu artefaktu.
+`npm run test:desktop` obejmuje wersje, oba kanały, deklarację zgodności, blokadę po błędzie podpisu, konfigurację Tauri oraz blokady publikacji. `npm run test:aktualizacje:przegladarka` uruchamia rzeczywisty interfejs React w Edge z atrapą IPC Tauri; wymaga dostępnego `playwright` (lub `POMAGIER_PLAYWRIGHT` wskazującego zewnętrzny pakiet). Sprawdza wykrycie wydania, brak aktualizacji, oba kanały, niezgodne dane, opis zmian, postęp, blokadę instalacji po błędzie podpisu, ponowne pobranie, odmowę zgody, błąd instalatora, błąd sieci i niezmienność testowego localStorage. Atrapa IPC nie wykonuje kryptografii, instalacji NSIS ani restartu. Odbiór dwóch rzeczywistych podpisanych wydań, brakującego/błędnego podpisu i zachowania kont SQLite/DPAPI oraz profilu WebView2 pozostaje wymagany przed pracą operacyjną.
 
 Pozostałe ograniczenia poza zakresem powłoki: manifest backupu nadal używa historycznej etykiety `ultimate-pomagier-3.5` (nie jest źródłem wersji desktopowej), Vite ostrzega o dużym głównym bundle, a npm podczas instalacji zależności zgłosił 36 podatności (28 moderate, 8 high). Nie przeprowadzano audytu ani aktualizacji całego drzewa zależności.
 
@@ -133,3 +128,18 @@ SHA-256: `d0cbdeb9d850bd2fc52db064fdceb61616c3fa1654ba4339cbc1c7dbe7a1dcea`.
 Status Authenticode: `NotSigned`. Pakiet testowy ma wyłączone aktualizacje; nie utworzono klucza produkcyjnego ani podpisanej paczki aktualizacyjnej. Nie wykonano instalacji na koncie współpracownika, akceptacji interfejsu WebView2 ani rzeczywistej aktualizacji między dwoma podpisanymi wydaniami. CI przygotowano, ale nie uruchomiono zdalnie. Nie wykonano push ani publikacji.
 
 **Gotowość: pakiet do testów instalacyjnych. Dystrybucja operacyjna wymaga konfiguracji kluczy i wykonania opisanej akceptacji Windows, w tym zachowania danych po aktualizacji.**
+
+## Wyniki lokalne etapu aktualizacji — 2026-10-25
+
+- `npm test`, `npm run lint`, `npm run build`: PASS. Zarejestrowano nowy panel opisu zmian w obowiązującym manifeście widoków V4. Build zgłasza istniejące ostrzeżenia o wielkości paczki i mieszanym imporcie API Tauri.
+- `npm run test:desktop`: PASS, 15 testów, w tym oba kanały, zgodność danych, blokady podpisanego wydania i publikacji. Testy metadanych oraz pakietowania nie wymagają już stałej wersji `4.0.0`, więc nie blokują następnego numeru wydania.
+- `npm run test:dystrybucja`: PASS, 13 testów istniejącego rejestru i dystrybucji.
+- `npm run test:aktualizacje:przegladarka`: PASS, rzeczywisty Edge i React z atrapą IPC Tauri. Dane testowego localStorage pozostały identyczne; nie jest to próba migracji zainstalowanej aplikacji.
+- Natywne testy `offline_tests` z lokalnie zainstalowanego źródła `tauri-plugin-updater 2.14.0`: PASS, 10 testów. Uruchomiono `cargo test --manifest-path .desktop-tools/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tauri-plugin-updater-2.14.0/Cargo.toml --locked --lib offline_tests` z lokalnym Rust i CARGO_HOME. Testy używają publicznych wektorów testowych pluginu, sprawdzają rzeczywistą kryptografię: zmianę bajtów paczki, niepoprawny podpis/klucz, podpis bez wersji oraz niezgodność wersji z podpisem. Log: `.desktop-tools/testy-podpisu-tauri.log`. Pierwsza próba offline wymagała brakujących zależności testowych; ponowienie z pobraniem zależności i `--locked` przeszło. Nie modyfikowano źródeł pluginu ani nie generowano kluczy produkcyjnych.
+- `actionlint` dla zmienionego workflow i wywołującego `dystrybucja.yml`: PASS. `git diff --check`: PASS.
+- Brak sekretów, zmiennej klucza i wydań GitHub uniemożliwia odbiór publikacji na rzeczywistych artefaktach. Nie uruchomiono zdalnego Actions, podpisanego builda produkcyjnego, instalacji aktualizacji, restartu ani kontroli danych WebView2/SQLite/DPAPI po aktualizacji. Nie deklarujemy tych etapów jako zaliczonych.
+- Praca na `main`, bez commita, push, tagowania, publikacji i tworzenia worktree. Zastaną zmianę w `src/kartoteki/uzytkownicy/widokUzytkownikow.css` pozostawiono poza zakresem.
+
+## Konsolidacja publikacji — 2026-10-28
+
+Obowiazujacy proces: desktop-windows.yml tylko buduje i testuje; dystrybucja.yml przygotowuje wspolny szkic trzech platform; publikacja-wydania.yml osobno zatwierdza publikacje i aktualizuje manifest stabilnego kanalu. Wczesniejszy opis publikuj=true oraz samodzielnej publikacji Windows jest nieaktualny. Testowy kanal pozostaje dostepny w buildzie i panelu; nie otrzymuje niezaleznego publikatora produkcyjnego. Migracja nazwy repozytorium wymaga potwierdzonej zgodnosci starych instalacji; w tym etapie nie publikujemy wydania.

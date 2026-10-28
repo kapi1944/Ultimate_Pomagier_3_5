@@ -9,11 +9,13 @@ import { opiszPlik } from './dystrybucja.mjs'
 
 const katalog = fileURLToPath(new URL('../', import.meta.url))
 export const adresStabilnegoWydania = 'https://github.com/kapi1944/Ultimate_Pomagier_3_5/releases/latest/download/latest.json'
+export const adresKanalowWydan = 'https://github.com/kapi1944/Ultimate_Pomagier_3_5/releases/download/windows-aktualizacje/{{target}}.json'
 
-export function przygotujKonfiguracjeWydania(pakiet, konfiguracja, { podpisane, tag, czysteZrodla, kluczPubliczny, kluczPrywatny }) {
+export function przygotujKonfiguracjeWydania(pakiet, konfiguracja, { podpisane, tag, czysteZrodla, kluczPubliczny, kluczPrywatny, kanal = 'stabilny' }) {
   sprawdzKonfiguracjeDesktop(konfiguracja)
   if (!/^\d+\.\d+\.\d+$/.test(pakiet.version) || (konfiguracja.version !== '../package.json' && pakiet.version !== konfiguracja.version)) throw new Error('Wersje pakietu i Tauri muszą być zgodne i stabilne.')
   if (podpisane) {
+    if (!['stabilny', 'testowy'].includes(kanal)) throw new Error('Nieznany kanał aktualizacji.')
     if (tag !== `v${pakiet.version}`) throw new Error('Podpisane wydanie wymaga dokładnego stabilnego tagu zgodnego z wersją.')
     if (!czysteZrodla) throw new Error('Podpisane wydanie wymaga czystego repozytorium bez zmian lokalnych.')
     if (!kluczPubliczny?.trim() || !kluczPrywatny?.trim()) throw new Error('Brak kluczy podpisujących wydanie. Aktualizacja nie może być niepodpisana.')
@@ -25,7 +27,8 @@ export function przygotujKonfiguracjeWydania(pakiet, konfiguracja, { podpisane, 
     bundle: { createUpdaterArtifacts: podpisane },
     plugins: { updater: {
       pubkey: podpisane ? kluczPubliczny.trim() : '',
-      endpoints: podpisane ? [adresStabilnegoWydania] : [],
+      requireSignedVersion: true,
+      endpoints: podpisane ? [adresKanalowWydan] : [],
       windows: { installMode: 'passive' },
     } },
   }
@@ -50,6 +53,7 @@ async function buduj() {
     czysteZrodla: stanRepozytorium.status === 0 && stanRepozytorium.stdout.trim() === '',
     kluczPubliczny: process.env.TAURI_UPDATER_PUBLIC_KEY,
     kluczPrywatny: process.env.TAURI_SIGNING_PRIVATE_KEY,
+    kanal: informacjeOWersji.kanal,
   })
   nadpisanie.app = { windows: [{ ...konfiguracja.app.windows[0], title: informacjeOWersji.nazwaProduktu }] }
   const katalogWydania = join(katalog, 'wydanie-desktop')
@@ -78,14 +82,23 @@ async function buduj() {
       platforma: 'windows', architektura: 'x86_64', typ: 'exe', podpis: { rodzaj: 'tauri', sha256: metadanePodpisu.sha256 },
     })
     await writeFile(join(katalogArtefaktow, 'wydanie-windows.json'), JSON.stringify({ wersja: pakiet.version, commit: informacjeOWersji.commit, pliki: [metadaneInstalatora] }, null, 2))
-    await writeFile(join(katalogArtefaktow, 'latest.json'), JSON.stringify({
+    const manifestAktualizacji = {
       version: pakiet.version,
-      notes: `Stabilne wydanie Ultimate Pomagier ${pakiet.version}`,
+      kanal: informacjeOWersji.kanal,
+      zgodnoscDanych: informacjeOWersji.zgodnoscDanych,
+      commit: informacjeOWersji.commit,
+      numerKompilacji: informacjeOWersji.numerKompilacji,
+      notes: process.env.POMAGIER_OPIS_ZMIAN?.trim() || `Wydanie ${informacjeOWersji.kanal}: Ultimate Pomagier ${pakiet.version}`,
       pub_date: new Date().toISOString(),
       platforms: { 'windows-x86_64': {
         signature: podpis,
         url: `https://github.com/kapi1944/Ultimate_Pomagier_3_5/releases/download/v${pakiet.version}/${nazwa}`,
       } },
+    }
+    await writeFile(join(katalogArtefaktow, 'latest.json'), JSON.stringify(manifestAktualizacji, null, 2))
+    await writeFile(join(katalogArtefaktow, `windows-${informacjeOWersji.kanal}.json`), JSON.stringify({
+      ...manifestAktualizacji,
+      platforms: { [`windows-${informacjeOWersji.kanal}`]: manifestAktualizacji.platforms['windows-x86_64'] },
     }, null, 2))
   }
   console.log(`Przygotowano ${join(katalogArtefaktow, nazwa)}`)
