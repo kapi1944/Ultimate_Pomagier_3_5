@@ -1,5 +1,149 @@
 # Etap 4.3.3 — pierwsze oficjalne wydanie 4.0.0
 
+## Końcowy komplet z poprawioną procedurą publikacji — 27 października 2026
+
+**STATUS WYDANIA: SZKIC GOTOWY. Publikacja wstrzymana do obowiązkowych testów instalacyjnych i akceptacji właściciela.**
+
+Tag **v4.0.0**, wersja **4.0.0**, commit **`cfb619f96c880367fdb9e0987b96efed06f555eb`**. W ramach zatwierdzonej naprawy wydania na `main` zapisano cztery lokalne korekty istniejącego procesu. Kod modułów aplikacji, wersje, zależności, klucze, dane użytkowników i bramka akceptacji pozostały bez zmian. Nie tworzono gałęzi, alternatywnego procesu, hostingu, nowych integracji ani kluczy. Nie uruchamiano lokalnego Cargo ani force push.
+
+Po udanej dystrybucji `d03f9b0…` kontrola rzeczywistego szkicu ujawniła dwa błędy istniejącego skryptu zatwierdzania: endpoint `/releases/tags/v4.0.0` zwracał 404 dla szkicu, a adresy jego plików zawierały `untagged-…`. Commit `cfb619f…` ustala ID przez `gh release view` i pobiera pełne metadane po ID; walidator dopuszcza wyłącznie adresy tego samego szkicu w tym samym repozytorium. Nadal wymaga stabilnego tagu, kompletnego manifestu trzech platform, zgodnych rozmiarów, SHA-256, podpisu Windows i metadanych podpisanego Androida. Dopasowanie commita oraz Required reviewers środowiska pozostały aktywne.
+
+Regresje obejmują prywatny szkic, nieprawidłowe ID, obce repozytorium i inne oznaczenie `untagged`. `npm run test:dystrybucja`: **15/15**; pełny lint oraz lint zmienionych plików: kod 0. Build aplikacji przeszedł przy poprzedniej korekcie; ostatnia zmiana dotyczy wyłącznie skryptu publikacji i jego regresji. Poprawiony odczyt i walidator sprawdzono na rzeczywistym szkicu ID `425256941`: osiem plików, manifest i dane wszystkich platform były zgodne z niezależnym odbiorem.
+
+Żeby również procedura zapisana pod tagiem działała po akceptacji, zachowano lokalnie wszystkie pliki i opis tego własnego, nieopublikowanego szkicu (`tmp/etap433/powtorzenie3/`), następnie usunięto wyłącznie ten szkic, odtworzono nieopublikowany tag na poprawce i uruchomiono istniejący workflow. Nie zastępowano plików ręcznie. Nowy komplet musi pochodzić z tego samego commita co tag.
+
+- [Końcowa dystrybucja — SUCCESS](https://github.com/kapi1944/Ultimate_Pomagier_3_5/actions/runs/40482903555): Windows, Android, WEB i automatyczny szkic — wszystkie zadania zakończone sukcesem.
+- [CI końcowego commita — SUCCESS](https://github.com/kapi1944/Ultimate_Pomagier_3_5/actions/runs/40482857961).
+- [Automatyczny Windows po pushu commita wydania — SUCCESS](https://github.com/kapi1944/Ultimate_Pomagier_3_5/actions/runs/40482857853), odrębny od podpisanej dystrybucji.
+
+Końcowy [szkic Ultimate Pomagier 4.0.0](https://github.com/kapi1944/Ultimate_Pomagier_3_5/releases/tag/untagged-74babc2dea4d272e6f97), ID **425273752**: `tag_name=v4.0.0`, `draft=true`, `prerelease=false`, `published_at=null`. Zawiera osiem przesłanych plików: EXE, APK, ZIP WEB, podpis Tauri, dwie sumy `.sha256`, `latest.json` i `rejestr-wydania.json`. Poprawiony odczyt i istniejący parser potwierdziły zgodność manifestu oraz rozmiarów i SHA-256 wszystkich plików z niezależnym odbiorem trzech platform. Podpis, sumy i metadane pobrano również bezpośrednio ze szkicu. Opis uzupełniono rzeczywistymi wynikami i ograniczeniami; automatyczny blok `pomagier-wydanie` zachowano dokładnie. Wydanie nie jest jeszcze publiczne; publiczny adres `/releases/tag/v4.0.0` oraz endpoint Latest wymagają kontroli po publikacji.
+
+Testy instalacji, uruchomienia, logowania, zamknięcia/restartu oraz zachowania danych na izolowanym Windows i Androidzie: **NIEZWERYFIKOWANE**. Nie uruchomiono publikacji. Required reviewer `kapi1944`, brak administracyjnego obejścia oraz ograniczenie środowiska do tagu `v4.0.0` zostały potwierdzone ponownie. Nazwy sześciu sekretów i dwóch zmiennych są kompletne; wartości sekretów nie były odczytywane. Do technicznego odbioru użyto wyłącznie publicznego klucza Tauri i odcisku certyfikatu Androida, bez wypisywania klucza.
+
+Odbiór rzeczywistych plików końcowego commita zapisano w ignorowanym `tmp/etap433/powtorzenie4/`, oddzielnie od poprzednich prób:
+
+| Plik | Rozmiar w bajtach | SHA-256 | Odbiór techniczny |
+| --- | ---: | --- | --- |
+| `Ultimate_Pomagier_4.0_Setup.exe` | 227349343 | `b80c635b6a7bbf7fab3cd34be329eb26635d1e7693303f3a3af294765e79398d` | PASS: x64, wersja 4.0.0, commit, SHA-256, kryptograficzny podpis Tauri i latest.json; Authenticode **NotSigned** |
+| `Ultimate_Pomagier_4.0.0_Android_arm64.apk` | 16734748 | `d8d6a3569f2506a0b1093d8fb0f76e9bdc10acebc5936343de7723fb93eef926` | PASS: podpis/certyfikat, pakiet, wersja, brak debug, ARM64, kompletność, integralność, ELF i ZIP 16 KB |
+| `Ultimate_Pomagier_4.0.0_WEB.zip` | 6553347 | `1cd74befad7f21e85cf71aa0444ed09743999887ee43fd89d1836d4746fdd6c9` | PASS: manifest produkcyjny, wersja/commit/czyste źródła, ZIP, uruchomienie, odrzucenie sesji demo i logowania bez usługi kont |
+
+Android: `applicationId=pl.ultimatepomagier.desktop`, `versionCode=4000000`, minSdk 26, targetSdk 36, ABI `arm64-v8a`, `debuggable=false`. Certyfikat SHA-256 `d93a9ec7961647e18f7a11949d04bebd3a63c4ad984b5a1a422c5e584aadfd02` zgodny z konfiguracją i manifestem. Użyto `apksigner`, `aapt`, `zipalign` oraz istniejącej walidacji bibliotek. WEB otwarto z rzeczywistego ZIP w osobnym profilu Chrome z syntetyczną sesją, bez użycia rzeczywistych danych; brak błędów JavaScript. Nie jest to potwierdzenie logowania produkcyjnego — archiwum nie zapewnia usługi tożsamości. Dane pozostają lokalne dla urządzenia/profilu, bez automatycznej synchronizacji.
+
+Windows: FileVersion i ProductVersion rzeczywistego EXE wynoszą 4.0.0. Podpis Tauri sprawdzono kryptograficznie Ed25519/BLAKE2b wraz z podpisem komentarza i identyfikatorem klucza, po dodatnim i ujemnym wektorze kontrolnym z lokalnego minisign-verify. `latest.json` ma wersję 4.0.0, platformę `windows-x86_64`, dokładny podpis `.sig` i docelowy adres `https://github.com/kapi1944/Ultimate_Pomagier_3_5/releases/download/v4.0.0/Ultimate_Pomagier_4.0_Setup.exe`. Endpoint aktualizatora pozostaje `https://github.com/kapi1944/Ultimate_Pomagier_3_5/releases/latest/download/latest.json`. `Get-AuthenticodeSignature` zwróciło **NotSigned**; podpis Tauri go nie zastępuje. Kontrola produkcyjnego frontendu przeszła w oficjalnym buildzie; uruchomienie interfejsu wewnątrz zainstalowanej aplikacji pozostaje NIEZWERYFIKOWANE.
+
+Stan repozytorium na końcu: lokalny `main` i `origin/main` wskazują już późniejszy commit **`ae2c5259f7514b6555d7e3aaf4438388c4be2647`**, dotyczący Poprawiacza prezentacji. Zaobserwowano go w końcowej kontroli; nie ustalano autora procesu ani nie analizowano nowego modułu. Nie zmienia on workflow dystrybucji ani skryptu publikacji. Tag, manifest i wszystkie odebrane artefakty nadal wskazują **`cfb619f96c880367fdb9e0987b96efed06f555eb`**; późniejszych zmian nie dołączano do wydania i nie przesuwano tagu. Pozostawiono tylko lokalną modyfikację tego raportu, bez stage i commita dokumentacji. `git diff --check` bez błędów. Wyniki testów i CI tego wydania odnoszą się do jego tagu, nie do późniejszego modułu na main.
+
+Warunki odbioru przez właściciela/IT przed publikacją:
+
+1. Windows: zatwierdzona izolowana VM/komputer z Windows 10/11 x64 i syntetycznym profilem. Zainstalować końcowy EXE, uruchomić, skonfigurować syntetyczne konto i zalogować. Zapisać dokument lub zadanie, zamknąć aplikację, uruchomić ponownie i potwierdzić zachowanie danych oraz ponowne logowanie. Uzgodnić dopuszczenie instalatora z IT przy braku Authenticode; nie obchodzić zabezpieczeń.
+2. Android: izolowane urządzenie lub emulator ARM64, Android 8.0/API 26 lub nowszy. Zainstalować końcowy produkcyjny APK, skonfigurować syntetyczne konto, zalogować, sprawdzić podstawowe moduły i zapisać dokument. Zrestartować aplikację i potwierdzić zachowanie danych. Nie czyścić ani nie odinstalowywać rzeczywistych danych użytkowników.
+3. Dopiero po potwierdzeniu obu odbiorów uruchomić istniejący `publikacja-wydania.yml` na `v4.0.0` z `zatwierdzam=true` i zaakceptować środowisko jako właściciel. Następnie anonimowo sprawdzić publiczne Latest, manifest i pobieranie każdego pliku z porównaniem SHA-256. Nie uruchamiano tego workflow w ramach przygotowania szkicu.
+
+## Odbiór kompletu d03f9b0 — 27 października 2026 (zapis historyczny)
+
+**STATUS WYDANIA: ZABLOKOWANE do publikacji — oczekiwanie na komplet artefaktów i odbiór instalacyjny.**
+
+Punkt wydania: **v4.0.0 / 4.0.0 / `d03f9b02f5819aa896782f184d1c8914efcbe45e`**. Lokalny main, origin/main i tag wskazują ten commit. Na początku wznowienia właściciel zatwierdził naprawę procesu, commit, usunięcie i odtworzenie nieopublikowanego tagu oraz ponowienie dystrybucji. Wszystkie zmiany tagu wykonano przez usunięcie i zwykły push; nie używano force push. Przed kolejnymi próbami potwierdzano brak Release. Dotychczasowe pliki i raporty zachowano.
+
+Wykonane lokalne korekty istniejącego procesu, bez aktualizacji zależności, zmiany wersji, kluczy lub kodu funkcjonalnego aplikacji:
+
+| Commit | Potwierdzona przyczyna / korekta |
+| --- | --- |
+| `faba1bf116d0614deaa53eb956b0c47ee0570aba` | Akcja SDK domyślnie żąda niedostępnego `tools`; jawne `packages: 'platform-tools'` w istniejącym workflow |
+| `6faf2db410f005bbef5c542ccfc3e94930bc38d1` | Gradle zgłasza `Missing script: tauri`; standardowy wpis `tauri` w package.json dla generowanego projektu Android |
+| `d03f9b02f5819aa896782f184d1c8914efcbe45e` | Po udanej kompilacji walidator odrzucił niekompletne APK; kopiowanie `libc++_shared.so` istniało wyłącznie w ścieżce odmowy dowiązań Windows. Przygotowanie tej samej biblioteki z właściwego NDK przeniesiono przed pakowanie także na Linuxie. Regresja obejmuje hosty Linux/Windows, ARM64/x64 i brak NDK. Zachowano wymóg obu bibliotek, ABI, podpisów i stron 16 KB; błąd brakujących plików podaje teraz ich nazwy |
+
+Weryfikacja korekt: `npm run tauri -- --version` i pomoc `android android-studio-script` potwierdziły kontrakt bez kompilacji Cargo. `npm run test:dystrybucja`: **14/14**; `npm run lint` i `npm run build`: kod 0. Build zachowuje znane ostrzeżenia o rozmiarze chunków i statycznym/dynamicznym imporcie Tauri. Po ostatniej drobnej zmianie diagnostyki ponowiono testy dystrybucji i lint obu zmienionych plików. Staged diff przejrzano przed każdym commitem; raport pozostawał poza stage. Nie uruchamiano lokalnego Cargo ani nie obchodzono Code Integrity.
+
+- [CI bieżącego commita — SUCCESS](https://github.com/kapi1944/Ultimate_Pomagier_3_5/actions/runs/40480522931).
+- [Dystrybucja bieżącego commita](https://github.com/kapi1944/Ultimate_Pomagier_3_5/actions/runs/40480559177) — Windows, Android i WEB **SUCCESS**; automatyczne przygotowanie szkicu w toku.
+- Próba `faba1bf…`: [40473582744](https://github.com/kapi1944/Ultimate_Pomagier_3_5/actions/runs/40473582744), Android odrzucony przez brak skryptu Tauri; po ustaleniu przyczyny zatrzymano pozostałe własne zadania tego przebiegu.
+- Próba `6faf2db…`: [40474587763](https://github.com/kapi1944/Ultimate_Pomagier_3_5/actions/runs/40474587763), Windows i WEB **SUCCESS**, Android **FAILURE** przy kontroli kompletności APK, szkic **SKIPPED**.
+
+WEB bieżącego commita: `Ultimate_Pomagier_4.0.0_WEB.zip`, **6553339 bajtów**, SHA-256 `bdebb7bbe7414d1de023a7d7f1b52352189762ccfd648742b7025ce568cd7d60`. Odbiór rzeczywistego ZIP, manifestu produkcyjnego, wersji/commita, czystych źródeł, uruchomienia w odizolowanym Chrome, odrzucenia syntetycznej sesji demo oraz logowania bez usługi kont: **PASS**, bez błędów JavaScript. Bieżące artefakty i wyniki zapisano odrębnie w ignorowanym `tmp/etap433/powtorzenie3/`; wcześniejsze próby zachowano.
+
+APK bieżącego commita: `Ultimate_Pomagier_4.0.0_Android_arm64.apk`, **16734748 bajtów**, SHA-256 `dc31703513c1d38d20bc51d0d79cc47b679337b52cadee665ccf9076ecdffce1`. Niezależny odbiór pobranego pliku: **PASS**. `apksigner verify --verbose --print-certs` potwierdził podpis; certyfikat SHA-256 `d93a9ec7961647e18f7a11949d04bebd3a63c4ad984b5a1a422c5e584aadfd02` jest zgodny z konfiguracją i manifestem. `aapt dump badging`: applicationId `pl.ultimatepomagier.desktop`, wersja 4.0.0, versionCode 4000000, minSdk 26, targetSdk 36, ABI `arm64-v8a`, brak debug. Odczyt APK, integralność podpisanego archiwum, komplet obu bibliotek, architektura ELF, segmenty i `zipalign -c -P 16 4`: **PASS**. Użyto istniejącego lokalnego JDK i build-tools 36.1.0 wyłącznie do odczytu, nie kompilowano Cargo. Wynik: `tmp/etap433/powtorzenie3/android-odbior.json`.
+
+Testy instalacji, logowania, restartu i zachowania danych na izolowanym Windows oraz Androidzie: **NIEZWERYFIKOWANE**. Nie uruchomiono `publikacja-wydania.yml`. Publikacja wymaga zakończenia tych testów, odbioru kompletu plików i akceptacji właściciela w `wydania-produkcyjne`. Dane pozostają lokalne; archiwum WEB nie zapewnia usługi tożsamości ani produkcyjnego logowania. Authenticode jest odrębny od podpisu Tauri; pierwszy rzeczywisty instalator był **NotSigned**, co wymaga uzgodnienia z IT przy wdrożeniu firmowym.
+
+## Pierwsze wznowienie po akceptacji — 27 października 2026 (zapis historyczny)
+
+**STATUS WYDANIA: ZABLOKOWANE do publikacji — trwa przygotowanie kompletu artefaktów.** Właściciel zatwierdził commit przygotowanej poprawki Android SDK oraz usunięcie i odtworzenie nieopublikowanego tagu `v4.0.0`. Nie jest wymagana ponowna zgoda na te wykonane czynności.
+
+- Commit wydania: `faba1bf116d0614deaa53eb956b0c47ee0570aba`, wersja **4.0.0**, gałąź `main`.
+- Commit zawiera wyłącznie jedną linię `.github/workflows/dystrybucja.yml`: `packages: 'platform-tools'`. Przed commitem przejrzano staged diff i `git diff --cached --check`; 13 testów dystrybucji przeszło w pierwszym przebiegu dla dokładnie tej poprawki. Raport pozostawiono poza commitem.
+- Wykonano zwykły push main, zatwierdzone usunięcie starego tagu oraz utworzenie i zwykły push nowego tagu na tym commicie. Bez force push, przełączania gałęzi, zmiany wersji, zależności, kluczy lub danych.
+- [Ponowna dystrybucja](https://github.com/kapi1944/Ultimate_Pomagier_3_5/actions/runs/40473582744): `workflow_dispatch`, tag `v4.0.0`, dokładnie nowy commit. Android przeszedł konfigurację SDK i rozpoczął produkcyjną kompilację; Windows również jest w kompilacji; WEB zakończył się sukcesem.
+- [CI poprawki — SUCCESS](https://github.com/kapi1944/Ultimate_Pomagier_3_5/actions/runs/40473509527). Dodatkowy [automatyczny workflow Windows po pushu main](https://github.com/kapi1944/Ultimate_Pomagier_3_5/actions/runs/40473509856) jest odrębny od podpisanego buildu dystrybucji.
+
+Nowy WEB odebrano niezależnie z artefaktu workflow, w izolowanym profilu Chrome: wersja i commit zgodne, źródła czyste, manifest produkcyjny, ZIP odczytany, syntetyczna sesja demo odrzucona, logowanie bez usługi kont odrzucone, brak błędów JavaScript. `Ultimate_Pomagier_4.0.0_WEB.zip`: **6553331 bajtów**, SHA-256 `98f265d83fd13c48031f0904560db899eb72f82b0ccde1c61c729a93e7de5388`. Wyniki i zrzut: `tmp/etap433/powtorzenie1/web-odbior.json` i `web-odbior.png`.
+
+Nowe pliki i wyniki są odseparowane od pierwszego przebiegu w ignorowanym `tmp/etap433/powtorzenie1/`; wcześniejszych plików nie usuwano. Do ukończenia pozostaje odbiór rzeczywistych Windows/APK i kompletnego szkicu. Testy instalacji, logowania, restartu i trwałości danych na izolowanym Windows oraz Androidzie pozostają **NIEZWERYFIKOWANE**. Nie uruchomiono publikacji ani lokalnego Cargo.
+
+## Pierwsza próba — 27 października 2026 (zapis historyczny)
+
+**STATUS WYDANIA: ZABLOKOWANE — błąd konfiguracji Android SDK w workflow.** Konfiguracja podpisów i bramki akceptacji jest kompletna według bieżącego odczytu GitHub. Na zatwierdzonym przez właściciela commicie `a78d1ea0cbdd4f6bd4465db3c71011be0c760701` utworzono i zwykłym pushem wypchnięto tag `v4.0.0`. Uruchomiono istniejącą dystrybucję; Windows i WEB zakończyły się sukcesem, Android błędem, utworzenie szkicu zostało pominięte. Nie uruchomiono publikacji.
+
+| Kontrola | Bieżący wynik |
+| --- | --- |
+| Repozytorium / gałąź | `kapi1944/Ultimate_Pomagier_3_5` / `main` |
+| HEAD, lokalne origin/main i zdalne main przez API | Zgodne: `a78d1ea0cbdd4f6bd4465db3c71011be0c760701` |
+| Pierwotny commit / decyzja właściciela | `10443b17db3c11f95149fdfa678b43cb6be31abc` — rodzic HEAD; właściciel następnie zatwierdził obecny main `a78d1ea…` dla tagu |
+| Różnica między tymi commitami | Wyłącznie dwa raporty w `docs/`; brak zmian kodu, wersji i workflow |
+| Początkowe drzewo robocze | Czyste; `git diff --check` bez błędów |
+| package.json / Cargo.toml | `4.0.0` / `4.0.0` |
+| Tag `v4.0.0` | Utworzony lokalnie i wypchnięty na GitHub; wskazuje zatwierdzony `a78d1ea…` |
+| Releases, w tym szkice | Uwierzytelnione API: pusta lista |
+| GitHub Actions | Włączone; CI, Windows, dystrybucja i publikacja aktywne |
+| Sekrety repozytorium | Wszystkie sześć wymaganych nazw obecne |
+| Zmienne repozytorium | Obecne `TAURI_UPDATER_PUBLIC_KEY` i `ANDROID_CERT_SHA256` |
+| `wydania-produkcyjne` | Required reviewer: `kapi1944`; `can_admins_bypass=false`; dopuszczony wyłącznie tag `v4.0.0` |
+| Samodzielne zatwierdzenie właściciela | `prevent_self_review=false`; wymagana akceptacja pozostaje aktywna |
+
+Kompletność konfiguracji sprawdzono wyłącznie na podstawie nazw i metadanych. Nie odczytywano ani nie ujawniano wartości sekretów. Późniejsza weryfikacja kryptograficzna EXE użyła publicznego klucza ze zmiennej `TAURI_UPDATER_PUBLIC_KEY`, bez jego wypisywania. Nie tworzono ani nie zmieniano kluczy. Historyczne instrukcje tworzenia kluczy poniżej nie są obecnie czynnością do wykonania.
+
+### CI i publikacja
+
+- [CI obecnego main — SUCCESS](https://github.com/kapi1944/Ultimate_Pomagier_3_5/actions/runs/40347608168).
+- [Instalator Windows obecnego main — SUCCESS](https://github.com/kapi1944/Ultimate_Pomagier_3_5/actions/runs/40347607958). Odczyt kroków potwierdził sukces testów, lint, launchera, pakietowania i kompilacji testowej; podpisany stabilny build został pominięty.
+- Wyniki CI wskazanego `10443b1…` pozostają zapisane w historycznej części raportu. Nie powtarzano testów aplikacji, lint ani build; nie zmieniano kodu. Nie uruchamiano lokalnego Cargo ani nie instalowano zależności.
+- [Dystrybucja v4.0.0 — FAILURE](https://github.com/kapi1944/Ultimate_Pomagier_3_5/actions/runs/40469222583), dokładnie commit `a78d1ea0cbdd4f6bd4465db3c71011be0c760701`: Windows **SUCCESS**, WEB **SUCCESS**, Android **FAILURE**, szkic **SKIPPED**.
+- `publikacja-wydania.yml`: nie uruchomiono. Brak szkicu i APK blokuje publikację. Wymaganej akceptacji środowiska nie zmieniano.
+
+Przyczyna błędu Androida jest potwierdzona logiem zadania `122071981175`: akcja `android-actions/setup-android@v3` wywołuje domyślnie `sdkmanager tools`; odpowiedź SDK: `Failed to find package 'tools'`, kod 1. Awaria wystąpiła przed kompilacją i przygotowaniem klucza. Odczyt `action.yml` używanej wersji akcji potwierdził domyślne `packages: 'tools platform-tools'`.
+
+Przygotowano lokalną poprawkę jednej linii `.github/workflows/dystrybucja.yml`: jawne `packages: 'platform-tools'`. Następny istniejący krok nadal instaluje NDK 27.2.12479018, platformę 36 i build-tools 36.0.0. Nie zmieniano architektury, wersji akcji ani zależności. Poprawka nie została jeszcze uruchomiona w Actions; nie jest potwierdzonym sukcesem Androida. `npm run test:dystrybucja`: **13/13**, kod 0. Nie dodawano testu powielającego pojedynczą linię YAML. Samodzielna kontrola parserem YAML nie została wykonana — brak lokalnego modułu; nie instalowano zależności.
+
+Adres aktualizatora w konfiguracji i skrypcie podpisanego Windows jest zgodny z docelowym repozytorium: `https://github.com/kapi1944/Ultimate_Pomagier_3_5/releases/latest/download/latest.json`. Rzeczywisty `latest.json` wskazuje `https://github.com/kapi1944/Ultimate_Pomagier_3_5/releases/download/v4.0.0/Ultimate_Pomagier_4.0_Setup.exe`, wersję 4.0.0, platformę `windows-x86_64` i dokładnie podpis z pobranego pliku `.sig`. Adres pobierania pozostanie niedostępny do publikacji Release.
+
+### Status platform i odbioru
+
+| Platforma | Artefakt i podpisy | Test instalacyjny / uruchomieniowy |
+| --- | --- | --- |
+| Windows x64 | Podpisany build **SUCCESS**, artefakt Actions `Ultimate-Pomagier-Windows-1`, ID `12718520987`; SHA-256, wersja, metadane commita, podpis Tauri i latest.json **PASS**; Authenticode **NotSigned** | Instalacja, logowanie, zamknięcie, restart i zachowanie danych: **NIEZWERYFIKOWANE** |
+| Android ARM64 | Oficjalnego produkcyjnego APK brak. Certyfikat, applicationId, versionCode, ABI, brak debug i integralność: **NIEZWERYFIKOWANE** | Instalacja, logowanie, moduły, restart i zachowanie danych: **NIEZWERYFIKOWANE** |
+| WEB | Artefakt Actions `Ultimate-Pomagier-WEB`, ID `12718056501`; wersja, commit, manifest produkcyjny i SHA-256 zgodne | **PASS**: rzeczywiste archiwum w izolowanym profilu Chrome, syntetyczna sesja demo odrzucona, logowanie bez usługi kont odrzucone, brak błędów JavaScript |
+
+ZIP WEB: `Ultimate_Pomagier_4.0.0_WEB.zip`, **6553339 bajtów**, SHA-256 `d11e31b6d039ff93c9cc80140589d88053e15e36d15baf9172e2a4407ff6b8ac`. Po pobraniu porównano sumę i rozmiar z `wydanie-web.json`, odczytano ZIP oraz `wersja.json` i `tryb-frontendu.json`: wersja 4.0.0, commit `a78d1ea…`, czyste źródła i tryb produkcyjny. Test otworzył pliki wyłącznie na lokalnym serwerze, w nowym profilu Chrome, z odciętymi żądaniami do usług zewnętrznych. Nie używano rzeczywistych kont ani danych. Zapis lokalny: `tmp/etap433/web-odbior.json`, `tmp/etap433/web-odbior.png`; skrypt kontroli w tym samym ignorowanym katalogu. Test nie potwierdza logowania produkcyjnego — jego niedostępność bez usługi została sprawdzona.
+
+EXE Windows: `Ultimate_Pomagier_4.0_Setup.exe`, **227347370 bajtów**, SHA-256 `f996292cc2848c4f599a4bb24911226a304a48aba5a222ced6610a9974ca7de8`. Porównano rozmiar, hash pliku i wpis `.sha256` z `wydanie-windows.json`; metadane `wersja.json` wskazują wersję 4.0.0, zatwierdzony commit i czyste źródła. Zasoby wersji rzeczywistego EXE: FileVersion/ProductVersion 4.0.0. Podpis Tauri sprawdzono kryptograficznie przez Ed25519/BLAKE2b, wraz z podpisem komentarza i zgodnością identyfikatora publicznego klucza. Przed kontrolą EXE procedura przeszła poprawny i zmieniony wektor z lokalnego `minisign-verify` 0.3.0; nie kompilowano Rust. `latest.json` i hash pliku `.sig` są zgodne. Wynik lokalny: `tmp/etap433/windows-odbior.json`; skrypt kontroli i pobrane pliki w tym samym ignorowanym katalogu.
+
+`Get-AuthenticodeSignature` rzeczywistego EXE zwróciło **NotSigned**. Nie uruchamiano instalatora ani nie obchodzono polityk firmowego Windows. Kontrola produkcyjnego frontendu jest potwierdzona przez sukces istniejącego kroku budowania z `kontrolaTrybuFrontendu.mjs`; niezależny odbiór interfejsu wewnątrz zainstalowanego EXE pozostaje **NIEZWERYFIKOWANY**.
+
+Podpis Tauri nie zastępuje Authenticode. Istniejąca konfiguracja Windows nie zawiera podpisywania Authenticode; jego brak będzie ograniczeniem wdrożenia firmowego. Ewentualny wymóg i zatwierdzony sposób podpisania uzgodnić z IT. Archiwum WEB nie zapewnia usługi tożsamości ani produkcyjnego logowania. Dane pozostają lokalne dla urządzenia/profilu.
+
+### Pozostałe decyzje i czynności
+
+1. Właściciel zatwierdził `a78d1ea…`; tagowanie i pierwsza dystrybucja zostały wykonane. Nowa blokada wymaga osobnej decyzji: commit przygotowanej poprawki workflow na main, usunięcie nieopublikowanego tagu `v4.0.0` i odtworzenie go na nowym commicie oraz ponowna dystrybucja, bez force push. Zadano to pytanie przed zmianą istniejącego tagu. Do czasu decyzji tag pozostaje bez zmian; lokalnej poprawki nie commitowano ani nie wypychano.
+2. Po decyzji i ponownym sprawdzeniu stanu GitHub uruchomić istniejący `dystrybucja.yml` na zatwierdzonym tagu. Przygotowany opis rzeczywistych zmian znajduje się w `tmp/etap433/opis-zmian.md`; należy zaktualizować go do ostatecznego SHA. Automatyczny blok `pomagier-wydanie` ma pochodzić z workflow; nie tworzono zastępczego manifestu ani ręcznego Release.
+3. Odebrać ponownie komplet trzech artefaktów tego samego commita oraz prywatny szkic. Przeprowadzić odbiór na izolowanym Windows i Androidzie, z danymi syntetycznymi. Nie znaleziono lokalnie WindowsSandbox/VBoxManage ani skonfigurowanego AVD; testów instalacyjnych nie wykonano. WEB z pierwszego przebiegu odebrano, ale nowe archiwum wymaga kontroli zgodności. Brak obowiązkowego odbioru blokuje publikację.
+4. Po kompletnym odbiorze uruchomić `publikacja-wydania.yml` na tagu i pozostawić wymaganą akceptację właścicielowi w `wydania-produkcyjne`. Następnie sprawdzić publiczną widoczność i pobieranie plików.
+
+Docelowy [Release v4.0.0](https://github.com/kapi1944/Ultimate_Pomagier_3_5/releases/tag/v4.0.0) jeszcze nie istnieje. Lokalnie zmieniono wyłącznie ten raport i jedną linię workflow dystrybucji. Nie wykonano commita; push dotyczył wyłącznie nowego, zatwierdzonego tagu. Nie przełączano gałęzi, nie usuwano danych, nie zmieniano kluczy ani polityk bezpieczeństwa. Nie wykonywano lokalnego Cargo ani force push.
+
+## Historyczny przebieg — 26 października 2026
+
 Data kontroli: 26 października 2026, Europe/Warsaw.
 
 > Zapis historyczny kontroli przed konfiguracją. Później, na polecenie właściciela, utworzono pierwsze klucze produkcyjne, dodano sześć sekretów i dwie zmienne oraz skonfigurowano środowisko akceptacji. Aktualny stan opisuje [raport konsolidacji](konsolidacja-lokalnych-repozytoriow-2026-10-26.md). Nie utworzono tagu ani Release; poniższe informacje o brakującej konfiguracji odnoszą się do stanu początkowego.

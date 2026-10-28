@@ -75,6 +75,7 @@ type DodatekDyplomu = {
 type UczestnikDyplomu = {
   id: string
   imieNazwisko: string
+  adnotacja?: string
   czyPustyDyplom?: boolean
   numerRejestru: string
   idDodatkuGornego: string
@@ -932,6 +933,7 @@ function StronaDyplomu({ dane, uczestnik }: { dane: ZapisDyplomow; uczestnik: Uc
             <span>Pan/Pani</span>
             {uczestnik.czyPustyDyplom ? <span aria-label="Miejsce na imię i nazwisko" className="dyplom-kartka__miejsce-na-nazwisko" /> : <strong>{uczestnik.imieNazwisko || 'Imię i nazwisko'}</strong>}
           </div>
+          {uczestnik.adnotacja?.trim() && <div className="dyplom-kartka__adnotacja">{uczestnik.adnotacja}</div>}
           <div className="dyplom-kartka__ukonczenie">{pobierzZdanieUkonczenia(dane.trybTytulu)}</div>
           <div className="dyplom-kartka__tytul" style={{ fontSize: `${dane.rozmiarTytulu / 6.8}cqw` }}>
             {formatujTytulSzkolenia(dane.tytulSzkolenia)}
@@ -2181,6 +2183,13 @@ export default function WidokDyplomow() {
                             aria-label={`Imię i nazwisko uczestnika ${indeks + 1}`}
                             placeholder={uczestnik.czyPustyDyplom ? 'Do uzupełnienia ręcznie' : undefined}
                             value={uczestnik.imieNazwisko}
+                          />
+                          <input
+                            aria-label={`Adnotacja uczestnika ${indeks + 1}`}
+                            onChange={(zdarzenie) => zmienUczestnika(uczestnik.id, { adnotacja: zdarzenie.target.value })}
+                            placeholder="Np. nr wpisu"
+                            type="text"
+                            value={uczestnik.adnotacja ?? ''}
                           />
                         </td>
                         <td>

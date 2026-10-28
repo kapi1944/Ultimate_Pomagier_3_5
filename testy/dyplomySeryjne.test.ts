@@ -30,12 +30,13 @@ assert.equal(zbudujNazweEksportowanegoDokumentu(wspolneDaneNazwy), 'IIST_2026.10
 console.log('OK: wspólny szablon dyplomu otrzymuje seryjne dane uczestników')
 
 const uczestnicyIndywidualni = [
-  { id: 'a', imieNazwisko: 'Anna Kowalska', numerRejestru: 'A/1', dodatek: 'logo-a', drugaStrona: false },
-  { id: 'p', imieNazwisko: 'Piotr Nowak', numerRejestru: 'P/2', dodatek: 'logo-p', drugaStrona: true },
+  { id: 'a', imieNazwisko: 'Anna Kowalska', adnotacja: 'Nr wpisu: Pz-1826', numerRejestru: 'A/1', dodatek: 'logo-a', drugaStrona: false },
+  { id: 'p', imieNazwisko: 'Piotr Nowak', adnotacja: '', numerRejestru: 'P/2', dodatek: 'logo-p', drugaStrona: true },
 ]
-const utworz = (nazwa: string, indeks: number) => ({ id: `nowy-${indeks}`, imieNazwisko: nazwa, numerRejestru: '', dodatek: '', drugaStrona: true })
+const utworz = (nazwa: string, indeks: number) => ({ id: `nowy-${indeks}`, imieNazwisko: nazwa, adnotacja: '', numerRejestru: '', dodatek: '', drugaStrona: true })
 const poZmianieKolejnosci = polaczUczestnikowPoNazwie(parsujListeUczestnikow('Piotr Nowak\nAnna Kowalska\nAnna Kowalska'), uczestnicyIndywidualni, utworz)
 assert.deepEqual(poZmianieKolejnosci, [uczestnicyIndywidualni[1], uczestnicyIndywidualni[0]])
+assert.equal(JSON.parse(JSON.stringify(poZmianieKolejnosci))[1].adnotacja, 'Nr wpisu: Pz-1826')
 assert.deepEqual(parsujListeUczestnikow('Anna Kowalska\n Anna Kowalska ; firma\r\nPiotr Nowak\n'), ['Anna Kowalska', 'Piotr Nowak'])
 assert.deepEqual(polaczUczestnikowPoNazwie([], uczestnicyIndywidualni, utworz), [])
 assert.deepEqual(polaczUczestnikowPoNazwie(['Anna Kowalska'], uczestnicyIndywidualni, utworz), [uczestnicyIndywidualni[0]])

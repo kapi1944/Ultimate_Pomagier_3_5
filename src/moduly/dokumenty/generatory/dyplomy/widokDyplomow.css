@@ -928,6 +928,14 @@
   border-bottom: 0.15cqw solid currentColor;
 }
 
+.dyplom-kartka__adnotacja {
+  color: var(--semper-tekst);
+  font-size: 2.2cqw;
+  font-weight: 800;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
 .dyplom-kartka__ukonczenie {
   margin-bottom: 22px;
   color: var(--semper-tekst);
