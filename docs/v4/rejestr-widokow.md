@@ -117,7 +117,7 @@ Właściciel pliku obejmuje wszystkie warunki renderowania, stany pusty/błąd/�
 | Plik powierzchni | Właściciel kodu | Współdzielony z | Udział w ukończonych etapach | Liczba sygnatur |
 | --- | --- | --- | --- | --- |
 | `src/App.tsx` | V4-02 | — | — | 0 |
-| `src/aplikacja/desktop/PanelAktualizacji.tsx` | V4-22 | V4-02 | — | 1 |
+| `src/aplikacja/desktop/PanelAktualizacji.tsx` | V4-22 | V4-02 | — | 2 |
 | `src/aplikacja/layout/NaglowekAplikacji.tsx` | V4-02 | — | V4-02 | 1 |
 | `src/aplikacja/layout/UkladAplikacji.tsx` | V4-02 | V4-03, V4-04, V4-05, V4-06, V4-07, V4-08, V4-09, V4-10, V4-11, V4-12, V4-13, V4-14, V4-15, V4-16, V4-17, V4-18, V4-19, V4-20, V4-21, V4-22, V4-23 | V4-02, V4-05 | 7 |
 | `src/aplikacja/logowanie/KontekstUzytkownika.tsx` | V4-02 | — | — | 1 |

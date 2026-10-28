@@ -171,6 +171,14 @@ Bez jednoznacznego polecenia nie wykonuj `git reset --hard`, `git clean -fd`, `g
 
 Nie zakładaj, że zadanie wymaga commita. Gdy commit jest polecony: sprawdź dokładny diff, dodaj do stage tylko pliki zadania, sprawdź staged diff, uruchom odpowiednie testy i dopiero wtedy commituj. Przy pushu sprawdź stan `origin`, użyj zwykłego push i nie stosuj force push bez jasnej zgody.
 
+### Stała zgoda na standardowy push po commicie Codexa
+
+Użytkownik udziela stałej zgody na standardowy push po każdym commicie utworzonym przez Codex w ramach zaakceptowanych zadań. Nie pytaj osobno o zgodę na push. Zgoda nie zastępuje wymaganej akceptacji zadania ani jego punktów kontrolnych.
+
+Każdy taki commit musi zostać niezwłocznie wypchnięty do origin i potwierdzony na GitHub. Dla gałęzi main użyj `git push origin main` i potwierdź zgodność lokalnego HEAD z aktualnym zdalnym HEAD.
+
+Jeżeli push się nie powiedzie, nie twórz kolejnych commitów, dopóki problem nie zostanie rozwiązany. Nie wykonuj force push i nie obchodź ochrony gałęzi.
+
 Naprawiaj problem w najwęższym sensownym zakresie bez tworzenia lokalnego obejścia naruszającego architekturę. Nie wykonuj przy okazji dużych refaktorów, masowych zmian nazw, formatowania całych katalogów, wymiany bibliotek ani przebudowy UI. Pozostałe problemy zgłoś w raporcie.
 
 Przed usunięciem kodu sprawdź importy dynamiczne, konfiguracje, routing, testy, rejestry, lazy loading, eksporty barrel, storage, dane migracyjne i zależności historyczne. Usuwanie martwego kodu jest osobnym, świadomym zadaniem.

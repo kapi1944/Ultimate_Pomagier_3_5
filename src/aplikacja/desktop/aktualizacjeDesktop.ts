@@ -1,3 +1,12 @@
+export type KanalAktualizacji = 'stabilny' | 'testowy'
+
+export function czyZgodnaAktualizacja(obecna: string, dostepna: string, metadane: Record<string, unknown>, kanal: KanalAktualizacji, zgodnoscDanych: number): boolean {
+  return czyNowszaWersjaStabilna(obecna, dostepna)
+    && metadane.kanal === kanal
+    && metadane.zgodnoscDanych === zgodnoscDanych
+    && typeof metadane.commit === 'string' && /^[a-f0-9]{40}$/.test(metadane.commit)
+}
+
 export function czyNowszaWersjaStabilna(obecna: string, dostepna: string): boolean {
   const wzorzec = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/
   if (!wzorzec.test(obecna) || !wzorzec.test(dostepna)) return false

@@ -1,6 +1,10 @@
 import { execFileSync } from 'node:child_process'
 import { pathToFileURL } from 'node:url'
-import { resolve } from 'node:path'
+import { resolve, join } from 'node:path'
+import { mkdtempSync, readFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { createHash } from 'node:crypto'
+import { sprawdzPublikacjeWindows, sprawdzManifestKanalu } from './publikujAktualizacjeWindows.mjs'
 
 export function pobierzSzkicWydania(tag, repozytorium, wykonaj = execFileSync) {
   const identyfikator = wykonaj('gh', ['release', 'view', tag, '--repo', repozytorium, '--json', 'databaseId', '--jq', '.databaseId'], { encoding: 'utf8', windowsHide: true }).trim()
@@ -46,6 +50,22 @@ if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.m
     const manifest = sprawdzSzkicPublikacji(wydanie, tag, repozytorium)
     const commit = execFileSync('git', ['rev-parse', `${tag}^{commit}`], { encoding: 'utf8', windowsHide: true }).trim()
     if (commit !== manifest.commit) throw new Error('Tag nie wskazuje commita przygotowanych instalatorów.')
+    const katalog = mkdtempSync(join(tmpdir(), 'pomagier-zatwierdzenie-'))
+    const plikWindows = manifest.pliki.find(plik => plik.platforma === 'windows')
+    for (const nazwa of ['latest.json', 'windows-stabilny.json', plikWindows.nazwa + '.sig']) {
+      execFileSync('gh', ['release', 'download', tag, '--repo', repozytorium, '--pattern', nazwa, '--dir', katalog], { stdio: 'inherit', windowsHide: true })
+    }
+    const aktualizacja = JSON.parse(readFileSync(join(katalog, 'latest.json'), 'utf8'))
+    const kanal = JSON.parse(readFileSync(join(katalog, 'windows-stabilny.json'), 'utf8'))
+    const podpis = readFileSync(join(katalog, plikWindows.nazwa + '.sig'), 'utf8')
+    if (createHash('sha256').update(podpis).digest('hex') !== plikWindows.podpis.sha256) throw new Error('Niezgodny podpis artefaktu')
+    const wydania = JSON.parse(execFileSync('gh', ['api', '--paginate', '--slurp', 'repos/' + repozytorium + '/releases?per_page=100'], { encoding: 'utf8' })).flat()
+    sprawdzPublikacjeWindows(aktualizacja, wydania.filter(element => element.id !== wydanie.id), 'stabilny', tag, aktualizacja.notes)
+    sprawdzManifestKanalu(aktualizacja, kanal, manifest, podpis, repozytorium)
     execFileSync('gh', ['release', 'edit', tag, '--draft=false', '--latest'], { stdio: 'inherit', windowsHide: true })
+    if (!wydania.some(element => element.tag_name === 'windows-aktualizacje')) {
+      execFileSync('gh', ['release', 'create', 'windows-aktualizacje', '--repo', repozytorium, '--target', manifest.commit, '--prerelease', '--latest=false', '--title', 'Kanały aktualizacji Windows', '--notes', 'Manifesty zatwierdzonych wydań.'], { stdio: 'inherit', windowsHide: true })
+    }
+    execFileSync('gh', ['release', 'upload', 'windows-aktualizacje', join(katalog, 'windows-stabilny.json'), '--repo', repozytorium, '--clobber'], { stdio: 'inherit', windowsHide: true })
   } catch (blad) { console.error(blad.message); process.exitCode = 1 }
 }
