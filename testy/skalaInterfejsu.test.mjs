@@ -10,10 +10,11 @@ const style = new Map()
 globalThis.window = new EventTarget()
 globalThis.document = { documentElement: { dataset: {}, style: { setProperty: (klucz, wartosc) => style.set(klucz, wartosc) } } }
 globalThis.localStorage = { getItem: (klucz) => magazyn.get(klucz) ?? null, setItem: (klucz, wartosc) => magazyn.set(klucz, wartosc) }
-assert.equal(domyslneUstawieniaAplikacji.wyglad.skalaInterfejsu, 100)
+assert.equal(domyslneUstawieniaAplikacji.wyglad.skalaInterfejsu, 85)
 assert.equal(JSON.stringify(normalizujUstawieniaAplikacji(domyslneUstawieniaAplikacji)), JSON.stringify(domyslneUstawieniaAplikacji), 'Reset nie tworzy pozornych niezapisanych zmian')
-assert.equal(normalizujUstawieniaAplikacji({ wyglad: { paleta: 'CRM', promienKart: 17 } }).wyglad.skalaInterfejsu, 100)
-for (const [wejscie, wynik] of [[undefined, 100], [NaN, 100], [Infinity, 100], ['85', 100], [0, 70], [999, 130], [83, 85], [86, 85]]) assert.equal(normalizujSkaleInterfejsu(wejscie), wynik)
+assert.equal(normalizujUstawieniaAplikacji({ wyglad: { paleta: 'CRM', promienKart: 17 } }).wyglad.skalaInterfejsu, 85)
+for (const [wejscie, wynik] of [[undefined, 85], [NaN, 85], [Infinity, 85], ['85', 85], [0, 70], [999, 130], [83, 85], [86, 85]]) assert.equal(normalizujSkaleInterfejsu(wejscie), wynik)
+assert.equal(normalizujUstawieniaAplikacji({ wyglad: { skalaInterfejsu: 100 } }).wyglad.skalaInterfejsu, 100)
 
 for (const paleta of paletyInterfejsu) for (const gestosc of gestosciInterfejsu) for (const skala of [70, 85, 100, 115, 130]) {
   const ustawienia = normalizujUstawieniaAplikacji({ wyglad: { paleta, gestosc, skalaInterfejsu: skala }, nawigacja: { szerokoscMenu: 320 } })

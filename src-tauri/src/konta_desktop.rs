@@ -217,6 +217,8 @@ pub async fn otworz_obszar_konta(
         .map_err(|_| "Nie udało się przygotować magazynu danych konta.")?;
     let mut konfiguracja = aplikacja.config().app.windows[0].clone();
     konfiguracja.label = "obszar".into();
+    konfiguracja.width = 1500.0;
+    konfiguracja.height = 870.0;
     *stan
         .konto_okna
         .lock()

@@ -87,7 +87,7 @@ export const domyslneUstawieniaAplikacji: UstawieniaAplikacji = {
     promienPol: 6,
     czasPrzejsciaMs: 150,
     skalaHover: 1,
-    skalaInterfejsu: 100,
+    skalaInterfejsu: 85,
   },
   nawigacja: {
     szerokoscMenu: 280,
@@ -326,5 +326,5 @@ export function normalizujUstawieniaAplikacji(dane: unknown): UstawieniaAplikacj
 }
 
 export function normalizujSkaleInterfejsu(wartosc: unknown): number {
-  return Math.round(ograniczLiczbe(wartosc, 70, 130, 100) / 5) * 5
+  return Math.round(ograniczLiczbe(wartosc, 70, 130, domyslneUstawieniaAplikacji.wyglad.skalaInterfejsu) / 5) * 5
 }

@@ -4,5 +4,5 @@
     "beforeDevCommand": "npm run dev:demo -- --host localhost --port 1421 --strictPort",
     "devUrl": "http://localhost:1421"
   },
-  "app": { "windows": [{ "label": "main", "create": false, "title": "Ultimate Pomagier — DEMO", "useHttpsScheme": false, "dragDropEnabled": false }] }
+  "app": { "windows": [{ "label": "main", "create": false, "title": "Ultimate Pomagier — DEMO", "width": 1500, "height": 1000, "useHttpsScheme": false, "dragDropEnabled": false }] }
 }

@@ -1,10 +1,10 @@
 import { isTauri } from '@tauri-apps/api/core'
 import { getCurrentWebview } from '@tauri-apps/api/webview'
-import { normalizujSkaleInterfejsu } from './modelUstawienAplikacji'
+import { domyslneUstawieniaAplikacji, normalizujSkaleInterfejsu } from './modelUstawienAplikacji'
 import { rozpoznajPlatforme } from '../desktop/rejestrWydan'
 
 export const zdarzenieZmianySkaliInterfejsu = 'ultimatePomagier:zmianaSkaliInterfejsu'
-let skalaInterfejsu = 100
+let skalaInterfejsu = domyslneUstawieniaAplikacji.wyglad.skalaInterfejsu
 let czyZastosowano = false
 let kolejkaSkalowania = Promise.resolve()
 let bladSkalowania = ''
