@@ -117,7 +117,7 @@ export default function WidokListySzczegolowOrganizacyjnych({ otworzNoweSzczegol
         <div className="rejestr-szczegolow__lista">
           {rekordy.length === 0 && <PustyStan>Brak opublikowanych szczegółów organizacyjnych. Aby przygotować dokument, otwórz formularz szczegółów.</PustyStan>}
           {rekordy.map((rekord) => (
-            <KartaRejestruSzczegolow key={rekord.id} rodzaj="opublikowany" rekord={rekord} czyPodglad={podgladRekorduId === rekord.id}>
+            <KartaRejestruSzczegolow key={rekord.id} rodzaj="opublikowany" rekord={rekord} czyPodglad={podgladRekorduId === rekord.id} zamknijPodglad={() => ustawPodgladRekorduId(null)}>
               <div className="rejestr-szczegolow__workflow">
                 {czyStatusOczekujacy(rekord.status) && czyKontoMozeZaakceptowacSzczegoly(konto, rekord) && (
                   <Przycisk onClick={() => zaakceptujSzczegoly(rekord)}>Oznacz jako zaakceptowane</Przycisk>

@@ -64,6 +64,7 @@ export default function WidokKopiiRoboczychSzczegolowOrganizacyjnych({ otworzNow
           {widoczneKopie.map((kopia) => (
             <KartaRejestruSzczegolow
               key={kopia.id} rodzaj="kopia" rekord={kopia} czyPodglad={podgladKopiiId === kopia.id}
+              zamknijPodglad={() => ustawPodgladKopiiId(null)}
               aktualnaWersjaOpublikowana={opublikowane.find((rekord) => rekord.id === kopia.zrodloOpublikowanegoId)?.numerWersji}
             >
               <AkcjeRekordu

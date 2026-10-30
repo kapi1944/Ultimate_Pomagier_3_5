@@ -24,4 +24,4 @@ export function czyKontoMozeWidziecKopie(konto: KontoSzczegolow, kopia: WersjaRo
 export function czyKontoMozeEdytowacKopie(konto: KontoSzczegolow, kopia: WersjaRoboczaGeneratora) { return czyKontoArchitekta(konto) || kopia.dane.opiekunId === konto.id }
 export function czyKontoMozeZaakceptowacSzczegoly(konto: KontoSzczegolow, rekord: OpublikowaneSzczegolyOrganizacyjne) { return czyKontoArchitekta(konto) || (rekord.opiekunId === konto.id && czyMozeAkceptowac(pobierzUzytkownika(konto.id))) }
 export function czyKontoMozeCofnacStatus(konto: KontoSzczegolow, rekord: OpublikowaneSzczegolyOrganizacyjne) { return czyKontoMozeZaakceptowacSzczegoly(konto, rekord) }
-export function czyKontoMozeEdytowacSzczegoly(konto: KontoSzczegolow, opiekunId: string) { return czyKontoArchitekta(konto) || (Boolean(opiekunId) && opiekunId === konto.id) }
+export function czyKontoMozeEdytowacSzczegoly(konto: KontoSzczegolow, opiekunId: string, czyNowy = false) { return czyKontoArchitekta(konto) || (konto.status === 'AKTYWNY' && konto.rola === 'OPIEKUN' && (czyNowy || !opiekunId || opiekunId === konto.id)) }

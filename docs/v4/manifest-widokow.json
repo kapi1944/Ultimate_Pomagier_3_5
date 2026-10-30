@@ -1194,6 +1194,7 @@
         "aside inert={!czyPanelJakosciOtwarty} aria-label=\"Panel kontroli jakosci\" className={`szczegoly-panel-jakosci${czyPanelJakosciOtwarty ? ' szczegoly-panel-jakosci--otwarty' : ''}${czyPanelJakosciPrzypiety ? ' szczegoly-panel-jakosci--przypiety' : ''}`} id={idPaneluJakosci} onKeyDown={obsluzKlawiszPaneluJakosci} onMouseEnter={otworzPanelJakosci} onMouseLeave={(zdarzenie) => { if (!zdarzenie.currentTarget.closest('[data-regulacja-szerokosci]')) schowajPanelJakosciJesliOdpiety() }}",
         "button aria-label={czyPanelJakosciPrzypiety ? 'Odepnij panel kontroli jakosci' : 'Przypnij panel kontroli jakosci'} className=\"szczegoly-panel-jakosci__przycisk\" onClick={przelaczPrzypieciePaneluJakosci} title={czyPanelJakosciPrzypiety ? 'Odepnij panel' : 'Przypnij panel'} type=\"button\"",
         "button aria-label={czyWysuwaniePaneluJakosciWlaczone ? 'Wylacz automatyczne wysuwanie panelu jakosci' : 'Wlacz automatyczne wysuwanie panelu jakosci'} className=\"szczegoly-panel-jakosci__przycisk\" onClick={przelaczWysuwaniePaneluJakosci} title={czyWysuwaniePaneluJakosciWlaczone ? 'Wylacz wysuwanie' : 'Wlacz wysuwanie'} type=\"button\"",
+        "details",
         "div className=\"szczegoly-panel-jakosci__naglowek\"",
         "div className=\"szczegoly-panel-jakosci__sterowanie\"",
         "div className=\"szczegoly-panel-jakosci__strefa-aktywacji\" onMouseEnter={otworzPanelJakosciZKrawedzi} aria-hidden=\"true\"",
@@ -1492,6 +1493,18 @@
         "form className=\"profil-uzytkownika__formularz\" onSubmit={(zdarzenie) => { void zmien(zdarzenie) }}"
       ],
       "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
+    },
+    "src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/PodgladSzczegolow.tsx": {
+      "zadanie": "V4-06",
+      "powierzchnie": [
+        "OknoDialogowe otwarty zamknij={zamknij} tytul={`Szczegóły organizacyjne — ${dane.tytulSzkolenia || rekord.nazwa} · ${wersja}`}",
+        "details",
+        "details className=\"podglad-szczegolow__sekcja\" open={rozwinieta}"
+      ],
+      "ukonczoneEtapy": [
+        "V4-06"
+      ],
       "wspoldzieloneZ": []
     }
   },

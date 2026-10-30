@@ -195,7 +195,7 @@ Właściciel pliku obejmuje wszystkie warunki renderowania, stany pusty/błąd/�
 | `src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/SekcjaFormularza.tsx` | V4-07 | — | — | 0 |
 | `src/moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokKopiiRoboczychSzczegolowOrganizacyjnych.tsx` | V4-06 | — | V4-06 | 0 |
 | `src/moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokListySzczegolowOrganizacyjnych.tsx` | V4-06 | — | V4-06 | 3 |
-| `src/moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokNowychSzczegolowOrganizacyjnych.tsx` | V4-07 | — | — | 9 |
+| `src/moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokNowychSzczegolowOrganizacyjnych.tsx` | V4-07 | — | — | 10 |
 | `src/moduly/zamkniete/szkolenia/WidokSzkolenZamknietych.tsx` | V4-05 | — | V4-05 | 0 |
 | `src/moduly/zamkniete/szkolenia/generator_szczegolow/WidokGeneratoraSzczegolow.tsx` | V4-07 | — | — | 0 |
 | `src/wspolne/dokumenty/AkcjeEksportuPdf.tsx` | V4-09 | V4-10, V4-11, V4-12, V4-13, V4-14, V4-15 | — | 1 |
@@ -212,6 +212,7 @@ Właściciel pliku obejmuje wszystkie warunki renderowania, stany pusty/błąd/�
 | `src/wspolne/telefon/PoleTelefonu.tsx` | V4-07 | V4-20, V4-21 | — | 0 |
 | `src/aplikacja/layout/DockAplikacji.tsx` | V4-02 | — | V4-02 | 0 |
 | `src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/KartaRejestruSzczegolow.tsx` | V4-06 | — | V4-06 | 0 |
+| `src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/PodgladSzczegolow.tsx` | V4-06 | — | V4-06 | 3 |
 
 Wspólny lokalny styl obu ekranów szkoleń: `src/moduly/szkoleniaV4.css` — właściciel V4-05, używany przez oba widoki. W V4-06 inwentaryzację rozszerzono o lokalną kartę rejestru; zachowano wszystkie dotychczasowe sygnatury.
 

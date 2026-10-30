@@ -1,3 +1,4 @@
+import { KontekstZatwierdzania } from '../komponenty/zatwierdzaniePol'
 import { RegulacjaSzerokosci } from '../../../../wspolne/komponenty/RegulacjaSzerokosci'
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent, type ReactNode } from 'react'
 import { pobierzLokalizacjeZMagazynu } from '../../../../kartoteki/lokalizacje/magazynLokalizacji'
@@ -42,7 +43,8 @@ const sekcjeNawigacji = [
   { id: 'eksport-import', etykieta: 'JSON' },
 ]
 
-const opcjeOpiekunow = ['', ...opiekunowieSzczegolow.map((opiekun) => opiekun.id)]
+const nazwyOpiekunow = ['Kasia RB', 'Iza', 'Kamila', 'Dawid']
+const opcjeOpiekunow = ['', ...nazwyOpiekunow.flatMap((nazwa) => opiekunowieSzczegolow.filter((osoba) => osoba.id === nazwa).map((osoba) => osoba.id))]
 const kluczPrzypieciaPaneluJakosci = 'ultimatePomagier.panelJakosciPrzypiety'
 const kluczWysuwaniaPaneluJakosci = 'ultimatePomagier.panelJakosciWysuwanieZKrawedzi'
 const zdarzenieZmianyPreferencjiPaneluJakosci = 'ultimatePomagier:zmianaPreferencjiPaneluJakosci'
@@ -555,6 +557,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
     <section
       className={`widok szczegoly-organizacyjne${czyPanelJakosciPrzypiety ? ' szczegoly-organizacyjne--panel-przypiety' : ''}${czyPanelJakosciOtwarty ? ' szczegoly-organizacyjne--panel-otwarty' : ''}`}
     >
+      <KontekstZatwierdzania.Provider value={generator.czyTylkoPodglad ? null : { grupy: generator.grupy, zmien: generator.przelaczZatwierdzeniePola }}>
       <DostawcaBledowPol bledyPol={generator.bledyPol}>
       <div className="szczegoly-obszar-roboczy">
         <PasekStickySzczegolow
@@ -629,6 +632,12 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
               ))}
             </div>
           )}
+          {generator.daneFormularza.zrodloImportuMaila && (
+            <details>
+              <summary>Źródło ostatniego importu</summary>
+              <pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{generator.daneFormularza.zrodloImportuMaila}</pre>
+            </details>
+          )}
         </SekcjaFormularza>
 
         <SekcjaFormularza id="podstawowe-informacje" tytul="Podstawowe informacje">
@@ -650,6 +659,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
             <PoleWyboru
               etykieta="Opiekun"
               opcje={opcjeOpiekunow}
+              etykietyOpcji={{ '': 'Wybierz opiekuna', ...Object.fromEntries(nazwyOpiekunow.map((nazwa) => [nazwa, nazwa])) }}
               pole="opiekunId"
               statusyPol={generator.statusyPol}
               wartosc={generator.daneFormularza.opiekunId}
@@ -919,6 +929,11 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
           </div>
         </SekcjaFormularza>
         <SekcjaFormularza id="wysylka-paczki" tytul="Wysyłka paczki">
+          <div className="szczegoly-wiersz-wymogu">
+            <span>Wysyłka paczki na siedzibę odbiorcy</span>
+            <PrzelacznikTakNie etykieta="Wysyłka paczki na siedzibę odbiorcy" pole="wysylkaNaSiedzibeOdbiorcy" disabled={generator.czyTylkoPodglad} wlaczony={Boolean(generator.daneFormularza.wysylkaNaSiedzibeOdbiorcy)} ustawWlaczony={(wartosc) => generator.aktualizujDane((dane) => ({ ...dane, wysylkaPaczkiDotyczy: wartosc || dane.wysylkaPaczkiDotyczy, wysylkaNaSiedzibeOdbiorcy: wartosc }), 'wysylkaNaSiedzibeOdbiorcy')} />
+          </div>
+          <p>Przy włączonym powiązaniu adres jest pobierany z siedziby odbiorcy. Własna korekta adresu wyłącza powiązanie, zachowując wpisane dane.</p>
           <PrzelacznikTakNie
             etykieta="Wysyłka paczki dotyczy"
             wlaczony={generator.daneFormularza.wysylkaPaczkiDotyczy}
@@ -959,6 +974,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
               <PoleTekstowe disabled={!generator.daneFormularza.wysylkaPaczkiDotyczy} etykieta="Email" pole="odbiorcaPaczki.email" statusyPol={generator.statusyPol} typ="email" wartosc={generator.daneFormularza.odbiorcaPaczki.email} ustawWartosc={(wartosc) => generator.aktualizujDane((dane) => ({ ...dane, odbiorcaPaczki: { ...dane.odbiorcaPaczki, email: wartosc } }), 'odbiorcaPaczki.email')} />
             </div>
           </div>
+        <PoleTekstowe etykieta="Informacja na etykiecie" pole="odbiorcaPaczki.informacjaNaEtykiecie" statusyPol={generator.statusyPol} wartosc={generator.daneFormularza.odbiorcaPaczki.informacjaNaEtykiecie ?? ''} ustawWartosc={(wartosc) => generator.aktualizujDane((dane) => ({ ...dane, odbiorcaPaczki: { ...dane.odbiorcaPaczki, informacjaNaEtykiecie: wartosc } }), 'odbiorcaPaczki.informacjaNaEtykiecie')} />
         </SekcjaFormularza>
 
         <SekcjaFormularza id="wyslij-aktualizacje" tytul="Wyślij aktualizację">
@@ -1120,6 +1136,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
         />
       </aside>
       </DostawcaBledowPol>
+      </KontekstZatwierdzania.Provider>
     </section>
   )
 }

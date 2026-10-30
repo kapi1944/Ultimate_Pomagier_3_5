@@ -94,6 +94,9 @@ Uwagi dodatkowe: ${dane.dodatkoweWymogi.uwagiDodatkowe || '-'}
 
 WYSYŁKA PACZKI
 Dotyczy: ${formatujTakNie(dane.wysylkaPaczkiDotyczy)}
+Na siedzibę odbiorcy: ${formatujTakNie(Boolean(dane.wysylkaNaSiedzibeOdbiorcy))}
+Adres: ${dane.odbiorcaPaczki.ulica} ${dane.odbiorcaPaczki.nrBudynku}, ${dane.odbiorcaPaczki.kodPocztowy} ${dane.odbiorcaPaczki.miasto}
+Etykieta: ${dane.odbiorcaPaczki.informacjaNaEtykiecie || '-'}
 Odbiorca: ${dane.odbiorcaPaczki.nazwaFirmy || '-'}, ${dane.odbiorcaPaczki.imieNazwisko || '-'}, ${dane.odbiorcaPaczki.email || '-'}
 
 PROGRAM SZKOLENIA

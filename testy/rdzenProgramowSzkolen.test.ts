@@ -116,8 +116,11 @@ test('interlinia zachowuje się w kopii i autosave, a starsze dane zachowują do
   for (const mnoznikInterlinii of [undefined, null, '1.5', Number.NaN, Number.POSITIVE_INFINITY]) {
     assert.equal(normalizujProgramSzkolenia({ ustawienia: { mnoznikInterlinii } }).ustawienia.mnoznikInterlinii, 1)
   }
-  assert.equal(normalizujProgramSzkolenia({ ustawienia: { mnoznikInterlinii: 0 } }).ustawienia.mnoznikInterlinii, 0.8)
-  assert.equal(normalizujProgramSzkolenia({ ustawienia: { mnoznikInterlinii: 3 } }).ustawienia.mnoznikInterlinii, 2)
+  for (const mnoznikInterlinii of [0.6, 0.8, 1.65, 2, 3]) {
+    assert.equal(normalizujProgramSzkolenia({ ustawienia: { mnoznikInterlinii } }).ustawienia.mnoznikInterlinii, mnoznikInterlinii)
+  }
+  assert.equal(normalizujProgramSzkolenia({ ustawienia: { mnoznikInterlinii: 0 } }).ustawienia.mnoznikInterlinii, 0.6)
+  assert.equal(normalizujProgramSzkolenia({ ustawienia: { mnoznikInterlinii: 4 } }).ustawienia.mnoznikInterlinii, 3)
 })
 
 test('odstęp między dniami zachowuje się po zapisie i autosave, także przy wartości zero', () => {

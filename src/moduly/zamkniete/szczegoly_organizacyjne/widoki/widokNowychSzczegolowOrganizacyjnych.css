@@ -1509,3 +1509,7 @@ button.szczegoly-checklista__naglowek:hover {
     width: min(var(--szerokosc-panelu-jakosci), 45cqw);
   }
 }
+
+/* Zatwierdzanie pojedynczych danych importu, także dotykiem. */
+.szczegoly-pole__naglowek > span:has(> button) { display: inline-flex; flex-wrap: wrap; gap: 0.35rem; }
+.szczegoly-pole__naglowek > span > button { min-height: 32px; padding: 0.25rem 0.5rem; border: 1px solid currentColor; border-radius: 0.35rem; font: inherit; cursor: pointer; }

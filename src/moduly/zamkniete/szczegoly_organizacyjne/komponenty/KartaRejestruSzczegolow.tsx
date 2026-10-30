@@ -3,10 +3,12 @@ import { Komunikat, OdznakaStatusu } from '../../../../wspolne/komponenty/Elemen
 import type { OpublikowaneSzczegolyOrganizacyjne, WersjaRoboczaGeneratora } from '../typy'
 import { pobierzKolorTlaOpiekuna, pobierzNazweOpiekuna } from '../uzytkownicySzczegolow'
 import { formatujDateRejestru, oznaczeniaStatusowSzczegolow, oznaczeniaStatusowSzkolenia } from '../prezentacjaRejestruSzczegolow'
+import { PodgladSzczegolow } from './PodgladSzczegolow'
 
 type WlasciwosciKarty = {
   children: ReactNode
   czyPodglad: boolean
+  zamknijPodglad: () => void
 } & (
   | { rodzaj: 'opublikowany'; rekord: OpublikowaneSzczegolyOrganizacyjne }
   | { rodzaj: 'kopia'; rekord: WersjaRoboczaGeneratora; aktualnaWersjaOpublikowana?: number }
@@ -54,7 +56,7 @@ export function KartaRejestruSzczegolow(wlasciwosci: WlasciwosciKarty) {
       </dl>
       {czyHistorycznaBaza && <Komunikat status="warning">Szkic opiera się na historycznej wersji opublikowanej. Aktualna wersja dokumentu: {wlasciwosci.aktualnaWersjaOpublikowana}. Sprawdź podstawę aktualizacji przed publikacją.</Komunikat>}
       <div className="rejestr-szczegolow__akcje">{children}</div>
-      {czyPodglad && <Komunikat>Podgląd: {dane.tytulSzkolenia || rekord.nazwa} · {rekord.grupy.length} grup. {czyOpublikowany ? 'Dokument opublikowany.' : 'Kopia robocza — zapisane wartości pozostają niezmienione.'}</Komunikat>}
+      {czyPodglad && <PodgladSzczegolow rekord={rekord} zamknij={wlasciwosci.zamknijPodglad} />}
     </article>
   )
 }

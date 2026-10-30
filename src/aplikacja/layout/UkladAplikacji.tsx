@@ -57,6 +57,7 @@ const kluczAktywnegoWidoku = 'ultimate-pomagier-aktywny-widok'
 
 type OpcjeZmianyWidoku = {
   zachowajKopieProgramu?: boolean
+  zachowajKopieSzczegolow?: boolean
   pomijajOstrzezenie?: boolean
   uzytkownikId?: string
 }
@@ -216,9 +217,9 @@ function renderujWidok(
     case 'generator-szczegolow':
       return <WidokGeneratoraSzczegolow otworzDokument={otworzDokument} />
     case 'zamkniete_szczegoly_organizacyjne_lista':
-      return <WidokListySzczegolowOrganizacyjnych otworzNoweSzczegoly={() => ustawAktywnyWidok('zamkniete_szczegoly_organizacyjne_nowe')} />
+      return <WidokListySzczegolowOrganizacyjnych otworzNoweSzczegoly={() => ustawAktywnyWidok('zamkniete_szczegoly_organizacyjne_nowe', { zachowajKopieSzczegolow: true })} />
     case 'zamkniete_szczegoly_organizacyjne_kopie_robocze':
-      return <WidokKopiiRoboczychSzczegolowOrganizacyjnych otworzNoweSzczegoly={() => ustawAktywnyWidok('zamkniete_szczegoly_organizacyjne_nowe')} />
+      return <WidokKopiiRoboczychSzczegolowOrganizacyjnych otworzNoweSzczegoly={() => ustawAktywnyWidok('zamkniete_szczegoly_organizacyjne_nowe', { zachowajKopieSzczegolow: true })} />
     case 'zamkniete_szczegoly_organizacyjne_nowe':
       return <WidokNowychSzczegolowOrganizacyjnych key={wersjaFormularzaSzczegolow} otworzDokument={otworzDokument} />
     case 'szkolenia-otwarte':
@@ -359,7 +360,7 @@ export default function UkladAplikacji() {
     }
 
     if (widok === 'zamkniete_szczegoly_organizacyjne_nowe') {
-      rozpocznijNoweSzczegolyOrganizacyjne()
+      if (!opcje.zachowajKopieSzczegolow) rozpocznijNoweSzczegolyOrganizacyjne()
       ustawWersjeFormularzaSzczegolow((obecna) => obecna + 1)
     }
 

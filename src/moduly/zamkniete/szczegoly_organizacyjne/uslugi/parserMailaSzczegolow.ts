@@ -1,3 +1,6 @@
+import { czyPaczkaNaSiedzibe } from '../logikaWysylkiPaczki'
+import { parsujNumeryTelefonu } from '../../../../wspolne/parsery/parserNumerowTelefonu'
+import { normalizujTekst, normalizujTrescMaila, czyWierszJestEtykieta, znajdzSekcjeMaila, etykietyPolMaila, parsujLiczbeUczestnikow, parsujGodzinySzkolenia, parsujKwoteMaila } from './analizaTresciMaila'
 import type {
   DaneFirmy,
   DaneFormularza,
@@ -11,56 +14,21 @@ import type {
   WynikParseraMailaSzczegolow,
 } from '../typy'
 import { poczatkoweDaneFormularza } from '../danePoczatkowe'
+import type { KlientKartoteki } from '../../../../kartoteki/klienciKartoteki'
 import type { Uzytkownik } from '../../../../kartoteki/uzytkownicy/typyUzytkownikow'
 
 type KartotekiImportu = {
   trenerzy?: readonly TrenerKartoteki[]
   opiekunowie?: readonly Uzytkownik[]
+  klienci?: readonly KlientKartoteki[]
   czyLokalizacjaPotwierdzona?: (miejsce: string) => boolean
 }
 
 const etykietyMiejsca = ['Miejsce', 'Lokalizacja', 'Adres szkolenia', 'Miejsce szkolenia', 'Miejsce szkolenia zapewnione przez Zamawiającego', 'Sala szkoleniowa zapewniona przez Zamawiającego']
-const etykietyKlienta = ['Nazwa klienta', 'Klient', 'Nazwa firmy']
-
-function normalizujTekst(tekst: string) {
-  return tekst
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/ł/g, 'l')
-}
+const etykietyKlienta = etykietyPolMaila.klient
 
 function zabezpieczWyrazenie(tekst: string) {
   return tekst.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
-
-function normalizujTrescMaila(tresc: string) {
-  const encje: Record<string, string> = {
-    nbsp: ' ', amp: '&', lt: '<', gt: '>', quot: '"', apos: "'",
-    ensp: ' ', emsp: ' ', thinsp: ' ', ndash: '–', mdash: '—',
-    colon: ':', tab: ' ', newline: '\n', laquo: '„', raquo: '”',
-    ldquo: '„', rdquo: '”', shy: '', zwj: '', zwnj: '',
-  }
-  return tresc
-    .replace(/\r\n?/g, '\n')
-    .replace(/[\u2028\u2029]/g, '\n')
-    .replace(/<!--[\s\S]*?-->|<(style|script)\b[^>]*>[\s\S]*?<\/\1>/gi, '')
-    .replace(/<(?:br|hr)\b[^>]*>|<\/?(?:p|div|tr|td|th|table|li|h[1-6])\b[^>]*>/gi, '\n')
-    .replace(/<\/?[a-z][a-z\d:-]*(?:\s[^<>]*)?\s*\/?>/gi, '')
-    .replace(/&(#x[\da-f]+|#\d+|[a-z]+);/gi, (calosc, encja: string) => {
-      if (!encja.startsWith('#')) return encje[encja.toLowerCase()] ?? calosc
-      const kod = encja[1].toLowerCase() === 'x' ? parseInt(encja.slice(2), 16) : Number(encja.slice(1))
-      return kod > 0 && kod <= 0x10ffff ? String.fromCodePoint(kod) : calosc
-    })
-    .replace(/[\u200b\uFEFF\u00ad]|\u200c|\u200d/g, '')
-    .replace(/\*\*|__/g, '')
-    .split('\n')
-    .map((wiersz) => wiersz.replace(/[^\S\n]+/g, ' ').trim().replace(/^(?:>\s*|#{1,6}\s+|[-*•–—]\s*(?=\p{L}))/gu, ''))
-    .join('\n')
-}
-
-function czyWierszJestEtykieta(wiersz: string) {
-  return /^[\p{L}][\p{L}\d .()/-]*\s*(?::|\s[-–—]\s)/u.test(wiersz.trim())
 }
 
 function znajdzWartoscWNastepnejLinii(wiersze: string[], indeks: number) {
@@ -86,7 +54,9 @@ function rozdzielNaglowkiWiadomosci(tresc: string) {
     const wartoscNaglowka = naglowek ? naglowek[2].trim() || znajdzWartoscWNastepnejLinii(wiersze, indeks) : ''
     const czyNaglowekAdresowy = ['od', 'from', 'nadawca', 'do', 'to', 'adresat'].some((nazwa) => Boolean(naglowki[nazwa]))
     const zakresDat = znajdzDaty(wartoscNaglowka)
-    const czyDataSzkolenia = naglowek && normalizujTekst(naglowek[1]) === 'data' && (!czyWBlokuNaglowkow || zakresDat.dataOd !== zakresDat.dataDo || !czyNaglowekAdresowy && !/\d{1,2}:\d{2}/.test(wartoscNaglowka))
+    const nastepnyWiersz = wiersze.slice(indeks + 1).find((wiersz) => wiersz.trim()) ?? ''
+    const czyNastepnyNaglowek = /^(?:Temat|Subject|Do|To|DW|Cc|Adresat|Załączniki|Attachments)\s*:/i.test(nastepnyWiersz)
+    const czyDataSzkolenia = naglowek && normalizujTekst(naglowek[1]) === 'data' && (!czyWBlokuNaglowkow || zakresDat.dataOd !== zakresDat.dataDo || !/\d{1,2}:\d{2}/.test(wartoscNaglowka) && (!czyNaglowekAdresowy || !czyNastepnyNaglowek))
     if (!naglowek || czyDataSzkolenia) {
       trescWlasciwa.push(wiersze[indeks])
       if (wiersze[indeks].trim()) czyWBlokuNaglowkow = false
@@ -113,43 +83,19 @@ function znajdzPoEtykiecie(tresc: string, etykiety: string[]) {
 }
 
 function znajdzWartosciPoEtykiecie(tresc: string, etykiety: string[]) {
-  const wzorEtykiet = etykiety.map((etykieta) => zabezpieczWyrazenie(normalizujTekst(etykieta))).join('|')
-  const wzor = new RegExp(`^[ \\t]*(?:${wzorEtykiet})[ \\t]*[:\\-–—][ \\t]*(.*)$`, 'i')
-  const wiersze = tresc.split('\n')
-  const wartosci: string[] = []
-  for (let indeks = 0; indeks < wiersze.length; indeks += 1) {
-    let wiersz = wiersze[indeks]
-    for (let koniec = indeks; koniec < Math.min(indeks + 5, wiersze.length); koniec += 1) {
-      if (koniec > indeks && wiersze[koniec].trim()) wiersz += ` ${wiersze[koniec]}`
-      const dopasowanie = normalizujTekst(wiersz).match(wzor)
-      if (dopasowanie) {
-        const wartosc = wiersz.slice(dopasowanie[0].length - dopasowanie[1].length).trim()
-          || znajdzWartoscWNastepnejLinii(wiersze, koniec)
-        if (wartosc) wartosci.push(wartosc)
-        break
-      }
-      if (!wiersz.trim() || !etykiety.some((etykieta) => normalizujTekst(etykieta).startsWith(normalizujTekst(wiersz).trim()))) break
-    }
-  }
-  return wartosci
+  return znajdzSekcjeMaila(tresc, etykiety).map((sekcja) => sekcja.wartosc.split('\n')[0]).filter(Boolean)
 }
 
 function znajdzBlokPoEtykiecie(tresc: string, etykiety: string[]) {
-  const wiersze = tresc.split('\n')
-  const indeks = wiersze.findIndex((wiersz) => etykiety.some((etykieta) => new RegExp(`^${zabezpieczWyrazenie(normalizujTekst(etykieta))}\\s*[:–—-]`).test(normalizujTekst(wiersz))))
-  if (indeks < 0) return ''
-  const blok = [wiersze[indeks].replace(/^[^:–—-]*[:–—-]\s*/, '')]
-  for (const wiersz of wiersze.slice(indeks + 1)) {
-    if (czyWierszJestEtykieta(wiersz) || /^(?:grupa\b|program szkolenia|harmonogram szkolenia)/i.test(wiersz)) break
-    if (wiersz.trim()) blok.push(wiersz)
-  }
-  return blok.filter(Boolean).join('\n')
+  return znajdzSekcjeMaila(tresc, etykiety)[0]?.wartosc ?? ''
 }
 
 function podzielKonteksty(tresc: string) {
   const dane: string[] = []
   const materialy: string[] = []
   const wysylki: string[][] = []
+  const priorytetyWysylek: number[] = []
+  let czyKontaktPaczki = false
   let sekcja: 'dane' | 'wysylka' | 'pomijana' = 'dane'
   let pierwszaGrupa = ''
   let czyPierwszaGrupa = true
@@ -184,7 +130,9 @@ function podzielKonteksty(tresc: string) {
       continue
     }
     if (aktywnaGrupa) blokiGrup.get(aktywnaGrupa)?.push(wiersz)
-    if (/^(?:dla [\p{L} ]+:\s*)?(?:materialy (?:na adres|do wysylki)|adres (?:do )?(?:wysylki|dostawy)|dane (?:do wysylki|odbiorcy paczki)|wysylka (?:materialow|paczki)|odbiorca (?:materialow|paczki))\b/u.test(tekst)) {
+    if (/^(?:dla [\p{L} ]+:\s*)?(?:materialy (?:na adres|do wysylki|wyslac na adres)|materialy szkoleniowe wyslac do|przesylka na adres|paczka na adres|adres odbiorcy|adres (?:do )?(?:wysylki|dostawy)|dane (?:do wysylki|odbiorcy paczki)|wysylka (?:materialow|paczki)|odbiorca (?:materialow|paczki))\b/u.test(tekst)) {
+      czyKontaktPaczki = false
+      if (czyPierwszaGrupa) priorytetyWysylek.push(/^adres odbiorcy/.test(tekst) ? 2 : 1)
       sekcja = 'wysylka'
       if (czyPierwszaGrupa) wysylki.push([wiersz.includes(':') ? wiersz.slice(wiersz.lastIndexOf(':') + 1).trim() : ''])
       continue
@@ -193,6 +141,10 @@ function podzielKonteksty(tresc: string) {
       sekcja = 'pomijana'
       continue
     }
+    if (sekcja === 'wysylka' && /kontakt do odbioru paczki|informacj[ae] na etykiet/.test(tekst)) czyKontaktPaczki = true
+    if (sekcja === 'wysylka' && czyKontaktPaczki && /^materialy szkoleniowe\s*:?$/.test(tekst)) { wysylki.at(-1)?.push(wiersz); continue }
+    if (/^(?:trener(?: prowadzacy)?|prowadzac[ya](?: szkolenie)?|liczba (?:uczestnikow|osob|godzin)|ilosc uczestnikow|uczestnicy|cena(?: netto| brutto)?|termin platnosci|lista uczestnikow|materialy szkoleniowe|certyfikaty|lista obecnosci|materialy dodatkowe|ankiety)\s*:/.test(tekst)) sekcja = 'dane'
+    if (/^(?:dane osoby kontaktowej|kontakt po stronie klienta)\s*:/.test(tekst)) sekcja = 'dane'
     if (/^(?:dane szkolenia|szczegoly szkolenia|podstawowe informacje|dokumentacja|dyspozycje materialowe|dane nabywcy|dane do faktury)\s*:?$/.test(tekst)) sekcja = 'dane'
     if (/^(?:(?:adres|miejsce|forma|tryb|data) szkolenia\s*:|sala szkoleniowa\b)/.test(tekst)) sekcja = 'dane'
     if (!czyPierwszaGrupa || /^dla [\p{L} ]+:\s*$/u.test(tekst)) continue
@@ -202,7 +154,7 @@ function podzielKonteksty(tresc: string) {
       materialy.push(wiersz)
     }
   }
-  return { dane: dane.join('\n'), materialy: materialy.join('\n'), wysylki: wysylki.map((wiersze) => wiersze.join('\n')), blokiGrup: [...blokiGrup.values()].map((blok) => blok.join('\n')) }
+  return { dane: dane.join('\n'), materialy: materialy.join('\n'), wysylki: wysylki.filter((_, indeks) => priorytetyWysylek[indeks] === Math.min(...priorytetyWysylek)).map((wiersze) => wiersze.join('\n')), blokiGrup: [...blokiGrup.values()].map((blok) => blok.join('\n')) }
 }
 
 const etykietyDyspozycji: Record<RodzajDyspozycjiMaterialowej, string[]> = {
@@ -213,12 +165,15 @@ const etykietyDyspozycji: Record<RodzajDyspozycjiMaterialowej, string[]> = {
   ankiety: ['Ankiety', 'Ankieta', 'Ankiety ewaluacyjne', 'Ank.'],
 }
 
-function parsujDyspozycje(wartosc: string): DyspozycjaMaterialowa {
+function parsujDyspozycje(wartosc: string, nazwaKlienta = ''): DyspozycjaMaterialowa {
   const tekst = normalizujTekst(wartosc)
   const dyspozycja: DyspozycjaMaterialowa = { tekstZrodlowy: wartosc, status: 'zaimportowane' }
   const czyOnline = /\bon[ -]?line\b|elektroniczn|cyfrow|\bpdf\b|e-?mail/.test(tekst)
   const papier = /druk|papier/.test(tekst)
-  const klient = /\bklient(?:a|owi|em)?\b|zamawiajac/.test(tekst)
+  const skrotKlienta = normalizujTekst((nazwaKlienta.match(/\p{Lu}/gu) ?? []).join('')).replace(/i/g, '')
+  const drukujacy = tekst.match(/drukuje\s+(\p{L}+)/u)?.[1]?.replace(/i/g, '') ?? ''
+  const klientZKontekstu = drukujacy.length >= 4 && skrotKlienta.startsWith(drukujacy)
+  const klient = klientZKontekstu || /\bklient(?:a|owi|em)?\b|zamawiajac/.test(tekst)
   const organizator = /organizator|semper|iist|\bmy\b/.test(tekst)
   const poSzkoleniu = /po (?:szkoleniu|zakonczeniu(?: szkolenia)?|kursie)/.test(tekst)
   const przedSzkoleniem = /przed (?:szkoleniem|rozpoczeciem(?: szkolenia)?|kursem)/.test(tekst)
@@ -231,12 +186,12 @@ function parsujDyspozycje(wartosc: string): DyspozycjaMaterialowa {
   return dyspozycja
 }
 
-function rozpoznajDyspozycje(tresc: string) {
+function rozpoznajDyspozycje(tresc: string, nazwaKlienta = '') {
   const dyspozycje: DyspozycjeMaterialowe = {}
   for (const rodzaj of Object.keys(etykietyDyspozycji) as RodzajDyspozycjiMaterialowej[]) {
     const wartosci = znajdzWartosciPoEtykiecie(tresc, etykietyDyspozycji[rodzaj])
     if (!wartosci.length) continue
-    const dyspozycja = parsujDyspozycje(wartosci[0])
+    const dyspozycja = parsujDyspozycje(wartosci[0], nazwaKlienta)
     if (new Set(wartosci.map(normalizujTekst)).size > 1) {
       dyspozycje[rodzaj] = { tekstZrodlowy: wartosci.join('\n'), status: 'niepewne' }
     } else dyspozycje[rodzaj] = dyspozycja
@@ -245,10 +200,15 @@ function rozpoznajDyspozycje(tresc: string) {
 }
 
 function rozpoznajOdbiorcePaczki(tresc: string) {
+  tresc = tresc.replace(/\b(\d{2})(?:\s*[-–—]\s*|\s+)(\d{3})(?=\s+\p{L}|$)/gu, '$1-$2')
   const wiersze = tresc.split('\n').map((wiersz) => wiersz.trim()).filter(Boolean)
   const dane: Partial<DaneFormularza['odbiorcaPaczki']> = {}
-  const nazwa = znajdzPoEtykiecie(tresc, ['Nazwa firmy', 'Nazwa odbiorcy', 'Odbiorca', 'Firma'])
-    || wiersze.find((wiersz) => !czyWierszJestEtykieta(wiersz) && !/^(?:ul\.|\d|tel\.|kontakt)/i.test(wiersz) && !znajdzEmail(wiersz))
+  const fragmentyNazwy: string[] = []
+  for (const [indeks, wiersz] of wiersze.entries()) {
+    if (/^(?:ul\.|ulica\b|al\.|aleja\b|pl\.|\d|tel\.|kontakt|informacja|\+)/i.test(wiersz) || indeks > 0 && czyWierszJestEtykieta(wiersz) || /\s\d+[a-z]?(?:\/\d+[a-z]?)?$/i.test(wiersz)) break
+    fragmentyNazwy.push(wiersz.replace(/^(?:Nazwa firmy|Nazwa odbiorcy|Odbiorca|Firma)\s*:\s*/i, ''))
+  }
+  const nazwa = fragmentyNazwy.filter(Boolean).join(' ') || znajdzPoEtykiecie(tresc, ['Nazwa firmy', 'Nazwa odbiorcy', 'Odbiorca', 'Firma'])
   if (nazwa) dane.nazwaFirmy = nazwa
   const adres = znajdzPoEtykiecie(tresc, ['Adres', 'Adres odbiorcy'])
   const indeksKodu = wiersze.findIndex((wiersz) => /^\d{2}-\d{3}\s/.test(wiersz))
@@ -271,7 +231,14 @@ function rozpoznajOdbiorcePaczki(tresc: string) {
   if (miasto) dane.miasto = miasto
   const kontakt = znajdzPoEtykiecie(tresc, ['Kontakt', 'Osoba kontaktowa', 'Osoba do kontaktu', 'Imię i nazwisko', 'Imię i nazwisko odbiorcy'])
   if (kontakt) dane.imieNazwisko = kontakt
-  const telefon = znajdzPoEtykiecie(tresc, ['Telefon', 'Tel.', 'Tel', 'Telefon kontaktowy'])
+  const indeksEtykiety = wiersze.findIndex((wiersz) => /informacj[ae] na etykiet|dopisek na etykiet/i.test(wiersz))
+  if (indeksEtykiety >= 0) {
+    const poDwukropku = wiersze[indeksEtykiety].split(':').slice(1).join(':').trim()
+    dane.informacjaNaEtykiecie = (poDwukropku || wiersze[indeksEtykiety + 1] || '').replace(/:$/, '')
+  }
+  const indeksKontaktu = wiersze.findIndex((wiersz) => /^kontakt do odbioru paczki/i.test(wiersz))
+  if (!kontakt && indeksKontaktu >= 0) dane.imieNazwisko = wiersze.slice(indeksKontaktu + 1).find((wiersz) => !/informacj[ae] na etykiet|^\+|^(?:tel\.?|telefon|nr telefonu|kom\.?)\b/i.test(wiersz) && !czyWierszJestEtykieta(wiersz) && !znajdzEmail(wiersz) && wiersz !== dane.informacjaNaEtykiecie)
+  const telefon = znajdzPoEtykiecie(tresc, ['Telefon', 'Tel.', 'Tel', 'Telefon kontaktowy', 'Nr telefonu', 'Kom.'])
     || tresc.match(/\btel\.?\s*(\+?\d[\d ()-]{6,})/i)?.[1] || ''
   if (telefon) dane.telefon = znajdzTelefon(telefon)
   const email = znajdzEmail(tresc)
@@ -492,33 +459,27 @@ export function parsujMailaSzczegolow(tresc: string, kartoteki: KartotekiImportu
     }
   }
 
-  const nazwaKlienta = znajdzPoEtykiecie(tresc, etykietyKlienta)
+  const blokKlienta = znajdzBlokPoEtykiecie(tresc, etykietyKlienta)
+  const wierszeNazwy: string[] = []
+  for (const wiersz of blokKlienta.split('\n')) {
+    if (/^(?:ul\.?\s|ulica\s|al\.?\s|aleja\s|pl\.?\s|\d{2}-\d{3}\b)/i.test(wiersz) || wierszeNazwy.length > 0 && /\s\d+[a-z]?(?:\/\d+[a-z]?)?[, ]*$/i.test(wiersz)) break
+    if (wiersz.trim()) wierszeNazwy.push(wiersz.trim())
+  }
+  const nazwaKlienta = wierszeNazwy.join(' ')
   if (nazwaKlienta) {
     daneFormularza.nazwaKlienta = nazwaKlienta
     dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'podstawowe informacje', 'nazwaKlienta')
   }
 
-  const jawnyOpiekun = znajdzPoEtykiecie(tresc, ['Opiekun szkolenia', 'Opiekun', 'Osoba odpowiedzialna za szkolenie'])
-  const opiekunowie = (kartoteki.opiekunowie ?? []).filter((osoba) => osoba.rola === 'OPIEKUN' && osoba.status === 'AKTYWNY' && ['SEMPER', 'IIST'].includes(osoba.organizacja))
-  const nazwaOpiekuna = (osoba: Uzytkownik) => `${osoba.imie} ${osoba.nazwisko}`
-  const emaileOpiekuna = (osoba: Uzytkownik) => [...osoba.emaile, osoba.email]
-  const nadawca = wiadomosc.naglowki.nadawca ?? wiadomosc.naglowki.od ?? wiadomosc.naglowki.from ?? ''
-  const domenaNadawcy = znajdzEmail(nadawca).toLowerCase().split('@')[1]
-  const czyFirmowaDomena = domenaNadawcy && opiekunowie.some((osoba) => emaileOpiekuna(osoba).some((email) => email.toLowerCase().split('@')[1] === domenaNadawcy))
-  const kandydatOpiekuna = jawnyOpiekun || (czyFirmowaDomena ? nadawca : '')
-  let dopasowaniaOpiekuna = kandydatOpiekuna
-    ? dopasujOsobe(kandydatOpiekuna, opiekunowie, nazwaOpiekuna, emaileOpiekuna)
-    : []
-  if (!jawnyOpiekun && dopasowaniaOpiekuna.length !== 1) {
-    const zeStopki = [...new Map(wiadomosc.stopka.split('\n').flatMap((wiersz) => dopasujOsobe(wiersz, opiekunowie, nazwaOpiekuna, emaileOpiekuna)).map((osoba) => [osoba.id, osoba])).values()]
-    if (zeStopki.length) dopasowaniaOpiekuna = zeStopki
-  }
-  if (dopasowaniaOpiekuna.length === 1) {
-    daneFormularza.opiekunId = dopasowaniaOpiekuna[0].id
+  const jawnyOpiekun = znajdzPoEtykiecie(tresc, ['Opiekun szkolenia', 'Opiekun', 'Osoba odpowiedzialna za szkolenie', 'Osoba odpowiedzialna', 'Opiekun projektu'])
+  const opiekunowie = (kartoteki.opiekunowie ?? []).filter((osoba) => osoba.rola === 'OPIEKUN' && osoba.status === 'AKTYWNY')
+  const dopasowania = jawnyOpiekun ? opiekunowie.filter((osoba) => [osoba.id, osoba.pseudonim, osoba.imie, osoba.imie + ' ' + osoba.nazwisko, ...osoba.aliasyHistoryczne, ...osoba.emaile].some((nazwa) => normalizujTekst(nazwa).trim() === normalizujTekst(jawnyOpiekun).trim())) : []
+  if (dopasowania.length === 1) {
+    daneFormularza.opiekunId = dopasowania[0].id
     dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'opiekun', 'opiekunId')
-  } else if (kandydatOpiekuna || dopasowaniaOpiekuna.length) {
+  } else if (jawnyOpiekun) {
     dodajNiepewne(polaNiepewne, 'opiekunId')
-    ostrzezenia.push(`Opiekun: wybierz rekord kartoteki dla „${kandydatOpiekuna || wiadomosc.stopka.trim()}”.`)
+    ostrzezenia.push('Opiekun: wybierz rekord kartoteki dla „' + jawnyOpiekun + '”.')
   }
 
   const nazwaGrupy = znajdzPoEtykiecie(tresc, ['Grupa', 'Nazwa grupy'])
@@ -527,11 +488,16 @@ export function parsujMailaSzczegolow(tresc: string, kartoteki: KartotekiImportu
     dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'grupa szkoleniowa', 'grupy.0.nazwa')
   }
 
-  const trener = znajdzPoEtykiecie(tresc, ['Trener', 'Prowadzący', 'Prowadząca', 'Trener Prowadzący', 'Prowadzący szkolenie'])
-  if (trener) {
+  const trenerzyZMaila = znajdzWartosciPoEtykiecie(tresc, etykietyPolMaila.trener)
+  const trener = trenerzyZMaila[0]
+  const czyKonfliktTrenerow = new Set(trenerzyZMaila.map((osoba) => normalizujTekst(oczyscNazweOsoby(osoba)))).size > 1
+  if (czyKonfliktTrenerow) {
+    dodajNiepewne(polaNiepewne, 'grupy.0.trenerzy')
+    ostrzezenia.push(`Różni trenerzy w tej samej grupie: ${trenerzyZMaila.join('; ')}. Wybierz właściwą osobę.`)
+  } else if (trener) {
     pierwszaGrupa.trenerzy = [
       {
-        id: `trener-import-${Date.now()}`,
+        id: `trener-import-${encodeURIComponent(normalizujTekst(oczyscNazweOsoby(trener)))}`,
         imieNazwisko: oczyscNazweOsoby(trener),
         telefon: znajdzTelefon(trener),
         email: znajdzEmail(trener),
@@ -573,7 +539,7 @@ export function parsujMailaSzczegolow(tresc: string, kartoteki: KartotekiImportu
     if (!dataDoZTresci) dodajNiepewne(polaNiepewne, 'grupy.0.dataDo')
   }
 
-  if (termin && datyTerminu.dataOd && !dataDo && datyTerminu.dataOd === datyTerminu.dataDo && !czyDatyZgodne) {
+  if (termin && datyTerminu.dataOd && !dataDo && datyTerminu.dataOd === datyTerminu.dataDo && !czyDatyZgodne && !/^Data\s*:/im.test(tresc)) {
     dodajNiepewne(polaNiepewne, 'grupy.0.dataDo')
   }
   if (czyKonfliktDat) {
@@ -603,22 +569,60 @@ export function parsujMailaSzczegolow(tresc: string, kartoteki: KartotekiImportu
   if (miejsce) {
     pierwszaGrupa.miejsce = miejsce.split('\n').join(', ')
     dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'miejsce', 'grupy.0.miejsce')
+    if (!forma && /^(?:Miejsce szkolenia|Sala szkoleniowa) zapewnion[ae] przez Zamawiającego\s*:/im.test(tresc)) {
+      pierwszaGrupa.formaSzkolenia = 'Stacjonarne'
+      dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'forma szkolenia', 'grupy.0.formaSzkolenia')
+    }
     if (kartoteki.czyLokalizacjaPotwierdzona && !kartoteki.czyLokalizacjaPotwierdzona(pierwszaGrupa.miejsce)) {
       dodajNiepewne(polaNiepewne, 'grupy.0.miejsce')
       ostrzezenia.push(`Lokalizacja „${pierwszaGrupa.miejsce}”: sprawdź dopasowanie miejscowości i potwierdzenie odmiany.`)
     }
   }
 
-  const liczbaUczestnikow = znajdzPoEtykiecie(tresc, ['Liczba uczestników', 'Liczba osób', 'Uczestników'])
-  if (liczbaUczestnikow) {
-    pierwszaGrupa.liczbaUczestnikow = znajdzNumer(liczbaUczestnikow)
-    dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'grupa szkoleniowa', 'grupy.0.liczbaUczestnikow')
+  const liczbyUczestnikow = znajdzWartosciPoEtykiecie(tresc, etykietyPolMaila.uczestnicy)
+  // Samodzielne zdanie o liczbie osób, poza polami kontaktowymi i adresami.
+  const samodzielneLiczby: string[] = []
+  let czyKontekstUczestnikow = true
+  for (const wiersz of tresc.split('\n')) {
+    if (czyWierszJestEtykieta(wiersz)) czyKontekstUczestnikow = /^(?:liczba (?:uczestnikow|osob)|ilosc uczestnikow|uczestnicy|grupa|data|termin|dane szkolenia)\b/i.test(normalizujTekst(wiersz))
+    if (czyKontekstUczestnikow && /^\d+\s+(?:osob|uczestnikow)[. ]*$/i.test(normalizujTekst(wiersz))) samodzielneLiczby.push(wiersz)
+  }
+  const kandydaciUczestnikow = [...liczbyUczestnikow, ...samodzielneLiczby]
+  const liczby = kandydaciUczestnikow.map(parsujLiczbeUczestnikow)
+  if (kandydaciUczestnikow.length) {
+    if (liczby.every((liczba) => liczba !== undefined) && new Set(liczby).size === 1) {
+      pierwszaGrupa.liczbaUczestnikow = liczby[0]
+      dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'grupa szkoleniowa', 'grupy.0.liczbaUczestnikow')
+    } else {
+      dodajNiepewne(polaNiepewne, 'grupy.0.liczbaUczestnikow')
+      ostrzezenia.push(`Liczba uczestników wymaga weryfikacji: ${kandydaciUczestnikow.join('; ')}.`)
+    }
   }
 
-  const liczbaGodzin = znajdzPoEtykiecie(tresc, ['Liczba godzin', 'Godziny szkolenia'])
-  if (liczbaGodzin) {
-    pierwszaGrupa.liczbaGodzin = znajdzNumer(liczbaGodzin)
-    dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'grupa szkoleniowa', 'grupy.0.liczbaGodzin')
+  const deklaracjeGodzin = znajdzWartosciPoEtykiecie(tresc, etykietyPolMaila.godziny)
+  const godziny = deklaracjeGodzin.map(parsujGodzinySzkolenia)
+  if (godziny.length) {
+    if (godziny.every((godzina) => godzina.liczbaGodzin !== undefined) && new Set(godziny.map((godzina) => godzina.liczbaGodzin)).size === 1) {
+      pierwszaGrupa.liczbaGodzin = godziny[0].liczbaGodzin
+      dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'grupa szkoleniowa', 'grupy.0.liczbaGodzin')
+    } else dodajNiepewne(polaNiepewne, 'grupy.0.liczbaGodzin')
+    const rodzaje = [...godziny, ...znajdzWartosciPoEtykiecie(tresc, etykietyPolMaila.rodzajGodzin).map(parsujGodzinySzkolenia)].flatMap((godzina) => godzina.rodzajGodzin ? [godzina.rodzajGodzin] : [])
+    if (new Set(rodzaje).size === 1) {
+      pierwszaGrupa.rodzajGodzin = rodzaje[0]
+      dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'grupa szkoleniowa', 'grupy.0.rodzajGodzin')
+    } else {
+      dodajNiepewne(polaNiepewne, 'grupy.0.rodzajGodzin')
+      ostrzezenia.push(`Rodzaj godzin: ${deklaracjeGodzin.join('; ')}. Potwierdź jednostkę w formularzu.`)
+    }
+  }
+
+  const harmonogram = znajdzPoEtykiecie(tresc, etykietyPolMaila.harmonogram) || tresc.match(/^godz\.?\s+([^\n]+)/im)?.[1] || ''
+  const zakresGodzin = harmonogram.match(/\b([01]?\d|2[0-3]):([0-5]\d)\s*[-–—]\s*([01]?\d|2[0-3]):([0-5]\d)\b/)
+  if (zakresGodzin) {
+    pierwszaGrupa.nazwaNiestandardowychGodzin = zakresGodzin[0]
+    dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'harmonogram', 'grupy.0.nazwaNiestandardowychGodzin')
+    const minuty = (Number(zakresGodzin[3]) - Number(zakresGodzin[1])) * 60 + Number(zakresGodzin[4]) - Number(zakresGodzin[2])
+    if (pierwszaGrupa.rodzajGodzin === 'Zegarowe (60 min)' && pierwszaGrupa.liczbaGodzin && minuty !== pierwszaGrupa.liczbaGodzin * 60) ostrzezenia.push(`Harmonogram ${zakresGodzin[0]} różni się od deklaracji ${pierwszaGrupa.liczbaGodzin} godzin zegarowych. Zachowano deklarowaną liczbę godzin.`)
   }
 
   const jawnaCenaNetto = znajdzPoEtykiecie(tresc, ['Cena netto', 'Wartość netto'])
@@ -626,8 +630,9 @@ export function parsujMailaSzczegolow(tresc: string, kartoteki: KartotekiImportu
   const vatZCeny = cenaNetto.match(/(?:VAT\s*)?(\d{1,3}\s*%)|\bZW\.?/i)?.[0] ?? ''
   if (cenaNetto) {
     const czyBrutto = /brutto/i.test(cenaNetto) || Boolean(znajdzPoEtykiecie(tresc, ['Cena brutto', 'Wartość brutto'])) && !jawnaCenaNetto
-    if (!czyBrutto) pierwszaGrupa.cenaNetto = znajdzNumer(cenaNetto.replace(/(?:VAT\s*)?\d{1,3}\s*%/i, ''))
-    dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'cena', 'grupy.0.cenaNetto')
+    if (!czyBrutto) pierwszaGrupa.cenaNetto = parsujKwoteMaila(cenaNetto.replace(/(?:VAT\s*)?\d{1,3}\s*%/i, ''))
+    if (pierwszaGrupa.cenaNetto !== undefined) dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'cena', 'grupy.0.cenaNetto')
+    else dodajNiepewne(polaNiepewne, 'grupy.0.cenaNetto')
     if (czyBrutto || !jawnaCenaNetto && !/\bnetto\b/i.test(cenaNetto) && !parsujVat(vatZCeny)) {
       dodajNiepewne(polaNiepewne, 'grupy.0.cenaNetto')
       ostrzezenia.push(`Cena „${cenaNetto}”: ${czyBrutto ? 'podano brutto; wpisz cenę netto' : 'potwierdź, czy kwota jest netto'}.`)
@@ -674,7 +679,7 @@ export function parsujMailaSzczegolow(tresc: string, kartoteki: KartotekiImportu
   }
 
   const adresKlienta = rozpoznajOdbiorcePaczki(znajdzBlokPoEtykiecie(tresc, etykietyKlienta))
-  const nabywca = uzupelnijDaneFirmy(uzupelnijDaneFirmy({}, {
+  let nabywca = uzupelnijDaneFirmy(uzupelnijDaneFirmy({}, {
     nazwa: nazwaKlienta,
     ulica: adresKlienta.ulica,
     nrBudynku: adresKlienta.nrBudynku,
@@ -690,10 +695,42 @@ export function parsujMailaSzczegolow(tresc: string, kartoteki: KartotekiImportu
     kodPocztowy: znajdzPoEtykiecie(tresc, ['Kod pocztowy nabywcy']),
     miasto: znajdzPoEtykiecie(tresc, ['Miasto nabywcy']),
     kraj: znajdzPoEtykiecie(tresc, ['Kraj nabywcy']),
-    osobaKontaktowa: znajdzPoEtykiecie(tresc, ['Osoba kontaktowa nabywcy', 'Kontakt nabywcy']),
+    osobaKontaktowa: znajdzPoEtykiecie(tresc, ['Osoba kontaktowa nabywcy', 'Kontakt nabywcy', 'Osoba kontaktowa', 'Osoba do kontaktu']),
     telefon: znajdzPoEtykiecie(tresc, ['Telefon nabywcy']),
     email: znajdzPoEtykiecie(tresc, ['Email nabywcy', 'E-mail nabywcy']),
   })
+
+  const etykietyKontaktu = ['Dane osoby kontaktowej', 'Kontakt po stronie klienta', 'Osoba kontaktowa', 'Osoba do kontaktu', 'Kontakt']
+  const wierszeKontaktu = tresc.split('\n')
+  const poczatekKontaktu = etykietyKontaktu.map((etykieta) => wierszeKontaktu.findIndex((wiersz) => normalizujTekst(wiersz).startsWith(normalizujTekst(etykieta) + ':'))).find((indeks) => indeks >= 0)
+  if (poczatekKontaktu !== undefined) {
+    const blok: string[] = [wierszeKontaktu[poczatekKontaktu].replace(/^[^:]*:\s*/, '')]
+    for (const wiersz of wierszeKontaktu.slice(poczatekKontaktu + 1)) {
+      if (czyWierszJestEtykieta(wiersz) && !/^(?:tel(?:efon)?\.?|nr telefonu|kom\.?|adres e-mail|e-?mail|mail)\s*:/i.test(wiersz)) break
+      blok.push(wiersz)
+    }
+    const tekst = blok.join(' ')
+    const email = znajdzEmail(tekst)
+    const telefon = tekst.match(/(?:tel(?:efon)?\.?|nr telefonu|kom\.?)\s*:?\s*(\+?\d[\d ()-]{6,})/i)?.[1]?.trim()
+    const osoba = blok.filter(Boolean)[0]?.split(/\b(?:tel(?:efon)?|nr telefonu|kom|adres e-mail|e-mail|email|mail)\b/i)[0].trim().replace(/[,;]+$/, '')
+    nabywca = uzupelnijDaneFirmy(nabywca, { osobaKontaktowa: osoba, telefon: telefon && parsujNumeryTelefonu(telefon).length === 1 ? telefon : undefined, email })
+  }
+  const raport = znajdzPoEtykiecie(tresc, ['Raport na adres'])
+  if (znajdzEmail(raport)) nabywca.sposobWysylkiRaportu = 'E-mail: ' + znajdzEmail(raport)
+
+  if (kartoteki.klienci && (nazwaKlienta || nabywca.nip)) {
+    const nip = (nabywca.nip ?? '').replace(/\D/g, '')
+    const dopasowania = kartoteki.klienci.filter((klient) => nip ? klient.nip.replace(/\D/g, '') === nip : normalizujTekst(klient.nazwa).replace(/\s+/g, ' ').trim() === normalizujTekst(nazwaKlienta))
+    if (dopasowania.length === 1) {
+      const klient = dopasowania[0]
+      nabywca = uzupelnijDaneFirmy({ nazwa: klient.nazwa, nip: klient.nip, ulica: klient.ulica, nrBudynku: klient.nrBudynku, nrLokalu: klient.nrLokalu, kodPocztowy: klient.kodPocztowy, miasto: klient.miasto, kraj: klient.kraj }, nabywca)
+      daneFormularza.nazwaKlienta = nazwaKlienta || klient.nazwa
+      dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'dane klienta', 'nazwaKlienta')
+    } else if (dopasowania.length > 1) {
+      dodajNiepewne(polaNiepewne, 'nazwaKlienta')
+      ostrzezenia.push(`Niejednoznaczny klient w kartotece. Propozycje: ${dopasowania.map((klient) => `${klient.nazwa} (${klient.miasto})`).join('; ')}. Potwierdź dane klienta.`)
+    }
+  }
 
   if (Object.keys(nabywca).length) {
     daneFormularza.nabywca = nabywca as DaneFirmy
@@ -719,7 +756,7 @@ export function parsujMailaSzczegolow(tresc: string, kartoteki: KartotekiImportu
     for (const pole of Object.keys(odbiorca)) dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'dane odbiorcy', `odbiorca.${pole}`)
   }
 
-  const dyspozycje = rozpoznajDyspozycje(konteksty.materialy)
+  const dyspozycje = rozpoznajDyspozycje(konteksty.materialy, nazwaKlienta)
   if (Object.keys(dyspozycje).length) {
     daneFormularza.dyspozycjeMaterialowe = dyspozycje
     for (const [rodzaj, dyspozycja] of Object.entries(dyspozycje)) {
@@ -741,12 +778,27 @@ export function parsujMailaSzczegolow(tresc: string, kartoteki: KartotekiImportu
         dodajNiepewne(polaNiepewne, `odbiorcaPaczki.${pole}`)
       }
     }
+    const pelneDane = { ...poczatkoweDaneFormularza, ...daneFormularza, nabywca: { ...poczatkoweDaneFormularza.nabywca, ...nabywca }, odbiorca: { ...poczatkoweDaneFormularza.odbiorca, ...odbiorca } }
+    daneFormularza.wysylkaNaSiedzibeOdbiorcy = czyPaczkaNaSiedzibe(pelneDane) && !polaNiepewne.some((pole) => pole.startsWith('odbiorcaPaczki.'))
+    dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'wysyłka materiałów', 'wysylkaNaSiedzibeOdbiorcy')
+    for (const pole of ['nazwaFirmy', 'ulica', 'nrBudynku', 'kodPocztowy', 'miasto'] as const) if (!odbiorcaPaczki[pole]) dodajNiepewne(polaNiepewne, 'odbiorcaPaczki.' + pole)
     if (!odbiorcaPaczki.nrBudynku || !odbiorcaPaczki.kodPocztowy || !odbiorcaPaczki.miasto) {
       dodajNiepewne(polaNiepewne, 'odbiorcaPaczki.ulica')
     }
   }
 
-  if (rozpoznanePola.length) daneFormularza.zrodloImportuMaila = tekstZrodlowy
+  const wierszeOryginalne = normalizujTrescMaila(tekstZrodlowy, true).split('\n')
+  const indeksProgramu = wierszeOryginalne.findIndex((wiersz) => /^\s*(?:[-*•–—]\s*)?program szkolenia\s*:/i.test(wiersz.replace(/\*\*|__/g, '')))
+  if (indeksProgramu >= 0) {
+    const program = [wierszeOryginalne[indeksProgramu].replace(/\*\*|__/g, '').replace(/^[^:]*:\s*/, ''), ...wierszeOryginalne.slice(indeksProgramu + 1)]
+    const koniecProgramu = program.findIndex((wiersz) => /^\s*(?:--|Z pozdrowieniami|Pozdrawiam)\s*$/i.test(wiersz))
+    const trescProgramu = (koniecProgramu < 0 ? program : program.slice(0, koniecProgramu)).join('\n').trim()
+    if (trescProgramu) {
+      daneFormularza.programSzkolenia = trescProgramu
+      dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'program szkolenia', 'programSzkolenia')
+    }
+  }
+  if (rozpoznanePola.length || polaNiepewne.length) daneFormularza.zrodloImportuMaila = tekstZrodlowy
 
   const pozostaleGrupy = konteksty.blokiGrup.slice(1).map((blok, indeks) => {
     const wynikGrupy = parsujMailaSzczegolow(blok, kartoteki)

@@ -1,3 +1,4 @@
+import { kluczKlientow, pobierzKlientowZKartoteki, type KlientKartoteki } from './klienciKartoteki'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import {
   pobierzLokalizacjeZMagazynu,
@@ -26,21 +27,6 @@ type TrenerKartoteki = {
   telefon: string
   email: string
   status: StatusTrenera
-}
-
-type KlientKartoteki = {
-  id: string
-  nazwa: string
-  nip: string
-  ulica: string
-  nrBudynku: string
-  nrLokalu: string
-  kodPocztowy: string
-  miasto: string
-  kraj: string
-  koordynator: string
-  telefonKoordynatora: string
-  emailKoordynatora: string
 }
 
 type FormularzTrenera = Omit<TrenerKartoteki, 'id'>
@@ -375,25 +361,7 @@ const pustyFormularzLokalizacji: FormularzLokalizacji = {
   status_odmiany: false,
 }
 
-const klienciStartowi: KlientKartoteki[] = [
-  {
-    id: 'klient-adamex',
-    nazwa: 'Adamex',
-    nip: '123456789',
-    ulica: 'Adamska',
-    nrBudynku: '12',
-    nrLokalu: '70-798',
-    kodPocztowy: '70-798',
-    miasto: 'Szczecin',
-    kraj: 'Polska',
-    koordynator: 'Adam Skała',
-    telefonKoordynatora: '',
-    emailKoordynatora: '',
-  },
-]
-
 const kluczTrenerow = 'ultimate-pomagier.kartoteki.trenerzy'
-const kluczKlientow = 'ultimate-pomagier.kartoteki.klienci'
 
 function utworzId(prefiks: string) {
   return `${prefiks}-${Date.now()}`
@@ -617,7 +585,7 @@ export default function WidokKartotek({ aktywnaZakladkaPoczatkowa = 'trenerzy', 
   const referencjaAktywnejKartoteki = useRef<HTMLElement | null>(null)
   const [aktywnaZakladka, ustawAktywnaZakladke] = useState<ZakladkaKartotek>(aktywnaZakladkaPoczatkowa)
   const [trenerzy, ustawTrenerow] = useState<TrenerKartoteki[]>(() => uzupelnijBazeTrenerow(pobierzZMagazynu(kluczTrenerow, przygotujTrenerowStartowych())))
-  const [klienci, ustawKlientow] = useState<KlientKartoteki[]>(() => pobierzZMagazynu(kluczKlientow, klienciStartowi))
+  const [klienci, ustawKlientow] = useState<KlientKartoteki[]>(pobierzKlientowZKartoteki)
   const [lokalizacje, ustawLokalizacje] = useState<Lokalizacja[]>(pobierzLokalizacjeZMagazynu)
   const [filtrTypuElementu, ustawFiltrTypuElementu] = useState<TypElementuKartoteki>('wszystkie')
   const [szukanyElementKartoteki, ustawSzukanyElementKartoteki] = useState('')

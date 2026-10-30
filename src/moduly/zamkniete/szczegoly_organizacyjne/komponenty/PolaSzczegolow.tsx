@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react'
+import { KontekstZatwierdzania } from './zatwierdzaniePol'
+import { useContext, type ReactNode } from 'react'
 import { etykietyStatusowPol, klasyStatusowPol } from '../stale'
 import type { StatusyPolImportu } from '../typy'
 import { pobierzIdBleduPola, pobierzIdPola } from './identyfikatoryPol'
@@ -36,6 +37,7 @@ type WlasciwosciPolaWyboru = WspolneWlasciwosciPola & {
   wartosc: string
   ustawWartosc: (wartosc: string) => void
   opcje: string[]
+  etykietyOpcji?: Record<string, string>
 }
 
 type WlasciwosciPolaCheckbox = WspolneWlasciwosciPola & {
@@ -43,13 +45,20 @@ type WlasciwosciPolaCheckbox = WspolneWlasciwosciPola & {
   ustawZaznaczone: (wartosc: boolean) => void
 }
 
-function ZnacznikStatusu({ pole, statusyPol }: { pole: string; statusyPol: StatusyPolImportu }) {
+export function ZnacznikStatusu({ pole, statusyPol }: { pole: string; statusyPol: StatusyPolImportu }) {
   const status = statusyPol[pole]
+  const kontekst = useContext(KontekstZatwierdzania)
+  const indeks = pole.match(/^grupy\.(\d+)\./)?.[1]
+  const idGrupy = indeks === undefined ? undefined : kontekst?.grupy[Number(indeks)]?.id
 
   if (!status) {
     return null
   }
 
+  if (kontekst && (status === 'niepewne' || status === 'zatwierdzone')) {
+    const zmien = (zdarzenie: React.MouseEvent<HTMLButtonElement>) => { zdarzenie.preventDefault(); zdarzenie.stopPropagation(); kontekst.zmien(pole, idGrupy) }
+    return <span><button type="button" className={`szczegoly-pole__status ${klasyStatusowPol[status]}`} aria-label={`${status === 'niepewne' ? 'Zatwierdź' : 'Cofnij zatwierdzenie'}: ${pole}`} onClick={zmien}>{etykietyStatusowPol[status]}</button>{status === 'niepewne' && <button type="button" onClick={zmien}>✓ Zatwierdź</button>}</span>
+  }
   return <span className={`szczegoly-pole__status ${klasyStatusowPol[status]}`}>{etykietyStatusowPol[status]}</span>
 }
 
@@ -161,7 +170,7 @@ export function PoleLiczbowe({
         min={min}
         step={krok}
         type="number"
-        value={wartosc}
+        value={statusyPol[pole] === 'brak' && wartosc === 0 ? '' : wartosc}
         onChange={(zdarzenie) => ustawWartosc(Number(zdarzenie.target.value))}
       />
     </OpakowaniePola>
@@ -191,7 +200,7 @@ export function PoleSuwak({
   )
 }
 
-export function PoleWyboru({ etykieta, pole, statusyPol, wartosc, ustawWartosc, opcje, blad, disabled, idGrupy }: WlasciwosciPolaWyboru) {
+export function PoleWyboru({ etykieta, pole, statusyPol, wartosc, ustawWartosc, opcje, etykietyOpcji, blad, disabled, idGrupy }: WlasciwosciPolaWyboru) {
   const bladZWalidacji = useBladPola(pole, disabled)
   const komunikatBledu = blad ?? bladZWalidacji
   return (
@@ -199,7 +208,7 @@ export function PoleWyboru({ etykieta, pole, statusyPol, wartosc, ustawWartosc, 
       <select aria-describedby={komunikatBledu ? pobierzIdBleduPola(pole) : undefined} aria-invalid={Boolean(komunikatBledu)} disabled={disabled} id={pobierzIdPola(pole, idGrupy)} value={wartosc} onChange={(zdarzenie) => ustawWartosc(zdarzenie.target.value)}>
         {opcje.map((opcja) => (
           <option key={opcja} value={opcja}>
-            {opcja}
+            {etykietyOpcji?.[opcja] ?? opcja}
           </option>
         ))}
       </select>

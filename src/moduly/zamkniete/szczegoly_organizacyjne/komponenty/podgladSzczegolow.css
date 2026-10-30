@@ -1,0 +1,33 @@
+.podglad-szczegolow .ui-dialog[open] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+  width: min(1180px, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
+  max-height: 90vh;
+  max-height: calc(90dvh / var(--ui-skala-przegladarki, 1));
+  box-sizing: border-box;
+  overflow: hidden;
+  padding: 16px;
+  overflow-wrap: anywhere;
+}
+.podglad-szczegolow .ui-dialog > h2 { margin: 0; font-size: 1.1rem; }
+.podglad-szczegolow .ui-dialog > .ui-przycisk { margin: 0; align-self: start; }
+.podglad-szczegolow .ui-dialog > .podglad-szczegolow__tresc { grid-column: 1 / -1; min-height: 0; overflow: auto; margin: 0; padding-right: 6px; overscroll-behavior: contain; }
+.podglad-szczegolow__akcje { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.podglad-szczegolow__sekcja { border-top: 1px solid var(--ui-obramowanie); padding: 8px 0; }
+.podglad-szczegolow__sekcja > summary { cursor: pointer; font-weight: 650; padding: 4px 0; }
+.podglad-szczegolow__sekcja h3 { font-size: 1rem; margin: 12px 0 4px; }
+.podglad-szczegolow__pola { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 20px; margin: 8px 0; }
+.podglad-szczegolow__pola > div { min-width: 0; }
+.podglad-szczegolow__pola dt { font-size: .85em; color: var(--ui-tekst-drugorzedny, var(--ui-tekst)); }
+.podglad-szczegolow__pola dd { margin: 2px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.podglad-szczegolow__pola ol { margin: 0; padding-left: 24px; }
+.podglad-szczegolow__szerokie { grid-column: 1 / -1; }
+.podglad-szczegolow__pewnosc { font-weight: normal; }
+.podglad-szczegolow__logo { max-width: 100%; max-height: 120px; object-fit: contain; }
+@media (max-width: 600px) {
+  .podglad-szczegolow .ui-dialog[open] { padding: 10px; gap: 8px; }
+  .podglad-szczegolow__pola { grid-template-columns: minmax(0, 1fr); }
+}

@@ -1,4 +1,7 @@
+import { synchronizujAdresPaczki, walidujWysylkePaczki } from '../logikaWysylkiPaczki'
+import { odtworzStatusyZatwierdzen, przelaczZatwierdzenie, kluczZatwierdzenia } from '../komponenty/zatwierdzaniePol'
 import { pobierzTrenerowZKartoteki } from '../../../../kartoteki/trenerzyKartoteki'
+import { pobierzKlientowZKartoteki } from '../../../../kartoteki/klienciKartoteki'
 import { pobierzUzytkownikow } from '../../../../kartoteki/uzytkownicy/magazynUzytkownikow'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
@@ -93,7 +96,7 @@ const polaSekcji: Record<KluczSekcjiSzczegolow, string[]> = {
   lokalizacja: ['grupy.miejsce', 'grupy.0.miejsce', 'grupy.formaSzkolenia', 'grupy.0.formaSzkolenia'],
   grupySzkoleniowe: ['grupy.', 'grupy.0.liczbaUczestnikow'],
   harmonogram: ['grupy.dataOd', 'grupy.0.dataOd', 'grupy.dataDo', 'grupy.0.dataDo', 'grupy.liczbaGodzin', 'grupy.0.liczbaGodzin'],
-  wysylka: ['wysylkaPaczkiDotyczy', 'odbiorcaPaczki.'],
+  wysylka: ['wysylkaNaSiedzibeOdbiorcy', 'wysylkaPaczkiDotyczy', 'odbiorcaPaczki.'],
   dokumenty: ['dokumentacja.', 'logotypy.', 'programSzkolenia'],
   rozliczenia: ['grupy.cenaNetto', 'grupy.0.cenaNetto', 'grupy.vat', 'grupy.0.vat', 'grupy.terminPlatnosci', 'grupy.0.terminPlatnosci'],
   uwagi: ['uwagiWewnetrzne', 'informacjeNiepewne', 'uwagiOpiekuna', 'uwagiDlaKlienta', 'uwagiDlaTrenera', 'uwagiDlaWysylaczy', 'dodatkoweWymogi.uwagiDodatkoweDodatkowe'],
@@ -218,6 +221,7 @@ function normalizujDane(dane?: Partial<DaneFormularza> & { uwagiWewnetrzne?: str
     nabywca,
     odbiorca: czyNabywcaJestOdbiorca ? { ...nabywca } : odbiorca,
     czyNabywcaJestOdbiorca,
+    wysylkaNaSiedzibeOdbiorcy: Boolean(obecne.wysylkaNaSiedzibeOdbiorcy),
     wysylkaPaczkiDotyczy: Boolean(obecne.wysylkaPaczkiDotyczy),
     odbiorcaPaczki: {
       ...poczatkoweDaneFormularza.odbiorcaPaczki,
@@ -311,7 +315,7 @@ function pobierzStanPoczatkowy() {
 }
 
 function scalDaneFormularza(obecne: DaneFormularza, czesciowe: Partial<DaneFormularza>): DaneFormularza {
-  return normalizujDane({
+  return synchronizujAdresPaczki(obecne, normalizujDane({
     ...obecne,
     ...czesciowe,
     nabywca: scalFirme(obecne.nabywca, czesciowe.nabywca),
@@ -336,7 +340,7 @@ function scalDaneFormularza(obecne: DaneFormularza, czesciowe: Partial<DaneFormu
         ...czesciowe.dodatkoweWymogi?.szczegolyWzorowKlienta,
       },
     },
-      })
+      }))
 }
 
 function scalGrupe(obecna: GrupaSzkoleniowa, czesciowa: Partial<GrupaSzkoleniowa>): GrupaSzkoleniowa {
@@ -402,6 +406,12 @@ function zbudujProblemyWalidacjiGrupy(grupa: GrupaSzkoleniowa, indeks: number, i
     dodaj('Grupy szkoleniowe', `grupy.${indeks}.terminPlatnosci`, `${nazwaGrupy}: termin płatności nie może być ujemny`)
   }
 
+  if (grupa.dataUmowy) {
+    const data = new Date(`${grupa.dataUmowy}T00:00:00Z`)
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(grupa.dataUmowy) || Number.isNaN(data.getTime()) || data.toISOString().slice(0, 10) !== grupa.dataUmowy) {
+      dodaj('Grupy szkoleniowe', `grupy.${indeks}.dataUmowy`, `${nazwaGrupy}: wpisz poprawną datę umowy`)
+    }
+  }
 
   const lokalizacja = grupa.formaSzkolenia === 'Online' ? null : indeksLokalizacji.znajdz(grupa.miejsce)
   if (lokalizacja && !lokalizacja.status_odmiany) {
@@ -456,7 +466,7 @@ function zbudujProblemyWalidacjiDanych(dane: DaneFormularza): ProblemWalidacji[]
     dodaj('Podstawowe informacje', 'opiekunId', 'Opiekun: wybierz opiekuna')
   }
 
-  problemy.push(...zbudujBledyDanychKlienta(dane))
+  problemy.push(...zbudujBledyDanychKlienta(dane), ...walidujWysylkePaczki(dane))
 
   if (dane.dodatkoweWymogi.wczesniejszyPrzyjazdTrenera && dane.dodatkoweWymogi.minutyWczesniej < 0) {
     dodaj('Dodatkowe wymogi', 'dodatkoweWymogi.minutyWczesniej', 'Wcześniejszy przyjazd trenera: wpisz liczbę minut minimum 0')
@@ -495,7 +505,7 @@ function pobierzKluczSekcjiZProblemu(problem: ProblemWalidacji): KluczSekcjiSzcz
 
 function zbudujProblemyPolNiepewnych(statusyPol: StatusyPolImportu): ProblemWalidacji[] {
   return Object.entries(statusyPol)
-    .filter(([, status]) => status === 'niepewne')
+    .filter(([pole, status]) => !pole.startsWith('zatwierdzenia.') && status === 'niepewne')
     .map(([pole]) => {
       const kluczSekcji = Object.entries(polaSekcji).find(([klucz]) => czyPoleNalezyDoSekcji(pole, klucz as KluczSekcjiSzczegolow))?.[0] as
         | KluczSekcjiSzczegolow
@@ -511,6 +521,15 @@ function zbudujProblemyPolNiepewnych(statusyPol: StatusyPolImportu): ProblemWali
     })
 }
 
+function pominPustePolaUmowy(statusyPol: StatusyPolImportu, grupy: GrupaSzkoleniowa[]): StatusyPolImportu {
+  return Object.fromEntries(Object.entries(statusyPol).filter(([pole, status]) => {
+    const dopasowanie = pole.match(/^grupy\.(\d+)\.(dataUmowy|numerUmowy)$/)
+    if (status !== 'niepewne' || !dopasowanie) return true
+    const grupa = grupy[Number(dopasowanie[1])]
+    return dopasowanie[2] === 'dataUmowy' ? Boolean(grupa?.dataUmowy) : Boolean(grupa?.numerUmowy?.trim())
+  }))
+}
+
 function zbudujModelSekcyjny(
   dane: DaneFormularza,
   grupy: GrupaSzkoleniowa[],
@@ -518,6 +537,7 @@ function zbudujModelSekcyjny(
   statusyPol: StatusyPolImportu,
   problemyPodstawowe: ProblemWalidacji[],
 ): ModelSekcyjnySzczegolow {
+  statusyPol = pominPustePolaUmowy(statusyPol, grupy)
   const problemyNiepewnychPol = zbudujProblemyPolNiepewnych(statusyPol)
   const wszystkieProblemy = [...problemyPodstawowe, ...problemyNiepewnychPol]
 
@@ -536,7 +556,7 @@ function zbudujModelSekcyjny(
     const bledyKrytyczne = problemy.filter((problem) => problem.czyBlokuje)
     const ostrzezenia = problemy.filter((problem) => !problem.czyBlokuje)
     const polaNiepewne = polaNiepewneSekcji(klucz)
-    const wymaganaDoPublikacji = wymaganeSekcjeDoPublikacji.includes(klucz)
+    const wymaganaDoPublikacji = wymaganeSekcjeDoPublikacji.includes(klucz) || klucz === 'wysylka' && dane.wysylkaPaczkiDotyczy
     const wynikWalidacji = bledyKrytyczne.length === 0
     const statusKompletnosci: StatusKompletnosciSekcji =
       wynikWalidacji && (!wymaganaDoPublikacji || polaNiepewne.length === 0) ? 'kompletna' : 'niekompletna'
@@ -579,7 +599,7 @@ function zbudujModelSekcyjny(
 }
 
 function czySekcjeWymaganeKompletne(modelSekcyjny: ModelSekcyjnySzczegolow) {
-  return wymaganeSekcjeDoPublikacji.every((klucz) => modelSekcyjny[klucz].wynikWalidacji && modelSekcyjny[klucz].statusKompletnosci === 'kompletna')
+  return Object.values(modelSekcyjny).filter((sekcja) => sekcja.wymaganaDoPublikacji).every((sekcja) => sekcja.wynikWalidacji && sekcja.statusKompletnosci === 'kompletna')
 }
 
 function zbierzProblemyModelu(model: ModelSekcyjnySzczegolow) {
@@ -600,7 +620,10 @@ export function useGeneratorSzczegolow() {
   const [daneFormularza, ustawDaneFormularza] = useState<DaneFormularza>(stanPoczatkowy.dane)
   const [grupy, ustawGrupy] = useState<GrupaSzkoleniowa[]>(stanPoczatkowy.grupy)
   const [adresaci, ustawAdresaci] = useState<DaneAdresatow>(stanPoczatkowy.adresaci)
-  const [statusyPol, ustawStatusyPol] = useState<StatusyPolImportu>(stanPoczatkowy.statusyPol)
+  const [zapisaneStatusyPol, ustawStatusyPol] = useState<StatusyPolImportu>(stanPoczatkowy.statusyPol)
+  const statusyPol = useMemo(() => odtworzStatusyZatwierdzen(zapisaneStatusyPol, grupy), [zapisaneStatusyPol, grupy])
+  const aktualneGrupy = useRef(grupy)
+  useLayoutEffect(() => { aktualneGrupy.current = grupy }, [grupy])
   const aktualneStatusyPol = useRef(statusyPol)
   useLayoutEffect(() => { aktualneStatusyPol.current = statusyPol }, [statusyPol])
   const [aktywnaKopiaId, ustawAktywnaKopiaId] = useState<string | null>(stanPoczatkowy.aktywnaKopiaId)
@@ -630,12 +653,12 @@ export function useGeneratorSzczegolow() {
   const problemyWalidacji = useMemo(() => zbierzProblemyModelu(modelSekcyjny), [modelSekcyjny])
   const zapamietajBledyPol = useMemo(() => utworzPamiecBledowPol(), [])
   const bledyPol = useMemo(() => zapamietajBledyPol(podstawoweProblemyWalidacji), [zapamietajBledyPol, podstawoweProblemyWalidacji])
-  const polaNiepewne = useMemo(() => Object.entries(statusyPol).filter(([, status]) => status === 'niepewne').map(([pole]) => pole), [statusyPol])
+  const polaNiepewne = useMemo(() => Object.entries(pominPustePolaUmowy(statusyPol, grupy)).filter(([pole, status]) => !pole.startsWith('zatwierdzenia.') && status === 'niepewne').map(([pole]) => pole), [statusyPol, grupy])
   const ostrzezeniaWalidacji = useMemo(() => problemyWalidacji.filter((problem) => !problem.czyBlokuje), [problemyWalidacji])
   const bledyKrytyczne = useMemo(() => problemyWalidacji.filter((problem) => problem.czyBlokuje), [problemyWalidacji])
   const czyFormularzKompletny = useMemo(() => czySekcjeWymaganeKompletne(modelSekcyjny), [modelSekcyjny])
   const podgladSzczegolow = useMemo(() => utworzTekstSzczegolow(daneFormularza, grupy), [daneFormularza, grupy])
-  const czyMoznaEdytowac = useMemo(() => czyKontoMozeEdytowacSzczegoly(aktywneKonto, daneFormularza.opiekunId), [aktywneKonto, daneFormularza.opiekunId])
+  const czyMoznaEdytowac = useMemo(() => czyKontoMozeEdytowacSzczegoly(aktywneKonto, daneFormularza.opiekunId, !aktywnaKopiaId && !zrodloOpublikowanegoId), [aktywneKonto, daneFormularza.opiekunId, aktywnaKopiaId, zrodloOpublikowanegoId])
   const ostatniAutosave = pobierzAutosaveSzczegolow()?.dataZapisu
   const czyAdresaciAktualizacjiPoprawni = useMemo(() => {
     const lista = podzielAdresatow(adresaci.reczniAdresaci)
@@ -665,7 +688,12 @@ export function useGeneratorSzczegolow() {
   }, [czyAutosaveAktywny, daneFormularza, grupy, adresaci, statusyPol, aktywnaKopiaId, zrodloOpublikowanegoId])
 
   const oznaczPoleRecznie = useCallback(function oznaczPoleRecznie(pole: string) {
-    ustawStatusyPol((obecne) => obecne[pole] === 'reczne' ? obecne : { ...obecne, [pole]: 'reczne' })
+    ustawStatusyPol((obecne) => {
+      const nastepne = { ...obecne, [pole]: 'reczne' as const }
+      const klucz = kluczZatwierdzenia(pole, aktualneGrupy.current)
+      if (klucz !== pole) delete nastepne[klucz]
+      return nastepne
+    })
   }, [])
 
   const cofnijStatusJesliNiekompletne = useCallback(function cofnijStatusJesliNiekompletne(dane: DaneFormularza, grupyDoSprawdzenia: GrupaSzkoleniowa[], statusyDoSprawdzenia: StatusyPolImportu) {
@@ -685,10 +713,11 @@ export function useGeneratorSzczegolow() {
       return
     }
 
-    ustawDaneFormularza((obecne) => cofnijStatusJesliNiekompletne(normalizujDane(aktualizacja(obecne)), grupy, statusyPol))
+    ustawDaneFormularza((obecne) => cofnijStatusJesliNiekompletne(normalizujDane(synchronizujAdresPaczki(obecne, aktualizacja(obecne))), grupy, statusyPol))
 
     if (pole) {
       oznaczPoleRecznie(pole)
+      if (daneFormularza.wysylkaNaSiedzibeOdbiorcy && /^odbiorcaPaczki\.(?:nazwaFirmy|ulica|nrBudynku|nrLokalu|kodPocztowy|miasto|kraj)$/.test(pole)) oznaczPoleRecznie('wysylkaNaSiedzibeOdbiorcy')
     }
   }
 
@@ -798,6 +827,7 @@ export function useGeneratorSzczegolow() {
     const lokalizacje = pobierzLokalizacjeZMagazynu()
     const wynik = parsujMailaSzczegolow(trescMaila, {
       trenerzy: pobierzTrenerowZKartoteki(),
+      klienci: pobierzKlientowZKartoteki(),
       opiekunowie: pobierzUzytkownikow(),
       czyLokalizacjaPotwierdzona: (miejsce) => Boolean(znajdzLokalizacjeDlaMiejsca(miejsce, lokalizacje)?.status_odmiany),
     })
@@ -805,21 +835,23 @@ export function useGeneratorSzczegolow() {
     ustawDaneFormularza((obecne) => scalDaneFormularza(obecne, mapowanie.daneFormularza))
     ustawGrupy((obecne) => {
       const pierwsza = scalGrupe(obecne[0] ?? normalizujGrupe(), mapowanie.pierwszaGrupa)
-      if (mapowanie.daneFormularza.dyspozycjeMaterialowe) {
-        pierwsza.dyspozycjeMaterialowe = { ...pierwsza.dyspozycjeMaterialowe, ...mapowanie.daneFormularza.dyspozycjeMaterialowe }
-        pierwsza.zrodloImportuMaila = mapowanie.daneFormularza.zrodloImportuMaila
-      }
       const pozostale = obecne.slice(1)
       mapowanie.pozostaleGrupy.forEach((grupa, indeks) => {
         pozostale[indeks] = scalGrupe(pozostale[indeks] ?? normalizujGrupe(undefined, indeks + 1), grupa)
       })
-      return [pierwsza, ...pozostale]
+      const nastepne = [pierwsza, ...pozostale]
+      const grupaDyspozycji = nastepne[mapowanie.indeksPierwszejGrupy]
+      if (mapowanie.daneFormularza.dyspozycjeMaterialowe && grupaDyspozycji) {
+        grupaDyspozycji.dyspozycjeMaterialowe = { ...grupaDyspozycji.dyspozycjeMaterialowe, ...mapowanie.daneFormularza.dyspozycjeMaterialowe }
+        grupaDyspozycji.zrodloImportuMaila = mapowanie.daneFormularza.zrodloImportuMaila
+      }
+      return nastepne
     })
     ustawRozpoznaneObszary(wynik.rozpoznaneObszary)
     ustawStatusyPol(mapowanie.statusyPol)
     ustawKomunikat(
       wynik.rozpoznaneObszary.length
-        ? `Import zakończony. Rozpoznano obszary: ${wynik.rozpoznaneObszary.join(', ')}. ${wynik.ostrzezenia?.join(' ') ?? ''}${mapowanie.zachowanePola.length ? ' Zachowano pola uzupełnione ręcznie.' : ''}`
+        ? `Import zakończony. Rozpoznano obszary: ${wynik.rozpoznaneObszary.join(', ')}. ${[...(wynik.ostrzezenia ?? []), ...mapowanie.ostrzezenia].join(' ')}${mapowanie.zachowanePola.length ? ' Zachowano pola uzupełnione ręcznie.' : ''}`
         : 'Import zakończony. Nie odnaleziono jawnie opisanych danych.',
     )
     dodajWpisHistoriiSzczegolow({
@@ -1068,6 +1100,12 @@ export function useGeneratorSzczegolow() {
     odswiezLokalizacje,
     sprawdzJakosc,
     adresaci,
+    przelaczZatwierdzeniePola: (pole: string, idGrupy?: string) => {
+      if (!czyMoznaEdytowac) return
+      const nastepne = przelaczZatwierdzenie(statusyPol, grupy, pole, idGrupy)
+      ustawStatusyPol(nastepne)
+      ustawDaneFormularza((obecne) => cofnijStatusJesliNiekompletne(obecne, grupy, odtworzStatusyZatwierdzen(nastepne, grupy)))
+    },
     statusyPol: efektywneStatusyPol,
     trescMaila,
     rozpoznaneObszary,

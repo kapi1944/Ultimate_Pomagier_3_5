@@ -189,7 +189,7 @@ export function normalizujProgramSzkolenia(zapis: unknown): ModelProgramuSzkolen
       kolorAkcentuProgramu: tekstLubDomyslny(ustawienia.kolorAkcentuProgramu, domyslneUstawieniaProgramu.kolorAkcentuProgramu),
       kolorReczny: ustawienia.kolorReczny === true,
       formatowanieSkryptowe: typeof ustawienia.formatowanieSkryptowe === 'boolean' ? ustawienia.formatowanieSkryptowe : domyslneUstawieniaProgramu.formatowanieSkryptowe,
-      mnoznikInterlinii: Math.min(2, Math.max(0.8, liczbaLubDomyslna(ustawienia.mnoznikInterlinii, domyslneUstawieniaProgramu.mnoznikInterlinii))),
+      mnoznikInterlinii: Math.min(3, Math.max(0.6, liczbaLubDomyslna(ustawienia.mnoznikInterlinii, domyslneUstawieniaProgramu.mnoznikInterlinii))),
       mnoznikOdstepuMiedzyDniami: Math.min(2, Math.max(0, liczbaLubDomyslna(ustawienia.mnoznikOdstepuMiedzyDniami, domyslneUstawieniaProgramu.mnoznikOdstepuMiedzyDniami))),
       stylDni: ustawienia.stylDni === 'naglowek' ? 'naglowek' : 'pasek',
       separatorTytuluDnia: ustawienia.separatorTytuluDnia === 'dwukropek' || ustawienia.separatorTytuluDnia === 'kropka' || ustawienia.separatorTytuluDnia === 'nowa-linia' ? ustawienia.separatorTytuluDnia : 'myslnik',

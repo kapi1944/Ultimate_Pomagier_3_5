@@ -73,6 +73,7 @@ export const poczatkoweDaneFormularza: DaneFormularza = {
   nabywca: { ...poczatkowaFirma },
   odbiorca: { ...poczatkowaFirma },
   czyNabywcaJestOdbiorca: false,
+  wysylkaNaSiedzibeOdbiorcy: false,
   wysylkaPaczkiDotyczy: false,
   odbiorcaPaczki: {
     nazwaFirmy: '',

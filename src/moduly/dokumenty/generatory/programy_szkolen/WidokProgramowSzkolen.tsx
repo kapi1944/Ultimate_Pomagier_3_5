@@ -1832,8 +1832,8 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
                 Interlinia modułów i podpunktów: {Math.round(ustawienia.mnoznikInterlinii * 100)}%
                 <input
                   className="program-szkolen__pole"
-                  min={0.8}
-                  max={2}
+                  min={0.6}
+                  max={3}
                   step={0.05}
                   type="range"
                   value={ustawienia.mnoznikInterlinii}

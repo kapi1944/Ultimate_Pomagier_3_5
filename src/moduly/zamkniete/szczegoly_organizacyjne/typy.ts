@@ -34,7 +34,7 @@ export type KluczSekcjiSzczegolow =
   | 'uwagi'
   | 'metadane'
 
-export type StatusPolaImportu = 'zaimportowane' | 'brak' | 'niepewne' | 'reczne'
+export type StatusPolaImportu = 'zaimportowane' | 'brak' | 'niepewne' | 'reczne' | 'zatwierdzone'
 export type OswiadczenieVat = 'Nie – 23%' | 'Min. 70%' | 'ZW – 100%'
 export type TrybCeny = 'za grupę' | 'za osobę'
 export type RodzajGodzin =
@@ -73,6 +73,7 @@ export type DaneKontaktuOrganizacyjnego = {
 }
 
 export type DaneOdbiorcyPaczki = DaneKontaktuOrganizacyjnego & {
+  informacjaNaEtykiecie?: string
   nazwaFirmy: string
   ulica: string
   nrBudynku: string
@@ -162,6 +163,7 @@ export type DaneFormularza = {
   nabywca: DaneFirmy
   odbiorca: DaneFirmy
   czyNabywcaJestOdbiorca: boolean
+  wysylkaNaSiedzibeOdbiorcy?: boolean
   wysylkaPaczkiDotyczy: boolean
   odbiorcaPaczki: DaneOdbiorcyPaczki
   dokumentacja: DaneDokumentacjiMaterialow

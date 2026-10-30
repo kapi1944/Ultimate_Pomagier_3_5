@@ -21,7 +21,7 @@ export function zbudujBledyDanychKlienta(dane: Pick<DaneFormularza, 'nabywca' | 
   const prefix = dane.czyNabywcaJestOdbiorca ? 'nabywca' : 'odbiorca'
   const etykieta = dane.czyNabywcaJestOdbiorca ? 'Nabywca' : 'Odbiorca'
 
-  return pobierzBrakujacePolaEfektywnegoOdbiorcy(dane).map((pole) => ({
+  const braki = pobierzBrakujacePolaEfektywnegoOdbiorcy(dane).map((pole) => ({
     sekcja: 'Dane klienta',
     pole: `${prefix}.${pole}`,
     komunikat: pole === 'nazwa'
@@ -30,6 +30,12 @@ export function zbudujBledyDanychKlienta(dane: Pick<DaneFormularza, 'nabywca' | 
     poziom: 'blad' as const,
     czyBlokuje: true,
   }))
+  const bledyEmail: ProblemWalidacji[] = (['nabywca', 'odbiorca'] as const).flatMap((obiekt) => {
+    if (obiekt === 'odbiorca' && dane.czyNabywcaJestOdbiorca) return []
+    const email = dane[obiekt].email.trim()
+    return email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? [{ sekcja: 'Dane klienta', pole: `${obiekt}.email`, komunikat: `${obiekt === 'nabywca' ? 'Nabywca' : 'Odbiorca'}: popraw adres email`, poziom: 'blad', czyBlokuje: true }] : []
+  })
+  return [...braki, ...bledyEmail]
 }
 
 export function pobierzEfektywneStatusyPolOdbiorcy(

@@ -30,6 +30,7 @@ export const etykietyStatusowPol: Record<StatusPolaImportu, string> = {
   brak: 'Brak',
   niepewne: '⚠ Niepewne',
   reczne: 'Ręcznie uzupełnione',
+  zatwierdzone: '✓ Zatwierdzone',
 }
 
 export const klasyStatusowPol: Record<StatusPolaImportu, string> = {
@@ -37,6 +38,7 @@ export const klasyStatusowPol: Record<StatusPolaImportu, string> = {
   brak: 'szczegoly-pole--brak',
   niepewne: 'szczegoly-pole--niepewne',
   reczne: 'szczegoly-pole--reczne',
+  zatwierdzone: 'szczegoly-pole--zaimportowane',
 }
 
 export const lokalizacjeKartoteki: LokalizacjaKartoteki[] = [
@@ -103,11 +105,10 @@ export const polaWymaganePoImporcie = [
   'grupy.0.formaSzkolenia',
   'grupy.0.miejsce',
   'grupy.0.liczbaGodzin',
+  'grupy.0.rodzajGodzin',
   'grupy.0.cenaNetto',
   'grupy.0.vat',
   'grupy.0.trenerzy',
   'grupy.0.liczbaUczestnikow',
   'grupy.0.terminPlatnosci',
-  'grupy.0.numerUmowy',
-  'grupy.0.dataUmowy',
 ]

@@ -1,3 +1,4 @@
+import { ZnacznikStatusu } from './PolaSzczegolow'
 import { memo, useEffect, useMemo, useState } from 'react'
 import {
   ustawPotwierdzonyMiejscownikLokalizacji,
@@ -5,7 +6,7 @@ import {
 import type { IndeksLokalizacjiSzczegolow } from '../uslugi/indeksLokalizacjiSzczegolow'
 import { DostawcaBledowPol } from './KontekstBledowPol'
 import type { BledyPolFormularza } from './stanBledowPol'
-import { etykietyStatusowPol, klasyStatusowPol } from '../stale'
+import { klasyStatusowPol } from '../stale'
 import type {
   FormaSzkolenia,
   GrupaSzkoleniowa,
@@ -87,15 +88,7 @@ function opiszGrupe(grupa: GrupaSzkoleniowa) {
   return `(${grupa.formaSzkolenia}) · od ${grupa.dataOd || 'brak daty od'} do ${grupa.dataDo || 'brak daty do'} | ${grupa.liczbaUczestnikow || 0} osób`
 }
 
-function ZnacznikStatusu({ pole, statusyPol }: { pole: string; statusyPol: StatusyPolImportu }) {
-  const status = statusyPol[pole]
 
-  if (!status) {
-    return null
-  }
-
-  return <span className={`szczegoly-pole__status ${klasyStatusowPol[status]}`}>{etykietyStatusowPol[status]}</span>
-}
 
 function PoleCeny({
   grupa,
