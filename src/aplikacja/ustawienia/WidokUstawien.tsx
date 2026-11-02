@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import UstawieniaHarmonogramu from './UstawieniaHarmonogramu'
+import { walidujHarmonogramPracy } from '../../moduly/zamkniete/pulpit/logika/harmonogramPracy'
 import PanelWersji from '../desktop/PanelWersji'
 import { informacjeOWersji } from '../wersjaAplikacji'
 import { useKontekstUzytkownika } from '../logowanie/useKontekstUzytkownika'
@@ -258,6 +260,8 @@ export default function WidokUstawien() {
 
   function zapiszSystemowe() {
     if (!czyMozeEdytowacSystemowe) return
+    const bledy = walidujHarmonogramPracy(roboczeUstawienia.pulpit.harmonogramPracy)
+    if (bledy.length) { ustawKomunikat(bledy.join(' ')); return }
 
     if (!zapiszUstawieniaAplikacji(roboczeUstawienia)) {
       ustawKomunikat('Nie udało się zapisać ustawień systemowych.')
@@ -684,6 +688,7 @@ export default function WidokUstawien() {
             </label>
           </section>
 
+          <UstawieniaHarmonogramu wartosc={roboczeUstawienia.pulpit.harmonogramPracy} zmien={(wartosc) => zmienPulpit('harmonogramPracy', wartosc)} />
           <section className="ustawienia__karta">
             <h2>Widoczne kafelki</h2>
 

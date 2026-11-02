@@ -895,3 +895,17 @@ html[data-ui-pokaz-plomien-asap="false"] .pulpit-deadline__plomien {
   .pulpit .pulpit-os-czasu__miniatura--lewo:hover, .pulpit .pulpit-os-czasu__miniatura--lewo:focus-visible { transform: translateX(0); }
   .pulpit .pulpit-os-czasu__miniatura--prawo:hover, .pulpit .pulpit-os-czasu__miniatura--prawo:focus-visible { transform: translateX(-100%); }
 }
+.pulpit-os-czasu {
+  --pulpit-tlo-bloku: color-mix(in srgb, var(--ui-akcent) 18%, var(--ui-panel));
+  --pulpit-tlo-kuriera: color-mix(in srgb, var(--ui-error-tlo) 85%, transparent);
+}
+.pulpit-blok-pracy { position: absolute; top: -6px; height: 24px; box-sizing: border-box; background: var(--pulpit-tlo-bloku); border-inline: 1px solid var(--ui-obramowanie); color: var(--ui-tekst); font-size: .65rem; line-height: 24px; text-align: center; }
+.pulpit-blok-pracy--1 { background: color-mix(in srgb, var(--ui-info) 18%, var(--ui-panel)); }
+.pulpit-blok-pracy--2 { background: color-mix(in srgb, var(--ui-akcent) 32%, var(--ui-panel)); }
+.pulpit-blok-pracy > span:first-child { display: block; position: relative; z-index: 3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-inline: 3px; pointer-events: none; }
+.pulpit-okno-kuriera { position: absolute; top: -10px; height: 32px; z-index: 2; background: var(--pulpit-tlo-kuriera); border-radius: 3px; }
+.pulpit-okno-kuriera__podpowiedz, .pulpit-blok-pracy__podpowiedz { display: none; position: absolute; top: 100%; left: 0; z-index: 40; width: max-content; max-width: 220px; padding: 6px; border: 1px solid var(--ui-obramowanie); border-radius: var(--ui-promien-pola); background: var(--ui-panel); color: var(--ui-tekst); font-size: .8rem; line-height: 1.4; white-space: normal; }
+.pulpit-okno-kuriera:hover, .pulpit-okno-kuriera:focus, .pulpit-blok-pracy:hover, .pulpit-blok-pracy:focus { z-index: 35; }
+.pulpit-okno-kuriera:hover .pulpit-okno-kuriera__podpowiedz, .pulpit-okno-kuriera:focus .pulpit-okno-kuriera__podpowiedz, .pulpit-blok-pracy:hover .pulpit-blok-pracy__podpowiedz, .pulpit-blok-pracy:focus .pulpit-blok-pracy__podpowiedz { display: block; }
+.pulpit-okno-kuriera:focus-visible, .pulpit-blok-pracy:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
+.pulpit-rutyna__przedzial { position: absolute; top: 0; height: 8px; box-sizing: border-box; border: 1px solid var(--ui-info); border-radius: 3px; background: var(--ui-info-tlo); }

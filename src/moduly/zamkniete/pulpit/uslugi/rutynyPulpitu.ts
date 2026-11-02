@@ -3,6 +3,18 @@ import { czyJestAdministratorem } from '../../../../kartoteki/uzytkownicy/uprawn
 import { pobierzUzytkownikow } from '../../../../kartoteki/uzytkownicy/magazynUzytkownikow'
 import { dataWarszawska, poczatekTygodnia, wersjaNaDzien, wystapieniaDnia, wystapieniaTygodnia, wlascicielWystapienia, type Rutyna, type StanRutyn, type WystapienieRutyny } from '../logika/rutyny'
 import { pobierzStanPulpitu, zapiszStanPulpitu } from './magazynPulpitu'
+import { pobierzUstawieniaAplikacji } from '../../../../aplikacja/ustawienia/magazynUstawienAplikacji'
+import { czyPoprawnaGodzina } from '../logika/harmonogramPracy'
+import type { WersjaHarmonogramu } from '../logika/rutyny'
+
+export const zdarzenieZmianyRutyn = 'ultimatePomagier:zmianaRutyn'
+
+function czyPoprawnyPlan(wersja: WersjaHarmonogramu) {
+  return (wersja.godzina === undefined || czyPoprawnaGodzina(wersja.godzina))
+    && (wersja.blokPracyId === undefined || (typeof wersja.blokPracyId === 'string' && Boolean(wersja.blokPracyId.trim())))
+    && !(wersja.godzina && wersja.blokPracyId)
+    && !(wersja.harmonogram.rodzaj === 'CEL_TYGODNIOWY' && (wersja.godzina || wersja.blokPracyId))
+}
 
 export function pobierzRutyny(): StanRutyn {
   const surowy = localStorage.getItem('ultimatePomagier.pulpit.v1')
@@ -14,6 +26,7 @@ export function pobierzRutyny(): StanRutyn {
   if (!stan || !Array.isArray(stan.rutyny) || !Array.isArray(stan.wykonania) || !Array.isArray(stan.historia)) throw new Error('Nie można odczytać danych rutyn. Zapis został zablokowany.')
   if (stan.rutyny.some((rutyna) => !rutyna || typeof rutyna.id !== 'string' || typeof rutyna.tytul !== 'string' || typeof rutyna.wlascicielId !== 'string' || !Array.isArray(rutyna.wersje) || !rutyna.wersje.length || rutyna.wersje.some((wersja) => !wersja || !czyPoprawnaData(wersja.od) || (wersja.godzina !== undefined && !/^([01]\d|2[0-3]):[0-5]\d$/.test(wersja.godzina)) || typeof wersja.aktywna !== 'boolean' || !wersja.harmonogram || !['CODZIENNIE', 'DNI_TYGODNIA', 'CEL_TYGODNIOWY'].includes(wersja.harmonogram.rodzaj))) || stan.wykonania.some((wpis) => !wpis || typeof wpis.rutynaId !== 'string' || !czyPoprawnaData(wpis.okres) || !Number.isInteger(wpis.numer) || typeof wpis.wykonane !== 'boolean') || stan.historia.some((wpis) => !wpis || typeof wpis.czas !== 'string' || typeof wpis.rutynaId !== 'string' || typeof wpis.uzytkownikId !== 'string' || typeof wpis.opis !== 'string')) throw new Error('Dane rutyn są uszkodzone. Zapis został zablokowany.')
   if (stan.rutyny.some((rutyna) => rutyna.wersje.some((wersja) => (wersja.harmonogram.rodzaj === 'DNI_TYGODNIA' && (!Array.isArray(wersja.harmonogram.dni) || wersja.harmonogram.dni.some((dzien) => !Number.isInteger(dzien) || dzien < 0 || dzien > 6))) || (wersja.harmonogram.rodzaj === 'CEL_TYGODNIOWY' && (!Number.isInteger(wersja.harmonogram.liczba) || wersja.harmonogram.liczba < 1 || wersja.harmonogram.liczba > 50))))) throw new Error('Harmonogram rutyny jest uszkodzony. Zapis został zablokowany.')
+  if (stan.rutyny.some((rutyna) => rutyna.wersje.some((wersja) => !czyPoprawnyPlan(wersja)))) throw new Error('Planowany czas rutyny jest uszkodzony. Zapis został zablokowany.')
   return stan
 }
 
@@ -25,6 +38,7 @@ function czyPoprawnaData(data: string) {
 
 function zapisz(stan: StanRutyn) {
   if (!zapiszStanPulpitu({ ...pobierzStanPulpitu(), rutyny: stan })) throw new Error('Nie udało się zapisać rutyn. Sprawdź dostępne miejsce.')
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(zdarzenieZmianyRutyn))
 }
 
 export function zapiszRutyne(rutyna: Rutyna, uzytkownik: Uzytkownik | null, data: string = dataWarszawska(new Date())) {
@@ -37,15 +51,18 @@ export function zapiszRutyne(rutyna: Rutyna, uzytkownik: Uzytkownik | null, data
   if (!rutyna.id || !rutyna.tytul.trim() || !rutyna.wlascicielId || !wersja || !czyPoprawnaData(wersja.od) || wersja.od < data) throw new Error('Podaj nazwę, użytkownika i poprawną datę nie wcześniejszą niż dzisiaj.')
   if (wersja.godzina !== undefined && !/^([01]\d|2[0-3]):[0-5]\d$/.test(wersja.godzina)) throw new Error('Podaj poprawną godzinę rutyny.')
   if (wersja.godzina && wersja.harmonogram.rodzaj === 'CEL_TYGODNIOWY') throw new Error('Cel tygodniowy nie ma przypisanej godziny dnia.')
+  if (!czyPoprawnyPlan(wersja)) throw new Error('Wybierz jeden planowany czas: godzinę, blok pracy albo brak czasu. Cel tygodniowy nie ma czasu dnia.')
+  if (wersja.blokPracyId && !pobierzUstawieniaAplikacji().pulpit.harmonogramPracy.blokiPracy.some((blok) => blok.id === wersja.blokPracyId && blok.wlaczony)) throw new Error('Wybierz dostępny, włączony blok pracy.')
   if (rutyna.link) { try { const adres = new URL(rutyna.link); if (!['http:', 'https:'].includes(adres.protocol)) throw new Error() } catch { throw new Error('Link musi być adresem HTTP lub HTTPS.') } }
   const harmonogram = wersja.harmonogram
   if (harmonogram.rodzaj === 'DNI_TYGODNIA' && (!harmonogram.dni.length || harmonogram.dni.some((dzien) => !Number.isInteger(dzien) || dzien < 0 || dzien > 6))) throw new Error('Wybierz co najmniej jeden dzień tygodnia.')
   if (harmonogram.rodzaj === 'CEL_TYGODNIOWY' && (!Number.isInteger(harmonogram.liczba) || harmonogram.liczba < 1 || harmonogram.liczba > 50)) throw new Error('Cel tygodniowy musi wynosić od 1 do 50.')
   if (poprzednia) {
     const aktualna = wersjaNaDzien(poprzednia, wersja.od)
-    const czyZmiana = aktualna?.godzina !== wersja.godzina || JSON.stringify(aktualna?.harmonogram) !== JSON.stringify(harmonogram) || aktualna?.aktywna !== wersja.aktywna || (aktualna?.wlascicielId ?? poprzednia.wlascicielId) !== rutyna.wlascicielId
-    if (czyZmiana && wersja.od <= data) throw new Error('Zmiana harmonogramu lub przypisania może obowiązywać najwcześniej od jutra.')
-    if (czyZmiana && (aktualna?.harmonogram.rodzaj === 'CEL_TYGODNIOWY' || harmonogram.rodzaj === 'CEL_TYGODNIOWY') && wersja.od !== poczatekTygodnia(wersja.od)) throw new Error('Zmiana celu tygodniowego obowiązuje od poniedziałku, aby nie zmieniać rozpoczętego tygodnia.')
+    const czyZmianaCyklu = JSON.stringify(aktualna?.harmonogram) !== JSON.stringify(harmonogram) || aktualna?.aktywna !== wersja.aktywna || (aktualna?.wlascicielId ?? poprzednia.wlascicielId) !== rutyna.wlascicielId
+    const czyZmiana = czyZmianaCyklu || aktualna?.godzina !== wersja.godzina || aktualna?.blokPracyId !== wersja.blokPracyId
+    if (czyZmianaCyklu && wersja.od <= data) throw new Error('Zmiana harmonogramu lub przypisania może obowiązywać najwcześniej od jutra.')
+    if (czyZmianaCyklu && (aktualna?.harmonogram.rodzaj === 'CEL_TYGODNIOWY' || harmonogram.rodzaj === 'CEL_TYGODNIOWY') && wersja.od !== poczatekTygodnia(wersja.od)) throw new Error('Zmiana celu tygodniowego obowiązuje od poniedziałku, aby nie zmieniać rozpoczętego tygodnia.')
     if (!czyZmiana) {
       zapisz({ ...stan, rutyny: stan.rutyny.map((wpis) => wpis.id === rutyna.id ? { ...rutyna, tytul: rutyna.tytul.trim(), wersje: poprzednia.wersje } : wpis), historia: [...stan.historia, { czas: new Date().toISOString(), uzytkownikId: uzytkownik.id, rutynaId: rutyna.id, opis: 'Zmieniono dane rutyny' }] })
       return

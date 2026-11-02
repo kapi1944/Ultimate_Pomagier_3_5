@@ -4,6 +4,7 @@ import {
   type UstawieniaAplikacji,
 } from './modelUstawienAplikacji'
 import { zastosujSkaleInterfejsu } from './skalaInterfejsu'
+import { walidujHarmonogramPracy } from '../../moduly/zamkniete/pulpit/logika/harmonogramPracy'
 
 export const kluczUstawienAplikacji = 'ultimatePomagier.ustawieniaAplikacji.v1'
 export const zdarzenieZmianyUstawienAplikacji = 'ultimatePomagier:zmianaUstawienAplikacji'
@@ -65,6 +66,7 @@ export function zastosujUstawieniaAplikacji(ustawienia: UstawieniaAplikacji) {
 }
 
 export function zapiszUstawieniaAplikacji(dane: UstawieniaAplikacji) {
+  if (dane.pulpit.harmonogramPracy !== undefined && walidujHarmonogramPracy(dane.pulpit.harmonogramPracy).length) return false
   const ustawienia = normalizujUstawieniaAplikacji(dane)
 
   try {
@@ -102,6 +104,11 @@ export function importujUstawieniaAplikacji(tekst: string):
       return { ok: false, blad: 'Plik nie zawiera obsługiwanej wersji ustawień.' }
     }
 
+    const pulpit = (dane as Record<string, unknown>).pulpit
+    if (pulpit && typeof pulpit === 'object' && 'harmonogramPracy' in pulpit) {
+      const bledy = walidujHarmonogramPracy(pulpit.harmonogramPracy)
+      if (bledy.length) return { ok: false, blad: bledy.join(' ') }
+    }
     return {
       ok: true,
       ustawienia: normalizujUstawieniaAplikacji(dane),

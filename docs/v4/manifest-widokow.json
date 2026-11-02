@@ -1523,6 +1523,14 @@
       "wspoldzieloneZ": [
         "V4-13"
       ]
+    },
+    "src/aplikacja/ustawienia/UstawieniaHarmonogramu.tsx": {
+      "zadanie": "V4-22",
+      "wspoldzieloneZ": [
+        "V4-04"
+      ],
+      "ukonczoneEtapy": [],
+      "powierzchnie": []
     }
   },
   "realizacjaEtapow": {

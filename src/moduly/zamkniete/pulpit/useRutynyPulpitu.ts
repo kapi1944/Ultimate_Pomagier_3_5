@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { pobierzRutyny } from './uslugi/rutynyPulpitu'
+import { pobierzRutyny, zdarzenieZmianyRutyn } from './uslugi/rutynyPulpitu'
 import type { StanRutyn } from './logika/rutyny'
 
 function odczytajRutyny(): { stan: StanRutyn; blad: string } {
@@ -14,7 +14,8 @@ export function useRutynyPulpitu() {
     const zegar = window.setInterval(odswiez, 60_000)
     window.addEventListener('focus', odswiez)
     window.addEventListener('storage', odswiez)
-    return () => { window.clearInterval(zegar); window.removeEventListener('focus', odswiez); window.removeEventListener('storage', odswiez) }
+    window.addEventListener(zdarzenieZmianyRutyn, odswiez)
+    return () => { window.clearInterval(zegar); window.removeEventListener('focus', odswiez); window.removeEventListener('storage', odswiez); window.removeEventListener(zdarzenieZmianyRutyn, odswiez) }
   }, [])
   return { ...odczyt, odswiez }
 }

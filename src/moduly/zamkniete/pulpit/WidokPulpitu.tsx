@@ -2,7 +2,8 @@ import FormularzZakupu, { type DaneFormularzaZakupu } from './FormularzZakupu'
 import { czyJestZamawiaczem, czyMozeWysylac } from '../../../kartoteki/uzytkownicy/uprawnienia'
 import { useEffect, useId, useMemo, useRef, useState, type ClipboardEvent, type CSSProperties, type Dispatch, type DragEvent, type SetStateAction } from 'react'
 import { useKontekstUzytkownika } from '../../../aplikacja/logowanie/useKontekstUzytkownika'
-import { pobierzUstawieniaAplikacji } from '../../../aplikacja/ustawienia/magazynUstawienAplikacji'
+import { pobierzUstawieniaAplikacji, zdarzenieZmianyUstawienAplikacji } from '../../../aplikacja/ustawienia/magazynUstawienAplikacji'
+import { blokiNaDzien, oknoKurieraNaDzien } from './logika/harmonogramPracy'
 import { pobierzUzytkownikow } from '../../../kartoteki/uzytkownicy/magazynUzytkownikow'
 import { pobierzNazweUzytkownika, pobierzNazweWyswietlanaUzytkownika, type Uzytkownik } from '../../../kartoteki/uzytkownicy/typyUzytkownikow'
 import { pobierzChecklistyPaczek, pobierzSzczegolyDoChecklisty } from '../../dokumenty/generatory/checklisty_paczek/rejestrChecklistPaczek'
@@ -544,10 +545,12 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
     function odswiezDanePulpitu() { ustawStan(pobierzStanPulpitu()) }
     window.addEventListener('focus', odswiezDanePulpitu)
     window.addEventListener('storage', odswiezDanePulpitu)
+    window.addEventListener(zdarzenieZmianyUstawienAplikacji, odswiezDanePulpitu)
     return () => {
       window.clearInterval(identyfikator)
       window.removeEventListener('focus', odswiezDanePulpitu)
       window.removeEventListener('storage', odswiezDanePulpitu)
+      window.removeEventListener(zdarzenieZmianyUstawienAplikacji, odswiezDanePulpitu)
     }
   }, [])
 
@@ -567,6 +570,10 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
   const etykietyOsi = pobierzEtykietyOsiCzasu(zakresDniaPracy)
   const czyWybranyDzienPracy = czyDzienPracy(new Date(data + 'T12:00:00'), zakresDniaPracy)
   const graniceDniaPracy = pobierzGraniceDniaPracyNaOsi(zakresDniaPracy)
+  const blokiPracy = ustawieniaAplikacji.pulpit.harmonogramPracy.blokiPracy
+  const blokiDnia = blokiNaDzien(blokiPracy, data)
+  const oknoKuriera = oknoKurieraNaDzien(ustawieniaAplikacji.pulpit.harmonogramPracy.kurier, data)
+  const opisKuriera = oknoKuriera ? `Spodziewany odbiór kuriera: ${oknoKuriera.poczatek}–${oknoKuriera.koniec}. Orientacyjny przedział, bez potwierdzenia przyjazdu.` : ''
 
   function odswiezStan() { ustawStan(pobierzStanPulpitu()) }
   function zmienZadanie(zadanie: ZadaniePulpitu) { zapiszZadanieReczne(zadanie); ustawWybraneZadanie((obecne) => obecne?.id === zadanie.id ? zadanie : obecne); odswiezStan() }
@@ -908,6 +915,13 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
           {czyWybranyDzienPracy ? <><div className="pulpit-os-czasu__odcinek pulpit-os-czasu__odcinek--przed-praca" style={{ width: graniceDniaPracy.poczatek + '%' }} />
           <div className="pulpit-os-czasu__odcinek pulpit-os-czasu__odcinek--praca" style={{ left: graniceDniaPracy.poczatek + '%', width: graniceDniaPracy.koniec - graniceDniaPracy.poczatek + '%' }} />
           <div className="pulpit-os-czasu__odcinek pulpit-os-czasu__odcinek--po-pracy" style={{ left: graniceDniaPracy.koniec + '%', width: 100 - graniceDniaPracy.koniec + '%' }} /></> : <div className="pulpit-os-czasu__odcinek pulpit-os-czasu__odcinek--po-pracy" style={{ width: '100%' }} />}
+          {blokiDnia.map((blok, indeks) => {
+            const poczatek = pozycjaGodzinyNaOsi(blok.poczatek, zakresDniaPracy)
+            const koniec = pozycjaGodzinyNaOsi(blok.koniec, zakresDniaPracy)
+            const opis = blok.nazwa + ': ' + blok.poczatek + '–' + blok.koniec
+            return <span key={blok.id} tabIndex={0} aria-label={opis} title={opis} className={'pulpit-blok-pracy pulpit-blok-pracy--' + indeks % 3} style={{ left: poczatek + '%', width: koniec - poczatek + '%' }}><span>{blok.nazwa}</span><span className="pulpit-blok-pracy__podpowiedz" role="tooltip">{opis}</span></span>
+          })}
+          {oknoKuriera && <span tabIndex={0} role="note" aria-label={opisKuriera} title={opisKuriera} className="pulpit-okno-kuriera" style={{ left: pozycjaGodzinyNaOsi(oknoKuriera.poczatek, zakresDniaPracy) + '%', width: pozycjaGodzinyNaOsi(oknoKuriera.koniec, zakresDniaPracy) - pozycjaGodzinyNaOsi(oknoKuriera.poczatek, zakresDniaPracy) + '%' }}><span className="pulpit-okno-kuriera__podpowiedz" role="tooltip">{opisKuriera}</span></span>}
           <div className="pulpit-os-czasu__postep" style={{ width: wskaznikCzasu.pozycja + '%' }} />
           {data === dataTekstowa(teraz) && <div className="pulpit-os-czasu__wskaznik" style={{ left: wskaznikCzasu.pozycja + '%' }}>
             <span className={'pulpit-os-czasu__etykieta-teraz pulpit-os-czasu__etykieta-teraz--' + wskaznikCzasu.wyrownanieEtykiety.toLocaleLowerCase('pl')}>{wskaznikCzasu.etykieta}</span>
@@ -923,7 +937,7 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
           <span className="pulpit-os-czasu__etykieta-pracy" style={{ left: graniceDniaPracy.koniec + '%' }}>Koniec pracy {zakresDniaPracy.koniec}</span></> : <span className="pulpit-os-czasu__etykieta-pracy" style={{ left: 0 }}>Dzień wolny</span>}
         </div>
         <div className="pulpit-os-czasu__zadania">{zadaniaGodzinowe.map((zadanie) => <MarkerDeadline key={zadanie.id} otworz={() => otworzZadanie(zadanie)} zakresDniaPracy={zakresDniaPracy} uzytkownicy={uzytkownicy} zadanie={zadanie} />)}</div>
-        <RutynyNaOsi daneRutyn={daneRutyn} data={data} uzytkownikId={wybranyUzytkownikId} zakresDniaPracy={zakresDniaPracy} otworz={(id) => { ustawWybranaRutyneId(id); window.setTimeout(() => document.getElementById('podsumowanie-rutyn')?.scrollIntoView({ block: 'start' }), 0) }} />
+        <RutynyNaOsi blokiPracy={blokiPracy} daneRutyn={daneRutyn} data={data} uzytkownikId={wybranyUzytkownikId} zakresDniaPracy={zakresDniaPracy} otworz={(id) => { ustawWybranaRutyneId(id); window.setTimeout(() => document.getElementById('podsumowanie-rutyn')?.scrollIntoView({ block: 'start' }), 0) }} />
       </div></div>
 
 

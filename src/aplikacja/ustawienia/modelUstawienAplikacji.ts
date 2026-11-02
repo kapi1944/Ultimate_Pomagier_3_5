@@ -1,3 +1,5 @@
+import { domyslnyHarmonogramPracy, normalizujHarmonogramPracy, type HarmonogramPracy } from '../../moduly/zamkniete/pulpit/logika/harmonogramPracy'
+
 export const paletyInterfejsu = [
   'EMERALD_DARK',
   'SOFT_GREY',
@@ -45,6 +47,7 @@ export type UstawieniaAplikacji = {
     wysokoscPrzyciskuMenu: 'KOMPAKTOWA' | 'STANDARDOWA' | 'DUZA'
   }
   pulpit: {
+    harmonogramPracy: HarmonogramPracy
     dniPracy: number[]
     poczatekDnia: string
     koniecDnia: string
@@ -94,6 +97,7 @@ export const domyslneUstawieniaAplikacji: UstawieniaAplikacji = {
     wysokoscPrzyciskuMenu: 'STANDARDOWA',
   },
   pulpit: {
+    harmonogramPracy: structuredClone(domyslnyHarmonogramPracy),
     dniPracy: [1, 2, 3, 4, 5],
     poczatekDnia: '07:45',
     koniecDnia: '16:00',
@@ -241,6 +245,7 @@ export function normalizujUstawieniaAplikacji(dane: unknown): UstawieniaAplikacj
       ),
     },
     pulpit: {
+      harmonogramPracy: normalizujHarmonogramPracy(pulpit.harmonogramPracy),
       dniPracy: Array.isArray(pulpit.dniPracy) && pulpit.dniPracy.every((dzien: unknown) => typeof dzien === 'number' && Number.isInteger(dzien) && dzien >= 0 && dzien <= 6)
         ? [...new Set<number>(pulpit.dniPracy)]
         : [...domyslneUstawieniaAplikacji.pulpit.dniPracy],

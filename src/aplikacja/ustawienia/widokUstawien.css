@@ -308,3 +308,8 @@
     grid-template-columns: 1fr;
   }
 }
+.ustawienia-harmonogram fieldset { min-width: 0; margin-block: .75rem; border: 1px solid var(--ui-obramowanie); }
+.ustawienia-harmonogram__wiersz { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; margin-block: .5rem; }
+.ustawienia-harmonogram__wiersz label { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; min-width: 0; }
+.ustawienia-harmonogram__wiersz input:not([type=checkbox]) { max-width: 100%; min-width: 0; box-sizing: border-box; }
+.ustawienia-harmonogram [role=alert] { color: var(--ui-error); }
