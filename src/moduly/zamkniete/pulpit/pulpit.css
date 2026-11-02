@@ -27,8 +27,7 @@
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
-  min-height: 205px;
-  padding: 38px 10px 0;
+  padding: 40px 10px 0;
   overflow: visible;
   isolation: isolate;
   container-type: inline-size;
@@ -146,18 +145,32 @@
 .pulpit-os-czasu__zadania {
   position: relative;
   z-index: 15;
-  height: 135px;
+  display: grid;
+  gap: 32px;
   overflow: visible;
 }
+
+.pulpit-os-czasu__zadania:not(:empty) { padding-bottom: 20px; }
+
+.pulpit-rutyny-godzinowe { display: grid; gap: 4px; }
+.pulpit-rutyny-godzinowe:not(:empty) { padding-block: 12px; }
+.pulpit-rutyna { position: relative; padding-top: 14px; }
+.pulpit-rutyna__punkt { position: absolute; top: 0; width: 10px; height: 10px; border: 2px solid var(--ui-info); border-radius: 50%; transform: translateX(-50%); }
+.pulpit-rutyna__kontrolki { display: flex; align-items: center; gap: 8px; width: 300px; max-width: 100%; box-sizing: border-box; padding: 4px 8px; border: 1px dashed var(--ui-info); border-radius: var(--ui-promien-pola); background: var(--ui-info-tlo); color: var(--ui-tekst); overflow-wrap: anywhere; }
+.pulpit-rutyna__kontrolki label { display: flex; flex: 1; min-width: 0; align-items: center; gap: 6px; font-size: .8rem; }
+.pulpit .pulpit-rutyna__kontrolki button { flex: none; min-height: 44px; padding: 4px 6px; font-size: .75rem; }
+.pulpit-rutyna__kontrolki input { flex: none; width: 20px; height: 20px; min-height: 20px; }
+.pulpit-rutyna__kontrolki--wykonane { opacity: .65; }
+.pulpit-rutyna__kontrolki--wykonane label { text-decoration: line-through; }
+.pulpit-rutyny-bez-godziny { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding-block: 8px; }
 
 .pulpit-deadline {
   --kolor-zadaniodawcy: #38bdf8;
   --kolor-zadaniobiorcy: #9a3412;
-  position: absolute;
+  position: relative;
   z-index: 18;
   top: 0;
   width: 0;
-  height: 115px;
 }
 
 .pulpit-deadline::before {
@@ -184,9 +197,9 @@
 }
 
 .pulpit .pulpit-deadline__przycisk {
-  position: absolute;
+  position: relative;
   z-index: 2;
-  top: 13px;
+  margin-top: 13px;
   left: 0;
   display: grid;
   justify-items: center;
@@ -199,6 +212,9 @@
   padding: 0;
   transform: translateX(-50%);
 }
+
+.pulpit .pulpit-deadline--lewo .pulpit-deadline__przycisk { transform: translateX(0); }
+.pulpit .pulpit-deadline--prawo .pulpit-deadline__przycisk { transform: translateX(-100%); }
 
 .pulpit .pulpit-deadline__przycisk:hover,
 .pulpit .pulpit-deadline__przycisk:focus-visible {
@@ -270,13 +286,12 @@
 .pulpit-deadline__etykieta {
   display: block;
   max-width: 190px;
-  overflow: hidden;
   color: #ffedd5;
   font-size: .7rem;
   font-weight: 850;
   line-height: 1.25;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .pulpit-deadline__plomien {
@@ -291,9 +306,9 @@
 .pulpit-deadline__tooltip {
   position: absolute;
   z-index: 50;
-  top: 66px;
+  top: calc(100% + 8px);
   left: 0;
-  display: grid;
+  display: none;
   width: min(285px, calc(100vw - 72px));
   gap: 4px;
   border: 1px solid #fb923c;
@@ -312,6 +327,7 @@
 
 .pulpit-deadline:hover .pulpit-deadline__tooltip,
 .pulpit-deadline:focus-within .pulpit-deadline__tooltip {
+  display: grid;
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
@@ -500,10 +516,6 @@
   .pulpit-deadline__etykieta { max-width: 120px; }
 }
 
-@media (max-width: 720px) {
-  .pulpit-os-czasu__etykieta-pracy { display: none; }
-}
-
 @container (max-width: 430px) {
   .pulpit-os-czasu__etykieta:nth-child(even) { display: none; }
 }
@@ -610,13 +622,15 @@ html[data-ui-pokaz-plomien-asap="false"] .pulpit-deadline__plomien {
 .pulpit-os-czasu__miniatury {
   position: relative;
   z-index: 22;
-  height: 78px;
-  margin-bottom: 8px;
+  display: grid;
+  gap: 30px;
   overflow: visible;
 }
 
+.pulpit-os-czasu__miniatury:not(:empty) { padding-bottom: 40px; }
+
 .pulpit .pulpit-os-czasu__miniatura {
-  position: absolute;
+  position: relative;
   z-index: 22;
   bottom: 0;
   width: 82px;
@@ -862,7 +876,7 @@ html[data-ui-pokaz-plomien-asap="false"] .pulpit-deadline__plomien {
 .pulpit .ui-panel dt { color: var(--ui-tekst-drugi); font-size: .875rem; }
 .pulpit .ui-panel dd { margin: 4px 0 0; overflow-wrap: anywhere; }
 .pulpit-os-czasu__przewijanie { min-width: 0; max-width: 100%; overflow: auto; overscroll-behavior-inline: contain; border: 1px solid var(--ui-obramowanie); border-radius: var(--ui-promien-karty); background: var(--ui-pole); padding: 12px; }
-.pulpit .pulpit-os-czasu { min-width: 720px; padding-bottom: 140px; }
+.pulpit .pulpit-os-czasu { min-width: 720px; }
 .pulpit .pulpit-os-czasu__etykiety { font-size: .8rem; }
 .pulpit .pulpit-os-czasu__etykieta-pracy { font-size: .75rem; }
 .pulpit .pulpit-os-czasu__etykieta-teraz { color: var(--ui-warning); border-color: var(--ui-warning); background: var(--ui-warning-tlo); }

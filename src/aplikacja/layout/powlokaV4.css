@@ -27,7 +27,7 @@
   .uklad-aplikacji .menu-boczne button:focus-visible { outline: 3px solid var(--ui-focus); outline-offset: 2px; }
   .uklad-aplikacji .menu-boczne__przycisk:hover { transform: none; }
   .menu-boczne__przeslona { position: fixed; inset: 0; z-index: calc(var(--ui-warstwa-menu) - 1); border: 0; background: #0009; }
-  .uklad-aplikacji .naglowek-aplikacji { flex: 0 0 auto; z-index: var(--ui-warstwa-naglowka); gap: 12px; flex-wrap: wrap; background: var(--ui-panel); padding: 10px 16px; }
+  .uklad-aplikacji .naglowek-aplikacji { flex: 0 0 auto; z-index: var(--ui-warstwa-naglowka); gap: 12px; flex-wrap: wrap; background: var(--ui-naglowek-tlo); border-bottom-color: var(--ui-pasek-separator); box-shadow: 0 2px 8px #0002; padding: 10px 16px; }
   .naglowek-aplikacji__lewa-strefa { flex: 1 1 180px; }
   .naglowek-aplikacji__marka { color: var(--ui-tekst-drugi); font-size: var(--ui-tekst-maly); }
   .naglowek-aplikacji__lewa-strefa ol { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; font-size: .875rem; }
@@ -35,10 +35,10 @@
   .naglowek-aplikacji__lewa-strefa li[aria-current] { font-weight: 700; }
   .naglowek-aplikacji__statusy { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
   .naglowek-aplikacji__dock-krotki { display: none; }
-  .dock-aplikacji { flex: 0 0 auto; display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 6px 16px max(6px, env(safe-area-inset-bottom)); border-top: 1px solid var(--ui-obramowanie); background: var(--ui-panel); max-height: 30dvh; overflow: auto; z-index: var(--ui-warstwa-naglowka); }
+  .dock-aplikacji { flex: 0 0 auto; display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 6px 16px max(6px, env(safe-area-inset-bottom)); border-top: 1px solid var(--ui-pasek-separator); background: var(--ui-dock-tlo); max-height: 30dvh; overflow: auto; z-index: var(--ui-warstwa-naglowka); }
   .dock-aplikacji nav { display: flex; flex-wrap: wrap; gap: 6px; }
   .dock-aplikacji .ui-przycisk { display: inline-flex; align-items: center; gap: 6px; font-size: .8rem; }
-  .dock-aplikacji [aria-current="page"] { border-color: var(--ui-akcent); background: var(--ui-akcent-mocny); }
+  .dock-aplikacji [aria-current="page"] { border-color: var(--ui-akcent); background: var(--ui-akcent); color: var(--ui-tekst-na-akcencie); font-weight: 700; }
   .dock-aplikacji__akcje { display: flex; gap: 6px; flex-shrink: 0; }
   .dock-aplikacji__wybor { display: grid; gap: 8px; }
   .dock-aplikacji__wybor label { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 6px; border-bottom: 1px solid var(--ui-obramowanie); }

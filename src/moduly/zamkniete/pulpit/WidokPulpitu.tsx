@@ -16,6 +16,8 @@ import { otworzLubUtworzChecklistePulpitu, oznaczWysylkeChecklisty } from './usl
 import type { WysylkaMonitora } from './logika/monitorWysylek'
 import MonitorWysylek from './MonitorWysylek'
 import WidokRutyn from './DailyRoutines'
+import RutynyNaOsi from './RutynyNaOsi'
+import { useRutynyPulpitu } from './useRutynyPulpitu'
 import { generujZadaniaAutomatyczne } from './logika/zadaniaAutomatyczne'
 import { czyMoznaZmienicKontekstPulpitu } from './logika/kontekstPulpitu'
 import { obliczLicznikiPulpitu } from './logika/podsumowaniePulpitu'
@@ -503,6 +505,8 @@ function IkonaZakupow() {
 
 export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, otworzPaczke }: WlasciwosciPulpitu) {
   const { zalogowanyUzytkownik, aktywniUzytkownicy } = useKontekstUzytkownika()
+  const daneRutyn = useRutynyPulpitu()
+  const [wybranaRutynaId, ustawWybranaRutyneId] = useState<string | null>(null)
   const [teraz, ustawTeraz] = useState(() => new Date())
   const [data, ustawDate] = useState(() => dataTekstowa(new Date()))
   const [filtr, ustawFiltr] = useState<FiltrPulpitu>('WSZYSTKIE')
@@ -553,7 +557,6 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
   const paczki = useMemo(() => zbudujWysylkiMonitora(pobierzSzczegolyDoChecklisty(), pobierzChecklistyPaczek(), stan.wyslanePaczki).filter((paczka) => !paczka.wlascicielId || paczka.wlascicielId === wybranyUzytkownikId), [stan.wyslanePaczki, wybranyUzytkownikId])
   const zadaniaAktywneDnia = zadania.filter((zadanie) => zadanie.status === 'OTWARTE' && czyZadanieDotyczyDnia(zadanie, data))
   const zadaniaGodzinowe = pobierzZadaniaDeadline(zadaniaAktywneDnia, data, teraz, zakresDniaPracy)
-  const zadaniaBezGodziny = sortujZadaniaBezGodziny(zadaniaAktywneDnia.filter((zadanie) => !zadanie.godzina && !czyZadanieDoKoncaDnia(zadanie)), teraz, zakresDniaPracy)
   const zadaniaWykonane = zadania.filter((zadanie) => zadanie.status === 'WYKONANE' && czyZadanieDotyczyDnia(zadanie, data))
   const pilne = zadania.filter((zadanie) => zadanie.status === 'OTWARTE' && (zadanie.priorytet === 'PILNE' || zadanie.priorytet === 'ASAP' || czyZadanieOpoznione(zadanie, teraz, zakresDniaPracy)))
   const liczniki = obliczLicznikiPulpitu(zadania, paczki, teraz, data, zakresDniaPracy)
@@ -854,7 +857,8 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
   }
   const pokazZadania = filtr !== 'PACZKI'
   const pokazPaczki = filtr === 'WSZYSTKIE' || filtr === 'PACZKI'
-  const zadaniaDoPokazania = filtr === 'PILNE' ? zadaniaBezGodziny.filter((zadanie) => zadanie.priorytet === 'PILNE' || zadanie.priorytet === 'ASAP' || czyZadanieOpoznione(zadanie, teraz, zakresDniaPracy)) : filtr === 'BLOKADY' ? zadaniaBezGodziny.filter((zadanie) => zadanie.czyAutomatyczne) : zadaniaBezGodziny
+  const zadaniaDzisiejsze = sortujZadaniaBezGodziny(zadaniaAktywneDnia, teraz, zakresDniaPracy)
+  const zadaniaDoPokazania = filtr === 'PILNE' ? zadaniaDzisiejsze.filter((zadanie) => zadanie.priorytet === 'PILNE' || zadanie.priorytet === 'ASAP' || czyZadanieOpoznione(zadanie, teraz, zakresDniaPracy)) : filtr === 'BLOKADY' ? zadaniaDzisiejsze.filter((zadanie) => zadanie.czyAutomatyczne) : zadaniaDzisiejsze
   const czyMoznaWykonacWybrane = Boolean(
     wybraneZadanie
     && !wybraneZadanie.czyAutomatyczne
@@ -886,7 +890,78 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
       {czyArchitekt && <label className="pulpit__wybor-kontekstu" htmlFor="pulpit-kontekst-uzytkownika">Kontekst użytkownika<select id="pulpit-kontekst-uzytkownika" onChange={(zdarzenie) => ustawWybranegoUzytkownikaId(zdarzenie.target.value)} value={wybranyUzytkownikId}>{aktywniUzytkownicy.map((uzytkownik) => <option key={uzytkownik.id} value={uzytkownik.id}>{pobierzNazweWyswietlanaUzytkownika(uzytkownik)}</option>)}</select></label>}
     </header>
 
-    <WidokRutyn otworzMonitor={() => { ustawFiltr('PACZKI'); window.setTimeout(() => document.querySelector('.monitor-wysylek')?.scrollIntoView({ block: 'start' }), 0) }} />
+    {pokazZadania && <section className="pulpit-sekcja" aria-labelledby="plan-dnia">
+      <div className="pulpit-sekcja__naglowek pulpit-sekcja__naglowek--plan">
+        <div><h2 id="plan-dnia">Plan dnia</h2><p>{formatujDate(data)}</p></div>
+        <div className="pulpit-nawigacja-daty">
+          <Przycisk className="pulpit-nawigacja-daty__strzalka" aria-label="Poprzedni dzień" onClick={() => ustawDate(przesunDate(data, -1))} type="button">&lsaquo;</Przycisk>
+          <Przycisk className="pulpit-nawigacja-daty__dzisiaj" onClick={() => ustawDate(dataTekstowa(new Date()))} type="button">Dzisiaj</Przycisk>
+          <Przycisk className="pulpit-nawigacja-daty__strzalka" aria-label="Następny dzień" onClick={() => ustawDate(przesunDate(data, 1))} type="button">&rsaquo;</Przycisk>
+          <input aria-label="Wybierz datę planu" onChange={(zdarzenie) => ustawDate(zdarzenie.target.value)} type="date" value={data} />
+        </div>
+      </div>
+      <div className="pulpit-os-czasu__przewijanie" tabIndex={0} role="region" aria-label="Oś dnia — przewijanie poziome"><div className="pulpit-os-czasu" aria-label={czyWybranyDzienPracy ? 'Dobowa oś czasu od 00:00 do 23:59; dzień pracy od ' + zakresDniaPracy.poczatek + ' do ' + zakresDniaPracy.koniec : 'Dobowa oś czasu od 00:00 do 23:59; dzień wolny'}>
+        <div className="pulpit-os-czasu__miniatury">
+          {zadaniaGodzinowe.map((zadanie) => <MiniaturaZadaniaNaOsi key={'miniatura-' + zadanie.id} otworz={() => otworzZadanie(zadanie)} zakresDniaPracy={zakresDniaPracy} zadanie={zadanie} />)}
+        </div>
+        <div className="pulpit-os-czasu__linia">
+          {czyWybranyDzienPracy ? <><div className="pulpit-os-czasu__odcinek pulpit-os-czasu__odcinek--przed-praca" style={{ width: graniceDniaPracy.poczatek + '%' }} />
+          <div className="pulpit-os-czasu__odcinek pulpit-os-czasu__odcinek--praca" style={{ left: graniceDniaPracy.poczatek + '%', width: graniceDniaPracy.koniec - graniceDniaPracy.poczatek + '%' }} />
+          <div className="pulpit-os-czasu__odcinek pulpit-os-czasu__odcinek--po-pracy" style={{ left: graniceDniaPracy.koniec + '%', width: 100 - graniceDniaPracy.koniec + '%' }} /></> : <div className="pulpit-os-czasu__odcinek pulpit-os-czasu__odcinek--po-pracy" style={{ width: '100%' }} />}
+          <div className="pulpit-os-czasu__postep" style={{ width: wskaznikCzasu.pozycja + '%' }} />
+          {data === dataTekstowa(teraz) && <div className="pulpit-os-czasu__wskaznik" style={{ left: wskaznikCzasu.pozycja + '%' }}>
+            <span className={'pulpit-os-czasu__etykieta-teraz pulpit-os-czasu__etykieta-teraz--' + wskaznikCzasu.wyrownanieEtykiety.toLocaleLowerCase('pl')}>{wskaznikCzasu.etykieta}</span>
+          </div>}
+        </div>
+        <div className="pulpit-os-czasu__etykiety">
+          {etykietyOsi.map((etykieta) => {
+            const pozycja = pozycjaGodzinyNaOsi(etykieta, zakresDniaPracy)
+            const klasaKrawedzi = pozycja <= 5 ? ' pulpit-os-czasu__etykieta--lewo' : pozycja >= 95 ? ' pulpit-os-czasu__etykieta--prawo' : ''
+            return <span className={'pulpit-os-czasu__etykieta' + klasaKrawedzi} key={etykieta} style={{ left: pozycja + '%' }}>{etykieta}</span>
+          })}
+          {czyWybranyDzienPracy ? <><span className="pulpit-os-czasu__etykieta-pracy" style={{ left: graniceDniaPracy.poczatek + '%' }}>Start pracy {zakresDniaPracy.poczatek}</span>
+          <span className="pulpit-os-czasu__etykieta-pracy" style={{ left: graniceDniaPracy.koniec + '%' }}>Koniec pracy {zakresDniaPracy.koniec}</span></> : <span className="pulpit-os-czasu__etykieta-pracy" style={{ left: 0 }}>Dzień wolny</span>}
+        </div>
+        <div className="pulpit-os-czasu__zadania">{zadaniaGodzinowe.map((zadanie) => <MarkerDeadline key={zadanie.id} otworz={() => otworzZadanie(zadanie)} zakresDniaPracy={zakresDniaPracy} uzytkownicy={uzytkownicy} zadanie={zadanie} />)}</div>
+        <RutynyNaOsi daneRutyn={daneRutyn} data={data} uzytkownikId={wybranyUzytkownikId} zakresDniaPracy={zakresDniaPracy} otworz={(id) => { ustawWybranaRutyneId(id); window.setTimeout(() => document.getElementById('podsumowanie-rutyn')?.scrollIntoView({ block: 'start' }), 0) }} />
+      </div></div>
+
+
+      <div className="pulpit-podsekcja">
+        <div className="pulpit-podsekcja__naglowek"><h3>Do wykonania dzisiaj</h3>{czyObserwowanyJestZalogowanym && trybFormularzaZadania === 'create' && <Przycisk onClick={otworzDodawanie} type="button">+ Dodaj zadanie</Przycisk>}</div>
+        {czyFormularzZadaniaOtwarty && (trybFormularzaZadania === 'edit' || czyObserwowanyJestZalogowanym) && <div className="pulpit-formularz-zadania__kontener" ref={kontenerFormularzaZadaniaRef}>
+          <h4>{trybFormularzaZadania === 'edit' ? 'Edytuj zadanie' : 'Dodaj zadanie'}</h4>
+          <FormularzZadaniaPulpitu
+            anuluj={trybFormularzaZadania === 'edit' ? anulujEdycjeZadania : undefined}
+            blad={bladFormularzaZadania}
+            czyWyborZadaniodawcy={trybFormularzaZadania === 'create' && czyWyborZadaniodawcy}
+            czyNiezapisaneZmiany={czyFormularzMaNiezapisaneZmiany}
+            formularz={formularzZadania}
+            key={trybFormularzaZadania + '-' + (edytowaneZadanieId ?? 'nowe')}
+            szkolenia={szkoleniaDostepne}
+            tryb={trybFormularzaZadania}
+            ustawFormularz={ustawFormularzZadania}
+            usun={trybFormularzaZadania === 'edit' && czyMoznaUsunacWybrane ? usunEdytowaneZadanie : undefined}
+            uzytkownicy={aktywniUzytkownicy}
+            wykonaj={trybFormularzaZadania === 'edit' && czyMoznaWykonacWybrane && wybraneZadanie ? () => oznaczWykonane(wybraneZadanie) : undefined}
+            zapisz={trybFormularzaZadania === 'edit' ? zapiszEdycjeZadania : dodajZadanie}
+          />
+        </div>}
+        {zadaniaDoPokazania.length ? <div className="pulpit-lista-zadan">{zadaniaDoPokazania.map((zadanie) => {
+          const czyWykonawca = zadanie.zadaniobiorcaId === zalogowanyUzytkownik?.id
+          const czyMoznaEdytowacTermin = czyMoznaEdytowacZadanie(
+            zadanie,
+            zalogowanyUzytkownik?.id,
+            zalogowanyUzytkownik?.rola,
+          )
+          return <KartaZadania key={zadanie.id} nazwaSzkolenia={pobierzNazweSzkolenia(szkoleniaDostepne, zadanie.powiazaneSzkolenieId)} zadanie={zadanie} teraz={teraz} zakresDniaPracy={zakresDniaPracy} uzytkownicy={uzytkownicy} otworz={() => otworzZadanie(zadanie)} wykonaj={zadanie.czyAutomatyczne || !czyWykonawca ? undefined : () => oznaczWykonane(zadanie)} zmienGodzine={!czyMoznaEdytowacTermin ? undefined : (godzina) => zmienGodzine(zadanie, godzina)} odloz={zadanie.czyTerminKrytyczny || !czyMoznaEdytowacTermin ? undefined : (nowaData) => odlozZadanie(zadanie, nowaData)} />
+        })}</div> : <PustyStan>Brak zadań do wykonania.</PustyStan>}
+      </div>
+      {zadaniaGodzinowe.length > 0 && <details className="pulpit-terminy"><summary>Zadania z terminem ({zadaniaGodzinowe.length})</summary><ul>{zadaniaGodzinowe.map((zadanie) => <li key={zadanie.id}><Przycisk onClick={() => otworzZadanie(zadanie)}>{etykietaTerminuZadania(zadanie)} — {zadanie.tytul}</Przycisk></li>)}</ul></details>}
+      {zadaniaWykonane.length > 0 && <details className="pulpit-wykonane"><summary>Wykonane ({zadaniaWykonane.length})</summary>{zadaniaWykonane.map((zadanie) => <KartaZadania key={zadanie.id} nazwaSzkolenia={pobierzNazweSzkolenia(szkoleniaDostepne, zadanie.powiazaneSzkolenieId)} zadanie={zadanie} teraz={teraz} zakresDniaPracy={zakresDniaPracy} uzytkownicy={uzytkownicy} otworz={() => otworzZadanie(zadanie)} />)}</details>}
+    </section>}
+
+    <WidokRutyn daneRutyn={daneRutyn} wybranaRutynaId={wybranaRutynaId} zamknijSzczegoly={() => ustawWybranaRutyneId(null)} otworzMonitor={() => { ustawFiltr('PACZKI'); window.setTimeout(() => document.querySelector('.monitor-wysylek')?.scrollIntoView({ block: 'start' }), 0) }} />
 
     <section aria-label="Podsumowanie" className="pulpit-kafelki">
       {widoczneKafelki.doZrobienia && (
@@ -974,75 +1049,6 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
         </Przycisk>
       )}
     </section>
-
-    {pokazZadania && <section className="pulpit-sekcja" aria-labelledby="plan-dnia">
-      <div className="pulpit-sekcja__naglowek pulpit-sekcja__naglowek--plan">
-        <div><h2 id="plan-dnia">Plan dnia</h2><p>{formatujDate(data)}</p></div>
-        <div className="pulpit-nawigacja-daty">
-          <Przycisk className="pulpit-nawigacja-daty__strzalka" aria-label="Poprzedni dzień" onClick={() => ustawDate(przesunDate(data, -1))} type="button">&lsaquo;</Przycisk>
-          <Przycisk className="pulpit-nawigacja-daty__dzisiaj" onClick={() => ustawDate(dataTekstowa(new Date()))} type="button">Dzisiaj</Przycisk>
-          <Przycisk className="pulpit-nawigacja-daty__strzalka" aria-label="Następny dzień" onClick={() => ustawDate(przesunDate(data, 1))} type="button">&rsaquo;</Przycisk>
-          <input aria-label="Wybierz datę planu" onChange={(zdarzenie) => ustawDate(zdarzenie.target.value)} type="date" value={data} />
-        </div>
-      </div>
-      <div className="pulpit-os-czasu__przewijanie" tabIndex={0} role="region" aria-label="Oś dnia — przewijanie poziome"><div className="pulpit-os-czasu" aria-label={czyWybranyDzienPracy ? 'Dobowa oś czasu od 00:00 do 23:59; dzień pracy od ' + zakresDniaPracy.poczatek + ' do ' + zakresDniaPracy.koniec : 'Dobowa oś czasu od 00:00 do 23:59; dzień wolny'}>
-        <div className="pulpit-os-czasu__miniatury">
-          {zadaniaGodzinowe.map((zadanie) => <MiniaturaZadaniaNaOsi key={'miniatura-' + zadanie.id} otworz={() => otworzZadanie(zadanie)} zakresDniaPracy={zakresDniaPracy} zadanie={zadanie} />)}
-        </div>
-        <div className="pulpit-os-czasu__linia">
-          {czyWybranyDzienPracy ? <><div className="pulpit-os-czasu__odcinek pulpit-os-czasu__odcinek--przed-praca" style={{ width: graniceDniaPracy.poczatek + '%' }} />
-          <div className="pulpit-os-czasu__odcinek pulpit-os-czasu__odcinek--praca" style={{ left: graniceDniaPracy.poczatek + '%', width: graniceDniaPracy.koniec - graniceDniaPracy.poczatek + '%' }} />
-          <div className="pulpit-os-czasu__odcinek pulpit-os-czasu__odcinek--po-pracy" style={{ left: graniceDniaPracy.koniec + '%', width: 100 - graniceDniaPracy.koniec + '%' }} /></> : <div className="pulpit-os-czasu__odcinek pulpit-os-czasu__odcinek--po-pracy" style={{ width: '100%' }} />}
-          <div className="pulpit-os-czasu__postep" style={{ width: wskaznikCzasu.pozycja + '%' }} />
-          {data === dataTekstowa(teraz) && <div className="pulpit-os-czasu__wskaznik" style={{ left: wskaznikCzasu.pozycja + '%' }}>
-            <span className={'pulpit-os-czasu__etykieta-teraz pulpit-os-czasu__etykieta-teraz--' + wskaznikCzasu.wyrownanieEtykiety.toLocaleLowerCase('pl')}>{wskaznikCzasu.etykieta}</span>
-          </div>}
-        </div>
-        <div className="pulpit-os-czasu__etykiety">
-          {etykietyOsi.map((etykieta) => {
-            const pozycja = pozycjaGodzinyNaOsi(etykieta, zakresDniaPracy)
-            const klasaKrawedzi = pozycja <= 5 ? ' pulpit-os-czasu__etykieta--lewo' : pozycja >= 95 ? ' pulpit-os-czasu__etykieta--prawo' : ''
-            return <span className={'pulpit-os-czasu__etykieta' + klasaKrawedzi} key={etykieta} style={{ left: pozycja + '%' }}>{etykieta}</span>
-          })}
-          {czyWybranyDzienPracy ? <><span className="pulpit-os-czasu__etykieta-pracy" style={{ left: graniceDniaPracy.poczatek + '%' }}>Start pracy {zakresDniaPracy.poczatek}</span>
-          <span className="pulpit-os-czasu__etykieta-pracy" style={{ left: graniceDniaPracy.koniec + '%' }}>Koniec pracy {zakresDniaPracy.koniec}</span></> : <span className="pulpit-os-czasu__etykieta-pracy" style={{ left: 0 }}>Dzień wolny</span>}
-        </div>
-        <div className="pulpit-os-czasu__zadania">{zadaniaGodzinowe.map((zadanie) => <MarkerDeadline key={zadanie.id} otworz={() => otworzZadanie(zadanie)} zakresDniaPracy={zakresDniaPracy} uzytkownicy={uzytkownicy} zadanie={zadanie} />)}</div>
-      </div></div>
-      {zadaniaGodzinowe.length > 0 && <details className="pulpit-terminy"><summary>Zadania z terminem ({zadaniaGodzinowe.length})</summary><ul>{zadaniaGodzinowe.map((zadanie) => <li key={zadanie.id}><Przycisk onClick={() => otworzZadanie(zadanie)}>{etykietaTerminuZadania(zadanie)} — {zadanie.tytul}</Przycisk></li>)}</ul></details>}
-
-      <div className="pulpit-podsekcja">
-        <div className="pulpit-podsekcja__naglowek"><h3>Do wykonania dzisiaj</h3>{czyObserwowanyJestZalogowanym && trybFormularzaZadania === 'create' && <Przycisk onClick={otworzDodawanie} type="button">+ Dodaj zadanie</Przycisk>}</div>
-        {czyFormularzZadaniaOtwarty && (trybFormularzaZadania === 'edit' || czyObserwowanyJestZalogowanym) && <div className="pulpit-formularz-zadania__kontener" ref={kontenerFormularzaZadaniaRef}>
-          <h4>{trybFormularzaZadania === 'edit' ? 'Edytuj zadanie' : 'Dodaj zadanie'}</h4>
-          <FormularzZadaniaPulpitu
-            anuluj={trybFormularzaZadania === 'edit' ? anulujEdycjeZadania : undefined}
-            blad={bladFormularzaZadania}
-            czyWyborZadaniodawcy={trybFormularzaZadania === 'create' && czyWyborZadaniodawcy}
-            czyNiezapisaneZmiany={czyFormularzMaNiezapisaneZmiany}
-            formularz={formularzZadania}
-            key={trybFormularzaZadania + '-' + (edytowaneZadanieId ?? 'nowe')}
-            szkolenia={szkoleniaDostepne}
-            tryb={trybFormularzaZadania}
-            ustawFormularz={ustawFormularzZadania}
-            usun={trybFormularzaZadania === 'edit' && czyMoznaUsunacWybrane ? usunEdytowaneZadanie : undefined}
-            uzytkownicy={aktywniUzytkownicy}
-            wykonaj={trybFormularzaZadania === 'edit' && czyMoznaWykonacWybrane && wybraneZadanie ? () => oznaczWykonane(wybraneZadanie) : undefined}
-            zapisz={trybFormularzaZadania === 'edit' ? zapiszEdycjeZadania : dodajZadanie}
-          />
-        </div>}
-        {zadaniaDoPokazania.length ? <div className="pulpit-lista-zadan">{zadaniaDoPokazania.map((zadanie) => {
-          const czyWykonawca = zadanie.zadaniobiorcaId === zalogowanyUzytkownik?.id
-          const czyMoznaEdytowacTermin = czyMoznaEdytowacZadanie(
-            zadanie,
-            zalogowanyUzytkownik?.id,
-            zalogowanyUzytkownik?.rola,
-          )
-          return <KartaZadania key={zadanie.id} nazwaSzkolenia={pobierzNazweSzkolenia(szkoleniaDostepne, zadanie.powiazaneSzkolenieId)} zadanie={zadanie} teraz={teraz} zakresDniaPracy={zakresDniaPracy} uzytkownicy={uzytkownicy} otworz={() => otworzZadanie(zadanie)} wykonaj={zadanie.czyAutomatyczne || !czyWykonawca ? undefined : () => oznaczWykonane(zadanie)} zmienGodzine={!czyMoznaEdytowacTermin ? undefined : (godzina) => zmienGodzine(zadanie, godzina)} odloz={zadanie.czyTerminKrytyczny || !czyMoznaEdytowacTermin ? undefined : (nowaData) => odlozZadanie(zadanie, nowaData)} />
-        })}</div> : <PustyStan>Brak zadań bez przypisanej godziny.</PustyStan>}
-      </div>
-      {zadaniaWykonane.length > 0 && <details className="pulpit-wykonane"><summary>Wykonane ({zadaniaWykonane.length})</summary>{zadaniaWykonane.map((zadanie) => <KartaZadania key={zadanie.id} nazwaSzkolenia={pobierzNazweSzkolenia(szkoleniaDostepne, zadanie.powiazaneSzkolenieId)} zadanie={zadanie} teraz={teraz} zakresDniaPracy={zakresDniaPracy} uzytkownicy={uzytkownicy} otworz={() => otworzZadanie(zadanie)} />)}</details>}
-    </section>}
 
     {bladWysylki && !paczkaDoPotwierdzenia && <Komunikat status="error">{bladWysylki}</Komunikat>}
     {pokazPaczki && <MonitorWysylek

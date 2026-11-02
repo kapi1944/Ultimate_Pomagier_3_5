@@ -20,6 +20,9 @@
   --ui-cien: 0 8px 24px #0003;
   --ui-focus: #facc15;
   --ui-tlo-gradient: var(--ui-tlo);
+  --ui-naglowek-tlo: color-mix(in srgb, var(--ui-powierzchnia) 85%, var(--ui-akcent) 15%);
+  --ui-dock-tlo: color-mix(in srgb, var(--ui-powierzchnia) 90%, var(--ui-akcent) 10%);
+  --ui-pasek-separator: color-mix(in srgb, var(--ui-obramowanie) 65%, var(--ui-akcent) 35%);
 }
 
 html:not([data-ui-paleta]), [data-ui-paleta="DOMYSLNA"], [data-ui-paleta="EMERALD_DARK"] {

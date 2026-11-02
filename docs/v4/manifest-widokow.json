@@ -1506,6 +1506,12 @@
         "V4-06"
       ],
       "wspoldzieloneZ": []
+    },
+    "src/moduly/zamkniete/pulpit/RutynyNaOsi.tsx": {
+      "zadanie": "V4-04",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     }
   },
   "realizacjaEtapow": {

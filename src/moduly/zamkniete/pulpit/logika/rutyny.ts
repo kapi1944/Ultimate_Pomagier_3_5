@@ -3,10 +3,10 @@ export type HarmonogramRutyny =
   | { rodzaj: 'DNI_TYGODNIA'; dni: number[] }
   | { rodzaj: 'CEL_TYGODNIOWY'; liczba: number }
 
-export type WersjaHarmonogramu = { od: string; harmonogram: HarmonogramRutyny; aktywna: boolean; wlascicielId?: string }
+export type WersjaHarmonogramu = { od: string; harmonogram: HarmonogramRutyny; aktywna: boolean; godzina?: string; wlascicielId?: string }
 export type Rutyna = { id: string; tytul: string; wlascicielId: string; wersje: WersjaHarmonogramu[]; opis?: string; instrukcja?: string; link?: string; priorytet?: 'ZWYKLE' | 'PILNE' }
 export type WykonanieRutyny = { rutynaId: string; okres: string; numer: number; wykonane: boolean; zmieniono?: string; zmienilId?: string }
-export type WystapienieRutyny = { rutynaId: string; okres: string; numer: number; tytul: string; wykonane: boolean }
+export type WystapienieRutyny = { rutynaId: string; okres: string; numer: number; tytul: string; wykonane: boolean; godzina?: string }
 export type ZdarzenieRutyny = { czas: string; uzytkownikId: string; rutynaId: string; opis: string }
 export type StanRutyn = { rutyny: Rutyna[]; wykonania: WykonanieRutyny[]; historia: ZdarzenieRutyny[] }
 
@@ -43,7 +43,7 @@ export function wystapieniaDnia(rutyny: Rutyna[], wykonania: WykonanieRutyny[], 
     const wersja = wersjaNaDzien(rutyna, data)
     if (!wersja?.aktywna || wersja.harmonogram.rodzaj === 'CEL_TYGODNIOWY') return []
     if (wersja.harmonogram.rodzaj === 'DNI_TYGODNIA' && !wersja.harmonogram.dni.includes(dzien)) return []
-    return [{ rutynaId: rutyna.id, okres: data, numer: 0, tytul: rutyna.tytul, wykonane: wykonania.some((wpis) => wpis.rutynaId === rutyna.id && wpis.okres === data && wpis.numer === 0 && wpis.wykonane) }]
+    return [{ rutynaId: rutyna.id, okres: data, numer: 0, tytul: rutyna.tytul, ...(wersja.godzina ? { godzina: wersja.godzina } : {}), wykonane: wykonania.some((wpis) => wpis.rutynaId === rutyna.id && wpis.okres === data && wpis.numer === 0 && wpis.wykonane) }]
   })
 }
 

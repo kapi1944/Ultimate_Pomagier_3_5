@@ -1,16 +1,16 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import { useKontekstUzytkownika } from '../../../aplikacja/logowanie/useKontekstUzytkownika'
 import { czyJestAdministratorem } from '../../../kartoteki/uzytkownicy/uprawnienia'
 import { czyJestPracownikiemWewnetrznym, pobierzNazweWyswietlanaUzytkownika } from '../../../kartoteki/uzytkownicy/typyUzytkownikow'
-import { dataWarszawska, dodajDni, obliczPostep, poczatekTygodnia, wersjaNaDzien, wystapieniaDnia, wystapieniaTygodnia, wlascicielWystapienia, type HarmonogramRutyny, type Rutyna, type StanRutyn, type WystapienieRutyny } from './logika/rutyny'
-import { pobierzRutyny, zapiszRutyne, zmienWykonanieRutyny } from './uslugi/rutynyPulpitu'
+import { dataWarszawska, dodajDni, obliczPostep, poczatekTygodnia, wersjaNaDzien, wystapieniaDnia, wystapieniaTygodnia, wlascicielWystapienia, type HarmonogramRutyny, type Rutyna, type WystapienieRutyny } from './logika/rutyny'
+import { zapiszRutyne, zmienWykonanieRutyny } from './uslugi/rutynyPulpitu'
+import type { useRutynyPulpitu } from './useRutynyPulpitu'
 import './rutyny.css'
 
 type Zakladka = 'Dzisiaj' | 'Ten tydzień' | 'Historia' | 'Zarządzaj rutynami'
-type Formularz = { id: string; tytul: string; opis: string; instrukcja: string; link: string; wlascicielId: string; priorytet: 'ZWYKLE' | 'PILNE'; rodzaj: HarmonogramRutyny['rodzaj']; dni: number[]; liczba: number; od: string; aktywna: boolean }
+type Formularz = { id: string; tytul: string; opis: string; instrukcja: string; link: string; wlascicielId: string; priorytet: 'ZWYKLE' | 'PILNE'; rodzaj: HarmonogramRutyny['rodzaj']; dni: number[]; liczba: number; od: string; aktywna: boolean; godzina: string }
 const dniTygodnia = [{ numer: 1, nazwa: 'Pn' }, { numer: 2, nazwa: 'Wt' }, { numer: 3, nazwa: 'Śr' }, { numer: 4, nazwa: 'Cz' }, { numer: 5, nazwa: 'Pt' }, { numer: 6, nazwa: 'Sb' }, { numer: 0, nazwa: 'Nd' }]
-const pustyStan: StanRutyn = { rutyny: [], wykonania: [], historia: [] }
-function pustyFormularz(wlascicielId: string, dzisiaj: string): Formularz { return { id: '', tytul: '', opis: '', instrukcja: '', link: '', wlascicielId, priorytet: 'ZWYKLE', rodzaj: 'CODZIENNIE', dni: [], liczba: 3, od: dzisiaj, aktywna: true } }
+function pustyFormularz(wlascicielId: string, dzisiaj: string): Formularz { return { id: '', tytul: '', opis: '', instrukcja: '', link: '', wlascicielId, priorytet: 'ZWYKLE', rodzaj: 'CODZIENNIE', dni: [], liczba: 3, od: dzisiaj, aktywna: true, godzina: '' } }
 
 function Pasek({ wystapienia }: { wystapienia: WystapienieRutyny[] }) {
   const postep = obliczPostep(wystapienia)
@@ -19,11 +19,11 @@ function Pasek({ wystapienia }: { wystapienia: WystapienieRutyny[] }) {
   </div>
 }
 
-export default function WidokRutyn({ otworzMonitor }: { otworzMonitor: () => void }) {
+export default function WidokRutyn({ otworzMonitor, daneRutyn, wybranaRutynaId, zamknijSzczegoly }: { otworzMonitor: () => void; daneRutyn: ReturnType<typeof useRutynyPulpitu>; wybranaRutynaId: string | null; zamknijSzczegoly: () => void }) {
   const { zalogowanyUzytkownik, aktywniUzytkownicy } = useKontekstUzytkownika()
-  const [stan, ustawStan] = useState<StanRutyn>(pustyStan)
+  const { stan, odswiez } = daneRutyn
   const [blad, ustawBlad] = useState('')
-  const [dzisiaj, ustawDzisiaj] = useState(() => dataWarszawska(new Date()))
+  const dzisiaj = dataWarszawska(new Date())
   const [otwarty, ustawOtwarty] = useState(false)
   const [zakladka, ustawZakladke] = useState<Zakladka>('Dzisiaj')
   const [zakres, ustawZakres] = useState<'MOJE' | 'ZESPOL'>('MOJE')
@@ -32,13 +32,6 @@ export default function WidokRutyn({ otworzMonitor }: { otworzMonitor: () => voi
   const czyAdmin = czyJestAdministratorem(zalogowanyUzytkownik)
   const czyPracownik = czyJestPracownikiemWewnetrznym(zalogowanyUzytkownik)
 
-  useEffect(() => {
-    function odswiez() { try { ustawStan(pobierzRutyny()); ustawBlad('') } catch (wyjatek) { ustawBlad(wyjatek instanceof Error ? wyjatek.message : 'Nie udało się odczytać rutyn.') } ustawDzisiaj(dataWarszawska(new Date())) }
-    odswiez()
-    const zegar = window.setInterval(odswiez, 60_000)
-    window.addEventListener('focus', odswiez); window.addEventListener('storage', odswiez)
-    return () => { window.clearInterval(zegar); window.removeEventListener('focus', odswiez); window.removeEventListener('storage', odswiez) }
-  }, [])
   if (!czyPracownik || !zalogowanyUzytkownik) return null
   const uzytkownik = zalogowanyUzytkownik
   const widoczne = (wystapienia: WystapienieRutyny[]) => wystapienia.filter((wpis) => { const rutyna = stan.rutyny.find((pozycja) => pozycja.id === wpis.rutynaId); return rutyna && ((czyAdmin && zakres === 'ZESPOL') || wlascicielWystapienia(rutyna, wpis) === uzytkownik.id) })
@@ -47,17 +40,17 @@ export default function WidokRutyn({ otworzMonitor }: { otworzMonitor: () => voi
   const zalegleDni = Array.from({ length: 30 }, (_, indeks) => dodajDni(dzisiaj, -indeks - 1)).flatMap((data) => widoczne(wystapieniaDnia(stan.rutyny, stan.wykonania, data))).filter((wpis) => !wpis.wykonane)
   const zalegleCele = Array.from({ length: 4 }, (_, indeks) => dodajDni(poczatekTygodnia(dzisiaj), -7 * (indeks + 1))).flatMap((data) => widoczne(wystapieniaTygodnia(stan.rutyny, stan.wykonania, data))).filter((wpis) => wpis.numer > 0 && !wpis.wykonane)
   const zalegle = [...zalegleDni, ...zalegleCele]
-  function wykonaj(wpis: WystapienieRutyny, wartosc: boolean) { try { zmienWykonanieRutyny(wpis, wartosc, uzytkownik); ustawStan(pobierzRutyny()); ustawBlad('') } catch (wyjatek) { ustawBlad(wyjatek instanceof Error ? wyjatek.message : 'Nie udało się zmienić rutyny.') } }
+  function wykonaj(wpis: WystapienieRutyny, wartosc: boolean) { try { zmienWykonanieRutyny(wpis, wartosc, uzytkownik); odswiez(); ustawBlad('') } catch (wyjatek) { ustawBlad(wyjatek instanceof Error ? wyjatek.message : 'Nie udało się zmienić rutyny.') } }
   function edytuj(rutyna: Rutyna) {
     const wersja = rutyna.wersje.at(-1)!
     const od = wersja.harmonogram.rodzaj === 'CEL_TYGODNIOWY' ? dodajDni(poczatekTygodnia(dzisiaj), 7) : dodajDni(dzisiaj, 1)
-    ustawFormularz({ id: rutyna.id, tytul: rutyna.tytul, opis: rutyna.opis ?? '', instrukcja: rutyna.instrukcja ?? '', link: rutyna.link ?? '', wlascicielId: rutyna.wlascicielId, priorytet: rutyna.priorytet ?? 'ZWYKLE', rodzaj: wersja.harmonogram.rodzaj, dni: wersja.harmonogram.rodzaj === 'DNI_TYGODNIA' ? wersja.harmonogram.dni : [], liczba: wersja.harmonogram.rodzaj === 'CEL_TYGODNIOWY' ? wersja.harmonogram.liczba : 3, od, aktywna: wersja.aktywna })
+    ustawFormularz({ id: rutyna.id, tytul: rutyna.tytul, opis: rutyna.opis ?? '', instrukcja: rutyna.instrukcja ?? '', link: rutyna.link ?? '', wlascicielId: rutyna.wlascicielId, priorytet: rutyna.priorytet ?? 'ZWYKLE', rodzaj: wersja.harmonogram.rodzaj, dni: wersja.harmonogram.rodzaj === 'DNI_TYGODNIA' ? wersja.harmonogram.dni : [], liczba: wersja.harmonogram.rodzaj === 'CEL_TYGODNIOWY' ? wersja.harmonogram.liczba : 3, od, aktywna: wersja.aktywna, godzina: wersja.godzina ?? '' })
   }
   function zapiszFormularz(zdarzenie: FormEvent) {
     zdarzenie.preventDefault(); if (!formularz) return
     const harmonogram: HarmonogramRutyny = formularz.rodzaj === 'CODZIENNIE' ? { rodzaj: 'CODZIENNIE' } : formularz.rodzaj === 'DNI_TYGODNIA' ? { rodzaj: 'DNI_TYGODNIA', dni: formularz.dni } : { rodzaj: 'CEL_TYGODNIOWY', liczba: formularz.liczba }
-    const rutyna: Rutyna = { id: formularz.id || crypto.randomUUID(), tytul: formularz.tytul, opis: formularz.opis, instrukcja: formularz.instrukcja, link: formularz.link, wlascicielId: formularz.wlascicielId, priorytet: formularz.priorytet, wersje: [{ od: formularz.od, aktywna: formularz.aktywna, harmonogram }] }
-    try { zapiszRutyne(rutyna, uzytkownik); ustawStan(pobierzRutyny()); ustawFormularz(null); ustawBlad('') } catch (wyjatek) { ustawBlad(wyjatek instanceof Error ? wyjatek.message : 'Nie udało się zapisać rutyny.') }
+    const rutyna: Rutyna = { id: formularz.id || crypto.randomUUID(), tytul: formularz.tytul, opis: formularz.opis, instrukcja: formularz.instrukcja, link: formularz.link, wlascicielId: formularz.wlascicielId, priorytet: formularz.priorytet, wersje: [{ od: formularz.od, aktywna: formularz.aktywna, ...(formularz.godzina && formularz.rodzaj !== 'CEL_TYGODNIOWY' ? { godzina: formularz.godzina } : {}), harmonogram }] }
+    try { zapiszRutyne(rutyna, uzytkownik); odswiez(); ustawFormularz(null); ustawBlad('') } catch (wyjatek) { ustawBlad(wyjatek instanceof Error ? wyjatek.message : 'Nie udało się zapisać rutyny.') }
   }
   function lista(wpisy: WystapienieRutyny[]) {
     if (!wpisy.length) return <p>Brak zaplanowanych zadań</p>
@@ -65,13 +58,14 @@ export default function WidokRutyn({ otworzMonitor }: { otworzMonitor: () => voi
   }
   const widok = filtr === 'ZALEGLE' ? zalegle : (zakladka === 'Ten tydzień' ? tygodniowe : dzienne).filter((wpis) => filtr === 'WSZYSTKIE' || (filtr === 'WYKONANE' ? wpis.wykonane : !wpis.wykonane))
   const zarzadzane = stan.rutyny.filter((rutyna) => czyAdmin || rutyna.wlascicielId === uzytkownik.id)
-  return <section className="daily-routines" aria-label="Daily Routines">
-    <div className="daily-routines__naglowek"><h2>Daily Routines</h2><button type="button" onClick={() => ustawOtwarty(!otwarty)}>{otwarty ? 'Zamknij moduł' : 'Zobacz wszystkie'}</button></div>
-    {blad && <p role="alert" className="rutyny-blad">{blad}</p>}
-    <Pasek wystapienia={dzienne} />
-    {lista(dzienne.filter((wpis) => !wpis.wykonane).slice(0, 4))}
+  return <section id="podsumowanie-rutyn" className="daily-routines" aria-label="Daily Routines">
+    <div className="daily-routines__naglowek"><h2>Daily Routines</h2><button type="button" onClick={() => { ustawOtwarty(!otwarty); zamknijSzczegoly() }}>{otwarty ? 'Zamknij moduł' : 'Zobacz wszystkie'}</button></div>
+    {(blad || daneRutyn.blad) && <p role="alert" className="rutyny-blad">{blad || daneRutyn.blad}</p>}
+    <p className="rutyny-skrot">Wykonano {obliczPostep(dzienne).wykonane} z {dzienne.length} rutyn dziennych</p>
+    <div className="rutyny-szybkie">{dzienne.map((wpis) => <label key={wpis.rutynaId}><input type="checkbox" checked={wpis.wykonane} onChange={(zdarzenie) => wykonaj(wpis, zdarzenie.target.checked)} />{wpis.tytul}</label>)}</div>
     {zalegle.length > 0 && <p className="rutyny-zalegle">Zaległe: {zalegle.length} (dni z ostatnich 30 dni i cele z czterech tygodni)</p>}
-    {otwarty && <div className="rutyny-modul">
+    {(otwarty || wybranaRutynaId) && <div className="rutyny-modul">
+      {wybranaRutynaId && stan.rutyny.filter((rutyna) => rutyna.id === wybranaRutynaId).map((rutyna) => <article key={rutyna.id}><h3>{rutyna.tytul}</h3><p>{rutyna.opis}</p><p>{rutyna.instrukcja}</p>{rutyna.link && <a href={rutyna.link} target="_blank" rel="noreferrer">Otwórz link</a>}<button type="button" onClick={zamknijSzczegoly}>Zamknij szczegóły</button></article>)}
       <nav className="rutyny-zakladki" aria-label="Widoki rutyn">{(['Dzisiaj', 'Ten tydzień', 'Historia', 'Zarządzaj rutynami'] as Zakladka[]).map((nazwa) => <button type="button" key={nazwa} aria-current={zakladka === nazwa ? 'page' : undefined} onClick={() => ustawZakladke(nazwa)}>{nazwa}</button>)}</nav>
       {czyAdmin && <label>Zakres <select value={zakres} onChange={(zdarzenie) => ustawZakres(zdarzenie.target.value === 'ZESPOL' ? 'ZESPOL' : 'MOJE')}><option value="MOJE">Moje</option><option value="ZESPOL">Zespołu</option></select></label>}
       {(zakladka === 'Dzisiaj' || zakladka === 'Ten tydzień') && <><h3>{zakladka}</h3><Pasek wystapienia={zakladka === 'Dzisiaj' ? dzienne : tygodniowe} />{zakladka === 'Ten tydzień' && stan.rutyny.map((rutyna) => { const cele = tygodniowe.filter((wpis) => wpis.rutynaId === rutyna.id && wpis.numer > 0); return cele.length > 0 ? <p key={rutyna.id}>{rutyna.tytul}: {cele.filter((wpis) => wpis.wykonane).length} z {cele.length} w tym tygodniu</p> : null })}<label>Filtr <select value={filtr} onChange={(zdarzenie) => ustawFiltr(zdarzenie.target.value as typeof filtr)}><option value="WSZYSTKIE">Wszystkie</option><option value="OTWARTE">Do zrobienia</option><option value="WYKONANE">Wykonane</option><option value="ZALEGLE">Zaległe — ostatnie 30 dni / 4 tygodnie</option></select></label>{lista(widok)}{zakladka === 'Ten tydzień' && <p>Cel tygodniowy jest liczony osobno od postępu dziennego.</p>}</>}
@@ -87,6 +81,7 @@ export default function WidokRutyn({ otworzMonitor }: { otworzMonitor: () => voi
           <label>Częstotliwość<select value={formularz.rodzaj} onChange={(zdarzenie) => ustawFormularz({ ...formularz, rodzaj: zdarzenie.target.value as HarmonogramRutyny['rodzaj'] })}><option value="CODZIENNIE">Codziennie</option><option value="DNI_TYGODNIA">Wybrane dni tygodnia</option><option value="CEL_TYGODNIOWY">N razy w tygodniu</option></select></label>
           {formularz.rodzaj === 'DNI_TYGODNIA' && <fieldset><legend>Dni tygodnia</legend>{dniTygodnia.map((dzien) => <label key={dzien.numer}><input type="checkbox" checked={formularz.dni.includes(dzien.numer)} onChange={(zdarzenie) => ustawFormularz({ ...formularz, dni: zdarzenie.target.checked ? [...formularz.dni, dzien.numer] : formularz.dni.filter((numer) => numer !== dzien.numer) })} /> {dzien.nazwa}</label>)}</fieldset>}
           {formularz.rodzaj === 'CEL_TYGODNIOWY' && <label>Razy w tygodniu<input type="number" min="1" max="50" required value={formularz.liczba} onChange={(zdarzenie) => ustawFormularz({ ...formularz, liczba: Number(zdarzenie.target.value) })} /></label>}
+          {formularz.rodzaj !== 'CEL_TYGODNIOWY' && <label>Godzina (opcjonalnie)<input type="time" value={formularz.godzina} onChange={(zdarzenie) => ustawFormularz({ ...formularz, godzina: zdarzenie.target.value })} /></label>}
           <label>Obowiązuje od<input type="date" min={formularz.id ? dodajDni(dzisiaj, 1) : dzisiaj} required value={formularz.od} onChange={(zdarzenie) => ustawFormularz({ ...formularz, od: zdarzenie.target.value })} /></label>
           <label><input type="checkbox" checked={formularz.aktywna} onChange={(zdarzenie) => ustawFormularz({ ...formularz, aktywna: zdarzenie.target.checked })} /> Rutyna aktywna</label><p>Zmiany harmonogramu i przypisania obowiązują od przyszłej daty; zmiany celu tygodniowego od poniedziałku.</p>
           <div><button type="submit">Zapisz</button> <button type="button" onClick={() => ustawFormularz(null)}>Anuluj</button></div>

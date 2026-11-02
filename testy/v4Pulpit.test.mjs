@@ -2,6 +2,7 @@ import { register } from 'node:module'
 import assert from 'node:assert/strict'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
+import './srodowiskoDemoKont.mjs'
 register('./loaderKomponentow.mjs', import.meta.url)
 const magazyn = new Map()
 Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: { getItem: (klucz) => magazyn.get(klucz) ?? null, setItem: (klucz, wartosc) => magazyn.set(klucz, wartosc), removeItem: (klucz) => magazyn.delete(klucz) } })
@@ -16,7 +17,7 @@ assert.match(wynik, /aria-label="Oś dnia — przewijanie poziome"/)
 assert.equal((wynik.match(/class="pulpit-kafelek__ikona"/g) ?? []).length, 5)
 assert.match(wynik, /data-status="warning"/)
 assert.match(wynik, /data-status="error"/)
-assert.match(wynik, /Brak zadań bez przypisanej godziny/)
+assert.match(wynik, /Brak zadań do wykonania/)
 assert.match(wynik, /Brak szkoleń wymagających wysyłki materiałów/)
 const { default: FormularzZakupu } = await import('../src/moduly/zamkniete/pulpit/FormularzZakupu.tsx')
 const formularz = { nazwa: '', ilosc: '1', uwagi: '', linkiProduktow: [''], zalaczniki: [] }
@@ -28,3 +29,7 @@ for (const czyZamawiacz of [false, true]) {
   assert.match(html, /type="submit"/)
 }
 console.log('V4-04: rzeczywiste kafelki, semantyka, oś, puste stany i formularz zakupu — OK.')
+
+assert.ok(wynik.indexOf('id="plan-dnia"') < wynik.indexOf('Do wykonania dzisiaj'))
+assert.ok(wynik.indexOf('Do wykonania dzisiaj') < wynik.indexOf('id="podsumowanie-rutyn"'))
+assert.ok(wynik.indexOf('id="podsumowanie-rutyn"') < wynik.indexOf('aria-label="Podsumowanie"'))

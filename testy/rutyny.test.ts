@@ -69,3 +69,18 @@ magazyn.set('ultimatePomagier.pulpit.v1', '{')
 assert.throws(() => zapiszRutyne(nowa, pracownik, '2026-10-28'), /uszkodzone/)
 assert.equal(magazyn.get('ultimatePomagier.pulpit.v1'), '{')
 magazyn.set('ultimatePomagier.pulpit.v1', odzyskanyZapis)
+
+const godzinowa: Rutyna = { ...nowa, id: 'godzinowa', wersje: [{ ...nowa.wersje[0], godzina: '12:00' }] }
+zapiszRutyne(godzinowa, pracownik, '2026-10-28')
+const odczyt = pobierzRutyny()
+const wpisGodzinowy = wystapieniaDnia(odczyt.rutyny, odczyt.wykonania, '2026-10-28').find((wpis) => wpis.rutynaId === godzinowa.id)!
+assert.equal(wpisGodzinowy.godzina, '12:00')
+assert.equal(wystapieniaDnia([nowa], [], '2026-10-28')[0].godzina, undefined)
+zmienWykonanieRutyny(wpisGodzinowy, true, pracownik, '2026-10-28')
+assert.equal(wystapieniaDnia(pobierzRutyny().rutyny, pobierzRutyny().wykonania, '2026-10-28').find((wpis) => wpis.rutynaId === godzinowa.id)?.wykonane, true)
+assert.throws(() => zapiszRutyne({ ...godzinowa, wersje: [{ ...godzinowa.wersje[0], godzina: '14:00' }] }, pracownik, '2026-10-28'), /jutra/)
+zapiszRutyne({ ...godzinowa, wersje: [{ ...godzinowa.wersje[0], od: '2026-10-29', godzina: '14:00' }] }, pracownik, '2026-10-28')
+assert.equal(wystapieniaDnia(pobierzRutyny().rutyny, [], '2026-10-28').find((wpis) => wpis.rutynaId === godzinowa.id)?.godzina, '12:00')
+assert.equal(wystapieniaDnia(pobierzRutyny().rutyny, [], '2026-10-29').find((wpis) => wpis.rutynaId === godzinowa.id)?.godzina, '14:00')
+assert.throws(() => zapiszRutyne({ ...godzinowa, id: 'bledna', wersje: [{ ...godzinowa.wersje[0], godzina: '25:00' }] }, pracownik, '2026-10-28'), /godzinę/)
+assert.throws(() => zapiszRutyne({ ...godzinowa, id: 'cel-godzinowy', wersje: [{ ...godzinowa.wersje[0], harmonogram: { rodzaj: 'CEL_TYGODNIOWY', liczba: 3 } }] }, pracownik, '2026-10-28'), /tygodniowy/)
