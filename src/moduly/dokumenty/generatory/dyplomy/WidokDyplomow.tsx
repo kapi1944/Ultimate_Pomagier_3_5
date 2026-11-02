@@ -19,6 +19,9 @@ import { czyUczestnikDoDruku, dodajPusteDyplomy, ograniczPrzesuniecieLogotypu, p
 import { pobierzLogoOrganizatora } from '../../../../wspolne/dokumenty/logoOrganizatora'
 import { etykietyImportuDyplomu, importujPlikDyplomu } from './importDyplomu'
 import type { DaneImportuDyplomu, WynikImportuDyplomu } from './importDyplomu'
+import ImporterDanychSzkoleniaZMaila from '../../../../wspolne/import/ImporterDanychSzkoleniaZMaila'
+import type { WartosciImportuSzkolenia } from '../../../../wspolne/parsery/importDanychSzkoleniaZMaila'
+import { odczytajWartosciDyplomuDoImportu, polaMailaObslugiwanePrzezDyplom, przygotujCofniecieImportu, przygotujZmianyDyplomuZMaila } from './importMailaDoDyplomu'
 import './widokDyplomow.css'
 
 type TrybSzkolenia = 'stacjonarne' | 'online'
@@ -997,6 +1000,8 @@ export default function WidokDyplomow() {
   const [importDyplomu, ustawImportDyplomu] = useState<(WynikImportuDyplomu & { nazwaPliku: string }) | null>(null)
   const [wybranePolaImportu, ustawWybranePolaImportu] = useState<Array<keyof DaneImportuDyplomu>>([])
   const [czyTrwaImport, ustawCzyTrwaImport] = useState(false)
+  const [czyImportMaila, ustawCzyImportMaila] = useState(false)
+  const [cofniecieImportuMaila, ustawCofniecieImportuMaila] = useState<Partial<ZapisDyplomow> | null>(null)
   const plikDyplomuRef = useRef<HTMLInputElement>(null)
   const [nazwaNowegoDodatku, ustawNazweNowegoDodatku] = useState('')
   const [tekstNowegoDodatku, ustawTekstNowegoDodatku] = useState('')
@@ -1119,10 +1124,12 @@ export default function WidokDyplomow() {
   }
 
   function wybierzSzczegoly(szczegolyOrganizacyjneId: string) {
+    ustawCofniecieImportuMaila(null)
     ustawDane((aktualne) => ({ ...aktualne, szczegolyOrganizacyjneId: szczegolyOrganizacyjneId || null, grupaId: null }))
   }
 
   function zastosujGrupeSzkoleniowa(grupaId: string) {
+    ustawCofniecieImportuMaila(null)
     if (!wybraneSzczegoly || !grupaId) {
       zmienPole('grupaId', null)
       return
@@ -1316,6 +1323,7 @@ export default function WidokDyplomow() {
 
   function zastosujImportDyplomu() {
     if (!importDyplomu) return
+    ustawCofniecieImportuMaila(null)
     const pola = importDyplomu.pola
     const czyWybrane = (pole: keyof DaneImportuDyplomu) => wybranePolaImportu.includes(pole) && pola[pole] !== undefined
     ustawDane((aktualne) => {
@@ -1354,6 +1362,25 @@ export default function WidokDyplomow() {
     ustawIndeksUczestnikaPierwszejStrony(0)
     ustawImportDyplomu(null)
     ustawKomunikat(`Zastosowano wybrane dane z pliku ${importDyplomu.nazwaPliku}. Sprawdź checklistę przed eksportem.`)
+  }
+
+  function zastosujMailaDoDyplomu(wartosci: WartosciImportuSzkolenia) {
+    try {
+      const zmiany = { ...przygotujZmianyDyplomuZMaila(wartosci), szczegolyOrganizacyjneId: null, grupaId: null }
+      ustawCofniecieImportuMaila(przygotujCofniecieImportu(dane, zmiany))
+      ustawDane({ ...dane, ...zmiany })
+      ustawCzyImportMaila(false)
+      ustawKomunikat('Zastosowano dane szkolenia z maila. Sprawdź podgląd i checklistę przed drukiem. Możesz cofnąć import.')
+    } catch (blad) {
+      ustawKomunikat(blad instanceof Error ? blad.message : 'Nie udało się zastosować danych. Formularz zachowano.')
+    }
+  }
+
+  function cofnijImportMaila() {
+    if (!cofniecieImportuMaila) return
+    ustawDane((aktualne) => ({ ...aktualne, ...cofniecieImportuMaila }))
+    ustawCofniecieImportuMaila(null)
+    ustawKomunikat('Cofnięto import danych szkolenia z maila. Przywrócono wcześniejsze wartości pól szkolenia.')
   }
 
   async function importujUczestnikowZPliku(zdarzenie: ChangeEvent<HTMLInputElement>) {
@@ -1540,6 +1567,7 @@ export default function WidokDyplomow() {
     }
   }
   function wyczyscGenerator() {
+    ustawCofniecieImportuMaila(null)
     const pustyZapis = utworzDomyslnyZapis()
     const wyczyszczoneDane = {
       ...pustyZapis,
@@ -1618,6 +1646,10 @@ export default function WidokDyplomow() {
           <button className="dyplomy__przycisk" type="button" disabled={czyTrwaImport} onClick={() => plikDyplomuRef.current?.click()}>
             {czyTrwaImport ? 'Odczytywanie dyplomu…' : 'Importuj dyplom PDF / TXT'}
           </button>
+          <button className="dyplomy__przycisk dyplomy__przycisk--glowny" type="button" onClick={() => ustawCzyImportMaila(true)}>
+            📩 Importuj dane szkolenia z maila
+          </button>
+          {cofniecieImportuMaila && <button className="dyplomy__przycisk" type="button" onClick={cofnijImportMaila}>Cofnij import z maila</button>}
           <PrzyciskPaneluGeneratora className="dyplomy__przycisk">
             Ustawienia dyplomu
           </PrzyciskPaneluGeneratora>
@@ -1639,6 +1671,14 @@ export default function WidokDyplomow() {
           </button>
         </div>
       </header>
+
+      {czyImportMaila && <ImporterDanychSzkoleniaZMaila
+        obecneWartosci={odczytajWartosciDyplomuDoImportu(dane)}
+        obslugiwanePola={polaMailaObslugiwanePrzezDyplom}
+        zastosuj={zastosujMailaDoDyplomu}
+        zamknij={() => ustawCzyImportMaila(false)}
+        opisZastosowania="Import odłączy dotychczasowe powiązanie ze Szczegółami organizacyjnymi i grupą. Lista uczestników pozostanie zachowana."
+      />}
 
       <div className="dyplomy__komunikat" aria-live="polite">
         {komunikat}

@@ -1,10 +1,10 @@
 import type { RodzajGodzin } from '../typy'
 
 export const etykietyPolMaila = {
-  trener: ['Trener', 'Prowadzący', 'Prowadząca', 'Trener prowadzący', 'Prowadzący szkolenie', 'Prowadząca szkolenie'],
+  trener: ['Trener', 'Prowadzący', 'Prowadząca', 'Trener prowadzący', 'Prowadzący szkolenie', 'Prowadząca szkolenie', 'Ekspert', 'Wykładowca'],
   klient: ['Nazwa klienta', 'Klient', 'Nazwa firmy', 'Zamawiający'],
   uczestnicy: ['Liczba uczestników', 'Liczba osób', 'Uczestników', 'Uczestnicy', 'Ilość uczestników'],
-  godziny: ['Liczba godzin', 'Godziny szkolenia'],
+  godziny: ['Liczba godzin', 'Godziny szkolenia', 'Czas trwania', 'Godziny dydaktyczne', 'Godziny zegarowe'],
   rodzajGodzin: ['Rodzaj godzin', 'Typ godzin'],
   harmonogram: ['Godziny', 'Harmonogram szkolenia', 'Godziny zajęć'],
 }
@@ -15,7 +15,16 @@ const etykietyDzielone = [...Object.values(etykietyPolMaila).flat(),
   'Materiały szkoleniowe', 'Lista obecności', 'Materiały dodatkowe', 'Nazwa odbiorcy', 'Osoba kontaktowa',
   'Miejsce szkolenia', 'Miejsce szkolenia zapewnione przez Zamawiającego', 'Sala szkoleniowa zapewniona przez Zamawiającego',
   'Cena netto', 'Cena brutto', 'Wartość netto', 'Oświadczenie VAT', 'Termin płatności', 'Tytuł szkolenia', 'Program szkolenia',
+  'Termin', 'Data szkolenia', 'Termin szkolenia', 'Termin realizacji', 'Data realizacji', 'Data od', 'Data do',
+  'Forma szkolenia', 'Tryb szkolenia', 'Tryb', 'Miejsce', 'Lokalizacja', 'Adres realizacji',
 ]
+
+function normalizujWierszTabeli(wiersz: string) {
+  const komorki = wiersz.split(/\t+/).map((komorka) => komorka.trim()).filter(Boolean)
+  const etykieta = komorki[0]?.replace(/:$/, '') ?? ''
+  return komorki.length > 1 && etykietyDzielone.some((nazwa) => normalizujTekst(nazwa) === normalizujTekst(etykieta))
+    ? `${etykieta}: ${komorki.slice(1).join(' ')}` : wiersz
+}
 
 function scalPodzieloneEtykiety(tresc: string) {
   const wiersze = tresc.split('\n')
@@ -116,6 +125,7 @@ export function normalizujTrescMaila(tresc: string, zachowajFormatowanie = false
     .replace(/\r\n?/g, '\n')
     .replace(/[\u2028\u2029]/g, '\n')
     .replace(/<!--[\s\S]*?-->|<(style|script)\b[^>]*>[\s\S]*?<\/\1>/gi, '')
+    .replace(/<t[dh]\b[^>]*>([\s\S]*?)<\/t[dh]>/gi, (_calosc, zawartosc: string) => `${zawartosc}\t`)
     .replace(/<(?:br|hr)\b[^>]*>|<\/?(?:p|div|tr|td|th|table|li|h[1-6])\b[^>]*>/gi, '\n')
     .replace(/<\/?[a-z][a-z\d:-]*(?:\s[^<>]*)?\s*\/?>/gi, '')
     .replace(/&(#x[\da-f]+|#\d+|[a-z]+);/gi, (calosc, encja: string) => {
@@ -129,6 +139,7 @@ export function normalizujTrescMaila(tresc: string, zachowajFormatowanie = false
     .replace(/\*\*|__/g, '')
     .replace(/\|/g, '\t')
     .split('\n')
+    .map(normalizujWierszTabeli)
     .map((wiersz) => wiersz.replace(/[^\S\n]+/g, ' ').trim().replace(/^(?:>\s*|#{1,6}\s+|[-*•–—]\s*(?=\p{L}))/gu, ''))
     .join('\n'))
 }

@@ -1,0 +1,21 @@
+.ui-dialog:has(.import-szkolenia) { width: min(960px, calc(100% - 24px)); }
+.import-szkolenia { display: grid; gap: 16px; min-width: 0; }
+.import-szkolenia__pole { display: grid; gap: 8px; }
+.import-szkolenia input:not([type="checkbox"]), .import-szkolenia textarea, .import-szkolenia select {
+  box-sizing: border-box; width: 100%; min-width: 0; min-height: 40px; padding: 8px;
+  background: var(--ui-pole-tlo, var(--ui-panel)); color: var(--ui-tekst); border: 1px solid var(--ui-obramowanie); border-radius: 6px; font: inherit;
+}
+.import-szkolenia textarea { resize: vertical; }
+.import-szkolenia__akcje, .import-szkolenia__warianty { display: flex; gap: 8px; flex-wrap: wrap; }
+.import-szkolenia button { min-height: 44px; white-space: normal; overflow-wrap: anywhere; }
+.import-szkolenia__tabela { border-collapse: collapse; width: 100%; table-layout: fixed; }
+.import-szkolenia__tabela th, .import-szkolenia__tabela td { padding: 12px; border-bottom: 1px solid var(--ui-obramowanie); text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+.import-szkolenia__tabela th:first-child { width: 25%; }
+.import-szkolenia__status, .import-szkolenia__porownanie { margin: 8px 0; }
+.import-szkolenia pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
+.import-szkolenia blockquote { margin: 8px 0; padding-left: 8px; border-left: 3px solid var(--ui-akcent); }
+@media (max-width: 600px) {
+  .import-szkolenia__tabela th, .import-szkolenia__tabela td { padding: 8px 4px; }
+  .import-szkolenia__tabela th:first-child { width: 30%; }
+  .import-szkolenia__akcje > button { flex: 1 1 160px; }
+}

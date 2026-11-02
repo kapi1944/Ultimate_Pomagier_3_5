@@ -262,3 +262,5 @@ Oba ekrany szkoleń otrzymały lifting V4. Zamknięte udostępniają istniejąc�
 Lokalna karta KartaRejestruSzczegolow należy do V4-06. Wspólny arkusz `src/moduly/zamkniete/szczegoly_organizacyjne/widoki/rejestrySzczegolowV4.css` i prezentacja statusów `src/moduly/zamkniete/szczegoly_organizacyjne/prezentacjaRejestruSzczegolow.ts` również należą do V4-06. Pełny formularz i jego arkusz pozostały bez zmian; V4-07 nie rozpoczęto. Szczegóły w raporcie V4-06.
 
 | `src/aplikacja/desktop/PanelWersji.tsx` | V4-22 | V4-03 | — | 1 |
+
+| `src/wspolne/import/ImporterDanychSzkoleniaZMaila.tsx` | V4-09 | V4-13 | — | 2 |

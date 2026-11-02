@@ -24,7 +24,7 @@ type KartotekiImportu = {
   czyLokalizacjaPotwierdzona?: (miejsce: string) => boolean
 }
 
-const etykietyMiejsca = ['Miejsce', 'Lokalizacja', 'Adres szkolenia', 'Miejsce szkolenia', 'Miejsce szkolenia zapewnione przez Zamawiającego', 'Sala szkoleniowa zapewniona przez Zamawiającego']
+export const etykietyMiejsca = ['Miejsce', 'Lokalizacja', 'Adres realizacji', 'Adres szkolenia', 'Miejsce szkolenia', 'Miejsce szkolenia zapewnione przez Zamawiającego', 'Sala szkoleniowa zapewniona przez Zamawiającego']
 const etykietyKlienta = etykietyPolMaila.klient
 
 function zabezpieczWyrazenie(tekst: string) {
@@ -43,7 +43,7 @@ function znajdzWartoscWNastepnejLinii(wiersze: string[], indeks: number) {
   return ''
 }
 
-function rozdzielNaglowkiWiadomosci(tresc: string) {
+export function rozdzielNaglowkiWiadomosci(tresc: string) {
   const wiersze = normalizujTrescMaila(tresc).split('\n')
   const naglowki: Record<string, string> = {}
   const trescWlasciwa: string[] = []
@@ -90,7 +90,7 @@ function znajdzBlokPoEtykiecie(tresc: string, etykiety: string[]) {
   return znajdzSekcjeMaila(tresc, etykiety)[0]?.wartosc ?? ''
 }
 
-function podzielKonteksty(tresc: string) {
+export function podzielKonteksty(tresc: string) {
   const dane: string[] = []
   const materialy: string[] = []
   const wysylki: string[][] = []
@@ -143,7 +143,7 @@ function podzielKonteksty(tresc: string) {
     }
     if (sekcja === 'wysylka' && /kontakt do odbioru paczki|informacj[ae] na etykiet/.test(tekst)) czyKontaktPaczki = true
     if (sekcja === 'wysylka' && czyKontaktPaczki && /^materialy szkoleniowe\s*:?$/.test(tekst)) { wysylki.at(-1)?.push(wiersz); continue }
-    if (/^(?:trener(?: prowadzacy)?|prowadzac[ya](?: szkolenie)?|liczba (?:uczestnikow|osob|godzin)|ilosc uczestnikow|uczestnicy|cena(?: netto| brutto)?|termin platnosci|lista uczestnikow|materialy szkoleniowe|certyfikaty|lista obecnosci|materialy dodatkowe|ankiety)\s*:/.test(tekst)) sekcja = 'dane'
+    if (/^(?:trener(?: prowadzacy)?|prowadzac[ya](?: szkolenie)?|ekspert|wykladowca|czas trwania|godziny (?:dydaktyczne|zegarowe)|termin(?: realizacji| szkolenia)?|data realizacji|liczba (?:uczestnikow|osob|godzin)|ilosc uczestnikow|uczestnicy|cena(?: netto| brutto)?|termin platnosci|lista uczestnikow|materialy szkoleniowe|certyfikaty|lista obecnosci|materialy dodatkowe|ankiety)\s*:/.test(tekst)) sekcja = 'dane'
     if (/^(?:dane osoby kontaktowej|kontakt po stronie klienta)\s*:/.test(tekst)) sekcja = 'dane'
     if (/^(?:dane szkolenia|szczegoly szkolenia|podstawowe informacje|dokumentacja|dyspozycje materialowe|dane nabywcy|dane do faktury)\s*:?$/.test(tekst)) sekcja = 'dane'
     if (/^(?:(?:adres|miejsce|forma|tryb|data) szkolenia\s*:|sala szkoleniowa\b)/.test(tekst)) sekcja = 'dane'
@@ -290,7 +290,7 @@ function dopasujOsobe<Typ extends { email: string }>(wartosc: string, osoby: rea
   return imieNazwisko ? osoby.filter((osoba) => normalizujTekst(oczyscNazweOsoby(nazwa(osoba))) === imieNazwisko) : []
 }
 
-function parsujTematWiadomosci(temat: string) {
+export function parsujTematWiadomosci(temat: string) {
   const tytulWCudzyslowie = znajdzTytulWCudzyslowie(temat)
   const tytul = tytulWCudzyslowie || (czySensownyTytul(temat) && !/[,;„”"']/.test(temat) ? temat.trim() : '')
   return {
@@ -344,7 +344,7 @@ function normalizujDate(wartosc: string) {
   return zbudujDate(dopasowanie[6], dopasowanie[5], dopasowanie[4])
 }
 
-function znajdzDaty(wartosc: string) {
+export function znajdzDaty(wartosc: string) {
   const skrocony = wartosc.match(/\b(\d{1,2})\s*[-–—]\s*(\d{1,2})[./](\d{1,2})[./](\d{4})\b/)
   const slowny = normalizujTekst(wartosc).match(/\b(\d{1,2})(?:\s*[-–—]\s*(\d{1,2}))?\s+(stycznia|lutego|marca|kwietnia|maja|czerwca|lipca|sierpnia|wrzesnia|pazdziernika|listopada|grudnia)\s+(\d{4})\b/)
   const miesiace = ['stycznia', 'lutego', 'marca', 'kwietnia', 'maja', 'czerwca', 'lipca', 'sierpnia', 'wrzesnia', 'pazdziernika', 'listopada', 'grudnia']
