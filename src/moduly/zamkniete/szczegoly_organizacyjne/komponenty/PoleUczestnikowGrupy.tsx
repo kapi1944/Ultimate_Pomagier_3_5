@@ -2,6 +2,9 @@ import type { GrupaSzkoleniowa, UczestnikGrupy } from '../typy'
 import { pobierzIdBleduPola } from './identyfikatoryPol'
 import { ZnacznikBleduPola } from './PolaSzczegolow'
 import { useBladPola } from './stanBledowPol'
+import { useState } from 'react'
+import ImporterListyOcr from '../../../../wspolne/ocr/ImporterListyOcr'
+import { dodajUczestnikowBezDuplikatow } from '../../../../wspolne/ocr/modelTabeliOcr'
 
 type WlasciwosciPolaUczestnikowGrupy = {
   grupa: GrupaSzkoleniowa
@@ -31,6 +34,7 @@ function utworzUczestnikow(grupa: GrupaSzkoleniowa, tekst: string): UczestnikGru
 }
 
 export default function PoleUczestnikowGrupy({ grupa, indeks, aktualizujGrupe }: WlasciwosciPolaUczestnikowGrupy) {
+  const [czyImporterOtwarty, ustawCzyImporterOtwarty] = useState(false)
   const tekstUczestnikow = (grupa.uczestnicy ?? []).map((uczestnik) => `${uczestnik.imie} ${uczestnik.nazwisko}`.trim()).join('\n')
   const poleLiczbyUczestnikow = `grupy.${indeks}.liczbaUczestnikow`
   const blad = useBladPola(poleLiczbyUczestnikow)
@@ -47,11 +51,23 @@ export default function PoleUczestnikowGrupy({ grupa, indeks, aktualizujGrupe }:
   }
 
   return (
+    <>
+    <button type="button" onClick={() => ustawCzyImporterOtwarty(true)}>Importuj listę ze skanu (OCR)</button>
+    {czyImporterOtwarty && <ImporterListyOcr kontekst={`grupa:${grupa.id}`} opisZastosowania="Do grupy szkolenia zostaną dodane imiona i nazwiska. Dane zespołu zachowasz w wyniku OCR i eksportowanej tabeli." obecneNazwy={(grupa.uczestnicy ?? []).map((osoba) => `${osoba.imie} ${osoba.nazwisko}`.trim())} zamknij={() => ustawCzyImporterOtwarty(false)} zastosuj={(osoby) => aktualizujGrupe(grupa.id, (obecna) => {
+      const dotychczasowi = obecna.uczestnicy ?? []
+      const uczestnicy = dodajUczestnikowBezDuplikatow(dotychczasowi.map((osoba) => ({ ...osoba, imieINazwisko: `${osoba.imie} ${osoba.nazwisko}`.trim() })), osoby).map((osoba) => {
+        const istniejacy = dotychczasowi.find((uczestnik) => uczestnik.id === osoba.id)
+        const [imie, ...nazwisko] = osoba.imieINazwisko.split(/\s+/)
+        return istniejacy ?? { id: osoba.id, imie, nazwisko: nazwisko.join(' '), email: '' }
+      })
+      return { ...obecna, uczestnicy, liczbaUczestnikow: uczestnicy.length }
+    }, `grupy.${indeks}.uczestnicy`)} />}
     <label className="szczegoly-pole">
       <span className="szczegoly-pole__naglowek"><span className="szczegoly-pole__etykieta">Uczestnicy<ZnacznikBleduPola blad={blad} /></span></span>
       <textarea aria-describedby={blad ? pobierzIdBleduPola(poleLiczbyUczestnikow) : undefined} aria-invalid={Boolean(blad)} placeholder="Jedna osoba w każdym wierszu" rows={5} value={tekstUczestnikow} onChange={(zdarzenie) => ustawUczestnikow(zdarzenie.target.value)} />
       {blad && <span className="szczegoly-pole__blad" id={pobierzIdBleduPola(poleLiczbyUczestnikow)}>{blad}</span>}
       <span className="szczegoly-pole__pomoc">Lista uczestników jest źródłem danych dla Listy obecności.</span>
     </label>
+    </>
   )
 }

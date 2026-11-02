@@ -1,0 +1,27 @@
+.ui-dialog:has(.importer-ocr) { width: min(1600px, calc(100% - 24px)); }
+.importer-ocr { display: grid; gap: 14px; min-width: 0; }
+.importer-ocr > * { min-width: 0; max-width: 100%; box-sizing: border-box; }
+.importer-ocr p, .importer-ocr label { overflow-wrap: anywhere; white-space: normal; }
+.importer-ocr input[type="checkbox"] { width: 18px; height: 18px; min-width: 18px; flex: 0 0 18px; margin: 0; }
+.importer-ocr__akcje > label { flex: 1 1 180px; min-width: 0; }
+.importer-ocr__akcje { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.importer-ocr label { display: grid; gap: 5px; }
+.importer-ocr label:has(input[type="checkbox"]) { display: flex; align-items: center; }
+.importer-ocr input:not([type="checkbox"]), .importer-ocr select, .importer-ocr textarea { box-sizing: border-box; max-width: 100%; min-width: 0; background: var(--ui-pole); color: var(--ui-tekst); border: 1px solid var(--ui-obramowanie); border-radius: 4px; padding: 8px; font: inherit; }
+.importer-ocr textarea { width: 100%; }
+.importer-ocr__panele { display: grid; grid-template-columns: minmax(0, var(--szerokosc-oryginalu, 40%)) 10px minmax(0, 1fr); position: relative; }
+.importer-ocr__panele > section { min-width: 0; padding: 10px; }
+.importer-ocr__obraz-kontener { max-height: 65vh; overflow: auto; }
+.importer-ocr__obraz-kontener img { display: block; width: 100%; }
+.importer-ocr__zaznaczenie { position: absolute; border: 3px solid var(--ui-akcent); box-sizing: border-box; background: #ffef0033; pointer-events: none; }
+.importer-ocr__przewijanie { overflow: auto; max-height: 65vh; max-width: 100%; }
+.importer-ocr table { border-collapse: collapse; }
+.importer-ocr td, .importer-ocr th { border: 1px solid var(--ui-obramowanie); padding: 6px; vertical-align: top; }
+.importer-ocr td input, .importer-ocr th input { min-width: 130px !important; width: 100%; }
+.importer-ocr td input[type="checkbox"] { min-width: 20px !important; }
+.importer-ocr small { display: block; }
+.importer-ocr [data-pewnosc="wysoka"] { box-shadow: inset 0 -3px var(--ui-success); }
+.importer-ocr [data-pewnosc="niska"] { box-shadow: inset 0 -3px var(--ui-warning); }
+.importer-ocr [data-pewnosc="brak"] { box-shadow: inset 0 -3px var(--ui-error); }
+.importer-ocr .regulacja-szerokosci { position: relative; inset: auto; width: 10px; height: 100%; }
+@media (max-width: 850px) { .importer-ocr__panele { display: block; } .importer-ocr .regulacja-szerokosci { display: none; } }

@@ -1,4 +1,5 @@
 import type { DaneWyekstrahowaneDokumentu } from '../dokumenty/typyDokumentu'
+import { importujDokumentOcr } from './importDokumentuOcr'
 
 export type WynikOcr = {
   tekst: string
@@ -7,18 +8,20 @@ export type WynikOcr = {
 }
 
 export async function rozpoznajObrazLokalnie(plik: File): Promise<WynikOcr> {
+  const strony = await importujDokumentOcr(plik, { sygnal: new AbortController().signal, postep: () => undefined, obrot: 0, odreczna: false, binarnie: false, podpisyOd: 100, podpisyPotwierdzone: true })
+  const tekst = strony.map(({ tabela }) => [tabela.informacje, ...tabela.wiersze.map((wiersz) => wiersz.map((pole) => pole.podpis ? '[grafika podpisu]' : pole.tekst).join('\t'))].join('\n')).join('\n\n')
   return {
-    tekst: '',
+    tekst,
     daneWyekstrahowane: [
       {
         id: 'ocr-warstwa-1',
         rodzaj: 'tekst',
         etykieta: 'OCR',
-        wartosc: `Obraz ${plik.name} wymaga zatwierdzenia po uruchomieniu lokalnego OCR.`,
+        wartosc: tekst,
         status: 'do_zatwierdzenia',
         zrodlo: 'ocr',
       },
     ],
-    komunikat: 'Obraz zapisano jako wzorzec. Warstwa OCR jest przygotowana, ale wymaga lokalnego silnika rozpoznawania.',
+    komunikat: 'Wykonano lokalny OCR. Sprawdź odczyt przed wykorzystaniem danych.',
   }
 }

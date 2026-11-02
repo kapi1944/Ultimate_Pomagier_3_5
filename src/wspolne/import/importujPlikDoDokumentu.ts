@@ -71,7 +71,7 @@ function utworzDokumentZObrazu(plik: File, adres: string, daneWyekstrahowane: Da
       nazwaPliku: plik.name,
       typMime: plik.type,
       podgladOryginalu: adres,
-      wymagaOcr: true,
+      wymagaOcr: !daneWyekstrahowane.some((pole) => pole.wartosc.trim()),
     },
     strony: [
       {
@@ -105,7 +105,7 @@ function utworzDokumentZObrazu(plik: File, adres: string, daneWyekstrahowane: Da
       },
     },
     polaDynamiczne: [],
-    metadane: utworzMetadane(daneWyekstrahowane, ['Wymaga OCR: obraz zapisano jako oryginał i warstwę roboczą.']),
+    metadane: utworzMetadane(daneWyekstrahowane, ['Wykonano lokalny OCR. Wynik wymaga weryfikacji z zachowanym oryginałem.']),
   }
 
   return uzupelnijAnalizeDokumentu(dokument)
@@ -236,8 +236,8 @@ export async function importujPlikDoDokumentu(plik: File): Promise<WynikImportuD
   }
 
   if (typ === 'obraz' || czyObraz(plik.type)) {
-    const adres = URL.createObjectURL(plik)
     const wynikOcr = await rozpoznajObrazLokalnie(plik)
+    const adres = URL.createObjectURL(plik)
 
     return {
       dokument: utworzDokumentZObrazu(plik, adres, wynikOcr.daneWyekstrahowane),

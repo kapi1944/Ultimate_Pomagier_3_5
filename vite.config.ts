@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto'
 import { resolve } from 'node:path'
 import { pobierzInformacjeOWersji } from './skrypty/informacjeOWersji.mjs'
 import { okreslTrybFrontendu } from './skrypty/kontrolaTrybuFrontendu.mjs'
+import { zasobyOcr } from './skrypty/zasobyOcr.mjs'
 
 const informacjeOWersji = pobierzInformacjeOWersji()
 
@@ -17,7 +18,7 @@ export default defineConfig(({ mode: trybVite, command: polecenie, isPreview: cz
       __INFORMACJE_O_WERSJI__: JSON.stringify(informacjeOWersji),
       'import.meta.env.POMAGIER_SERWER_DEMONSTRACYJNY': JSON.stringify(polecenie === 'serve' && !czyPodglad && trybFrontendu.tryb === 'demonstracyjny'),
     },
-    plugins: [react(), {
+    plugins: [react(), zasobyOcr(), {
       name: 'informacje-o-wydaniu',
       transformIndexHtml(html) {
         return html.replace('%NAZWA_PRODUKTU%', informacjeOWersji.nazwaProduktu)

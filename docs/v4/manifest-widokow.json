@@ -1531,6 +1531,18 @@
       ],
       "ukonczoneEtapy": [],
       "powierzchnie": []
+    },
+    "src/wspolne/ocr/ImporterListyOcr.tsx": {
+      "zadanie": "V4-09",
+      "powierzchnie": [
+        "OknoDialogowe otwarty zamknij={() => { kontroler.current?.abort(); zamknij() }} tytul=\"Importuj listę ze skanu (OCR)\"",
+        "details"
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": [
+        "V4-07",
+        "V4-11"
+      ]
     }
   },
   "realizacjaEtapow": {

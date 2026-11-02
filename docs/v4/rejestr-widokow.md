@@ -265,3 +265,5 @@ Lokalna karta KartaRejestruSzczegolow należy do V4-06. Wspólny arkusz `src/mod
 | `src/aplikacja/desktop/PanelWersji.tsx` | V4-22 | V4-03 | — | 1 |
 
 | `src/wspolne/import/ImporterDanychSzkoleniaZMaila.tsx` | V4-09 | V4-13 | — | 2 |
+
+| `src/wspolne/ocr/ImporterListyOcr.tsx` | V4-09 | V4-07, V4-11 | — | 2 |
