@@ -8,15 +8,14 @@ import type { UstawieniaDruku } from './planDruku'
 import { otworzPdfPrezentacji, renderujPptxDoPdf, sprawdzPdfPrezentacji } from './renderowaniePdf'
 import { pobierzPlikMaterialow, wygenerujKompletZip, wygenerujPdfDruku, wygenerujPngOkladki } from './eksportMaterialow'
 import type { PlikMaterialow } from './eksportMaterialow'
+import type { RenderPodgladu } from '../TrybyPrezentacji'
 import PodgladWydruku from './PodgladWydruku'
 
-type Wlasciwosci = { model: ModelPptx | null; nazwa: string; daneOkladki: DaneOkladki; czyZajety: boolean; ustawZajety: (wartosc: boolean) => void }
-type RenderPrezentacji = { model: ModelPptx; bufor: ArrayBuffer; uwagi: string[] }
+type Wlasciwosci = { render: RenderPodgladu | null; odbierzRender: (render: RenderPodgladu) => void; model: ModelPptx | null; nazwa: string; daneOkladki: DaneOkladki; czyZajety: boolean; ustawZajety: (wartosc: boolean) => void }
 type RenderOkladki = { kluczDanych: string; bufor: ArrayBuffer }
 
-export default function PanelEksportu({ model, nazwa, daneOkladki, czyZajety, ustawZajety }: Wlasciwosci) {
+export default function PanelEksportu({ model, nazwa, daneOkladki, czyZajety, ustawZajety, odbierzRender, render }: Wlasciwosci) {
   const [ustawienia, ustawUstawienia] = useState(domyslneUstawieniaDruku)
-  const [render, ustawRender] = useState<RenderPrezentacji | null>(null)
   const [okladki, ustawOkladki] = useState<Partial<Record<OrientacjaOkladki, RenderOkladki>>>({})
   const [zrodloOkladki, ustawZrodloOkladki] = useState<'szablon' | 'pierwszySlajd'>('szablon')
   const [blad, ustawBlad] = useState('')
@@ -49,7 +48,7 @@ export default function PanelEksportu({ model, nazwa, daneOkladki, czyZajety, us
     if (bufor) return bufor
     ustawPostep('Renderowanie aktualnego PPTX lokalnie. To może potrwać kilka minut…')
     const wynik = await renderujPptxDoPdf(model)
-    ustawRender({ model, ...wynik })
+    odbierzRender({ model, ...wynik })
     return wynik.bufor
   }
 
@@ -111,7 +110,7 @@ export default function PanelEksportu({ model, nazwa, daneOkladki, czyZajety, us
       </div>
       <label>Wczytaj PDF aktualnego PPTX (wszystkie slajdy)<input type="file" accept=".pdf" disabled={czyZajety} onChange={(zdarzenie) => {
         const plik = zdarzenie.target.files?.[0]; zdarzenie.target.value = ''
-        if (plik) void wykonaj(async () => { const dane = await plik.arrayBuffer(); await sprawdzPdfPrezentacji(dane, model.slajdy.length); ustawRender({ model, bufor: dane, uwagi: ['PDF wczytano ręcznie. Sprawdź zgodność jego treści i kolejności z aktualnym PPTX.'] }) })
+        if (plik) void wykonaj(async () => { const dane = await plik.arrayBuffer(); await sprawdzPdfPrezentacji(dane, model.slajdy.length); odbierzRender({ model, bufor: dane, uwagi: ['PDF wczytano ręcznie. Sprawdź zgodność jego treści i kolejności z aktualnym PPTX.'] }) })
       }} /></label>
       <p className="narzedzia__opis">Windows desktop: renderowanie lokalnym PowerPoint. Linux desktop: lokalny LibreOffice. Przeglądarka i Android: wczytaj PDF wyeksportowany ze wszystkich slajdów aktualnego PPTX. Każda zmiana PPTX unieważnia wcześniejszy podgląd.</p>
       {render?.model === model && render.uwagi.length > 0 && <details open><summary>Uwagi z renderowania ({render.uwagi.length})</summary><ul className="poprawiacz-prezentacji__lista">{render.uwagi.map((uwaga, indeks) => <li key={indeks}>{uwaga}</li>)}</ul></details>}

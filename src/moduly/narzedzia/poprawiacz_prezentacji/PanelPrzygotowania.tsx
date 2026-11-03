@@ -6,7 +6,7 @@ import { zastosujMapowanie, daneOkladkiZeSzczegolow, etykietyPol, wartoscPola, z
 import type { DaneOkladki, MapowaniePola, PolePrezentacji } from './operacje/mapowanieDanych'
 import { pobierzSzczegolyDoGeneratorow } from '../../../wspolne/integracje/szczegolyDoDokumentow/pobierzSzczegolyDoGeneratorow'
 
-type Wlasciwosci = { model: ModelPptx | null; czyZajety: boolean; ustawZajety: (wartosc: boolean) => void; zmienModel: (model: ModelPptx) => void; daneOkladki: DaneOkladki; ustawDaneOkladki: (dane: DaneOkladki) => void }
+type Wlasciwosci = { model: ModelPptx | null; czyZajety: boolean; ustawZajety: (wartosc: boolean) => void; zmienModel: (model: ModelPptx) => Promise<void> | void; daneOkladki: DaneOkladki; ustawDaneOkladki: (dane: DaneOkladki) => void }
 
 export default function PanelPrzygotowania({ model, czyZajety, ustawZajety, zmienModel, daneOkladki, ustawDaneOkladki }: Wlasciwosci) {
   const [szerokosc, ustawSzerokosc] = useState(model ? model.slajdy[0].szerokosc / 360000 : 33.867)
@@ -47,7 +47,7 @@ export default function PanelPrzygotowania({ model, czyZajety, ustawZajety, zmie
         <label className="poprawiacz-prezentacji__wybor"><input type="checkbox" role="switch" checked={czyDuplikaty} onChange={(zdarzenie) => ustawCzyDuplikaty(zdarzenie.target.checked)} />Usuń dodatkowe numery, jeśli wzorzec zapewnia numerację</label>
         <button type="button" onClick={() => void wykonaj(async () => {
           const wynik = await korygujUklad(model, { szerokoscCm: szerokosc, wysokoscCm: wysokosc, czyKorygowacUklad: czyKorekta, czyUsuwacDuplikaty: czyDuplikaty, profil })
-          zmienModel(wynik.model)
+          await zmienModel(wynik.model)
           ustawKomunikat(`Zastosowano wymiary. Zmienione obiekty: ${wynik.zmienione}; usunięte duplikaty: ${wynik.duplikaty}; uwagi do kontroli: ${wynik.uwagi.length}. Sprawdź wygląd po renderowaniu PDF.`)
         })}>Zastosuj wymiary i korektę</button>
       </fieldset>
@@ -74,7 +74,7 @@ export default function PanelPrzygotowania({ model, czyZajety, ustawZajety, zmie
             }}><option value="">Pomiń pole</option>{Object.entries(etykietyPol).map(([klucz, etykieta]) => <option key={klucz} value={klucz}>{etykieta}</option>)}<option value="reczna">Wartość ręczna</option></select></label>
             {pozycja.wartoscReczna !== undefined ? <label>Nowa wartość<input value={pozycja.wartoscReczna} onChange={(zdarzenie) => ustawMapowanie(mapa.map((element) => element.idObiektu === obiekt.id ? { ...element, wartoscReczna: zdarzenie.target.value } : element))} /></label> : pozycja.pole && <p>Nowa wartość: {wartoscPola(pozycja.pole, daneOkladki) || '(brak danych)'}</p>}
           </div> })}
-          <button type="button" disabled={!liczbaWybranych} onClick={() => void wykonaj(async () => { zmienModel(await zastosujMapowanie(model, daneOkladki, mapa)); ustawKomunikat('Uzupełniono wyłącznie zatwierdzone pola pierwszego slajdu.') })}>Zastosuj zatwierdzone mapowanie</button>
+          <button type="button" disabled={!liczbaWybranych} onClick={() => void wykonaj(async () => { await zmienModel(await zastosujMapowanie(model, daneOkladki, mapa)); ustawKomunikat('Uzupełniono wyłącznie zatwierdzone pola pierwszego slajdu.') })}>Zastosuj zatwierdzone mapowanie</button>
         </fieldset>
       </details>}
     </section>

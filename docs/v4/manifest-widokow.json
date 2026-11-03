@@ -1543,6 +1543,30 @@
         "V4-07",
         "V4-11"
       ]
+    },
+    "src/moduly/narzedzia/poprawiacz_prezentacji/PodgladSlajdu.tsx": {
+      "zadanie": "V4-17",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
+    },
+    "src/moduly/narzedzia/poprawiacz_prezentacji/TrybyPrezentacji.tsx": {
+      "zadanie": "V4-17",
+      "powierzchnie": [
+        "details",
+        "details className=\"prezentacja-zmiany\""
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
+    },
+    "src/moduly/narzedzia/poprawiacz_prezentacji/WlasciwosciObiektu.tsx": {
+      "zadanie": "V4-17",
+      "powierzchnie": [
+        "aside className=\"prezentacja-wlasciwosci\" aria-label=\"Właściwości obiektów\"",
+        "form key={`${slajd.czesc}:${pierwszy.klucz}`} onSubmit={(zdarzenie) => { zdarzenie.preventDefault() const pola = new FormData(zdarzenie.currentTarget) const id = tozsamoscObiektu(slajd, pierwszy)! const zmiany: ZmianaObiektu[] = [] const nowa = { x: Number(pola.get('x')) * 360000, y: Number(pola.get('y')) * 360000, cx: Number(pola.get('cx')) * 360000, cy: Number(pola.get('cy')) * 360000 } if (Object.entries(nowa).some(([pole, wartosc]) => Math.abs(wartosc - geometria[pole as keyof typeof geometria]) > 2)) zmiany.push({ id, geometria: nowa }) potomkowieXml(pierwszy.element, 't').forEach((fragment, indeks) => { const tekst = String(pola.get(`tekst${indeks}`) ?? '') if (tekst !== fragment.textContent) zmiany.push({ id, fragment: { indeks, tekst } }) }) const czcionka = String(pola.get('czcionka') ?? '').trim() const rozmiar = String(pola.get('rozmiar') ?? '') const kolor = String(pola.get('kolor') ?? '').trim() const wyrownanie = String(pola.get('wyrownanie') ?? '') const odstep = String(pola.get('odstep') ?? '') for (const obiekt of bezpieczne) { if (czcionka || rozmiar || kolor || wyrownanie || odstep) zmiany.push({ id: tozsamoscObiektu(slajd, obiekt)!, czcionka: czcionka || undefined, rozmiar: rozmiar ? Number(rozmiar) : undefined, kolor: kolor || undefined, wyrownanie: ['l', 'ctr', 'r', 'just'].includes(wyrownanie) ? wyrownanie as ZmianaObiektu['wyrownanie'] : undefined, odstep: odstep ? Number(odstep) : undefined }) } if (zmiany.length) zmien(zmiany, 'Edycja właściwości') }}"
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
     }
   },
   "realizacjaEtapow": {

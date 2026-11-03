@@ -121,3 +121,55 @@
 @media (max-width: 600px) {
   .poprawiacz-prezentacji__etapy { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* Wspólny podgląd, porównanie i lokalna edycja slajdu. */
+.prezentacja-tryby { min-width: 0; border: 1px solid var(--ui-obramowanie); padding: 16px; background: var(--ui-powierzchnia); color: var(--ui-tekst); }
+.prezentacja-tryby label { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.prezentacja-tryby input:not([type=checkbox]):not([type=range]):not([type=color]):not([type=file]), .prezentacja-tryby select, .prezentacja-tryby textarea { max-width: 100%; min-width: 0; background: var(--ui-pole); color: var(--ui-tekst); border: 1px solid var(--ui-obramowanie); padding: 5px; }
+.prezentacja-tryby input[type=number] { width: 85px; }
+.prezentacja-tryby input[type=range] { max-width: 150px; }
+.prezentacja-tryby [aria-pressed=true], .prezentacja-miniatury [aria-current=page] { outline: 2px solid var(--ui-tekst); }
+.prezentacja-tryby--pelny { position: fixed; inset: 0; z-index: 20000; display: flex; flex-direction: column; overflow: auto; box-sizing: border-box; }
+.prezentacja-workspace { min-width: 0; min-height: 350px; }
+.prezentacja-workspace--roboczy { display: grid; grid-template-columns: var(--szerokosc-miniatur) minmax(0,1fr) var(--szerokosc-wlasciwosci); gap: 12px; }
+.prezentacja-miniatury { display: flex; flex-direction: column; gap: 10px; max-height: 650px; overflow: auto; }
+.prezentacja-miniatury .prezentacja-struktura { pointer-events: none; font-size: 4px; }
+.prezentacja-miniatury button { flex-shrink: 0; }
+.prezentacja-scena { min-width: 0; min-height: 350px; overflow: hidden; display: grid; align-items: center; padding: 12px; border: 1px solid var(--ui-obramowanie); touch-action: none; }
+.prezentacja-tryby--pelny .prezentacja-workspace { flex: 1; display: flex; min-height: 0; }
+.prezentacja-tryby--pelny .prezentacja-scena { width: 100%; min-height: 200px; }
+.prezentacja-porownanie { width: 100%; transform-origin: center; }
+.prezentacja-porownanie--obok { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 12px; }
+.prezentacja-podglad { width: 100%; position: relative; background: white; overflow: hidden; }
+.prezentacja-podglad > canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.prezentacja-podglad > canvas[hidden] { display: none; }
+.prezentacja-struktura { position: relative; width: 100%; background: white; overflow: hidden; border: 0; }
+.prezentacja-struktura--nakladka { position: absolute; inset: 0; background: transparent; }
+.prezentacja-struktura--siatka { background-image: linear-gradient(#80808033 1px, transparent 1px), linear-gradient(90deg, #80808033 1px, transparent 1px); background-size: 2% 2%; }
+.prezentacja-struktura .prezentacja-obiekt { position: absolute; box-sizing: border-box; overflow: hidden; white-space: pre-wrap; font-size: clamp(6px, 1vw, 18px); color: #222; border: 1px solid #999; padding: 0; min-width: 0; min-height: 0; }
+.prezentacja-struktura--nakladka .prezentacja-obiekt { color: transparent; }
+.prezentacja-obiekt--wybrany { outline: 2px dashed var(--ui-tekst); outline-offset: 2px; overflow: visible !important; }
+.prezentacja-uchwyt { position: absolute; right: 0; bottom: 0; width: 16px; height: 16px; background: #1674c4; border: 1px solid white; cursor: nwse-resize; }
+.prezentacja-marginesy { position: absolute; inset: 5%; border: 1px dashed #c62299; pointer-events: none; z-index: 10000; }
+.prezentacja-nakladka { position: relative; }
+.prezentacja-nakladka > strong { display: block; height: 24px; }
+.prezentacja-nakladka__oryginal { position: absolute; inset: 24px 0 0; }
+.prezentacja-nakladka__oryginal .prezentacja-podglad { height: 100%; }
+.prezentacja-wlasciwosci { max-height: 650px; overflow: auto; }
+.prezentacja-wlasciwosci form, .prezentacja-wlasciwosci fieldset { display: grid; gap: 8px; min-width: 0; }
+.prezentacja-wlasciwosci textarea { width: 100%; min-height: 70px; }
+.prezentacja-lista-obiektow, .prezentacja-zmiany__lista { max-height: 330px; overflow: auto; display: grid; gap: 8px; }
+.prezentacja-zmiany article { border-top: 1px solid var(--ui-obramowanie); padding: 10px 0; overflow-wrap: anywhere; }
+.prezentacja-zmiany article p { max-height: 90px; overflow: auto; }
+@media (max-width: 1100px) { .prezentacja-workspace--roboczy { grid-template-columns: 100px minmax(0,1fr); } .prezentacja-workspace--roboczy > div:last-child { grid-column: 1/-1; } }
+@media (max-width: 600px) { .prezentacja-workspace--roboczy { grid-template-columns: minmax(0,1fr); } .prezentacja-miniatury { flex-direction: row; max-height: 100px; } .prezentacja-miniatury > button { width: 90px; } .prezentacja-miniatury > label { display: none; } .prezentacja-tryby { padding: 8px; } .prezentacja-scena { padding: 3px; min-height: 200px; } .prezentacja-porownanie--obok { gap: 4px; } }
+.prezentacja-pole-wersji { position: relative; width: 100%; background: #80808022; }
+.prezentacja-nakladka__oryginal .prezentacja-pole-wersji { height: 100%; }
+.prezentacja-tryby--pelny .prezentacja-porownanie { width: min(100%, calc((100dvh / var(--ui-skala-przegladarki, 1) - 230px) * var(--proporcja-slajdu))); justify-self: center; }
+.prezentacja-zmiany[open] { position: fixed; z-index: 15000; right: 0; top: 10vh; bottom: 0; width: min(430px, 92vw); padding: 18px; background: var(--ui-powierzchnia); color: var(--ui-tekst); border: 1px solid var(--ui-obramowanie); overflow: auto; box-shadow: -8px 0 28px #0004; }
+.prezentacja-zmiany[open] > summary { position: sticky; top: -18px; background: var(--ui-powierzchnia); padding: 12px 0; cursor: pointer; }
+.prezentacja-zmiany[open] .prezentacja-zmiany__lista { max-height: none; }
+.poprawiacz-prezentacji__uklad--przygotowanie { grid-template-columns: minmax(0, 1fr); }
+.poprawiacz-prezentacji__uklad--przygotowanie .poprawiacz-prezentacji__lewy-panel { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+@media (max-width: 900px) { .poprawiacz-prezentacji__uklad--przygotowanie .poprawiacz-prezentacji__lewy-panel { grid-template-columns: minmax(0, 1fr); } }
+.prezentacja-prowadnice { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(transparent calc(50% - .5px), #008cdd88 50%, transparent calc(50% + .5px)), linear-gradient(90deg, transparent calc(50% - .5px), #008cdd88 50%, transparent calc(50% + .5px)); z-index: 10000; }

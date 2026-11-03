@@ -17,6 +17,7 @@ export type ObiektSlajdu = {
   kolejnosc: number
   czyProstaGeometria: boolean
   element: Element
+  podpisObrazu?: string
 }
 
 export type SlajdPptx = {

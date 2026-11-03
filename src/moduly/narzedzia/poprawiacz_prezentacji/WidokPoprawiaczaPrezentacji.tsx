@@ -6,7 +6,9 @@ import { otworzPptx } from './pptx/otworzPptx'
 import { analizujPrezentacje } from './analiza/analizujPrezentacje'
 import { zastosujPoprawki } from './operacje/zastosujPoprawki'
 import { pobierzKopiePptx, zapiszPptx } from './pptx/zapiszPptx'
-import PodgladStrukturalny from './PodgladStrukturalny'
+import TrybyPrezentacji, { type RenderPodgladu } from './TrybyPrezentacji'
+import type { ModelPptx } from './pptx/modelPptx'
+import { odtworzTransakcje, utworzTransakcje } from './operacje/historiaPrezentacji'
 import PanelAnalizy from './analiza/PanelAnalizy'
 import PanelPrzygotowania from './PanelPrzygotowania'
 import PanelEksportu from './eksport/PanelEksportu'
@@ -22,7 +24,7 @@ export default function WidokPoprawiaczaPrezentacji() {
   const [dane, wyslijAkcje] = useReducer(zmienStanPoprawiacza, poczatkowyStanPoprawiacza)
   const [czyPrzeciagany, ustawCzyPrzeciagany] = useState(false)
   const [operacje, ustawOperacje] = useState(operacjePoczatkowe)
-  const [indeksSlajdu, ustawIndeksSlajdu] = useState(0)
+  const [rendery, ustawRendery] = useState<RenderPodgladu[]>([])
   const [czyPotwierdzenie, ustawCzyPotwierdzenie] = useState(false)
   const [kopia, ustawKopie] = useState<{ plik: Blob; nazwa: string } | null>(null)
   const [czyPrzygotowanie, ustawCzyPrzygotowanie] = useState(false)
@@ -30,11 +32,13 @@ export default function WidokPoprawiaczaPrezentacji() {
   const polePliku = useRef<HTMLInputElement>(null)
   const modal = useRef<HTMLDialogElement>(null)
   const operacjaWToku = useRef(false)
+  const numerRenderu = useRef(0)
+  const biezaceModele = useRef({ model: dane.model, oryginal: dane.oryginal })
+  useEffect(() => { biezaceModele.current = { model: dane.model, oryginal: dane.oryginal } }, [dane.model, dane.oryginal])
   const czyZajety = czyPrzygotowanie || dane.stan === 'ANALIZOWANIE' || dane.stan === 'MODYFIKOWANIE'
   const wybrane = operacje.filter((operacja) => operacja.czyWybrana).map((operacja) => operacja.id)
   const trafienia = dane.analiza?.problemy.filter((problem) => wybrane.includes(problem.typ)) ?? []
   const numerySlajdow = [...new Set(trafienia.map((problem) => problem.numerSlajdu))]
-  const slajd = dane.model?.slajdy[indeksSlajdu]
   const etap = dane.stan === 'GOTOWE' ? 3 : dane.stan === 'ANALIZOWANIE' ? 1 : dane.analiza ? 2 : 0
 
   useEffect(() => {
@@ -47,10 +51,39 @@ export default function WidokPoprawiaczaPrezentacji() {
     const kolejnyStan = zmienStanPoprawiacza(dane, { typ: 'WYBIERZ_PLIK', pliki })
     wyslijAkcje({ typ: 'WYBIERZ_PLIK', pliki })
     if (!kolejnyStan.blad) {
-      ustawIndeksSlajdu(0)
+      wyslijAkcje({ typ: 'SLAJD', indeks: 0 })
       ustawKopie(null)
+      ustawRendery([])
       ustawOperacje(operacjePoczatkowe)
     }
+  }
+
+  async function zapiszOperacje(model: ModelPptx, nazwa: string) {
+    if (!dane.model) return
+    const transakcja = await utworzTransakcje(dane.model, model, nazwa)
+    wyslijAkcje({ typ: 'ZAPISZ_OPERACJE', model, analiza: analizujPrezentacje(model), transakcja })
+    ustawKopie(null)
+    ustawRendery((obecne) => obecne.filter((render) => render.model === dane.oryginal))
+  }
+
+  async function zmienHistorie(kierunek: 'przed' | 'po') {
+    if (!dane.model || operacjaWToku.current || czyZajety) return
+    const transakcja = (kierunek === 'przed' ? dane.historia : dane.ponawianie).at(-1)
+    if (!transakcja) return
+    operacjaWToku.current = true; ustawCzyPrzygotowanie(true)
+    try {
+      const model = await odtworzTransakcje(dane.model, transakcja, kierunek)
+      wyslijAkcje({ typ: 'HISTORIA', model, analiza: analizujPrezentacje(model), kierunek })
+      ustawKopie(null)
+      ustawRendery((obecne) => obecne.filter((render) => render.model === dane.oryginal))
+    } catch (blad) { wyslijAkcje({ typ: 'BLAD', blad: blad instanceof Error ? blad.message : 'Błąd historii.' }) }
+    finally { operacjaWToku.current = false; ustawCzyPrzygotowanie(false) }
+  }
+
+  function odbierzRender(render: RenderPodgladu) {
+    if (render.model !== biezaceModele.current.model && render.model !== biezaceModele.current.oryginal) return
+    ustawRendery((obecne) => [...obecne.filter((stary) => (stary.model === dane.oryginal || stary.model === dane.model) && stary.model !== render.model), { ...render, klucz: ++numerRenderu.current }])
+    if (render.model === dane.model) wyslijAkcje({ typ: 'RENDER', rewizja: dane.rewizja })
   }
 
   async function analizuj() {
@@ -58,10 +91,14 @@ export default function WidokPoprawiaczaPrezentacji() {
     operacjaWToku.current = true
     wyslijAkcje({ typ: 'ROZPOCZNIJ_ANALIZE' })
     try {
+      if (dane.model) {
+        wyslijAkcje({ typ: 'ZAKONCZ_ANALIZE', model: dane.model, analiza: analizujPrezentacje(dane.model) })
+        return
+      }
       const model = await otworzPptx(await dane.prezentacja.plik.arrayBuffer())
       wyslijAkcje({ typ: 'ZAKONCZ_ANALIZE', model, analiza: analizujPrezentacje(model) })
       ustawKopie(null)
-      ustawIndeksSlajdu(0)
+      wyslijAkcje({ typ: 'SLAJD', indeks: 0 })
     } catch (blad) {
       wyslijAkcje({ typ: 'BLAD', blad: blad instanceof Error ? blad.message : 'Nie udało się przeanalizować PPTX.' })
     } finally { operacjaWToku.current = false }
@@ -76,7 +113,8 @@ export default function WidokPoprawiaczaPrezentacji() {
       const wynik = await zastosujPoprawki(dane.model, wybrane)
       const plik = await zapiszPptx(wynik.model)
       ustawKopie({ plik, nazwa: dane.prezentacja.nazwa })
-      wyslijAkcje({ typ: 'ZAKONCZ_POPRAWKI', model: wynik.model, analiza: analizujPrezentacje(wynik.model), raport: wynik.raport })
+      const transakcja = await utworzTransakcje(dane.model, wynik.model, 'Automatyczne poprawki')
+      wyslijAkcje({ typ: 'ZAPISZ_OPERACJE', model: wynik.model, analiza: analizujPrezentacje(wynik.model), transakcja, raport: wynik.raport })
     } catch (blad) {
       wyslijAkcje({ typ: 'BLAD', blad: blad instanceof Error ? blad.message : 'Nie udało się zastosować poprawek.' })
     } finally { operacjaWToku.current = false }
@@ -95,7 +133,8 @@ export default function WidokPoprawiaczaPrezentacji() {
       </ol>
       {dane.blad && <p role="alert">{dane.blad}</p>}
       {czyZajety && <p role="status">{dane.stan === 'ANALIZOWANIE' ? 'Analizowanie prezentacji…' : 'Stosowanie i weryfikacja poprawek…'}</p>}
-      <div className="poprawiacz-prezentacji__uklad">
+      {dane.model && <TrybyPrezentacji dane={dane} wyslij={wyslijAkcje} zapisz={zapiszOperacje} historia={(kierunek) => void zmienHistorie(kierunek)} czyZajety={czyZajety} ustawZajety={ustawCzyPrzygotowanie} rendery={rendery} odbierzRender={odbierzRender} />}
+      <div className="poprawiacz-prezentacji__uklad poprawiacz-prezentacji__uklad--przygotowanie">
         <div className="poprawiacz-prezentacji__lewy-panel">
           <section className="narzedzia__panel" aria-labelledby="poprawiacz-plik">
             <h2 id="poprawiacz-plik">Plik prezentacji</h2>
@@ -117,13 +156,13 @@ export default function WidokPoprawiaczaPrezentacji() {
             </div>
             {dane.prezentacja && <div className="poprawiacz-prezentacji__wybrany-plik" aria-live="polite">
               <strong>{dane.prezentacja.nazwa}</strong><span>{dane.prezentacja.rozmiar.toLocaleString('pl-PL')} B</span>
-              <button type="button" disabled={czyZajety} onClick={() => { wyslijAkcje({ typ: 'USUN_PLIK' }); ustawKopie(null); ustawIndeksSlajdu(0) }}>Usuń plik</button>
+              <button type="button" disabled={czyZajety} onClick={() => { wyslijAkcje({ typ: 'USUN_PLIK' }); ustawKopie(null); ustawRendery([]); wyslijAkcje({ typ: 'SLAJD', indeks: 0 }) }}>Usuń plik</button>
             </div>}
             <p className="narzedzia__opis">Przetwarzanie odbywa się lokalnie. Oryginalny plik na dysku pozostaje bez zmian.</p>
             <button type="button" disabled={!dane.prezentacja || czyZajety} onClick={analizuj}>Analizuj prezentację</button>
           </section>
           {dane.analiza && <PanelAnalizy analiza={dane.analiza} operacje={operacje} ustawOperacje={ustawOperacje}
-            czyZajety={czyZajety} otworzSlajd={(numer) => ustawIndeksSlajdu(numer - 1)} potwierdzPoprawki={() => ustawCzyPotwierdzenie(true)} />}
+            czyZajety={czyZajety} otworzSlajd={(numer) => wyslijAkcje({ typ: 'SLAJD', indeks: numer - 1 })} potwierdzPoprawki={() => ustawCzyPotwierdzenie(true)} />}
           {dane.raport && <section className="narzedzia__panel" aria-label="Raport poprawek" role="status">
             <h2>Gotowe</h2><p>Usunięto: {dane.raport.paski} pasków; {dane.raport.numery} numerów.</p>
             <p>Zmodyfikowano: {dane.raport.slajdy.length} slajdów. Ponowna analiza potwierdziła liczbę usuniętych elementów.</p>
@@ -131,21 +170,12 @@ export default function WidokPoprawiaczaPrezentacji() {
             <p className="narzedzia__opis">Dalsze przygotowanie materiałów jest dostępne w panelu Eksport i druk.</p>
           </section>}
           <PanelPrzygotowania key={dane.model ? dane.prezentacja?.nazwa : 'okladka'} model={dane.model} czyZajety={czyZajety} ustawZajety={ustawCzyPrzygotowanie}
-            daneOkladki={daneOkladki} ustawDaneOkladki={ustawDaneOkladki} zmienModel={(model) => { wyslijAkcje({ typ: 'ZAKONCZ_ANALIZE', model, analiza: analizujPrezentacje(model) }); ustawKopie(null) }} />
+            daneOkladki={daneOkladki} ustawDaneOkladki={ustawDaneOkladki} zmienModel={(model) => zapiszOperacje(model, 'Przygotowanie SEMPER')} />
         </div>
-        <section className="narzedzia__panel" aria-labelledby="poprawiacz-podglad">
-          <h2 id="poprawiacz-podglad">Podgląd strukturalny slajdu</h2>
-          {slajd ? <>
-            <div className="poprawiacz-prezentacji__akcje">
-              <button type="button" disabled={indeksSlajdu === 0} onClick={() => ustawIndeksSlajdu((indeks) => indeks - 1)}>‹ poprzedni</button>
-              <span aria-live="polite">Slajd {slajd.numer} / {dane.model?.slajdy.length}</span>
-              <button type="button" disabled={indeksSlajdu >= (dane.model?.slajdy.length ?? 0) - 1} onClick={() => ustawIndeksSlajdu((indeks) => indeks + 1)}>następny ›</button>
-            </div>
-            <PodgladStrukturalny slajd={slajd} problemy={dane.analiza?.problemy ?? []} />
-          </> : <div className="poprawiacz-prezentacji__podglad"><IkonaMenu typ="prezentacja" /><p>Podgląd pojawi się po przeanalizowaniu prezentacji.</p></div>}
-        </section>
+        {!dane.model && <div className="narzedzia__panel"><p>Podgląd pojawi się po przeanalizowaniu prezentacji.</p></div>}
+
       </div>
-      <PanelEksportu key={dane.prezentacja?.nazwa ?? 'okladka'} model={dane.model} nazwa={dane.prezentacja?.nazwa ?? 'SEMPER.pptx'} daneOkladki={daneOkladki} czyZajety={czyZajety} ustawZajety={ustawCzyPrzygotowanie} />
+      <PanelEksportu key={dane.prezentacja?.nazwa ?? 'okladka'} model={dane.model} render={rendery.find((render) => render.model === dane.model) ?? null} odbierzRender={odbierzRender} nazwa={dane.prezentacja?.nazwa ?? 'SEMPER.pptx'} daneOkladki={daneOkladki} czyZajety={czyZajety} ustawZajety={ustawCzyPrzygotowanie} />
       <dialog ref={modal} className="poprawiacz-prezentacji__modal" aria-labelledby="poprawiacz-potwierdzenie" onCancel={() => ustawCzyPotwierdzenie(false)}>
         <h2 id="poprawiacz-potwierdzenie">Potwierdź poprawki</h2>
         <p>Zmodyfikowanych zostanie {numerySlajdow.length} slajdów. Oryginalny plik na dysku nie zostanie nadpisany.</p>

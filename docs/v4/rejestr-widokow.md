@@ -267,3 +267,11 @@ Lokalna karta KartaRejestruSzczegolow należy do V4-06. Wspólny arkusz `src/mod
 | `src/wspolne/import/ImporterDanychSzkoleniaZMaila.tsx` | V4-09 | V4-13 | — | 2 |
 
 | `src/wspolne/ocr/ImporterListyOcr.tsx` | V4-09 | V4-07, V4-11 | — | 2 |
+
+| `src/moduly/narzedzia/poprawiacz_prezentacji/PodgladSlajdu.tsx` | V4-17 | — | — | 0 |
+
+| `src/moduly/narzedzia/poprawiacz_prezentacji/TrybyPrezentacji.tsx` | V4-17 | — | — | 2 |
+
+| `src/moduly/narzedzia/poprawiacz_prezentacji/WlasciwosciObiektu.tsx` | V4-17 | — | — | 2 |
+
+Poprawiacz prezentacji (03.11.2026): wspólny stan oryginału i kopii roboczej, tryby roboczy/pełnoekranowy/porównawczy, strukturalne różnice, podgląd PDF oraz bezpieczna edycja i historia. Tryby są podwidokami istniejącej trasy; bez nowych identyfikatorów nawigacji.

@@ -1,6 +1,6 @@
 import JSZip from 'jszip'
 import type { ModelPptx } from './modelPptx'
-import { ustalKolejnoscSlajdow } from './relacjePptx'
+import { odczytajRelacje, ustalKolejnoscSlajdow } from './relacjePptx'
 import { utworzSlajd } from './slajdyPptx'
 import { uzupelnijWzorceSlajdu } from './wzorcePptx'
 import { liczbaXml, parsujXmlPptx, potomkowieXml, przestrzeniePptx } from './xmlPptx'
@@ -31,5 +31,23 @@ export async function otworzPptx(bufor: ArrayBuffer): Promise<ModelPptx> {
     return utworzSlajd(dokument, czesc, indeks + 1, szerokosc, wysokosc)
   })
   for (const slajd of slajdy) uzupelnijWzorceSlajdu({ czesciXml }, slajd)
+  const podpisy = new Map<string, Promise<string>>()
+  for (const slajd of slajdy) {
+    const relacjeSlajdu = czesciXml.get(slajd.czesc.replace(/([^/]+)$/, '_rels/$1.rels'))
+    const relacje = relacjeSlajdu ? odczytajRelacje(relacjeSlajdu, slajd.czesc) : []
+    for (const obiekt of slajd.obiekty.filter((obiekt) => obiekt.typ === 'obraz')) {
+      const podpisyObiektu: string[] = []
+      for (const obraz of potomkowieXml(obiekt.element, 'blip')) {
+        const id = przestrzeniePptx.relacje.map((przestrzen) => obraz.getAttributeNS(przestrzen, 'embed')).find(Boolean)
+        const cel = relacje.find((relacja) => relacja.id === id)?.cel
+        const plik = cel && archiwum.file(cel)
+        if (!cel || !plik) continue
+        if (!podpisy.has(cel)) podpisy.set(cel, plik.async('arraybuffer').then(async (dane) =>
+          Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', dane))).map((bajt) => bajt.toString(16).padStart(2, '0')).join('')))
+        podpisyObiektu.push(await podpisy.get(cel)!)
+      }
+      obiekt.podpisObrazu = podpisyObiektu.join('|')
+    }
+  }
   return { archiwum, buforZrodlowy: bufor, czesciXml, slajdy }
 }

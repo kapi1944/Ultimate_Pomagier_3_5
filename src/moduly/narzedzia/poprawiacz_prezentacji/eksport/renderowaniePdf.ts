@@ -30,7 +30,8 @@ export async function renderujPptxDoPdf(model: ModelPptx) {
   return { bufor, uwagi: wynik.uwagi }
 }
 
-export async function renderujStronePdf(dokument: PDFDocumentProxy, numer: number, szerokoscPikseli: number, czySzara = false) {
+export async function renderujStronePdf(dokument: PDFDocumentProxy, numer: number, szerokoscPikseli: number, czySzara = false, sygnal?: AbortSignal) {
+  sygnal?.throwIfAborted()
   const strona = await dokument.getPage(numer)
   const oryginal = strona.getViewport({ scale: 1 })
   const widok = strona.getViewport({ scale: szerokoscPikseli / oryginal.width })
@@ -38,7 +39,11 @@ export async function renderujStronePdf(dokument: PDFDocumentProxy, numer: numbe
   plotno.width = Math.ceil(widok.width); plotno.height = Math.ceil(widok.height)
   const kontekst = plotno.getContext('2d')
   if (!kontekst) throw new Error('Nie można utworzyć podglądu PDF.')
-  await strona.render({ canvasContext: kontekst, canvas: plotno, viewport: widok, background: '#ffffff' }).promise
+  const zadanie = strona.render({ canvasContext: kontekst, canvas: plotno, viewport: widok, background: '#ffffff' })
+  const anuluj = () => zadanie.cancel()
+  sygnal?.addEventListener('abort', anuluj, { once: true })
+  try { sygnal?.throwIfAborted(); await zadanie.promise }
+  finally { sygnal?.removeEventListener('abort', anuluj); strona.cleanup() }
   if (czySzara) {
     const obraz = kontekst.getImageData(0, 0, plotno.width, plotno.height)
     for (let indeks = 0; indeks < obraz.data.length; indeks += 4) {
