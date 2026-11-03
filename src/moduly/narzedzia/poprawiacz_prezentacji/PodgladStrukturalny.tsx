@@ -70,8 +70,9 @@ export default function PodgladStrukturalny({ slajd, problemy, czyNakladka = fal
         style={{ left: `${emuNaProcent(geometria.x, slajd.szerokosc)}%`, top: `${emuNaProcent(geometria.y, slajd.wysokosc)}%`,
           width: `${emuNaProcent(geometria.cx, slajd.szerokosc)}%`, height: `${emuNaProcent(geometria.cy, slajd.wysokosc)}%`,
           zIndex: obiekt.kolejnosc + 1, background: czyNakladka || obiekt.typ === 'grupa' ? 'transparent' : obiekt.wypelnienie ?? undefined,
-          border: podswietlony ? `3px solid ${kolor}` : kandydaci.has(obiekt.klucz) ? '2px solid #ef9200' : kontury || zaznaczony ? undefined : 'none',
-          borderColor: zaznaczony ? 'var(--ui-tekst)' : podswietlony ? kolor : undefined,
+          borderWidth: podswietlony ? 3 : kandydaci.has(obiekt.klucz) ? 2 : kontury || zaznaczony ? 1 : 0,
+          borderStyle: 'solid',
+          borderColor: zaznaczony ? 'var(--ui-tekst)' : podswietlony ? kolor : kandydaci.has(obiekt.klucz) ? '#ef9200' : undefined,
           pointerEvents: wybierz ? 'auto' : 'none', touchAction: edytowalny ? 'none' : undefined }}>
         {!czyNakladka && (obiekt.typ === 'obraz' ? 'Obraz' : obiekt.tabela ? `Tabela ${obiekt.tabela.wiersze} × ${obiekt.tabela.kolumny}` : obiekt.tekst.slice(0, 180))}
         {zaznaczony && edytowalny && <span data-rozmiar="tak" className="prezentacja-uchwyt" aria-hidden="true" />}
