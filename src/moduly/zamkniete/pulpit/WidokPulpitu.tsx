@@ -7,7 +7,7 @@ import PolaOsiCzasu from './PolaOsiCzasu'
 import { czyGodzinaWOsi, czyTerazWOsi, normalizujOsCzasu, walidujOsCzasu, type KonfiguracjaOsiCzasu } from './logika/czasDnia'
 import { blokiNaDzien, oknoKurieraNaDzien } from './logika/harmonogramPracy'
 import { pobierzUzytkownikow } from '../../../kartoteki/uzytkownicy/magazynUzytkownikow'
-import { pobierzNazweUzytkownika, pobierzNazweWyswietlanaUzytkownika, type Uzytkownik } from '../../../kartoteki/uzytkownicy/typyUzytkownikow'
+import { pobierzNazweWyswietlanaUzytkownika, type Uzytkownik } from '../../../kartoteki/uzytkownicy/typyUzytkownikow'
 import { pobierzChecklistyPaczek, pobierzSzczegolyDoChecklisty } from '../../dokumenty/generatory/checklisty_paczek/rejestrChecklistPaczek'
 import { czyPozycjaJestAktywna } from '../../dokumenty/generatory/checklisty_paczek/modelChecklistyPaczki'
 import { czyDzienPracy, pobierzEtykietyOsiCzasu, pobierzGraniceDniaPracyNaOsi, pobierzStanWskaznikaCzasu, pozycjaGodzinyNaOsi, type ZakresDniaPracy } from './logika/czasDnia'
@@ -28,7 +28,7 @@ import { generujZadaniaAutomatyczne } from './logika/zadaniaAutomatyczne'
 import { czyMoznaZmienicKontekstPulpitu } from './logika/kontekstPulpitu'
 import { obliczLicznikiPulpitu } from './logika/podsumowaniePulpitu'
 import { czyPoprawnyLinkProduktu, obliczLiczbeAktywnychZapotrzebowanZakupowych, odmienRzeczDoZakupu, pobierzAktywneZapotrzebowaniaZakupowe, pobierzTekstLicznikaZakupow, walidujNoweZapotrzebowanieZakupowe } from './logika/zapotrzebowaniaZakupowe'
-import { czyMoznaEdytowacZadanie, czyMoznaOznaczycZadanieRecznie, czyMoznaWybracZadaniodawce, czyZadanieDoKoncaDnia, czyZadanieDotyczyDnia, czyZadanieOpoznione, czyZadanieWidoczneDlaUzytkownika, pobierzEtykieteStatusuZadania, pobierzGodzineMarkeraZadania, pobierzKolorZadaniodawcy, pobierzSzerokoscLiniiDoFajrantu, pobierzZadaniaDeadline, rozstrzygnijPrzypisanieZadania, sortujZadaniaBezGodziny, walidujPrzypomnienia } from './logika/zadania'
+import { czyMoznaEdytowacZadanie, czyMoznaOznaczycZadanieRecznie, czyMoznaWybracZadaniodawce, czyZadanieDoKoncaDnia, czyZadanieDotyczyDnia, czyZadanieOpoznione, czyZadanieWidoczneDlaUzytkownika, pobierzEtykieteStatusuZadania, pobierzGodzineMarkeraZadania, pobierzKolorZadaniodawcy, pobierzSzerokoscLiniiDoFajrantu, pobierzZadaniaDeadline, pobierzEtykieteUzytkownika, rozstrzygnijPrzypisanieZadania, sortujZadaniaBezGodziny, walidujPrzypomnienia } from './logika/zadania'
 import type { JednostkaPrzypomnienia, KadrMiniaturyZadania, PrzypomnienieZadania, ZadaniePulpitu, ZapotrzebowanieZakupowe } from './modele/pulpit'
 import { pobierzLinkiProduktu, zapiszZakupPrzezUzytkownika, edytujZadanieRecznePrzezZadaniodawce, pobierzStanPulpitu, usunZadanieReczne, zapiszZadanieReczne } from './uslugi/magazynPulpitu'
 import './pulpit.css'
@@ -148,9 +148,9 @@ function formatujMoment(dataIso: string) {
   }).format(data)
 }
 
-function pobierzNazweOsoby(uzytkownicy: Uzytkownik[], uzytkownikId: string) {
+function pobierzNazweOsoby(uzytkownicy: Uzytkownik[], uzytkownikId: string, aktualnyUzytkownikId?: string | null) {
   const uzytkownik = uzytkownicy.find((osoba) => osoba.id === uzytkownikId)
-  return uzytkownik ? pobierzNazweUzytkownika(uzytkownik) || pobierzNazweWyswietlanaUzytkownika(uzytkownik) : 'Nieustalony użytkownik'
+  return uzytkownik ? pobierzEtykieteUzytkownika(uzytkownik, aktualnyUzytkownikId) || pobierzNazweWyswietlanaUzytkownika(uzytkownik) : 'Nieustalony użytkownik'
 }
 
 function pobierzNazweSzkolenia(szkolenia: Array<{ id: string; nazwa: string }>, szkolenieId?: string) {
@@ -187,11 +187,12 @@ function pobierzZadaniaAutomatyczne() {
   )
 }
 
-function KartaZadania({ zadanie, teraz, zakresDniaPracy, uzytkownicy, nazwaSzkolenia, otworz, wykonaj, zmienGodzine, odloz }: {
+function KartaZadania({ zadanie, teraz, zakresDniaPracy, uzytkownicy, aktualnyUzytkownikId, nazwaSzkolenia, otworz, wykonaj, zmienGodzine, odloz }: {
   zadanie: ZadaniePulpitu
   teraz: Date
   zakresDniaPracy: ZakresDniaPracy
   uzytkownicy: Uzytkownik[]
+  aktualnyUzytkownikId?: string | null
   nazwaSzkolenia?: string
   otworz: () => void
   wykonaj?: () => void
@@ -206,8 +207,8 @@ function KartaZadania({ zadanie, teraz, zakresDniaPracy, uzytkownicy, nazwaSzkol
       <strong>{zadanie.tytul}</strong>
       {zadanie.opis && <span className="pulpit-zadanie__opis">{zadanie.opis}</span>}
       {zadanie.powiazaneSzkolenieId && <small>Szkolenie: {nazwaSzkolenia ?? 'Szkolenie niedostępne'}</small>}
-      <small>Zadaniodawca: {pobierzNazweOsoby(uzytkownicy, zadanie.zadaniodawcaId)}</small>
-      <small>Zadaniobiorca: {pobierzNazweOsoby(uzytkownicy, zadanie.zadaniobiorcaId)}</small>
+      <small>Zadaniodawca: {pobierzNazweOsoby(uzytkownicy, zadanie.zadaniodawcaId, aktualnyUzytkownikId)}</small>
+      <small>Zadaniobiorca: {pobierzNazweOsoby(uzytkownicy, zadanie.zadaniobiorcaId, aktualnyUzytkownikId)}</small>
     </Przycisk>
     <div className="pulpit-zadanie__meta">
       {(zadanie.godzina || czyZadanieDoKoncaDnia(zadanie)) && <span>{etykietaTerminuZadania(zadanie)}</span>}
@@ -245,7 +246,7 @@ function MiniaturaZadaniaNaOsi({ zadanie, zakresDniaPracy, otworz }: { zadanie: 
   </Przycisk>
 }
 
-function MarkerDeadline({ zadanie, zakresDniaPracy, uzytkownicy, otworz }: { zadanie: ZadaniePulpitu; zakresDniaPracy: ZakresDniaPracy; uzytkownicy: Uzytkownik[]; otworz: () => void }) {
+function MarkerDeadline({ zadanie, zakresDniaPracy, uzytkownicy, aktualnyUzytkownikId, otworz }: { zadanie: ZadaniePulpitu; zakresDniaPracy: ZakresDniaPracy; uzytkownicy: Uzytkownik[]; aktualnyUzytkownikId?: string | null; otworz: () => void }) {
   const zadaniodawca = uzytkownicy.find((uzytkownik) => uzytkownik.id === zadanie.zadaniodawcaId)
   const zadaniobiorca = uzytkownicy.find((uzytkownik) => uzytkownik.id === zadanie.zadaniobiorcaId)
 
@@ -291,17 +292,18 @@ function MarkerDeadline({ zadanie, zakresDniaPracy, uzytkownicy, otworz }: { zad
       <span>Deadline: {formatujDate(zadanie.data)}, {etykietaTerminuZadania(zadanie)}</span>
       {czyDoKoncaDnia && <span>Do: FAJRANT {zakresDniaPracy.koniec}</span>}
       <span>Priorytet: {etykietaPriorytetu(zadanie.priorytet)}</span>
-      <span>Zadaniodawca: {pobierzNazweOsoby(uzytkownicy, zadanie.zadaniodawcaId)}</span>
-      <span>Zadaniobiorca: {pobierzNazweOsoby(uzytkownicy, zadanie.zadaniobiorcaId)}</span>
+      <span>Zadaniodawca: {pobierzNazweOsoby(uzytkownicy, zadanie.zadaniodawcaId, aktualnyUzytkownikId)}</span>
+      <span>Zadaniobiorca: {pobierzNazweOsoby(uzytkownicy, zadanie.zadaniobiorcaId, aktualnyUzytkownikId)}</span>
     </span>
   </div>
 }
 
-function FormularzZadaniaPulpitu({ formularz, ustawFormularz, uzytkownicy, szkolenia, czyWyborZadaniodawcy, tryb, blad, czyNiezapisaneZmiany, zapisz, anuluj, usun, wykonaj }: {
+function FormularzZadaniaPulpitu({ formularz, ustawFormularz, uzytkownicy, szkolenia, aktualnyUzytkownikId, czyWyborZadaniodawcy, tryb, blad, czyNiezapisaneZmiany, zapisz, anuluj, usun, wykonaj }: {
   formularz: FormularzZadania
   ustawFormularz: Dispatch<SetStateAction<FormularzZadania>>
   uzytkownicy: Uzytkownik[]
   szkolenia: Array<{ id: string; nazwa: string }>
+  aktualnyUzytkownikId?: string | null
   czyWyborZadaniodawcy: boolean
   tryb: TrybFormularzaZadania
   blad: string
@@ -408,9 +410,9 @@ function FormularzZadaniaPulpitu({ formularz, ustawFormularz, uzytkownicy, szkol
     {formularz.rodzajTerminu === 'KONKRETNA_GODZINA' && <label htmlFor="pulpit-godzina-zadania">Godzina wykonania<input id="pulpit-godzina-zadania" onChange={(zdarzenie) => ustawFormularz({ ...formularz, godzina: zdarzenie.target.value })} type="time" value={formularz.godzina} /></label>}
     <label htmlFor="pulpit-priorytet-zadania">Priorytet<select id="pulpit-priorytet-zadania" onChange={(zdarzenie) => ustawFormularz({ ...formularz, priorytet: zdarzenie.target.value as ZadaniePulpitu['priorytet'] })} value={formularz.priorytet}><option value="ZWYKLE">Zwykłe</option><option value="PILNE">Pilne</option><option value="ASAP">ASAP</option></select></label>
     {czyWyborZadaniodawcy
-      ? <label htmlFor="pulpit-zadaniodawca">Zadaniodawca<select id="pulpit-zadaniodawca" onChange={(zdarzenie) => ustawFormularz({ ...formularz, zadaniodawcaId: zdarzenie.target.value })} value={formularz.zadaniodawcaId}>{uzytkownicy.map((uzytkownik) => <option key={uzytkownik.id} value={uzytkownik.id}>{pobierzNazweUzytkownika(uzytkownik)}</option>)}</select></label>
-      : tryb === 'edit' && <label htmlFor="pulpit-zadaniodawca">Zadaniodawca<input disabled id="pulpit-zadaniodawca" value={pobierzNazweOsoby(uzytkownicy, formularz.zadaniodawcaId)} /></label>}
-    <label htmlFor="pulpit-zadaniobiorca">Zadaniobiorca<select id="pulpit-zadaniobiorca" onChange={(zdarzenie) => ustawFormularz({ ...formularz, zadaniobiorcaId: zdarzenie.target.value })} value={formularz.zadaniobiorcaId}><option value="">Ja &mdash; {pobierzNazweOsoby(uzytkownicy, formularz.zadaniodawcaId)}</option>{uzytkownicy.filter((uzytkownik) => uzytkownik.id !== formularz.zadaniodawcaId).map((uzytkownik) => <option key={uzytkownik.id} value={uzytkownik.id}>{pobierzNazweUzytkownika(uzytkownik)}</option>)}</select></label>
+      ? <label htmlFor="pulpit-zadaniodawca">Zadaniodawca<select id="pulpit-zadaniodawca" onChange={(zdarzenie) => ustawFormularz((obecny) => ({ ...obecny, zadaniodawcaId: zdarzenie.target.value }))} value={formularz.zadaniodawcaId}>{uzytkownicy.map((uzytkownik) => <option key={uzytkownik.id} value={uzytkownik.id}>{pobierzEtykieteUzytkownika(uzytkownik, aktualnyUzytkownikId)}</option>)}</select></label>
+      : tryb === 'edit' && <label htmlFor="pulpit-zadaniodawca">Zadaniodawca<input disabled id="pulpit-zadaniodawca" value={pobierzNazweOsoby(uzytkownicy, formularz.zadaniodawcaId, aktualnyUzytkownikId)} /></label>}
+    <label htmlFor="pulpit-zadaniobiorca">Zadaniobiorca<select id="pulpit-zadaniobiorca" onChange={(zdarzenie) => ustawFormularz((obecny) => ({ ...obecny, zadaniobiorcaId: zdarzenie.target.value }))} value={formularz.zadaniobiorcaId}>{uzytkownicy.map((uzytkownik) => <option key={uzytkownik.id} value={uzytkownik.id}>{pobierzEtykieteUzytkownika(uzytkownik, aktualnyUzytkownikId)}</option>)}</select></label>
     <label htmlFor="pulpit-powiazanie-zadania">Powiązanie<select id="pulpit-powiazanie-zadania" onChange={(zdarzenie) => ustawFormularz({ ...formularz, szkolenieId: zdarzenie.target.value })} value={formularz.szkolenieId}><option value="">Bez powiązania</option>{szkolenia.map((szczegoly) => <option key={szczegoly.id} value={szczegoly.id}>{szczegoly.nazwa}</option>)}</select></label>
     {formularz.odlozonoDo && <div className="pulpit-formularz-zadania__odlozenie"><label htmlFor="pulpit-odlozenie-zadania">Odłożone do<input id="pulpit-odlozenie-zadania" onChange={(zdarzenie) => ustawFormularz({ ...formularz, odlozonoDo: zdarzenie.target.value || undefined })} type="date" value={formularz.odlozonoDo} /></label><Przycisk onClick={() => ustawFormularz({ ...formularz, odlozonoDo: undefined })} type="button">Usuń odłożenie</Przycisk></div>}
     <div
@@ -539,6 +541,7 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
   const [bladFormularzaZadania, ustawBladFormularzaZadania] = useState('')
   const [bladFormularzaZakupu, ustawBladFormularzaZakupu] = useState('')
   const [formularzZadania, ustawFormularzZadania] = useState(() => pustyFormularz(dataTekstowa(new Date()), zalogowanyUzytkownik?.id ?? ''))
+  const poprzedniZalogowanyUzytkownikId = useRef(zalogowanyUzytkownik?.id ?? null)
   const [nowyZakup, ustawNowyZakup] = useState<DaneFormularzaZakupu>(pustyFormularzZakupu)
   const kontenerFormularzaZadaniaRef = useRef<HTMLDivElement>(null)
   const uzytkownicy = pobierzUzytkownikow()
@@ -590,6 +593,19 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
       window.removeEventListener(zdarzenieZmianyUstawienAplikacji, odswiezDanePulpitu)
     }
   }, [])
+
+  useEffect(() => {
+    const aktualnyId = zalogowanyUzytkownik?.id ?? null
+    if (poprzedniZalogowanyUzytkownikId.current === aktualnyId) return
+    poprzedniZalogowanyUzytkownikId.current = aktualnyId
+    ustawWybranegoUzytkownikaId(aktualnyId ?? '')
+    ustawWybraneZadanie(null)
+    ustawTrybFormularzaZadania('create')
+    ustawEdytowaneZadanieId(null)
+    ustawFormularzZadania(pustyFormularz(data, aktualnyId ?? ''))
+    ustawBladFormularzaZadania('')
+    ustawCzyFormularzZadaniaOtwarty(false)
+  }, [zalogowanyUzytkownik?.id, data])
 
   const czyArchitekt = czyMoznaZmienicKontekstPulpitu(zalogowanyUzytkownik?.rola)
   const czyWyborZadaniodawcy = czyMoznaWybracZadaniodawce(zalogowanyUzytkownik?.rola)
@@ -744,7 +760,7 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
     }
 
     const zadaniobiorcaId =
-      formularzZadania.zadaniobiorcaId || wybraneZadanie.zadaniodawcaId
+      formularzZadania.zadaniobiorcaId || zalogowanyUzytkownik.id
 
     if (!aktywniUzytkownicy.some((uzytkownik) => uzytkownik.id === zadaniobiorcaId)) {
       ustawBladFormularzaZadania('Wybrany Zadaniobiorca nie jest dostępny.')
@@ -982,7 +998,7 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
           {czyWybranyDzienPracy ? <><span className="pulpit-os-czasu__etykieta-pracy" style={{ left: graniceDniaPracy.poczatek + '%', transform: graniceDniaPracy.poczatek < 15 ? 'none' : undefined }}>Start pracy {zakresDniaPracy.poczatek}</span>
           <span className="pulpit-os-czasu__etykieta-pracy" style={{ left: graniceDniaPracy.koniec + '%', transform: graniceDniaPracy.koniec > 85 ? 'translateX(-100%)' : undefined, top: (graniceDniaPracy.koniec - graniceDniaPracy.poczatek) * szerokoscOsi / 100 < 250 ? 34 : undefined }}>Koniec pracy {zakresDniaPracy.koniec}</span></> : <span className="pulpit-os-czasu__etykieta-pracy" style={{ left: 0, transform: 'none' }}>Dzień wolny</span>}
         </div>
-        <div className="pulpit-os-czasu__zadania">{zadaniaNaOsi.map((zadanie) => <MarkerDeadline key={zadanie.id} otworz={() => otworzZadanie(zadanie)} zakresDniaPracy={zakresDniaPracy} uzytkownicy={uzytkownicy} zadanie={zadanie} />)}</div>
+        <div className="pulpit-os-czasu__zadania">{zadaniaNaOsi.map((zadanie) => <MarkerDeadline key={zadanie.id} aktualnyUzytkownikId={zalogowanyUzytkownik?.id} otworz={() => otworzZadanie(zadanie)} zakresDniaPracy={zakresDniaPracy} uzytkownicy={uzytkownicy} zadanie={zadanie} />)}</div>
         <RutynyNaOsi blokiPracy={blokiPracy} daneRutyn={daneRutyn} data={data} uzytkownikId={wybranyUzytkownikId} zakresDniaPracy={zakresDniaPracy} otworz={(id) => { ustawWybranaRutyneId(id); window.setTimeout(() => document.getElementById('podsumowanie-rutyn')?.scrollIntoView({ block: 'start' }), 0) }} />
       </div></div>
       {zadaniaPozaOsia.length > 0 && <details className="pulpit-poza-osia"><summary>Zadania poza zakresem osi ({zadaniaPozaOsia.length})</summary><ul>{zadaniaPozaOsia.map((zadanie) => { const godzina = pobierzGodzineMarkeraZadania(zadanie, zakresDniaPracy)!; return <li key={zadanie.id}><Przycisk type="button" onClick={() => otworzZadanie(zadanie)}>{godzina < osCzasu.poczatek ? 'Przed' : 'Po'} zakresem · {godzina} · {zadanie.tytul}</Przycisk></li> })}</ul></details>}
@@ -999,6 +1015,7 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
             czyWyborZadaniodawcy={trybFormularzaZadania === 'create' && czyWyborZadaniodawcy}
             czyNiezapisaneZmiany={czyFormularzMaNiezapisaneZmiany}
             formularz={formularzZadania}
+            aktualnyUzytkownikId={zalogowanyUzytkownik?.id}
             key={trybFormularzaZadania + '-' + (edytowaneZadanieId ?? 'nowe')}
             szkolenia={szkoleniaDostepne}
             tryb={trybFormularzaZadania}
@@ -1016,11 +1033,11 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
             zalogowanyUzytkownik?.id,
             zalogowanyUzytkownik?.rola,
           )
-          return <KartaZadania key={zadanie.id} nazwaSzkolenia={pobierzNazweSzkolenia(szkoleniaDostepne, zadanie.powiazaneSzkolenieId)} zadanie={zadanie} teraz={teraz} zakresDniaPracy={zakresDniaPracy} uzytkownicy={uzytkownicy} otworz={() => otworzZadanie(zadanie)} wykonaj={zadanie.czyAutomatyczne || !czyWykonawca ? undefined : () => oznaczWykonane(zadanie)} zmienGodzine={!czyMoznaEdytowacTermin ? undefined : (godzina) => zmienGodzine(zadanie, godzina)} odloz={zadanie.czyTerminKrytyczny || !czyMoznaEdytowacTermin ? undefined : (nowaData) => odlozZadanie(zadanie, nowaData)} />
+          return <KartaZadania key={zadanie.id} nazwaSzkolenia={pobierzNazweSzkolenia(szkoleniaDostepne, zadanie.powiazaneSzkolenieId)} zadanie={zadanie} teraz={teraz} zakresDniaPracy={zakresDniaPracy} uzytkownicy={uzytkownicy} aktualnyUzytkownikId={zalogowanyUzytkownik?.id} otworz={() => otworzZadanie(zadanie)} wykonaj={zadanie.czyAutomatyczne || !czyWykonawca ? undefined : () => oznaczWykonane(zadanie)} zmienGodzine={!czyMoznaEdytowacTermin ? undefined : (godzina) => zmienGodzine(zadanie, godzina)} odloz={zadanie.czyTerminKrytyczny || !czyMoznaEdytowacTermin ? undefined : (nowaData) => odlozZadanie(zadanie, nowaData)} />
         })}</div> : <PustyStan>Brak zadań do wykonania.</PustyStan>}
       </div>
       {zadaniaGodzinowe.length > 0 && <details className="pulpit-terminy"><summary>Zadania z terminem ({zadaniaGodzinowe.length})</summary><ul>{zadaniaGodzinowe.map((zadanie) => <li key={zadanie.id}><Przycisk onClick={() => otworzZadanie(zadanie)}>{etykietaTerminuZadania(zadanie)} — {zadanie.tytul}</Przycisk></li>)}</ul></details>}
-      {zadaniaWykonane.length > 0 && <details className="pulpit-wykonane"><summary>Wykonane ({zadaniaWykonane.length})</summary>{zadaniaWykonane.map((zadanie) => <KartaZadania key={zadanie.id} nazwaSzkolenia={pobierzNazweSzkolenia(szkoleniaDostepne, zadanie.powiazaneSzkolenieId)} zadanie={zadanie} teraz={teraz} zakresDniaPracy={zakresDniaPracy} uzytkownicy={uzytkownicy} otworz={() => otworzZadanie(zadanie)} />)}</details>}
+      {zadaniaWykonane.length > 0 && <details className="pulpit-wykonane"><summary>Wykonane ({zadaniaWykonane.length})</summary>{zadaniaWykonane.map((zadanie) => <KartaZadania key={zadanie.id} nazwaSzkolenia={pobierzNazweSzkolenia(szkoleniaDostepne, zadanie.powiazaneSzkolenieId)} zadanie={zadanie} teraz={teraz} zakresDniaPracy={zakresDniaPracy} uzytkownicy={uzytkownicy} aktualnyUzytkownikId={zalogowanyUzytkownik?.id} otworz={() => otworzZadanie(zadanie)} />)}</details>}
     </section>}
 
     <WidokRutyn daneRutyn={daneRutyn} wybranaRutynaId={wybranaRutynaId} zamknijSzczegoly={() => ustawWybranaRutyneId(null)} otworzMonitor={() => { ustawFiltr('PACZKI'); window.setTimeout(() => document.querySelector('.monitor-wysylek')?.scrollIntoView({ block: 'start' }), 0) }} />
@@ -1162,8 +1179,8 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
         <div><dt>Termin</dt><dd>{formatujDate(wybraneZadanie.data)}</dd></div>
         <div><dt>Godzina</dt><dd>{etykietaTerminuZadania(wybraneZadanie)}</dd></div>
         <div><dt>Priorytet</dt><dd>{etykietaPriorytetu(wybraneZadanie.priorytet)}</dd></div>
-        <div><dt>Zadaniodawca</dt><dd>{pobierzNazweOsoby(uzytkownicy, wybraneZadanie.zadaniodawcaId)}</dd></div>
-        <div><dt>Zadaniobiorca</dt><dd>{pobierzNazweOsoby(uzytkownicy, wybraneZadanie.zadaniobiorcaId)}</dd></div>
+        <div><dt>Zadaniodawca</dt><dd>{pobierzNazweOsoby(uzytkownicy, wybraneZadanie.zadaniodawcaId, zalogowanyUzytkownik?.id)}</dd></div>
+        <div><dt>Zadaniobiorca</dt><dd>{pobierzNazweOsoby(uzytkownicy, wybraneZadanie.zadaniobiorcaId, zalogowanyUzytkownik?.id)}</dd></div>
         <div><dt>Przypomnienia</dt><dd>{wybraneZadanie.przypomnienia.length ? wybraneZadanie.przypomnienia.map(etykietaPrzypomnienia).join(', ') : 'Brak'}</dd></div>
         <div><dt>Źródło</dt><dd>{wybraneZadanie.czyAutomatyczne ? 'Automatyczna reguła szkolenia' : 'Ręczne zadanie'}</dd></div>
         <div><dt>Powiązane szkolenie</dt><dd>{pobierzNazweSzkolenia(szkoleniaDostepne, wybraneZadanie.powiazaneSzkolenieId)}</dd></div>

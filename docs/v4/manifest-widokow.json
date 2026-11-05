@@ -1039,6 +1039,14 @@
       "ukonczoneEtapy": [],
       "wspoldzieloneZ": []
     },
+    "src/moduly/zamkniete/pulpit/DokumentyWysylki.tsx": {
+      "zadanie": "V4-04",
+      "powierzchnie": [
+        "details className=\"monitor-dokument__historia\""
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
+    },
     "src/moduly/zamkniete/pulpit/FormularzZakupu.tsx": {
       "zadanie": "V4-04",
       "powierzchnie": [
@@ -1058,12 +1066,16 @@
         "OknoDialogowe otwarty tytul={edytowanyZakup ? 'Edytuj zakup' : 'Zgłoś zakup'} zamknij={() => ustawCzyDodawanieZakupu(false)}",
         "PanelWysuwany otwarty tytul=\"Aktualne zapotrzebowania zakupowe\" zamknij={() => ustawCzyWykazZakupowOtwarty(false)}",
         "PanelWysuwany otwarty tytul=\"Szczegóły zadania\" zamknij={() => ustawWybraneZadanie(null)}",
+        "button ref={przyciskOsiRef} className=\"pulpit-dostosuj-os\" type=\"button\" aria-expanded={roboczaOs !== null} aria-controls=\"pulpit-panel-osi\" onClick={() => { ustawPelnaOs(false); ustawRoboczaOs({ ...zapisanaOs }); ustawKomunikatOsi('') }}",
+        "details className=\"pulpit-poza-osia\"",
         "details className=\"pulpit-terminy\"",
         "details className=\"pulpit-wykonane\"",
         "div className=\"pulpit-drawer__akcje\"",
         "div className=\"pulpit-drawer__naglowek\"",
         "div className=\"pulpit-modal__akcje\"",
-        "form className=\"pulpit-formularz-zadania\" onPaste={obsluzWklejenie} onSubmit={(zdarzenie) => { zdarzenie.preventDefault(); zapisz() }}"
+        "div className=\"pulpit-panel-osi__akcje\"",
+        "form className=\"pulpit-formularz-zadania\" onPaste={obsluzWklejenie} onSubmit={(zdarzenie) => { zdarzenie.preventDefault(); zapisz() }}",
+        "form id=\"pulpit-panel-osi\" className=\"pulpit-panel-osi\" aria-label=\"Dostosuj oś\" onSubmit={zapiszUstawieniaOsi} onKeyDown={(zdarzenie) => { if (zdarzenie.key === 'Escape') { zdarzenie.stopPropagation(); zamknijUstawieniaOsi() } }}"
       ],
       "ukonczoneEtapy": [
         "V4-04"
@@ -1509,7 +1521,9 @@
     },
     "src/moduly/zamkniete/pulpit/RutynyNaOsi.tsx": {
       "zadanie": "V4-04",
-      "powierzchnie": [],
+      "powierzchnie": [
+        "details className=\"pulpit-poza-osia pulpit-rutyny-poza-osia\""
+      ],
       "ukonczoneEtapy": [],
       "wspoldzieloneZ": []
     },

@@ -25,6 +25,8 @@ test('produkcyjna projekcja: późne konta, zmiana statusu, wylogowanie i ponown
     const opiekunowie = pobierzOpiekunowSzczegolow()
     assert.deepEqual(opiekunowie.map((konto) => konto.nazwa).sort(), ['Kasia RB', 'Iza Cz', 'Kamila', 'Dawid'].sort())
     assert.ok(opiekunowie.every((konto) => konto.id.startsWith('rzeczywiste-id-')))
+    assert.equal(opiekunowie.find((konto) => konto.pseudonim === 'Dawid')?.imieNazwisko, 'Dawid Chyła')
+    assert.equal(opiekunowie.find((konto) => konto.pseudonim === 'Dawid')?.organizacja, 'IIST')
     const nieaktywny = opiekunowie[0]
     const zablokowany = opiekunowie[1]
     ustawProjekcjeKont(konta.map((konto) => konto.id === nieaktywny.id ? { ...konto, status: 'NIEAKTYWNY' } : konto.id === zablokowany.id ? { ...konto, status: 'ZABLOKOWANY' } : konto), [], konta[0])

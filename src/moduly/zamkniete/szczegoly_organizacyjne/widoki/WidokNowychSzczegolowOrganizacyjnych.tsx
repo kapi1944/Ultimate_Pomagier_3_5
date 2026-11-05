@@ -44,6 +44,10 @@ const sekcjeNawigacji = [
   { id: 'eksport-import', etykieta: 'JSON' },
 ]
 
+function normalizujFrazeOpiekuna(wartosc: string) {
+  return wartosc.toLocaleLowerCase('pl').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ł/g, 'l').trim()
+}
+
 const kluczPrzypieciaPaneluJakosci = 'ultimatePomagier.panelJakosciPrzypiety'
 const kluczWysuwaniaPaneluJakosci = 'ultimatePomagier.panelJakosciWysuwanieZKrawedzi'
 const zdarzenieZmianyPreferencjiPaneluJakosci = 'ultimatePomagier:zmianaPreferencjiPaneluJakosci'
@@ -266,6 +270,7 @@ type WlasciwosciWidokuNowychSzczegolow = {
 export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }: WlasciwosciWidokuNowychSzczegolow) {
   const generator = useGeneratorSzczegolow()
   const [opiekunowie, ustawOpiekunow] = useState(pobierzOpiekunowSzczegolow)
+  const [frazaOpiekuna, ustawFrazeOpiekuna] = useState('')
   useEffect(() => {
     const odswiez = () => ustawOpiekunow(pobierzOpiekunowSzczegolow())
     const zakoncz = subskrybujUzytkownikow(odswiez)
@@ -274,7 +279,10 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
   }, [])
   const opiekunId = generator.daneFormularza.opiekunId
   const historycznyOpiekun = opiekunId && !opiekunowie.some((osoba) => osoba.id === opiekunId) ? opiekunId : undefined
-  const opcjeOpiekunow = ['', ...opiekunowie.map((osoba) => osoba.id), ...(historycznyOpiekun ? [historycznyOpiekun] : [])]
+  const pasujacyOpiekunowie = opiekunowie.filter((osoba) => normalizujFrazeOpiekuna([osoba.imieNazwisko, osoba.pseudonim, osoba.organizacja].join(' ')).includes(normalizujFrazeOpiekuna(frazaOpiekuna)))
+  const wybranyAktywnyOpiekun = opiekunowie.find((osoba) => osoba.id === opiekunId)
+  const widoczniOpiekunowie = wybranyAktywnyOpiekun && !pasujacyOpiekunowie.some((osoba) => osoba.id === wybranyAktywnyOpiekun.id) ? [wybranyAktywnyOpiekun, ...pasujacyOpiekunowie] : pasujacyOpiekunowie
+  const opcjeOpiekunow = ['', ...widoczniOpiekunowie.map((osoba) => osoba.id), ...(historycznyOpiekun ? [historycznyOpiekun] : [])]
   const [odswiezaczDokumentow, ustawOdswiezaczDokumentow] = useState(0)
   const aktywnaWersja = generator.kopieRobocze.find((kopia) => kopia.id === generator.aktywnaKopiaId) ?? null
   const szczegolyOrganizacyjneId = generator.zrodloOpublikowanegoId ?? aktywnaWersja?.id ?? null
@@ -665,16 +673,20 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
               wartosc={generator.daneFormularza.nazwaKlienta}
               ustawWartosc={(wartosc) => generator.aktualizujDane((dane) => ({ ...dane, nazwaKlienta: wartosc }), 'nazwaKlienta')}
             />
+            <div>
+              <label htmlFor="szukaj-opiekuna">Szukaj opiekuna</label>
+              <input aria-label="Szukaj opiekuna po imieniu, nazwisku lub pseudonimie" id="szukaj-opiekuna" onChange={(zdarzenie) => ustawFrazeOpiekuna(zdarzenie.target.value)} placeholder="Imię, nazwisko lub pseudonim" type="search" value={frazaOpiekuna} />
             <PoleWyboru
               etykieta="Opiekun"
               opcje={opcjeOpiekunow}
-              etykietyOpcji={{ '': 'Wybierz opiekuna', ...Object.fromEntries(opiekunowie.map((osoba) => [osoba.id, osoba.nazwa])), ...(historycznyOpiekun ? { [historycznyOpiekun]: `${pobierzKontoSzczegolow(historycznyOpiekun)?.nazwa ?? 'Dotychczasowy opiekun'} (niedostępny)` } : {}) }}
+              etykietyOpcji={{ '': opiekunowie.length ? 'Wybierz lub wyczyść opiekuna' : 'Brak aktywnych opiekunów', ...Object.fromEntries(widoczniOpiekunowie.map((osoba) => [osoba.id, `${osoba.imieNazwisko || osoba.nazwa}${osoba.pseudonim ? ` — ${osoba.pseudonim}` : ''}${osoba.organizacja ? ` · ${osoba.organizacja}` : ''}`])), ...(historycznyOpiekun ? { [historycznyOpiekun]: `${pobierzKontoSzczegolow(historycznyOpiekun)?.nazwa ?? 'Dotychczasowy opiekun'} (niedostępny)` } : {}) }}
               niedostepneOpcje={historycznyOpiekun ? [historycznyOpiekun] : []}
               pole="opiekunId"
               statusyPol={generator.statusyPol}
               wartosc={generator.daneFormularza.opiekunId}
               ustawWartosc={(wartosc) => generator.aktualizujDane((dane) => ({ ...dane, opiekunId: wartosc }), 'opiekunId')}
             />
+            </div>
           </div>
         </SekcjaFormularza>
 

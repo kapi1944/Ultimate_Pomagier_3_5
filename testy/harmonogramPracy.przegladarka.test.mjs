@@ -27,7 +27,7 @@ test('oś: zakres, kompresja, podgląd, współrzędne, wyjątki widoku i uprawn
         window.dispatchEvent(new Event('storage'))
         return { id, zadaniaReczne, rutyny }
       })
-      await os.locator('.pulpit-deadline').waitFor()
+      await os.locator('.pulpit-deadline__przycisk').waitFor()
       assert.match(await os.getAttribute('aria-label'), /06:00 do 18:00/)
       assert.equal(await os.locator('.pulpit-deadline').count(), 1)
       assert.equal(await os.locator('.pulpit-rutyna__punkt').count(), 0)
@@ -36,8 +36,9 @@ test('oś: zakres, kompresja, podgląd, współrzędne, wyjątki widoku i uprawn
       assert.match(await strona.locator('.pulpit-czas-poza-osia').innerText(), /04:00.*PREFAJRANT/)
       await strona.getByText('Zadania poza zakresem osi (2)', { exact: true }).click()
       await strona.getByRole('button', { name: 'Przed zakresem · 05:00 · Zadanie osi 05:00', exact: true }).click()
-      await strona.getByRole('heading', { name: 'Zadanie osi 05:00', exact: true }).waitFor()
-      await strona.getByRole('button', { name: 'Zamknij panel', exact: true }).click()
+      await strona.getByRole('heading', { name: 'Edytuj zadanie', exact: true }).waitFor()
+      assert.equal(await strona.getByLabel('Nazwa zadania', { exact: true }).inputValue(), 'Zadanie osi 05:00')
+      await strona.getByRole('button', { name: 'Anuluj', exact: true }).click()
 
       const panel = strona.getByRole('form', { name: 'Dostosuj oś', exact: true })
       await strona.getByRole('button', { name: '⚙ Dostosuj oś', exact: true }).click()

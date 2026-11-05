@@ -27,7 +27,7 @@ export function formularzZZadania(zadanie: ZadaniePulpitu): FormularzZadania {
     rodzajTerminu: czyZadanieDoKoncaDnia(zadanie) ? 'DO_KONCA_DNIA' : zadanie.godzina ? 'KONKRETNA_GODZINA' : 'BRAK_GODZINY',
     priorytet: zadanie.priorytet,
     zadaniodawcaId: zadanie.zadaniodawcaId,
-    zadaniobiorcaId: zadanie.zadaniobiorcaId === zadanie.zadaniodawcaId ? '' : zadanie.zadaniobiorcaId,
+    zadaniobiorcaId: zadanie.zadaniobiorcaId,
     szkolenieId: zadanie.powiazaneSzkolenieId ?? '',
     odlozonoDo: zadanie.odlozonoDo,
     przypomnienia: zadanie.przypomnienia.map((przypomnienie) => ({ ...przypomnienie })),

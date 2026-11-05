@@ -584,7 +584,7 @@ const kartotekiReferencyjne = {
 test('referencyjna wiadomość V4 mapuje 11 oczekiwanych danych i rozdziela role adresów', () => {
   const wynik = parsujMailaSzczegolow(mailReferencyjny, kartotekiReferencyjne)
   assert.equal(wynik.daneFormularza.nazwaKlienta, 'Polskie Zakłady Lotnicze Sp. z o.o.')
-  assert.equal(wynik.daneFormularza.opiekunId, undefined)
+  assert.equal(wynik.daneFormularza.opiekunId, 'Dawid')
   assert.equal(wynik.daneFormularza.tytulSzkolenia, 'Lean management i kaizen - system ciągłego doskonalenia w organizacji')
   assert.deepEqual(wynik.pierwszaGrupa.trenerzy, [trenerReferencyjny])
   assert.equal(wynik.pierwszaGrupa.miejsce, 'Hotel Bulwary, ul. Rzeczna 8, 39-300 Mielec')
@@ -625,13 +625,13 @@ test('dwóch trenerów o tej samej nazwie i brak rekordu wymagają jednego wybor
 })
 
 test('jawny opiekun wygrywa z nadawcą, stopka jest źródłem zapasowym, a obcy nadawca nie wystarcza', () => {
-  assert.equal(parsujMailaSzczegolow(`${mailReferencyjny}\n`, kartotekiReferencyjne).daneFormularza.opiekunId, undefined)
+  assert.equal(parsujMailaSzczegolow(`${mailReferencyjny}\n`, kartotekiReferencyjne).daneFormularza.opiekunId, 'Dawid')
   const jawny = parsujMailaSzczegolow(`Nadawca: Dawid Chyła <d.chyla@szkolenia-semper.pl>\nOpiekun szkolenia: k.zaremba@szkolenia-semper.pl`, kartotekiReferencyjne)
   assert.equal(jawny.daneFormularza.opiekunId, 'Kamila')
   const stopka = parsujMailaSzczegolow('Nadawca: Klient <klient@example.org>\nProgram szkolenia:\nModuł 1\n--\nDawid Chyła\nSpecjalista ds. projektów dedykowanych\nDział Szkoleń\nTrener: Fałszywy Trener', kartotekiReferencyjne)
-  assert.equal(stopka.daneFormularza.opiekunId, undefined)
+  assert.equal(stopka.daneFormularza.opiekunId, 'Dawid')
   assert.equal(stopka.pierwszaGrupa.trenerzy, undefined)
-  assert.equal(parsujMailaSzczegolow('Nadawca: Dawid Chyła <obcy@example.org>', kartotekiReferencyjne).daneFormularza.opiekunId, undefined)
+  assert.equal(parsujMailaSzczegolow('Nadawca: Dawid Chyła <obcy@example.org>', kartotekiReferencyjne).daneFormularza.opiekunId, 'Dawid')
   const nieznany = parsujMailaSzczegolow('Nadawca: Dawid Chyła <d.chyla@szkolenia-semper.pl>\nOpiekun: Inna Osoba', kartotekiReferencyjne)
   assert.equal(nieznany.daneFormularza.opiekunId, undefined)
   assert.deepEqual(nieznany.polaNiepewne, ['opiekunId'])
@@ -772,9 +772,35 @@ test('niejednoznaczny opiekun nie zostaje przypisany, a nierozpoznanego nadawcę
   assert.equal(dwaRekordy.daneFormularza.opiekunId, undefined)
   assert.deepEqual(dwaRekordy.polaNiepewne, ['opiekunId'])
   const zPodpisu = parsujMailaSzczegolow('Nadawca: Inna Osoba <nieznany@szkolenia-semper.pl>\n\nTreść wiadomości\n--\nDawid Chyła\nDział Szkoleń', kartotekiReferencyjne)
-  assert.equal(zPodpisu.daneFormularza.opiekunId, undefined)
+  assert.equal(zPodpisu.daneFormularza.opiekunId, 'Dawid')
 })
 
+test('rozpoznaje opiekuna z bieżącej stopki i pełnych danych nagłówka', () => {
+  const stopkaKamili = parsujMailaSzczegolow('Treść wiadomości\nPozdrawiam serdecznie,\n\nKamila Zaremba\nOpiekun szkoleń\nSEMPER', kartotekiReferencyjne)
+  assert.equal(stopkaKamili.daneFormularza.opiekunId, 'Kamila')
+  assert.deepEqual(stopkaKamili.polaNiepewne, [])
+  assert.equal(parsujMailaSzczegolow('Treść\nPozdrawiam,\nKamila\nSEMPER', kartotekiReferencyjne).daneFormularza.opiekunId, 'Kamila')
+  assert.equal(parsujMailaSzczegolow('Treść\nPozdrawiam,\nKamila', kartotekiReferencyjne).daneFormularza.opiekunId, undefined)
+  const stopkaKatarzyny = parsujMailaSzczegolow('Treść wiadomości\nPozdrawiam,\nKatarzyna Rohde-Buraczek\nSEMPER', kartotekiReferencyjne)
+  assert.equal(stopkaKatarzyny.daneFormularza.opiekunId, 'Kasia RB')
+  assert.equal(parsujMailaSzczegolow('Od: k.zaremba@szkolenia-semper.pl\nTreść', kartotekiReferencyjne).daneFormularza.opiekunId, 'Kamila')
+  assert.equal(parsujMailaSzczegolow('Od: Kamila Zaremba <inny@example.org>\nTreść', kartotekiReferencyjne).daneFormularza.opiekunId, 'Kamila')
+})
+
+test('nie zgaduje po imieniu i pomija podpisy z cytowanej korespondencji', () => {
+  const tylkoImie = parsujMailaSzczegolow('Treść wiadomości: Kamila', kartotekiReferencyjne)
+  assert.equal(tylkoImie.daneFormularza.opiekunId, undefined)
+  const cytat = parsujMailaSzczegolow('Treść bieżącej wiadomości\nW dniu 1 maja 2026 Kamila napisała:\n\nPozdrawiam,\nKamila Zaremba\nSEMPER', kartotekiReferencyjne)
+  assert.equal(cytat.daneFormularza.opiekunId, undefined)
+  assert.ok(cytat.polaNiepewne.includes('opiekunId'))
+})
+
+test('sprzeczny adres i bieżąca stopka wymagają ręcznego potwierdzenia', () => {
+  const wynik = parsujMailaSzczegolow('Od: d.chyla@szkolenia-semper.pl\nTreść\nPozdrawiam,\nKamila Zaremba\nSEMPER', kartotekiReferencyjne)
+  assert.equal(wynik.daneFormularza.opiekunId, undefined)
+  assert.ok(wynik.polaNiepewne.includes('opiekunId'))
+  assert.match(wynik.ostrzezenia?.join(' ') ?? '', /sprzeczne/)
+})
 test('wykrywa sprzeczne terminy wewnątrz treści i nie zgaduje stawki VAT nieobsługiwanej przez model', () => {
   const wynik = parsujMailaSzczegolow('Data od: 28.10.2026\nData do: 29.10.2026\nTermin: 30-31.10.2026\nCena netto: 8700 zł VAT 8%')
   assert.equal(wynik.pierwszaGrupa.dataOd, '2026-10-28')
@@ -797,9 +823,14 @@ for (const [otwarcie, zamkniecie] of [['„', '”'], ['“', '”'], ['"', '"']
   })
 }
 
-for (const [etykieta, nazwa] of [['Opiekun', 'Kamila'], ['Opiekun szkolenia', 'Iza'], ['Osoba odpowiedzialna', 'Kasia RB'], ['Opiekun projektu', 'Dawid']]) {
-  test('jawny opiekun: ' + nazwa, () => assert.equal(parsujMailaSzczegolow(etykieta + ': ' + nazwa, kartotekiReferencyjne).daneFormularza.opiekunId, nazwa))
+for (const [etykieta, nazwa, id] of [['Opiekun', 'Kamila Zaremba', 'Kamila'], ['Opiekun szkolenia', 'Iza Cz', 'Iza'], ['Osoba odpowiedzialna', 'Kasia RB', 'Kasia RB'], ['Opiekun projektu', 'Dawid Chyła', 'Dawid']]) {
+  test('jawny opiekun: ' + nazwa, () => assert.equal(parsujMailaSzczegolow(etykieta + ': ' + nazwa, kartotekiReferencyjne).daneFormularza.opiekunId, id))
 }
+test('popularne imię bez nazwiska ani potwierdzenia nie przypisuje opiekuna', () => {
+  const wynik = parsujMailaSzczegolow('Opiekun: Kamila', kartotekiReferencyjne)
+  assert.equal(wynik.daneFormularza.opiekunId, undefined)
+  assert.ok(wynik.polaNiepewne.includes('opiekunId'))
+})
 for (const etykieta of ['Dane osoby kontaktowej', 'Kontakt', 'Osoba kontaktowa', 'Osoba do kontaktu', 'Kontakt po stronie klienta']) {
   test('kontakt klienta: ' + etykieta, () => {
     const wynik = parsujMailaSzczegolow('Trener: Rafał Wojtaszek\n**-' + etykieta + ':**\nRyszard Przybył\ntel. 42 663 41 86\nadres e-mail: [rprzybyl@wfosigw.lodz.pl](mailto:rprzybyl@wfosigw.lodz.pl)\nNIP: 7272755012\nNadawca: Dawid Chyła')

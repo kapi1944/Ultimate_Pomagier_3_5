@@ -1,4 +1,4 @@
-import type { RolaUzytkownika } from '../../../../kartoteki/uzytkownicy/typyUzytkownikow'
+import { pobierzNazweUzytkownika, type RolaUzytkownika, type Uzytkownik } from '../../../../kartoteki/uzytkownicy/typyUzytkownikow'
 import { domyslnyZakresDniaPracy, pozycjaGodzinyNaOsi, type ZakresDniaPracy } from './czasDnia'
 import type { PrzypomnienieZadania, ZadaniePulpitu } from '../modele/pulpit'
 
@@ -166,6 +166,11 @@ export function czyMoznaWybracZadaniodawce(rola: RolaUzytkownika | null | undefi
   return rola === 'ADMINISTRATOR' || rola === 'ARCHITEKT'
 }
 
+export function pobierzEtykieteUzytkownika(uzytkownik: Pick<Uzytkownik, 'id' | 'imie' | 'nazwisko'>, aktualnyUzytkownikId?: string | null) {
+  const nazwa = pobierzNazweUzytkownika(uzytkownik)
+  return aktualnyUzytkownikId && uzytkownik.id === aktualnyUzytkownikId ? `Ja — ${nazwa}` : nazwa
+}
+
 export function rozstrzygnijPrzypisanieZadania(
   aktualnyUzytkownikId: string,
   rola: RolaUzytkownika | null | undefined,
@@ -177,7 +182,7 @@ export function rozstrzygnijPrzypisanieZadania(
     : aktualnyUzytkownikId
   return {
     zadaniodawcaId,
-    zadaniobiorcaId: wybranyZadaniobiorcaId || zadaniodawcaId,
+    zadaniobiorcaId: wybranyZadaniobiorcaId || aktualnyUzytkownikId,
   }
 }
 

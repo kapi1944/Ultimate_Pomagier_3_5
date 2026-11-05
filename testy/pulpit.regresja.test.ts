@@ -11,7 +11,7 @@ import { obliczLicznikiPulpitu } from '../src/moduly/zamkniete/pulpit/logika/pod
 import { obliczLiczbeAktywnychZapotrzebowanZakupowych, odmienRzeczDoZakupu, pobierzTekstLicznikaZakupow, walidujNoweZapotrzebowanieZakupowe } from '../src/moduly/zamkniete/pulpit/logika/zapotrzebowaniaZakupowe.ts'
 import { generujZadaniaAutomatyczne } from '../src/moduly/zamkniete/pulpit/logika/zadaniaAutomatyczne.ts'
 import { normalizujKadrMiniatury } from '../src/moduly/zamkniete/pulpit/logika/miniaturyZadan.ts'
-import { czyMoznaEdytowacZadanie, czyMoznaOznaczycZadanieRecznie, czyMoznaWybracZadaniodawce, czyZadanieDoKoncaDnia, czyZadanieOpoznione, czyZadanieWidoczneDlaUzytkownika, pobierzEtykieteStatusuZadania, pobierzGodzineLogicznegoDeadline, pobierzGodzineMarkeraZadania, pobierzMomentPrzypomnieniaZadania, pobierzSzerokoscLiniiDoFajrantu, pobierzZadaniaDeadline, rozstrzygnijPrzypisanieZadania, sortujZadaniaBezGodziny, walidujPrzypomnienia } from '../src/moduly/zamkniete/pulpit/logika/zadania.ts'
+import { czyMoznaEdytowacZadanie, czyMoznaOznaczycZadanieRecznie, czyMoznaWybracZadaniodawce, czyZadanieDoKoncaDnia, czyZadanieOpoznione, czyZadanieWidoczneDlaUzytkownika, pobierzEtykieteStatusuZadania, pobierzEtykieteUzytkownika, pobierzGodzineLogicznegoDeadline, pobierzGodzineMarkeraZadania, pobierzMomentPrzypomnieniaZadania, pobierzSzerokoscLiniiDoFajrantu, pobierzZadaniaDeadline, rozstrzygnijPrzypisanieZadania, sortujZadaniaBezGodziny, walidujPrzypomnienia } from '../src/moduly/zamkniete/pulpit/logika/zadania.ts'
 import type { PaczkaPulpitu, StatusZapotrzebowaniaZakupowego, ZadaniePulpitu, ZapotrzebowanieZakupowe } from '../src/moduly/zamkniete/pulpit/modele/pulpit.ts'
 import { edytujZadanieRecznePrzezZadaniodawce, normalizujZadaniePulpitu, pobierzStanPulpitu, usunZadanieReczne, zapiszZadanieReczne, zapiszZapotrzebowanieZakupowe } from '../src/moduly/zamkniete/pulpit/uslugi/magazynPulpitu.ts'
 
@@ -214,6 +214,26 @@ test('domyślnie Zadaniodawca i Zadaniobiorca są aktualnym użytkownikiem', () 
   })
 })
 
+test('zmiana Zadaniodawcy i Zadaniobiorcy nie zmienia drugiego pola', () => {
+  assert.deepEqual(rozstrzygnijPrzypisanieZadania('anna-id', 'ADMINISTRATOR', 'jan-id', 'ewa-id'), {
+    zadaniodawcaId: 'jan-id',
+    zadaniobiorcaId: 'ewa-id',
+  })
+  assert.deepEqual(rozstrzygnijPrzypisanieZadania('anna-id', 'ADMINISTRATOR', 'jan-id'), {
+    zadaniodawcaId: 'jan-id',
+    zadaniobiorcaId: 'anna-id',
+  })
+})
+
+test('etykieta Ja zależy wyłącznie od stabilnego ID sesji, także przy takich samych nazwiskach', () => {
+  const anna1 = { id: 'uzytkownik-1', imie: 'Anna', nazwisko: 'Kowalska' }
+  const anna2 = { id: 'uzytkownik-2', imie: 'Anna', nazwisko: 'Kowalska' }
+  assert.equal(pobierzEtykieteUzytkownika(anna1, 'uzytkownik-1'), 'Ja — Anna Kowalska')
+  assert.equal(pobierzEtykieteUzytkownika(anna2, 'uzytkownik-1'), 'Anna Kowalska')
+  assert.equal(pobierzEtykieteUzytkownika(anna2, 'uzytkownik-2'), 'Ja — Anna Kowalska')
+  assert.equal(pobierzEtykieteUzytkownika(anna1, null), 'Anna Kowalska')
+})
+
 test('zwykły użytkownik nie może zmienić Zadaniodawcy', () => {
   assert.equal(czyMoznaWybracZadaniodawce('OPIEKUN'), false)
   assert.deepEqual(rozstrzygnijPrzypisanieZadania('anna', 'OPIEKUN', 'jan', 'ewa'), {
@@ -222,11 +242,11 @@ test('zwykły użytkownik nie może zmienić Zadaniodawcy', () => {
   })
 })
 
-test('Administrator może wybrać Zadaniodawcę, a Ja oznacza efektywnego Zadaniodawcę', () => {
+test('Administrator może wybrać Zadaniodawcę, a domyślny Zadaniobiorca pozostaje aktualnym użytkownikiem', () => {
   assert.equal(czyMoznaWybracZadaniodawce('ADMINISTRATOR'), true)
   assert.deepEqual(rozstrzygnijPrzypisanieZadania('admin', 'ADMINISTRATOR', 'jan'), {
     zadaniodawcaId: 'jan',
-    zadaniobiorcaId: 'jan',
+    zadaniobiorcaId: 'admin',
   })
 })
 
@@ -334,6 +354,10 @@ test('magazyn chroni edycję i zachowuje historyczne metadane zadania', () => {
   })
 
   zapiszZadanieReczne(oryginalne)
+  const odczytane = pobierzStanPulpitu().zadaniaReczne[0]
+  assert.equal(odczytane?.zadaniodawcaId, 'jan')
+  assert.equal(odczytane?.zadaniobiorcaId, 'anna')
+  assert.equal(formularzZZadania(odczytane!).zadaniobiorcaId, 'anna')
 
   const niedozwolone = edytujZadanieRecznePrzezZadaniodawce(
     oryginalne.id,

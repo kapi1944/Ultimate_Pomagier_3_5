@@ -46,7 +46,7 @@ function PanelAkcjiDokumentu({ wysylka, stan, uzytkownikId, otworzDokument }: Wl
   const uzytkownik = uzytkownikId ? pobierzUzytkownika(uzytkownikId) : null
   const mozePotwierdzac = czyMozeWysylac(uzytkownik) && Boolean(wysylka.checklistaId && wysylka.paczkaId)
   const mozeDrukowac = czyMozeEksportowac(uzytkownik)
-  const zablokowane = !stan.dokument || stan.nieDotyczy || stan.wymagaAktualizacji || stan.ostrzezenia.length > 0
+  const zablokowane = !stan.dokument || !wysylka.checklistaId || !wysylka.paczkaId || stan.nieDotyczy || stan.wymagaAktualizacji || stan.ostrzezenia.length > 0
   const zastapione = new Set(stan.operacje.map((operacja) => operacja.korygowanaOperacjaId))
 
   async function wykonaj(akcja: (id: string) => Promise<unknown>, opis: string) {
@@ -145,6 +145,6 @@ export default function DokumentyWysylki({ wysylka, dokumenty, uzytkownikId, otw
     <progress aria-label="Kompletność dokumentów" value={podsumowanie.procent} max="100">{podsumowanie.procent}%</progress>
     <p>Zawartość fizyczna: {wysylka.liczbaGotowych}/{wysylka.liczbaWymaganych} pozycji · Wysyłka: {wysylka.statusPrzesylki}</p>
     <div className="monitor-dokumenty__siatka">{dokumenty.map((stan) => <KafelekDokumentuWysylki key={stan.rodzaj} stan={stan} otwarty={wybranyRodzaj === stan.rodzaj} panelId={panelId} otworz={() => ustawWybranyRodzaj(wybranyRodzaj === stan.rodzaj ? null : stan.rodzaj)} />)}</div>
-    {wybrany && <div id={panelId}><PanelAkcjiDokumentu key={`${wybrany.rodzaj}:${wybrany.wersjaDokumentuId ?? 'brak'}`} wysylka={wysylka} stan={wybrany} uzytkownikId={uzytkownikId} otworzDokument={otworzDokument} /></div>}
+    {wybrany && <div id={panelId}><PanelAkcjiDokumentu key={[wybrany.rodzaj, wybrany.wersjaDokumentuId, wybrany.odciskZrodla, wybrany.wymagane, wybrany.nieDotyczy].join(':')} wysylka={wysylka} stan={wybrany} uzytkownikId={uzytkownikId} otworzDokument={otworzDokument} /></div>}
   </section>
 }

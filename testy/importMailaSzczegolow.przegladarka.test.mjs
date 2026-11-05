@@ -67,7 +67,7 @@ test('kontakty i odbiorca: dynamiczne błędy, ARIA, kontrola jakości, import, 
     await pole('odbiorca.imieNazwiskoOdbiorcy').fill('Własny odbiorca')
     await pole('nabywca.osobaKontaktowa').fill('Osoba nabywcy')
     await pole('czyNabywcaJestOdbiorca').check()
-    await pole('opiekunId').selectOption({ label: 'Kamila' })
+    await pole('opiekunId').selectOption({ value: 'Kamila' })
     await strona.getByRole('button', { name: 'Zapisz wersję roboczą', exact: true }).click()
     const zapis = await strona.evaluate(async () => (await import('/src/moduly/zamkniete/szczegoly_organizacyjne/uslugi/magazynWersjiRoboczych.ts')).pobierzAktualnaWersjeRobocza())
     assert.equal(zapis.dane.zrodloImportuMaila, tresc)
@@ -192,7 +192,7 @@ test('produkcja: późna projekcja kont, czterej opiekunowie z rzeczywistym ID, 
     const selektor = strona.locator('select[id$="opiekunId"]')
     for (const nazwa of ['Kasia RB', 'Iza Cz', 'Kamila', 'Dawid']) {
       const konto = konta.find((konto) => konto.pseudonim === nazwa)
-      await selektor.selectOption({ label: nazwa })
+      await selektor.selectOption({ value: konto.id })
       assert.equal(await selektor.inputValue(), konto.id)
       assert.notEqual(konto.id, nazwa)
       await strona.getByRole('button', { name: 'Zapisz wersję roboczą', exact: true }).click()
@@ -371,8 +371,12 @@ test('import OZE w formularzu: wartości A–G, statusy, ręczne 48 osób i pono
     await importuj.click()
     await sprawdzPola('48')
     assert.equal((await pobierzStan()).statusyPol['grupy.0.liczbaUczestnikow'], 'reczne')
+    await strona.getByLabel('Szukaj opiekuna po imieniu, nazwisku lub pseudonimie').fill('Rohde')
+    assert.equal(await pole('opiekunId').locator('option[value="Kasia RB"]').count(), 1)
+    assert.equal(await pole('opiekunId').locator('option[value="Dawid"]').count(), 0)
+    await strona.getByLabel('Szukaj opiekuna po imieniu, nazwisku lub pseudonimie').fill('')
     for (const [nazwa, id] of [['Kasia RB', 'Kasia RB'], ['Iza Cz', 'Iza'], ['Dawid', 'Dawid'], ['Kamila', 'Kamila']]) {
-      await pole('opiekunId').selectOption({ label: nazwa })
+      await pole('opiekunId').selectOption({ value: id })
       assert.equal(await pole('opiekunId').inputValue(), id)
     }
     await strona.locator('.szczegoly-import-maila textarea').fill('Temat: 06.11.2026\nDane osoby kontaktowej:\nRyszard Przybył\ntel. 42 663 41 86\nadres e-mail: rprzybyl@wfosigw.lodz.pl')

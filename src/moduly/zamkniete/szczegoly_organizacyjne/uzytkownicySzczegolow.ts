@@ -1,16 +1,16 @@
 import { pobierzUzytkownika, pobierzUzytkownikow } from '../../../kartoteki/uzytkownicy/magazynUzytkownikow'
 import { czyJestAdministratorem, czyMozeAkceptowac } from '../../../kartoteki/uzytkownicy/uprawnienia'
 import type { Uzytkownik } from '../../../kartoteki/uzytkownicy/typyUzytkownikow'
-import { pobierzNazweWyswietlanaUzytkownika } from '../../../kartoteki/uzytkownicy/typyUzytkownikow'
+import { etykietyOrganizacji, pobierzNazweWyswietlanaUzytkownika, pobierzNazweUzytkownika } from '../../../kartoteki/uzytkownicy/typyUzytkownikow'
 import { pobierzZalogowanegoUzytkownika } from '../../../aplikacja/logowanie/sesjaUzytkownika'
 import type { OpublikowaneSzczegolyOrganizacyjne, WersjaRoboczaGeneratora } from './typy'
 
-export type KontoSzczegolow = Pick<Uzytkownik, 'id' | 'rola' | 'kolorProfilu' | 'status' | 'odznaki'> & { nazwa: string; kolorOpiekuna?: string }
+export type KontoSzczegolow = Pick<Uzytkownik, 'id' | 'rola' | 'kolorProfilu' | 'status' | 'odznaki'> & { nazwa: string; imieNazwisko: string; pseudonim: string; organizacja: string; kolorOpiekuna?: string }
 
-const nieznaneKonto: KontoSzczegolow = { id: '', nazwa: 'Nieznany użytkownik', rola: 'GOSC', kolorProfilu: '#94a3b8', status: 'NIEAKTYWNY', odznaki: [] }
+const nieznaneKonto: KontoSzczegolow = { id: '', nazwa: 'Nieznany użytkownik', imieNazwisko: '', pseudonim: '', organizacja: '', rola: 'GOSC', kolorProfilu: '#94a3b8', status: 'NIEAKTYWNY', odznaki: [] }
 
 function mapujKonto(uzytkownik: Uzytkownik): KontoSzczegolow {
-  return { id: uzytkownik.id, nazwa: pobierzNazweWyswietlanaUzytkownika(uzytkownik), rola: uzytkownik.rola, kolorProfilu: uzytkownik.kolorProfilu, kolorOpiekuna: uzytkownik.rola === 'OPIEKUN' ? uzytkownik.kolorProfilu : undefined, status: uzytkownik.status, odznaki: [...uzytkownik.odznaki] }
+  return { id: uzytkownik.id, nazwa: pobierzNazweWyswietlanaUzytkownika(uzytkownik), imieNazwisko: pobierzNazweUzytkownika(uzytkownik), pseudonim: uzytkownik.pseudonim, organizacja: etykietyOrganizacji[uzytkownik.organizacja], rola: uzytkownik.rola, kolorProfilu: uzytkownik.kolorProfilu, kolorOpiekuna: uzytkownik.rola === 'OPIEKUN' ? uzytkownik.kolorProfilu : undefined, status: uzytkownik.status, odznaki: [...uzytkownik.odznaki] }
 }
 
 export function pobierzOpiekunowSzczegolow() {

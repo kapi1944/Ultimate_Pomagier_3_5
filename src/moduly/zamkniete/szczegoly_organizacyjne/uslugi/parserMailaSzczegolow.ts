@@ -44,8 +44,43 @@ function znajdzWartoscWNastepnejLinii(wiersze: string[], indeks: number) {
   return ''
 }
 
+function normalizujTozsamosc(tekst: string) {
+  return normalizujTekst(tekst).replace(/[^a-z0-9]+/g, ' ').trim().replace(/\s+/g, ' ')
+}
+
+function wytnijCytowanaKorespondencje(tresc: string) {
+  const wiersze = tresc.split('\n')
+  const indeks = wiersze.findIndex((wiersz) => /^\s*(?:-{2,}\s*(?:original message|forwarded message)\s*-{2,}|begin forwarded message:|w dniu .+ napisa[łl]\(?a?\)?.*:|on .+ wrote:)\s*$/i.test(wiersz) || /^\s*>/.test(wiersz))
+  return indeks < 0 ? tresc : wiersze.slice(0, indeks).join('\n')
+}
+
+function pobierzAdresNadawcy(wartosc: string) {
+  return wartosc.match(/[\w.!#$%&'*+/=?^{|}~-]+@[\w.-]+\.[a-z]{2,}/i)?.[0]?.toLocaleLowerCase('pl') ?? ''
+}
+
+function dopasujOpiekunowPoNazwie(wartosc: string, opiekunowie: readonly Uzytkownik[]) {
+  const szukana = normalizujTozsamosc(wartosc)
+  if (!szukana) return []
+  return opiekunowie.filter((osoba) => [osoba.imie + ' ' + osoba.nazwisko, ...osoba.aliasyHistoryczne.filter((alias) => normalizujTozsamosc(alias).split(' ').length > 1)].some((nazwa) => normalizujTozsamosc(nazwa) === szukana))
+}
+
+function dopasujOpiekunaPoAdresie(wartosc: string, opiekunowie: readonly Uzytkownik[]) {
+  const adres = pobierzAdresNadawcy(wartosc)
+  if (!adres) return []
+  return opiekunowie.filter((osoba) => [osoba.email, ...osoba.emaile].some((email) => email.toLocaleLowerCase('pl') === adres))
+}
+
+function dopasujOpiekunowPoPodpisie(wiersze: string[], opiekunowie: readonly Uzytkownik[]) {
+  const dopasowaniaPelnychNazw = wiersze.flatMap((wiersz) => dopasujOpiekunowPoNazwie(wiersz.trim(), opiekunowie))
+  const organizacje = new Set(wiersze.map((wiersz) => normalizujTozsamosc(wiersz)))
+  const dopasowaniaPseudonimow = opiekunowie.filter((osoba) => normalizujTozsamosc(osoba.pseudonim) && organizacje.has(normalizujTozsamosc(osoba.organizacja)) && wiersze.some((wiersz) => normalizujTozsamosc(wiersz) === normalizujTozsamosc(osoba.pseudonim)))
+  return [...dopasowaniaPelnychNazw, ...dopasowaniaPseudonimow]
+}
 export function rozdzielNaglowkiWiadomosci(tresc: string) {
-  const wiersze = normalizujTrescMaila(tresc).split('\n')
+  const trescNormalna = normalizujTrescMaila(tresc)
+  const trescBezCytatu = wytnijCytowanaKorespondencje(trescNormalna)
+  const czyPominietoCytat = trescBezCytatu !== trescNormalna
+  const wiersze = trescBezCytatu.split('\n')
   const naglowki: Record<string, string> = {}
   const trescWlasciwa: string[] = []
   let czyWBlokuNaglowkow = false
@@ -73,10 +108,11 @@ export function rozdzielNaglowkiWiadomosci(tresc: string) {
     }
   }
 
-  const indeksStopki = trescWlasciwa.findIndex((wiersz, indeks) => /^--$|^(?:z pozdrowieniami|pozdrawiam|pozdrawiam serdecznie)[,.! ]*$/i.test(wiersz)
-    || indeks > trescWlasciwa.length - 25 && /^(?:specjalista ds\.|dzial szkolen)/.test(normalizujTekst(wiersz)))
-  const poczatekStopki = indeksStopki < 0 ? trescWlasciwa.length : Math.max(0, indeksStopki - (/^(?:specjalista|dzial)/.test(normalizujTekst(trescWlasciwa[indeksStopki])) ? 2 : 0))
-  return { naglowki, tresc: trescWlasciwa.slice(0, poczatekStopki).join('\n'), stopka: trescWlasciwa.slice(poczatekStopki).join('\n') }
+  const wierszeBiezacejWiadomosci = wytnijCytowanaKorespondencje(trescWlasciwa.join('\n')).split('\n')
+  const indeksStopki = wierszeBiezacejWiadomosci.findIndex((wiersz, indeks) => /^--$|^(?:z pozdrowieniami|pozdrawiam|pozdrawiam serdecznie)[,.! ]*$/i.test(wiersz)
+    || indeks > wierszeBiezacejWiadomosci.length - 25 && /^(?:specjalista ds\.|dzial szkolen)/.test(normalizujTekst(wiersz)))
+  const poczatekStopki = indeksStopki < 0 ? wierszeBiezacejWiadomosci.length : Math.max(0, indeksStopki - (/^(?:specjalista|dzial)/.test(normalizujTekst(wierszeBiezacejWiadomosci[indeksStopki])) ? 2 : 0))
+  return { naglowki, tresc: wierszeBiezacejWiadomosci.slice(0, poczatekStopki).join('\n'), stopka: wierszeBiezacejWiadomosci.slice(poczatekStopki).join('\n'), czyPominietoCytat }
 }
 
 function znajdzPoEtykiecie(tresc: string, etykiety: string[]) {
@@ -491,13 +527,27 @@ export function parsujMailaSzczegolow(tresc: string, kartoteki: KartotekiImportu
 
   const jawnyOpiekun = znajdzPoEtykiecie(tresc, ['Opiekun szkolenia', 'Opiekun', 'Osoba odpowiedzialna za szkolenie', 'Osoba odpowiedzialna', 'Opiekun projektu'])
   const opiekunowie = (kartoteki.opiekunowie ?? []).filter((osoba) => osoba.rola === 'OPIEKUN' && osoba.status === 'AKTYWNY')
-  const dopasowania = jawnyOpiekun ? opiekunowie.filter((osoba) => [osoba.id, osoba.pseudonim, osoba.imie, osoba.imie + ' ' + osoba.nazwisko, ...osoba.aliasyHistoryczne, ...osoba.emaile].some((nazwa) => normalizujTekst(nazwa).trim() === normalizujTekst(jawnyOpiekun).trim())) : []
+  const naglowekNadawcy = wiadomosc.naglowki.od ?? wiadomosc.naglowki.from ?? wiadomosc.naglowki.nadawca ?? ''
+  const dopasowaniaJawne = jawnyOpiekun ? opiekunowie.filter((osoba) => {
+    const pseudonimPotwierdzony = normalizujTozsamosc(osoba.pseudonim) !== normalizujTozsamosc(osoba.imie) ? [osoba.pseudonim] : []
+    const aliasyPelnejNazwy = osoba.aliasyHistoryczne.filter((alias) => normalizujTozsamosc(alias).split(' ').length > 1)
+    return [osoba.imie + ' ' + osoba.nazwisko, ...pseudonimPotwierdzony, ...aliasyPelnejNazwy, ...osoba.emaile].some((nazwa) => normalizujTozsamosc(nazwa) === normalizujTozsamosc(jawnyOpiekun) || pobierzAdresNadawcy(nazwa) && pobierzAdresNadawcy(nazwa) === pobierzAdresNadawcy(jawnyOpiekun))
+  }) : []
+  const dopasowaniaAdresu = dopasujOpiekunaPoAdresie(naglowekNadawcy, opiekunowie)
+  const podpisy = wiadomosc.stopka.split('\n').map((wiersz) => wiersz.trim()).filter(Boolean)
+  const dopasowaniaStopki = dopasujOpiekunowPoPodpisie(podpisy, opiekunowie)
+  const nazwaNadawcy = naglowekNadawcy.replace(pobierzAdresNadawcy(naglowekNadawcy), '').replace(/[<>"]/g, '').trim()
+  const dopasowaniaNaglowka = dopasujOpiekunowPoNazwie(nazwaNadawcy, opiekunowie)
+  const sygnaly = [dopasowaniaAdresu, dopasowaniaStopki, dopasowaniaNaglowka].filter((dopasowania) => dopasowania.length === 1).map((dopasowania) => dopasowania[0])
+  const sprzeczneSygnaly = new Set(sygnaly.map((osoba) => osoba.id)).size > 1
+  const jednoznacznyNadawca = !sprzeczneSygnaly ? sygnaly[0] : undefined
+  const dopasowania = jawnyOpiekun ? dopasowaniaJawne : sprzeczneSygnaly ? [] : dopasowaniaJawne.length ? dopasowaniaJawne : jednoznacznyNadawca ? [jednoznacznyNadawca] : []
   if (dopasowania.length === 1) {
     daneFormularza.opiekunId = dopasowania[0].id
     dodajRozpoznanie(rozpoznaneObszary, rozpoznanePola, 'opiekun', 'opiekunId')
-  } else if (jawnyOpiekun) {
+  } else if (jawnyOpiekun || sprzeczneSygnaly || naglowekNadawcy || wiadomosc.stopka || wiadomosc.czyPominietoCytat) {
     dodajNiepewne(polaNiepewne, 'opiekunId')
-    ostrzezenia.push('Opiekun: wybierz rekord kartoteki dla „' + jawnyOpiekun + '”.')
+    ostrzezenia.push(sprzeczneSygnaly ? 'Opiekun: sprzeczne dane nadawcy i podpisu; potwierdź wybór ręcznie.' : 'Opiekun: nie znaleziono jednoznacznego dopasowania; potwierdź wybór ręcznie.')
   }
 
   const nazwaGrupy = znajdzPoEtykiecie(tresc, ['Grupa', 'Nazwa grupy'])
