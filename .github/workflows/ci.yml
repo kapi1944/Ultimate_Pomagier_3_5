@@ -23,6 +23,8 @@ jobs:
         run: npm ci
       - name: Testy
         run: npm test
+      - name: Testy przeglądarkowe w zainstalowanym Chrome
+        run: npm run test:e2e
       - name: Testy konfiguracji desktopowej
         run: npm run test:desktop
       - name: Testy rejestru i dystrybucji
