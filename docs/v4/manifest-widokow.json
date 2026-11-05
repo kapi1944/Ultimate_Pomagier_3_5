@@ -1513,6 +1513,12 @@
       "ukonczoneEtapy": [],
       "wspoldzieloneZ": []
     },
+    "src/moduly/zamkniete/pulpit/PolaOsiCzasu.tsx": {
+      "zadanie": "V4-04",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": ["V4-22"]
+    },
     "src/wspolne/import/ImporterDanychSzkoleniaZMaila.tsx": {
       "zadanie": "V4-09",
       "powierzchnie": [

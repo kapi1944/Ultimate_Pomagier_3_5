@@ -1,4 +1,8 @@
+import { ocenDzienPracy, domyslnyKalendarzPracy, type KalendarzPracy } from '../../../../wspolne/czas/kalendarzPracy'
+export { dataWarszawska } from '../../../../wspolne/czas/kalendarzPracy'
+
 export type HarmonogramRutyny =
+  | { rodzaj: 'DNI_ROBOCZE' }
   | { rodzaj: 'CODZIENNIE' }
   | { rodzaj: 'DNI_TYGODNIA'; dni: number[] }
   | { rodzaj: 'CEL_TYGODNIOWY'; liczba: number }
@@ -9,12 +13,6 @@ export type WykonanieRutyny = { rutynaId: string; okres: string; numer: number; 
 export type WystapienieRutyny = { rutynaId: string; okres: string; numer: number; tytul: string; wykonane: boolean; godzina?: string; blokPracyId?: string }
 export type ZdarzenieRutyny = { czas: string; uzytkownikId: string; rutynaId: string; opis: string }
 export type StanRutyn = { rutyny: Rutyna[]; wykonania: WykonanieRutyny[]; historia: ZdarzenieRutyny[] }
-
-export function dataWarszawska(data: Date): string {
-  const czesci = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Warsaw', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(data)
-  const wartosc = (typ: string) => czesci.find((czesc) => czesc.type === typ)?.value ?? ''
-  return `${wartosc('year')}-${wartosc('month')}-${wartosc('day')}`
-}
 
 export function dodajDni(data: string, liczba: number): string {
   const dzien = new Date(`${data}T00:00:00Z`)
@@ -37,19 +35,20 @@ export function wlascicielWystapienia(rutyna: Rutyna, wystapienie: WystapienieRu
   return wersja?.wlascicielId ?? rutyna.wlascicielId
 }
 
-export function wystapieniaDnia(rutyny: Rutyna[], wykonania: WykonanieRutyny[], data: string): WystapienieRutyny[] {
+export function wystapieniaDnia(rutyny: Rutyna[], wykonania: WykonanieRutyny[], data: string, kalendarz: KalendarzPracy = domyslnyKalendarzPracy): WystapienieRutyny[] {
   const dzien = new Date(`${data}T00:00:00Z`).getUTCDay()
   return rutyny.flatMap((rutyna) => {
     const wersja = wersjaNaDzien(rutyna, data)
     if (!wersja?.aktywna || wersja.harmonogram.rodzaj === 'CEL_TYGODNIOWY') return []
+    if (wersja.harmonogram.rodzaj === 'DNI_ROBOCZE' && !ocenDzienPracy(data, wersja.wlascicielId ?? rutyna.wlascicielId, kalendarz).roboczy) return []
     if (wersja.harmonogram.rodzaj === 'DNI_TYGODNIA' && !wersja.harmonogram.dni.includes(dzien)) return []
     return [{ rutynaId: rutyna.id, okres: data, numer: 0, tytul: rutyna.tytul, ...(wersja.godzina ? { godzina: wersja.godzina } : {}), ...(wersja.blokPracyId ? { blokPracyId: wersja.blokPracyId } : {}), wykonane: wykonania.some((wpis) => wpis.rutynaId === rutyna.id && wpis.okres === data && wpis.numer === 0 && wpis.wykonane) }]
   })
 }
 
-export function wystapieniaTygodnia(rutyny: Rutyna[], wykonania: WykonanieRutyny[], data: string): WystapienieRutyny[] {
+export function wystapieniaTygodnia(rutyny: Rutyna[], wykonania: WykonanieRutyny[], data: string, kalendarz: KalendarzPracy = domyslnyKalendarzPracy): WystapienieRutyny[] {
   const poniedzialek = poczatekTygodnia(data)
-  const dzienne = Array.from({ length: 7 }, (_, indeks) => wystapieniaDnia(rutyny, wykonania, dodajDni(poniedzialek, indeks))).flat()
+  const dzienne = Array.from({ length: 7 }, (_, indeks) => wystapieniaDnia(rutyny, wykonania, dodajDni(poniedzialek, indeks), kalendarz)).flat()
   const cele = rutyny.flatMap((rutyna) => {
     const wersja = wersjaNaDzien(rutyna, poniedzialek) ?? wersjaNaDzien(rutyna, dodajDni(poniedzialek, 6))
     if (!wersja?.aktywna || wersja.harmonogram.rodzaj !== 'CEL_TYGODNIOWY') return []

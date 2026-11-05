@@ -36,7 +36,7 @@ test('oś Pulpitu: kompaktowy pusty stan, rosnące etykiety i miniatury bez koli
       for (const liczba of [0, 1, 6]) {
         zapiszStanPulpitu({ zadaniaReczne: Array.from({ length: liczba }, (_, indeks) => ({
           id: 'os-' + indeks, tytul: 'Długa etykieta zadania wymagająca kilku wierszy '.repeat(indeks + 1),
-          data, godzina: indeks === 0 ? '00:00' : indeks === 5 ? '23:59' : '12:00',
+          data, godzina: indeks === 0 ? '06:00' : indeks === 5 ? '18:00' : '12:00',
           utworzono: dzisiaj.toISOString(), status: 'OTWARTE', priorytet: 'ASAP', typZrodla: 'RECZNE', typZadania: 'INNE',
           wlascicielId: konta[0].id, zadaniodawcaId: konta[0].id, zadaniobiorcaId: konta[0].id,
           przypomnienia: [], czyAutomatyczne: false, czyTerminKrytyczny: false,
@@ -54,14 +54,16 @@ test('oś Pulpitu: kompaktowy pusty stan, rosnące etykiety i miniatury bez koli
             etykiety: prostokat(document.querySelector('.pulpit-os-czasu__etykiety')),
             zadania: [...document.querySelectorAll('.pulpit-deadline__przycisk')].map(prostokat),
             miniatury: [...document.querySelectorAll('.pulpit-os-czasu__miniatura')].map(prostokat),
+            kotwice: [...document.querySelectorAll('.pulpit-deadline')].map(prostokat),
             wysokosc: kontener.offsetHeight, przewijanie: kontener.scrollHeight - kontener.clientHeight,
             nadmiarStrony: document.documentElement.scrollWidth - document.documentElement.clientWidth,
           }
         })
         assert.equal(pomiar.zadania.length, liczba)
         assert.equal(pomiar.miniatury.length, liczba)
-        assert.deepEqual(await strona.locator('.pulpit-os-czasu__etykieta').allTextContents(), ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00', '23:59'])
-        assert.equal(await strona.locator('.pulpit-os-czasu__etykieta-teraz').count(), 1)
+        const etykiety = await strona.locator('.pulpit-os-czasu__etykieta').allTextContents()
+        assert.equal(etykiety[0], '06:00')
+        assert.equal(etykiety.at(-1), '18:00')
         wysokosci.push(pomiar.wysokosc)
         assert.ok(pomiar.nadmiarStrony <= 1, JSON.stringify(pomiar))
         assert.ok(pomiar.przewijanie <= 1, JSON.stringify(pomiar))
@@ -70,6 +72,8 @@ test('oś Pulpitu: kompaktowy pusty stan, rosnące etykiety i miniatury bez koli
           assert.ok(Math.abs(pomiar.linia.y + pomiar.linia.height / 2 - (pomiar.kontener.y + pomiar.kontener.height / 2)) < 12)
         }
         for (const [indeks, zadanie] of pomiar.zadania.entries()) {
+          const oczekiwanaPozycja = indeks === 0 ? 0 : indeks === 5 ? 1 : 281.25 / 551.25
+          assert.ok(Math.abs((pomiar.kotwice[indeks].x - pomiar.linia.x) / pomiar.linia.width - oczekiwanaPozycja) < .001)
           assert.ok(zadanie.y >= pomiar.etykiety.bottom)
           assert.ok(zadanie.bottom <= pomiar.kontener.bottom)
           if (indeks) assert.ok(zadanie.y >= pomiar.zadania[indeks - 1].bottom)

@@ -4,6 +4,7 @@ import { czyBrakMiejscaWMagazynie, odczytajZapisRejestru, skompresujRejestr } fr
 export const kluczRejestruDokumentow = 'ultimatePomagier.rejestrDokumentow.v1'
 export const kluczKopiiBezpieczenstwaRejestruDokumentow = 'ultimatePomagier.rejestrDokumentow.kopia-bezpieczenstwa'
 export const wersjaRejestruDokumentow = 3
+export const zdarzenieZmianyRejestruDokumentow = 'pomagier-zmiana-rejestru-dokumentow'
 
 export type KopiaRoboczaDokumentu = { id: string; dokumentNadrzednyId: string | null; czyNowyDokument: boolean; daneDokumentu: unknown; reczneNadpisania: Record<string, unknown>; utworzono: string; zaktualizowano: string }
 export type AutosaveDokumentu = { id: string; generatorId: string; dokumentId: string | null; dane: unknown; zapisano: string }
@@ -107,6 +108,7 @@ function zapiszStan(stan: StanRejestruDokumentow) {
     // Nie usuwamy starego zapisu: setItem jest atomowe również przy braku miejsca.
     localStorage.setItem(kluczRejestruDokumentow, skompresowany)
   }
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(zdarzenieZmianyRejestruDokumentow))
 }
 export function pobierzStanRejestruDokumentowBezZapisu(): StanRejestruDokumentow {
   const zapis = localStorage.getItem(kluczRejestruDokumentow)

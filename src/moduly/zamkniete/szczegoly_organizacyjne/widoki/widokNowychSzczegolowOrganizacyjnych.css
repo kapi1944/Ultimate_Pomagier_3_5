@@ -399,6 +399,12 @@
   align-items: start;
 }
 
+.szczegoly-kolumna-sekcji {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
 .szczegoly-uwagi-dodatkowe {
   display: grid;
 }
@@ -1176,8 +1182,7 @@ button.szczegoly-checklista__naglowek:hover {
   .szczegoly-wiersz-wymogu,
   .szczegoly-wiersz-wymogu--przyjazd,
   .szczegoly-wiersz-wymogu--rozszerzony,
-  .szczegoly-uklad-generatora,
-  .szczegoly-uklad-sekcji {
+  .szczegoly-uklad-generatora {
     grid-template-columns: 1fr;
   }
 
@@ -1226,8 +1231,7 @@ button.szczegoly-checklista__naglowek:hover {
   .szczegoly-wiersz-wymogu,
   .szczegoly-wiersz-wymogu--przyjazd,
   .szczegoly-wiersz-wymogu--rozszerzony,
-  .szczegoly-uklad-generatora,
-  .szczegoly-uklad-sekcji {
+  .szczegoly-uklad-generatora {
     grid-template-columns: 1fr;
   }
 
@@ -1362,7 +1366,10 @@ button.szczegoly-checklista__naglowek:hover {
   .szczegoly-sekcja__naglowek h2, .szczegoly-sekcja-dokumentow h2 { font-size: var(--ui-tekst-naglowek); line-height: 1.4; }
   .szczegoly-sekcja__naglowek p { color: var(--ui-tekst-drugi); line-height: 1.5; }
   .szczegoly-sekcja__tresc { gap: 20px; }
-  .szczegoly-uklad-sekcji { grid-template-columns: minmax(0, 1fr); }
+  .szczegoly-formularz { container: formularz-szczegolow / inline-size; }
+  @container formularz-szczegolow (max-width: 760px) {
+    .szczegoly-uklad-sekcji { grid-template-columns: minmax(0, 1fr); }
+  }
   .szczegoly-pole, .szczegoly-przelacznik-pole { font-size: var(--ui-tekst-maly); align-content: start; }
   .szczegoly-pole__naglowek { flex-wrap: wrap; align-items: start; line-height: 1.5; }
   .szczegoly-pole__status { line-height: 1.3; }

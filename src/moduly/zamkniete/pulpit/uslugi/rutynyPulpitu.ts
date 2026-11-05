@@ -6,6 +6,7 @@ import { pobierzStanPulpitu, zapiszStanPulpitu } from './magazynPulpitu'
 import { pobierzUstawieniaAplikacji } from '../../../../aplikacja/ustawienia/magazynUstawienAplikacji'
 import { czyPoprawnaGodzina } from '../logika/harmonogramPracy'
 import type { WersjaHarmonogramu } from '../logika/rutyny'
+import { pobierzKalendarzPracy } from '../../../../wspolne/czas/serwisKalendarzaPracy'
 
 export const zdarzenieZmianyRutyn = 'ultimatePomagier:zmianaRutyn'
 
@@ -24,7 +25,7 @@ export function pobierzRutyny(): StanRutyn {
   const stan = pobierzStanPulpitu().rutyny
   if (stan === undefined) return { rutyny: [], wykonania: [], historia: [] }
   if (!stan || !Array.isArray(stan.rutyny) || !Array.isArray(stan.wykonania) || !Array.isArray(stan.historia)) throw new Error('Nie można odczytać danych rutyn. Zapis został zablokowany.')
-  if (stan.rutyny.some((rutyna) => !rutyna || typeof rutyna.id !== 'string' || typeof rutyna.tytul !== 'string' || typeof rutyna.wlascicielId !== 'string' || !Array.isArray(rutyna.wersje) || !rutyna.wersje.length || rutyna.wersje.some((wersja) => !wersja || !czyPoprawnaData(wersja.od) || (wersja.godzina !== undefined && !/^([01]\d|2[0-3]):[0-5]\d$/.test(wersja.godzina)) || typeof wersja.aktywna !== 'boolean' || !wersja.harmonogram || !['CODZIENNIE', 'DNI_TYGODNIA', 'CEL_TYGODNIOWY'].includes(wersja.harmonogram.rodzaj))) || stan.wykonania.some((wpis) => !wpis || typeof wpis.rutynaId !== 'string' || !czyPoprawnaData(wpis.okres) || !Number.isInteger(wpis.numer) || typeof wpis.wykonane !== 'boolean') || stan.historia.some((wpis) => !wpis || typeof wpis.czas !== 'string' || typeof wpis.rutynaId !== 'string' || typeof wpis.uzytkownikId !== 'string' || typeof wpis.opis !== 'string')) throw new Error('Dane rutyn są uszkodzone. Zapis został zablokowany.')
+  if (stan.rutyny.some((rutyna) => !rutyna || typeof rutyna.id !== 'string' || typeof rutyna.tytul !== 'string' || typeof rutyna.wlascicielId !== 'string' || !Array.isArray(rutyna.wersje) || !rutyna.wersje.length || rutyna.wersje.some((wersja) => !wersja || !czyPoprawnaData(wersja.od) || (wersja.godzina !== undefined && !/^([01]\d|2[0-3]):[0-5]\d$/.test(wersja.godzina)) || typeof wersja.aktywna !== 'boolean' || !wersja.harmonogram || !['DNI_ROBOCZE', 'CODZIENNIE', 'DNI_TYGODNIA', 'CEL_TYGODNIOWY'].includes(wersja.harmonogram.rodzaj))) || stan.wykonania.some((wpis) => !wpis || typeof wpis.rutynaId !== 'string' || !czyPoprawnaData(wpis.okres) || !Number.isInteger(wpis.numer) || typeof wpis.wykonane !== 'boolean') || stan.historia.some((wpis) => !wpis || typeof wpis.czas !== 'string' || typeof wpis.rutynaId !== 'string' || typeof wpis.uzytkownikId !== 'string' || typeof wpis.opis !== 'string')) throw new Error('Dane rutyn są uszkodzone. Zapis został zablokowany.')
   if (stan.rutyny.some((rutyna) => rutyna.wersje.some((wersja) => (wersja.harmonogram.rodzaj === 'DNI_TYGODNIA' && (!Array.isArray(wersja.harmonogram.dni) || wersja.harmonogram.dni.some((dzien) => !Number.isInteger(dzien) || dzien < 0 || dzien > 6))) || (wersja.harmonogram.rodzaj === 'CEL_TYGODNIOWY' && (!Number.isInteger(wersja.harmonogram.liczba) || wersja.harmonogram.liczba < 1 || wersja.harmonogram.liczba > 50))))) throw new Error('Harmonogram rutyny jest uszkodzony. Zapis został zablokowany.')
   if (stan.rutyny.some((rutyna) => rutyna.wersje.some((wersja) => !czyPoprawnyPlan(wersja)))) throw new Error('Planowany czas rutyny jest uszkodzony. Zapis został zablokowany.')
   return stan
@@ -78,7 +79,8 @@ export function zmienWykonanieRutyny(wystapienie: WystapienieRutyny, wykonane: b
   const stan = pobierzRutyny()
   const rutyna = stan.rutyny.find((wpis) => wpis.id === wystapienie.rutynaId)
   if (!rutyna || (wlascicielWystapienia(rutyna, wystapienie) !== uzytkownik.id && !czyJestAdministratorem(uzytkownik))) throw new Error('Brak uprawnień do tego wystąpienia.')
-  const dostepne = wystapienie.numer ? wystapieniaTygodnia([rutyna], stan.wykonania, wystapienie.okres) : wystapieniaDnia([rutyna], stan.wykonania, wystapienie.okres)
+  const kalendarz = pobierzKalendarzPracy()
+  const dostepne = wystapienie.numer ? wystapieniaTygodnia([rutyna], stan.wykonania, wystapienie.okres, kalendarz) : wystapieniaDnia([rutyna], stan.wykonania, wystapienie.okres, kalendarz)
   const wersjaDzisiaj = wersjaNaDzien(rutyna, dzisiaj)
   if (wystapienie.okres > dzisiaj || (wystapienie.numer > 0 && wystapienie.okres === poczatekTygodnia(dzisiaj) && (!wersjaDzisiaj?.aktywna || wersjaDzisiaj.harmonogram.rodzaj !== 'CEL_TYGODNIOWY')) || !dostepne.some((wpis) => wpis.okres === wystapienie.okres && wpis.numer === wystapienie.numer)) throw new Error('Wystąpienie nie jest dostępne.')
   const poprzednie = stan.wykonania.find((wpis) => wpis.rutynaId === rutyna.id && wpis.okres === wystapienie.okres && wpis.numer === wystapienie.numer)

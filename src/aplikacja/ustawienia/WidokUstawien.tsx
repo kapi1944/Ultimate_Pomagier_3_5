@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import UstawieniaHarmonogramu from './UstawieniaHarmonogramu'
+import PolaOsiCzasu from '../../moduly/zamkniete/pulpit/PolaOsiCzasu'
+import { normalizujOsCzasu } from '../../moduly/zamkniete/pulpit/logika/czasDnia'
 import { walidujHarmonogramPracy } from '../../moduly/zamkniete/pulpit/logika/harmonogramPracy'
 import PanelWersji from '../desktop/PanelWersji'
 import { informacjeOWersji } from '../wersjaAplikacji'
@@ -26,6 +28,7 @@ import {
   pobierzUstawieniaAplikacji,
   zastosujUstawieniaAplikacji,
   zapiszUstawieniaAplikacji,
+  walidujUstawieniaOsi,
 } from './magazynUstawienAplikacji'
 import { czyNalezyPrzypomniecOPelnymBackupu, odczytajKopieLokalna, pobierzListeKopiiLokalnych, przywrocBackup, przywrocKopieLokalna, serializujBackup, sprawdzBackup, utworzBackup, type BackupDanych, type KategoriaBackupu } from '../../wspolne/dane/backupDanych'
 import { analizujMigracjeStarszychDokumentow, wykonajMigracjeStarszychDokumentow, type RaportMigracjiStarszychDokumentow } from '../../wspolne/dokumenty/migracjaStarszychDokumentow'
@@ -190,10 +193,15 @@ export default function WidokUstawien() {
     pole: K,
     wartosc: UstawieniaAplikacji['pulpit'][K],
   ) {
-    ustawRoboczeUstawienia((obecne) => ({
-      ...obecne,
-      pulpit: { ...obecne.pulpit, [pole]: wartosc },
-    }))
+    const pulpit = { ...roboczeUstawienia.pulpit, [pole]: wartosc }
+    if (pole === 'poczatekDnia' || pole === 'koniecDnia') {
+      const praca = { poczatek: pulpit.poczatekDnia, koniec: pulpit.koniecDnia }
+      const os = normalizujOsCzasu(pulpit.osCzasu, praca)
+      if (JSON.stringify(os) !== JSON.stringify(pulpit.osCzasu)) ustawKomunikat('Rozszerzono zakres osi, aby obejmował nowe godziny pracy.')
+      pulpit.osCzasu = os
+      pulpit.osieUzytkownikow = Object.fromEntries(Object.entries(pulpit.osieUzytkownikow).map(([id, os]) => [id, normalizujOsCzasu(os, praca)]))
+    }
+    ustawRoboczeUstawienia({ ...roboczeUstawienia, pulpit })
   }
 
   function zmienDeadline<K extends keyof UstawieniaAplikacji['pulpit']['deadline']>(
@@ -260,7 +268,7 @@ export default function WidokUstawien() {
 
   function zapiszSystemowe() {
     if (!czyMozeEdytowacSystemowe) return
-    const bledy = walidujHarmonogramPracy(roboczeUstawienia.pulpit.harmonogramPracy)
+    const bledy = [...walidujHarmonogramPracy(roboczeUstawienia.pulpit.harmonogramPracy), ...walidujUstawieniaOsi(roboczeUstawienia.pulpit)]
     if (bledy.length) { ustawKomunikat(bledy.join(' ')); return }
 
     if (!zapiszUstawieniaAplikacji(roboczeUstawienia)) {
@@ -689,6 +697,11 @@ export default function WidokUstawien() {
           </section>
 
           <UstawieniaHarmonogramu wartosc={roboczeUstawienia.pulpit.harmonogramPracy} zmien={(wartosc) => zmienPulpit('harmonogramPracy', wartosc)} />
+          <section className="ustawienia__karta" aria-label="Oś czasu">
+            <h2>Oś czasu</h2>
+            <p>Domyślna konfiguracja widoku. Każdy użytkownik może zapisać własny zakres przyciskiem „Dostosuj oś” na Pulpicie, bez zmiany godzin pracy.</p>
+            <PolaOsiCzasu wartosc={roboczeUstawienia.pulpit.osCzasu} zmien={(os) => zmienPulpit('osCzasu', os)} praca={{ poczatek: roboczeUstawienia.pulpit.poczatekDnia, koniec: roboczeUstawienia.pulpit.koniecDnia }} />
+          </section>
           <section className="ustawienia__karta">
             <h2>Widoczne kafelki</h2>
 

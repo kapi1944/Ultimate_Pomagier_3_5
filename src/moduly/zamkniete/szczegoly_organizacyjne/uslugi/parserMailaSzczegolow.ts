@@ -1,5 +1,6 @@
 import { czyPaczkaNaSiedzibe } from '../logikaWysylkiPaczki'
-import { parsujNumeryTelefonu } from '../../../../wspolne/parsery/parserNumerowTelefonu'
+import { walidujEmail } from '../../../../wspolne/walidacja/walidatoryDanych'
+import { pobierzBladKontaktu } from '../walidacjaKontaktowSzczegolow'
 import { normalizujTekst, normalizujTrescMaila, czyWierszJestEtykieta, znajdzSekcjeMaila, etykietyPolMaila, parsujLiczbeUczestnikow, parsujGodzinySzkolenia, parsujKwoteMaila } from './analizaTresciMaila'
 import type {
   DaneFirmy,
@@ -88,6 +89,21 @@ function znajdzWartosciPoEtykiecie(tresc: string, etykiety: string[]) {
 
 function znajdzBlokPoEtykiecie(tresc: string, etykiety: string[]) {
   return znajdzSekcjeMaila(tresc, etykiety)[0]?.wartosc ?? ''
+}
+
+function znajdzAdresPoEtykiecie(tresc: string, etykiety: string[]) {
+  const wiersze = tresc.split('\n')
+  const wzorzec = new RegExp(`^(?:${etykiety.map(zabezpieczWyrazenie).join('|')})\\s*:\\s*(.*)$`, 'i')
+  const indeks = wiersze.findIndex((wiersz) => wzorzec.test(wiersz))
+  if (indeks < 0) return ''
+  let wartosc = wiersze[indeks].match(wzorzec)?.[1] ?? ''
+  for (let nastepny = indeks + 1; nastepny < wiersze.length && !wartosc.includes('@'); nastepny += 1) {
+    const wiersz = wiersze[nastepny].trim()
+    if (czyWierszJestEtykieta(wiersz) && !/^(?:adres e-?mail|e-?mail|mail|mailto)\s*:/i.test(wiersz)) break
+    if (wartosc && !/^(?:(?:adres e-?mail|e-?mail|mail|mailto)\s*:\s*)+$/i.test(wartosc)) break
+    wartosc = [wartosc, wiersz].filter(Boolean).join(' ')
+  }
+  return wartosc
 }
 
 export function podzielKonteksty(tresc: string) {
@@ -239,9 +255,9 @@ function rozpoznajOdbiorcePaczki(tresc: string) {
   const indeksKontaktu = wiersze.findIndex((wiersz) => /^kontakt do odbioru paczki/i.test(wiersz))
   if (!kontakt && indeksKontaktu >= 0) dane.imieNazwisko = wiersze.slice(indeksKontaktu + 1).find((wiersz) => !/informacj[ae] na etykiet|^\+|^(?:tel\.?|telefon|nr telefonu|kom\.?)\b/i.test(wiersz) && !czyWierszJestEtykieta(wiersz) && !znajdzEmail(wiersz) && wiersz !== dane.informacjaNaEtykiecie)
   const telefon = znajdzPoEtykiecie(tresc, ['Telefon', 'Tel.', 'Tel', 'Telefon kontaktowy', 'Nr telefonu', 'Kom.'])
-    || tresc.match(/\btel\.?\s*(\+?\d[\d ()-]{6,})/i)?.[1] || ''
-  if (telefon) dane.telefon = znajdzTelefon(telefon)
-  const email = znajdzEmail(tresc)
+    || tresc.match(/\btel\.?\s*(\+?\d[^\n]*?)(?=\s+(?:adres e-mail|e-?mail|mail)\s*:|\n|$)/i)?.[1] || ''
+  if (telefon) dane.telefon = telefon.trim()
+  const email = znajdzEmail(tresc) || znajdzAdresPoEtykiecie(tresc, ['Adres e-mail', 'E-mail', 'Email', 'Mail'])
   if (email) dane.email = email
   return dane
 }
@@ -305,7 +321,9 @@ function wybierzNajlepszegoKandydata(kandydaci: (KandydatTytulu | undefined)[]) 
 }
 
 function znajdzEmail(tekst: string) {
-  return tekst.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i)?.[0] ?? ''
+  const kandydaci = tekst.match(/[^\s<>()[\]",;:]+@[^\s<>()[\]",;:?]+/g) ?? []
+  const adresy = [...new Set(kandydaci.map((adres) => adres.replace(/^(\*\*|__)(.*)\1$/, '$2').replace(/[.!]+$/, '')))]
+  return adresy.length === 1 && walidujEmail(adresy[0]) ? adresy[0] : ''
 }
 
 function znajdzTelefon(tekst: string) {
@@ -697,7 +715,7 @@ export function parsujMailaSzczegolow(tresc: string, kartoteki: KartotekiImportu
     kraj: znajdzPoEtykiecie(tresc, ['Kraj nabywcy']),
     osobaKontaktowa: znajdzPoEtykiecie(tresc, ['Osoba kontaktowa nabywcy', 'Kontakt nabywcy', 'Osoba kontaktowa', 'Osoba do kontaktu']),
     telefon: znajdzPoEtykiecie(tresc, ['Telefon nabywcy']),
-    email: znajdzPoEtykiecie(tresc, ['Email nabywcy', 'E-mail nabywcy']),
+    email: znajdzAdresPoEtykiecie(tresc, ['Email nabywcy', 'E-mail nabywcy']),
   })
 
   const etykietyKontaktu = ['Dane osoby kontaktowej', 'Kontakt po stronie klienta', 'Osoba kontaktowa', 'Osoba do kontaktu', 'Kontakt']
@@ -710,13 +728,18 @@ export function parsujMailaSzczegolow(tresc: string, kartoteki: KartotekiImportu
       blok.push(wiersz)
     }
     const tekst = blok.join(' ')
-    const email = znajdzEmail(tekst)
-    const telefon = tekst.match(/(?:tel(?:efon)?\.?|nr telefonu|kom\.?)\s*:?\s*(\+?\d[\d ()-]{6,})/i)?.[1]?.trim()
+    const email = znajdzEmail(tekst) || blok.find((wiersz) => /@|^(?:adres e-mail|e-?mail|mail)\s*:/i.test(wiersz))
+    const telefon = tekst.match(/(?:tel(?:efon)?\.?|nr telefonu|kom\.?)\s*:?\s*(.+?)(?=\s+(?:adres e-mail|e-?mail|mail)\s*:|$)/i)?.[1]?.trim()
     const osoba = blok.filter(Boolean)[0]?.split(/\b(?:tel(?:efon)?|nr telefonu|kom|adres e-mail|e-mail|email|mail)\b/i)[0].trim().replace(/[,;]+$/, '')
-    nabywca = uzupelnijDaneFirmy(nabywca, { osobaKontaktowa: osoba, telefon: telefon && parsujNumeryTelefonu(telefon).length === 1 ? telefon : undefined, email })
+    nabywca = uzupelnijDaneFirmy(nabywca, { osobaKontaktowa: osoba, telefon, email })
   }
-  const raport = znajdzPoEtykiecie(tresc, ['Raport na adres'])
-  if (znajdzEmail(raport)) nabywca.sposobWysylkiRaportu = 'E-mail: ' + znajdzEmail(raport)
+  const raport = znajdzAdresPoEtykiecie(tresc, ['Raport na adres'])
+  if (raport) {
+    const email = znajdzEmail(raport)
+    const reszta = email ? raport.replaceAll(email, '').replace(/(?:adres\s+e-?mail|e-?mail|mail|mailto)\s*:/gi, '').replace(/[\s<>()[\]"'.,;:!?-]/g, '') : raport
+    nabywca.sposobWysylkiRaportu = email && !reszta ? email : raport
+    if (raport.includes('@') && !email) dodajNiepewne(polaNiepewne, 'nabywca.sposobWysylkiRaportu')
+  }
 
   if (kartoteki.klienci && (nazwaKlienta || nabywca.nip)) {
     const nip = (nabywca.nip ?? '').replace(/\D/g, '')
@@ -747,7 +770,7 @@ export function parsujMailaSzczegolow(tresc: string, kartoteki: KartotekiImportu
     kraj: znajdzPoEtykiecie(tresc, ['Kraj odbiorcy']),
     imieNazwiskoOdbiorcy: znajdzPoEtykiecie(tresc, ['Imię i nazwisko odbiorcy', 'Imie i nazwisko odbiorcy']),
     telefon: znajdzPoEtykiecie(tresc, ['Telefon odbiorcy']),
-    email: znajdzPoEtykiecie(tresc, ['Email odbiorcy', 'E-mail odbiorcy']),
+    email: znajdzAdresPoEtykiecie(tresc, ['Email odbiorcy', 'E-mail odbiorcy']),
   })
 
   if (Object.keys(odbiorca).length) {
@@ -784,6 +807,15 @@ export function parsujMailaSzczegolow(tresc: string, kartoteki: KartotekiImportu
     for (const pole of ['nazwaFirmy', 'ulica', 'nrBudynku', 'kodPocztowy', 'miasto'] as const) if (!odbiorcaPaczki[pole]) dodajNiepewne(polaNiepewne, 'odbiorcaPaczki.' + pole)
     if (!odbiorcaPaczki.nrBudynku || !odbiorcaPaczki.kodPocztowy || !odbiorcaPaczki.miasto) {
       dodajNiepewne(polaNiepewne, 'odbiorcaPaczki.ulica')
+    }
+  }
+
+  for (const obiekt of ['nabywca', 'odbiorca', 'odbiorcaPaczki'] as const) {
+    const kontakt = daneFormularza[obiekt]
+    if (!kontakt) continue
+    if (kontakt.email) kontakt.email = znajdzEmail(kontakt.email) || kontakt.email
+    for (const pole of ['email', 'telefon'] as const) {
+      if (kontakt[pole] && pobierzBladKontaktu(pole, kontakt[pole])) dodajNiepewne(polaNiepewne, `${obiekt}.${pole}`)
     }
   }
 

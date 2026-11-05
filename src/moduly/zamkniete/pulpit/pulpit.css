@@ -516,9 +516,6 @@
   .pulpit-deadline__etykieta { max-width: 120px; }
 }
 
-@container (max-width: 430px) {
-  .pulpit-os-czasu__etykieta:nth-child(even) { display: none; }
-}
 
 @media (prefers-reduced-motion: reduce) {
   .pulpit-deadline__plomien { animation: none; }
@@ -909,3 +906,11 @@ html[data-ui-pokaz-plomien-asap="false"] .pulpit-deadline__plomien {
 .pulpit-okno-kuriera:hover .pulpit-okno-kuriera__podpowiedz, .pulpit-okno-kuriera:focus .pulpit-okno-kuriera__podpowiedz, .pulpit-blok-pracy:hover .pulpit-blok-pracy__podpowiedz, .pulpit-blok-pracy:focus .pulpit-blok-pracy__podpowiedz { display: block; }
 .pulpit-okno-kuriera:focus-visible, .pulpit-blok-pracy:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
 .pulpit-rutyna__przedzial { position: absolute; top: 0; height: 8px; box-sizing: border-box; border: 1px solid var(--ui-info); border-radius: 3px; background: var(--ui-info-tlo); }
+.pulpit-dostosuj-os { justify-self: end; min-height: 44px; }
+.pulpit-panel-osi { box-sizing: border-box; width: min(100%, 640px); justify-self: end; display: grid; gap: 12px; padding: 16px; border: 1px solid var(--ui-obramowanie); border-radius: var(--ui-promien-karty); background: var(--ui-powierzchnia); }
+.pulpit-panel-osi__akcje { display: flex; flex-wrap: wrap; gap: 8px; }
+.pulpit-poza-osia { padding: 8px; border: 1px solid var(--ui-obramowanie); border-radius: var(--ui-promien-pola); }
+.pulpit-poza-osia summary { cursor: pointer; padding: 8px; }
+.pulpit-poza-osia ul { list-style: none; display: grid; gap: 8px; padding: 0; }
+.pulpit-poza-osia button { min-height: 44px; text-align: left; overflow-wrap: anywhere; }
+.pulpit-pelna-os { justify-self: start; }

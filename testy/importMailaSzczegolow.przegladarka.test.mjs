@@ -8,6 +8,219 @@ const { chromium } = wymagaj(process.env.POMAGIER_PLAYWRIGHT || 'playwright')
 const adres = process.env.POMAGIER_ADRES || 'http://127.0.0.1:5173'
 const mail = readFileSync(new URL('./fixtures/mailOrganizacyjnyV4.txt', import.meta.url), 'utf8')
 
+test('kontakty i odbiorca: dynamiczne błędy, ARIA, kontrola jakości, import, niezależne wartości i kopia', { timeout: 90000 }, async () => {
+  const przegladarka = await chromium.launch({ channel: 'chrome', headless: true })
+  try {
+    const strona = await przegladarka.newPage({ viewport: { width: 1600, height: 1100 } })
+    await strona.goto(adres)
+    await strona.evaluate(async () => (await import('/src/aplikacja/logowanie/sesjaUzytkownika.ts')).rozpocznijSesje('architekt-systemu'))
+    await strona.goto(`${adres}/szkolenia-zamkniete/szczegoly-organizacyjne/nowe`)
+    const pole = (nazwa) => strona.locator(`#szczegoly-pole-${nazwa.replaceAll('.', '-')}`)
+    await pole('odbiorca.imieNazwiskoOdbiorcy').fill('Własny odbiorca')
+    await pole('nabywca.osobaKontaktowa').fill('Anna Nowak')
+    await pole('czyNabywcaJestOdbiorca').check()
+    assert.equal(await pole('odbiorca.imieNazwiskoOdbiorcy').inputValue(), 'Anna Nowak')
+    await pole('nabywca.osobaKontaktowa').fill('Piotr Kowalski')
+    assert.equal(await pole('odbiorca.imieNazwiskoOdbiorcy').inputValue(), 'Piotr Kowalski')
+    for (const [nazwa, bledne, poprawne] of [
+      ['nabywca.email', ['kontakt@', 'kontakt@firma', 'kontakt@@firma.pl', 'kontakt@firma.pl12345', 'E-mail:kontakt@firma.pl'], ['kontakt@firma.pl', 'anna.nowak@firma.com', 'kontakt+szkolenia@firma.pl']],
+      ['nabywca.telefon', ['785 660 226dsf', '123', '785ABC226'], ['785 660 226', '785660226', '+48 785 660 226', '+49 151 23456789', '+45 12 34 56 78']],
+    ]) {
+      for (const wartosc of bledne) {
+        await pole(nazwa).fill(wartosc)
+        assert.equal(await pole(nazwa).getAttribute('aria-invalid'), 'true')
+        const idBledu = await pole(nazwa).getAttribute('aria-describedby')
+        assert.ok(idBledu)
+        assert.match(await strona.locator(`#${idBledu}`).innerText(), /Nieprawidłowy/)
+        assert.equal(await pole(nazwa).inputValue(), wartosc)
+        assert.equal(await pole(nazwa).locator('..').locator('.szczegoly-pole__pomoc').count(), 0)
+      }
+      for (const wartosc of poprawne) {
+        await pole(nazwa).fill(wartosc)
+        assert.equal(await pole(nazwa).getAttribute('aria-invalid'), 'false')
+      }
+    }
+    await pole('nabywca.telefon').fill('')
+    assert.equal(await pole('nabywca.telefon').getAttribute('aria-invalid'), 'false')
+    await pole('nabywca.email').fill('')
+    assert.match(await strona.locator('#szczegoly-blad-nabywca-email').innerText(), /wpisz adres/)
+    await pole('nabywca.email').fill('kontakt@')
+    await strona.getByRole('button', { name: 'Kontrola jakości', exact: true }).click()
+    const problem = strona.locator('.szczegoly-panel-jakosci').getByRole('button', { name: /Nabywca: Nieprawidłowy adres e-mail/ }).first()
+    if (!await problem.isVisible()) await strona.getByRole('button', { name: 'Rozwiń wszystkie', exact: true }).click()
+    await problem.click()
+    await strona.waitForFunction(() => document.activeElement?.id === 'szczegoly-pole-nabywca-email')
+    await strona.getByRole('button', { name: 'Schowaj panel', exact: true }).click()
+    await pole('nabywca.email').fill('')
+    const tresc = 'Email nabywcy:\nAdres e-mail:\n<a href="mailto:kontakt+szkolenia@firma.pl">Kontakt</a>\nTelefon nabywcy: 785 660 226dsf\nRaport na adres: [raport@firma.pl](mailto:raport@firma.pl)'
+    await strona.locator('.szczegoly-import-maila textarea').fill(tresc)
+    await strona.getByRole('button', { name: 'Zastosuj treść maila', exact: true }).click()
+    // Ręcznie wyczyszczony email jest chroniony; nowy formularz daje importowi czyste pola.
+    strona.once('dialog', (okno) => okno.accept())
+    await strona.getByRole('button', { name: 'Nowy formularz', exact: true }).click()
+    await strona.locator('.szczegoly-import-maila textarea').fill(tresc)
+    await strona.getByRole('button', { name: 'Zastosuj treść maila', exact: true }).click()
+    assert.equal(await pole('nabywca.email').inputValue(), 'kontakt+szkolenia@firma.pl')
+    assert.equal(await pole('nabywca.sposobWysylkiRaportu').inputValue(), 'raport@firma.pl')
+    assert.equal(await pole('nabywca.telefon').inputValue(), '785 660 226dsf')
+    assert.equal(await pole('nabywca.telefon').getAttribute('aria-invalid'), 'true')
+    await pole('odbiorca.imieNazwiskoOdbiorcy').fill('Własny odbiorca')
+    await pole('nabywca.osobaKontaktowa').fill('Osoba nabywcy')
+    await pole('czyNabywcaJestOdbiorca').check()
+    await pole('opiekunId').selectOption({ label: 'Kamila' })
+    await strona.getByRole('button', { name: 'Zapisz wersję roboczą', exact: true }).click()
+    const zapis = await strona.evaluate(async () => (await import('/src/moduly/zamkniete/szczegoly_organizacyjne/uslugi/magazynWersjiRoboczych.ts')).pobierzAktualnaWersjeRobocza())
+    assert.equal(zapis.dane.zrodloImportuMaila, tresc)
+    assert.equal(zapis.statusyPol['nabywca.telefon'], 'niepewne')
+    assert.equal(zapis.dane.nabywca.telefon, '785 660 226dsf')
+    assert.equal(zapis.dane.odbiorca.imieNazwiskoOdbiorcy, 'Własny odbiorca')
+    await strona.goto(`${adres}/szkolenia-zamkniete/szczegoly-organizacyjne/kopie-robocze`)
+    await strona.getByRole('button', { name: /Podgl[aą]d/, exact: true }).click()
+    assert.equal(await strona.locator('[data-pole="odbiorca.imieNazwiskoOdbiorcy"] dd').innerText(), 'Osoba nabywcy')
+    await strona.getByRole('button', { name: 'Zamknij', exact: true }).click()
+    await strona.getByRole('button', { name: 'Edytuj', exact: true }).click()
+    assert.equal(await pole('odbiorca.imieNazwiskoOdbiorcy').inputValue(), 'Osoba nabywcy')
+    await pole('czyNabywcaJestOdbiorca').uncheck()
+    assert.equal(await pole('odbiorca.imieNazwiskoOdbiorcy').inputValue(), 'Własny odbiorca')
+    assert.equal(await pole('nabywca.telefon').getAttribute('aria-invalid'), 'true')
+    const kompletna = await strona.evaluate(async () => {
+      const { poczatkoweDaneFormularza, poczatkowaGrupa, poczatkowiAdresaci } = await import('/src/moduly/zamkniete/szczegoly_organizacyjne/danePoczatkowe.ts')
+      const { wersjaEksportuSzczegolow } = await import('/src/moduly/zamkniete/szczegoly_organizacyjne/uslugi/magazynWersjiRoboczych.ts')
+      return { id: 'test-kontaktow-kompletny', wersja: wersjaEksportuSzczegolow, dane: { ...poczatkoweDaneFormularza, status: 'PEŁNE', tytulSzkolenia: 'Test kontaktów', nazwaKlienta: 'Klient', opiekunId: 'Kamila', czyNabywcaJestOdbiorca: true, nabywca: { ...poczatkoweDaneFormularza.nabywca, nazwa: 'Klient', email: 'kontakt@firma.pl' } }, grupy: [{ ...poczatkowaGrupa, formaSzkolenia: 'Online', miejsce: 'Online', dataOd: '2026-11-06', dataDo: '2026-11-06', liczbaUczestnikow: 5, liczbaGodzin: 8, cenaNetto: 1000, trenerzy: [{ id: 'trener-testowy', imieNazwisko: 'Jan Kowalski', email: '', telefon: '' }] }], adresaci: poczatkowiAdresaci, statusyPol: {} }
+    })
+    await strona.locator('input[accept=".json,application/json"]').setInputFiles({ name: 'test-kontaktow.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(kompletna)) })
+    const publikuj = strona.getByRole('button', { name: 'Opublikuj', exact: true })
+    assert.equal(await publikuj.isEnabled(), true)
+    await pole('nabywca.email').fill('kontakt@')
+    await strona.getByRole('button', { name: 'Zapisz wersję roboczą', exact: true }).waitFor()
+    assert.equal(await publikuj.count(), 0)
+    await pole('nabywca.email').fill('kontakt@firma.pl')
+    await pole('nabywca.telefon').fill('785ABC226')
+    assert.equal(await publikuj.count(), 0)
+    await pole('nabywca.telefon').fill('+45 12 34 56 78')
+    await strona.getByRole('button', { name: 'Zapisz wersję roboczą', exact: true }).click()
+    assert.equal(await publikuj.isEnabled(), true)
+    await pole('nabywca.telefon').fill('')
+    assert.equal(await publikuj.isEnabled(), true, 'Pusty opcjonalny telefon nie blokuje publikacji')
+  } finally { await przegladarka.close() }
+})
+
+test('Grid czterech sekcji: niezależne kolumny, menu, panel jakości, 85%, wąskie okno i dotyk', { timeout: 90000 }, async () => {
+  const przegladarka = await chromium.launch({ channel: 'chrome', headless: true })
+  try {
+    const strona = await przegladarka.newPage({ viewport: { width: 1920, height: 1200 }, hasTouch: true })
+    await strona.goto(adres)
+    await strona.evaluate(async () => {
+      const { rozpocznijSesje } = await import('/src/aplikacja/logowanie/sesjaUzytkownika.ts')
+      rozpocznijSesje('architekt-systemu')
+      localStorage.setItem('ultimatePomagier.panelJakosciWysuwanieZKrawedzi', 'false')
+    })
+    await strona.goto(`${adres}/szkolenia-zamkniete/szczegoly-organizacyjne/nowe`)
+    await strona.evaluate(async () => (await import('/src/aplikacja/ustawienia/skalaInterfejsu.ts')).zastosujSkaleInterfejsu(85))
+    await strona.locator('[aria-controls="menu-glowne"]').click()
+    const przypnij = strona.getByRole('button', { name: /Przypnij Menu/ })
+    if (await przypnij.isVisible()) await przypnij.click()
+    for (const szerokosc of [1920, 1440, 1000, 768, 390]) {
+      await strona.setViewportSize({ width: szerokosc, height: 1200 })
+      for (const otwarty of [false, true]) {
+        if (otwarty) await strona.getByRole('button', { name: 'Kontrola jakości', exact: true }).tap()
+        else if (await strona.locator('.szczegoly-panel-jakosci--otwarty').count()) await strona.getByRole('button', { name: 'Schowaj panel', exact: true }).tap()
+        await strona.waitForTimeout(300)
+        const geometria = await strona.evaluate(() => {
+          const obszar = document.querySelector('.szczegoly-formularz')
+          const siatka = document.querySelector('.szczegoly-uklad-sekcji')
+          const prostokat = (id) => { const { x, y, width, height, bottom } = document.getElementById(id).getBoundingClientRect(); return { x, y, width, height, bottom } }
+          return { szerokosc: parseFloat(getComputedStyle(obszar).width), skala: getComputedStyle(document.documentElement).getPropertyValue('--ui-skala-przegladarki'), liczba: document.querySelectorAll('.szczegoly-uklad-sekcji').length, kolumny: siatka.children.length, pakiet: prostokat('pakiet-podstawowy'), materialy: prostokat('materialy-szkoleniowe'), dodatkowe: prostokat('dodatkowe-wymogi'), wymogi: prostokat('wymogi-materialow') }
+        })
+        assert.equal(geometria.skala.trim(), '0.85')
+        assert.equal(geometria.liczba, 1)
+        assert.equal(geometria.kolumny, 2)
+        if (szerokosc === 1920) assert.ok(geometria.szerokosc > 760)
+        if (szerokosc === 390) assert.ok(geometria.szerokosc <= 760)
+        assert.ok(geometria.materialy.y >= geometria.pakiet.bottom)
+        assert.ok(geometria.wymogi.y >= geometria.dodatkowe.bottom)
+        if (geometria.szerokosc > 760) {
+          assert.ok(Math.abs(geometria.pakiet.y - geometria.dodatkowe.y) < 2, JSON.stringify(geometria))
+          assert.ok(geometria.dodatkowe.x > geometria.pakiet.x + geometria.pakiet.width)
+          assert.ok(Math.abs(geometria.materialy.x - geometria.pakiet.x) < 2)
+          assert.ok(Math.abs(geometria.wymogi.x - geometria.dodatkowe.x) < 2)
+          assert.ok(geometria.materialy.y > geometria.wymogi.y, 'Krótka prawa kolumna nie rozciąga swoich sekcji do lewej')
+        } else {
+          assert.ok(Math.abs(geometria.pakiet.x - geometria.dodatkowe.x) < 2)
+          assert.ok(geometria.dodatkowe.y >= geometria.materialy.bottom)
+        }
+        if ([1920, 390].includes(szerokosc)) {
+          await strona.locator('#pakiet-podstawowy').scrollIntoViewIfNeeded()
+          await strona.screenshot({ path: `tmp/szczegoly-${szerokosc}-${otwarty ? 'panel' : 'bez-panelu'}.png` })
+        }
+      }
+    }
+  } finally { await przegladarka.close() }
+})
+
+test('produkcja: późna projekcja kont, czterej opiekunowie z rzeczywistym ID, kopie, zmiana kont i ponowne logowanie', { timeout: 90000 }, async () => {
+  const adresProdukcyjny = process.env.POMAGIER_ADRES_PRODUKCYJNY || 'http://127.0.0.1:47831'
+  const przegladarka = await chromium.launch({ channel: 'chrome', headless: true })
+  try {
+    const strona = await przegladarka.newPage({ viewport: { width: 1600, height: 1100 } })
+    let konta = []
+    let aktywnaSesja = false
+    await strona.route('**/api/konta', async (trasa) => {
+      const { operacja } = trasa.request().postDataJSON()
+      if (operacja === 'logowanie') aktywnaSesja = true
+      if (operacja === 'wyloguj') aktywnaSesja = false
+      const wynik = operacja === 'wyloguj' ? { dane: true } : !aktywnaSesja ? { blad: 'Brak testowej sesji' }
+        : { dane: operacja === 'katalog' ? konta : operacja === 'historia' ? [] : konta.find((konto) => konto.rola === 'ARCHITEKT') }
+      await trasa.fulfill({ json: wynik })
+    })
+    await strona.goto(adresProdukcyjny)
+    await strona.getByRole('button', { name: 'Zaloguj', exact: true }).waitFor()
+    konta = await strona.evaluate(async () => {
+      const { pobierzOpiekunowSzczegolow } = await import('/src/moduly/zamkniete/szczegoly_organizacyjne/uzytkownicySzczegolow.ts')
+      if (pobierzOpiekunowSzczegolow().length) throw new Error('Projekcja przed logowaniem musi być pusta')
+      const { daneStartoweUzytkownikow } = await import('/src/kartoteki/uzytkownicy/daneUzytkownikow.ts')
+      return daneStartoweUzytkownikow.map((konto, indeks) => ({ ...konto, id: `testowe-konto-${indeks}` }))
+    })
+    const zaloguj = async () => {
+      await strona.getByLabel('Login lub adres e-mail').fill('architekt-testowy')
+      await strona.getByLabel('Hasło', { exact: true }).fill('haslo-wylacznie-testowe')
+      await strona.getByRole('button', { name: 'Zaloguj', exact: true }).click()
+      await strona.locator('.naglowek-aplikacji').waitFor()
+    }
+    await zaloguj()
+    await strona.goto(`${adresProdukcyjny}/szkolenia-zamkniete/szczegoly-organizacyjne/nowe`)
+    const selektor = strona.locator('select[id$="opiekunId"]')
+    for (const nazwa of ['Kasia RB', 'Iza Cz', 'Kamila', 'Dawid']) {
+      const konto = konta.find((konto) => konto.pseudonim === nazwa)
+      await selektor.selectOption({ label: nazwa })
+      assert.equal(await selektor.inputValue(), konto.id)
+      assert.notEqual(konto.id, nazwa)
+      await strona.getByRole('button', { name: 'Zapisz wersję roboczą', exact: true }).click()
+      const zapis = await strona.evaluate(async () => (await import('/src/moduly/zamkniete/szczegoly_organizacyjne/uslugi/magazynWersjiRoboczych.ts')).pobierzAktualnaWersjeRobocza())
+      assert.equal(zapis.dane.opiekunId, konto.id)
+      await strona.goto(`${adresProdukcyjny}/szkolenia-zamkniete/szczegoly-organizacyjne/kopie-robocze`)
+      await strona.getByRole('button', { name: 'Edytuj', exact: true }).click()
+      assert.equal(await selektor.inputValue(), konto.id)
+    }
+    const wybranyId = await selektor.inputValue()
+    const zablokowanyId = konta.find((konto) => konto.pseudonim === 'Iza Cz').id
+    const zmienione = konta.map((konto) => konto.id === wybranyId ? { ...konto, status: 'NIEAKTYWNY' } : konto.id === zablokowanyId ? { ...konto, status: 'ZABLOKOWANY' } : konto)
+    await strona.evaluate(async (konta) => {
+      const { ustawProjekcjeKont } = await import('/src/aplikacja/logowanie/projekcjaKont.ts')
+      ustawProjekcjeKont(konta, [], konta.find((konto) => konto.rola === 'ARCHITEKT'))
+    }, zmienione)
+    await selektor.locator(`option[value="${wybranyId}"]:disabled`).waitFor({ state: 'attached' })
+    assert.equal(await selektor.inputValue(), wybranyId)
+    assert.equal(await selektor.locator(`option[value="${zablokowanyId}"]`).count(), 0)
+    await strona.getByRole('button', { name: 'Wyloguj', exact: true }).click()
+    await zaloguj()
+    await strona.goto(`${adresProdukcyjny}/szkolenia-zamkniete/szczegoly-organizacyjne/kopie-robocze`)
+    await strona.getByRole('button', { name: 'Edytuj', exact: true }).click()
+    assert.equal(await selektor.inputValue(), wybranyId)
+    assert.equal(await selektor.locator('option:not(:disabled)').count(), 5)
+  } finally { await przegladarka.close() }
+})
+
 test('import V4 w formularzu: kartoteki, lokalizacja, rozliczenia, jakość i ochrona ręcznych zmian', { timeout: 90000 }, async () => {
   const przegladarka = await chromium.launch({ channel: 'chrome', headless: true })
   try {
@@ -158,9 +371,9 @@ test('import OZE w formularzu: wartości A–G, statusy, ręczne 48 osób i pono
     await importuj.click()
     await sprawdzPola('48')
     assert.equal((await pobierzStan()).statusyPol['grupy.0.liczbaUczestnikow'], 'reczne')
-    for (const nazwa of ['Kasia RB', 'Iza', 'Dawid', 'Kamila']) {
+    for (const [nazwa, id] of [['Kasia RB', 'Kasia RB'], ['Iza Cz', 'Iza'], ['Dawid', 'Dawid'], ['Kamila', 'Kamila']]) {
       await pole('opiekunId').selectOption({ label: nazwa })
-      assert.equal(await pole('opiekunId').inputValue(), nazwa)
+      assert.equal(await pole('opiekunId').inputValue(), id)
     }
     await strona.locator('.szczegoly-import-maila textarea').fill('Temat: 06.11.2026\nDane osoby kontaktowej:\nRyszard Przybył\ntel. 42 663 41 86\nadres e-mail: rprzybyl@wfosigw.lodz.pl')
     await importuj.click()

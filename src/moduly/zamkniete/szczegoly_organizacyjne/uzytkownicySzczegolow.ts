@@ -13,7 +13,9 @@ function mapujKonto(uzytkownik: Uzytkownik): KontoSzczegolow {
   return { id: uzytkownik.id, nazwa: pobierzNazweWyswietlanaUzytkownika(uzytkownik), rola: uzytkownik.rola, kolorProfilu: uzytkownik.kolorProfilu, kolorOpiekuna: uzytkownik.rola === 'OPIEKUN' ? uzytkownik.kolorProfilu : undefined, status: uzytkownik.status, odznaki: [...uzytkownik.odznaki] }
 }
 
-export const opiekunowieSzczegolow = pobierzUzytkownikow().filter((uzytkownik) => uzytkownik.rola === 'OPIEKUN' && uzytkownik.status === 'AKTYWNY').map(mapujKonto)
+export function pobierzOpiekunowSzczegolow() {
+  return pobierzUzytkownikow().filter((uzytkownik) => uzytkownik.rola === 'OPIEKUN' && uzytkownik.status === 'AKTYWNY').map(mapujKonto)
+}
 
 export function pobierzKontoSzczegolow(id: string) { const uzytkownik = pobierzUzytkownika(id); return uzytkownik ? mapujKonto(uzytkownik) : undefined }
 export function pobierzNazweOpiekuna(id: string) { return pobierzKontoSzczegolow(id)?.nazwa || (id ? 'Nieznany użytkownik' : 'Bez opiekuna') }

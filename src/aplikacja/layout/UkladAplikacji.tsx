@@ -204,7 +204,7 @@ function renderujWidok(
     case 'profil_uzytkownika':
       return <WidokProfiluUzytkownika key={uzytkownikIdProfilu ?? 'wlasny'} ustawCzyMaNiezapisaneZmiany={ustawCzyProfilMaNiezapisaneZmiany} uzytkownikId={uzytkownikIdProfilu} wybierzProfil={wybierzProfil} />
     case 'pulpit':
-      return <WidokPulpitu otworzDokumenty={otworzDokumentyPulpitu} otworzPaczke={(id, paczkaId) => {
+      return <WidokPulpitu otworzDokument={otworzDokument} otworzDokumenty={otworzDokumentyPulpitu} otworzPaczke={(id, paczkaId) => {
         const checklista = pobierzChecklistePaczki(id)
         if (checklista) {
           otworzDokument(checklista)

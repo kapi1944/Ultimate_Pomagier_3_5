@@ -1,4 +1,8 @@
-import { useId, useState } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
+import type { Dokument } from '../../../wspolne/dokumenty/modelDokumentu'
+import { zdarzenieZmianyRejestruDokumentow } from '../../../wspolne/dokumenty/rejestrDokumentow'
+import { pobierzDokumentyMonitora } from './uslugi/dokumentyMonitora'
+import DokumentyWysylki from './DokumentyWysylki'
 import { OdznakaStatusu, Przycisk, PustyStan } from '../../../wspolne/komponenty/ElementyInterfejsu'
 import { czyPoprawnaDataWysylki, filtrujWysylki, pobierzPilnoscWysylki, sortujWysylki, type FiltrMonitora, type PilnoscWysylki, type WysylkaMonitora } from './logika/monitorWysylek'
 import './monitorWysylek.css'
@@ -17,14 +21,33 @@ function formatujDateWysylki(data: string) {
   return czyPoprawnaDataWysylki(data) ? new Intl.DateTimeFormat('pl-PL').format(new Date(data + 'T00:00:00')) : data ? 'Nieprawidłowa data' : 'Brak daty'
 }
 
-export default function MonitorWysylek({ wysylki, teraz, otworzSzkolenie, otworzCheckliste, oznaczWyslana, czyMozeWysylac }: {
+export default function MonitorWysylek({ wysylki, teraz, otworzSzkolenie, otworzCheckliste, oznaczWyslana, czyMozeWysylac, uzytkownikId = null, otworzDokument }: {
   wysylki: WysylkaMonitora[]
   teraz: Date
   otworzSzkolenie?: (id: string) => void
   otworzCheckliste?: (wysylka: WysylkaMonitora) => void
   oznaczWyslana: (wysylka: WysylkaMonitora) => void
   czyMozeWysylac: boolean
+  uzytkownikId?: string | null
+  otworzDokument?: (dokument: Dokument<unknown, unknown>) => void
 }) {
+  const [odswiezacz, ustawOdswiezacz] = useState(0)
+  useEffect(() => {
+    const odswiez = () => ustawOdswiezacz((obecny) => obecny + 1)
+    window.addEventListener(zdarzenieZmianyRejestruDokumentow, odswiez)
+    window.addEventListener('storage', odswiez)
+    window.addEventListener('focus', odswiez)
+    return () => {
+      window.removeEventListener(zdarzenieZmianyRejestruDokumentow, odswiez)
+      window.removeEventListener('storage', odswiez)
+      window.removeEventListener('focus', odswiez)
+    }
+  }, [])
+  const daneDokumentow = useMemo(() => {
+    void odswiezacz
+    try { return { dokumenty: pobierzDokumentyMonitora(wysylki), blad: '' } }
+    catch { return { dokumenty: null, blad: 'Nie udało się odczytać dokumentów i historii wydruków. Odśwież widok lub sprawdź kopię danych.' } }
+  }, [wysylki, odswiezacz])
   const [filtr, ustawFiltr] = useState<FiltrMonitora>('WSZYSTKIE')
   const identyfikator = useId()
   const widoczne = sortujWysylki(filtrujWysylki(wysylki, filtr, teraz), teraz)
@@ -64,9 +87,10 @@ export default function MonitorWysylek({ wysylki, teraz, otworzSzkolenie, otworz
           {otworzCheckliste && <Przycisk type="button" onClick={() => otworzCheckliste(wysylka)}>{wysylka.checklistaId ? 'Otwórz checklistę' : 'Utwórz checklistę'}</Przycisk>}
           {czyMozeWysylac && wysylka.czyMoznaOznaczycWyslana && !wysylka.czyWyslana && <Przycisk onClick={() => oznaczWyslana(wysylka)}>Oznacz jako wysłaną</Przycisk>}
         </div>
+        {daneDokumentow.blad && <p role="alert">{daneDokumentow.blad}</p>}
+        {daneDokumentow.dokumenty?.get(wysylka.id) && <DokumentyWysylki wysylka={wysylka} dokumenty={daneDokumentow.dokumenty.get(wysylka.id)!} uzytkownikId={uzytkownikId} otworzDokument={otworzDokument} />}
         <details className="monitor-wysylek__dokumenty"><summary>Informacje o paczce{wysylka.brakujaceElementy.length ? ` · ostrzeżenia: ${wysylka.brakujaceElementy.length}` : ''}</summary>
           {wysylka.brakujaceElementy.length > 0 && <ul>{wysylka.brakujaceElementy.map((element, indeks) => <li key={indeks}>{element}</li>)}</ul>}
-          <ol>{['Program', 'Lista obecności', 'Ankieta', 'Dyplomy', 'Karta na drzwi', 'Checklista'].map((nazwa) => <li key={nazwa}>{nazwa}</li>)}</ol>
         </details>
       </article>
     })}</div> : <PustyStan>{wysylki.length ? 'Brak wysyłek dla wybranego filtra.' : 'Brak szkoleń wymagających wysyłki materiałów.'}</PustyStan>}

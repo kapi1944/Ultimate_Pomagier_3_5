@@ -1,4 +1,5 @@
 import type { DaneFormularza, GrupaSzkoleniowa } from '../typy'
+import { pobierzEfektywneDaneOdbiorcy } from '../logikaDanychOdbiorcy'
 
 function zabezpieczHtml(tekst: string) {
   return tekst
@@ -35,6 +36,7 @@ function opiszRodzajGodzin(grupa: GrupaSzkoleniowa) {
 }
 
 export function utworzTekstSzczegolow(dane: DaneFormularza, grupy: GrupaSzkoleniowa[]) {
+  const odbiorca = pobierzEfektywneDaneOdbiorcy(dane)
   const opisGrup = grupy
     .map((grupa, indeks) => {
       const trenerzy = grupa.trenerzy.map((trener) => `${trener.imieNazwisko}${trener.email ? ` (${trener.email})` : ''}`).join(', ')
@@ -68,7 +70,10 @@ ${opisGrup}
 DANE KLIENTA
 Nabywca: ${dane.nabywca.nazwa || '-'}
 Adres nabywcy: ${dane.nabywca.ulica || '-'} ${dane.nabywca.nrBudynku || ''}${dane.nabywca.nrLokalu ? `/${dane.nabywca.nrLokalu}` : ''}, ${dane.nabywca.kodPocztowy || '-'} ${dane.nabywca.miasto || '-'}, ${dane.nabywca.kraj || '-'}
-Odbiorca: ${dane.czyNabywcaJestOdbiorca ? dane.nabywca.nazwa || '-' : dane.odbiorca.nazwa || '-'}
+Odbiorca: ${odbiorca.nazwa || '-'}
+Osoba odbiorcy: ${odbiorca.imieNazwiskoOdbiorcy || '-'}
+Email odbiorcy: ${odbiorca.email || '-'}
+Telefon odbiorcy: ${odbiorca.telefon || '-'}
 
 PAKIET I MATERIAŁY
 Lista obecności: ${formatujTakNie(dane.dokumentacja.listaObecnosci)}

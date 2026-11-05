@@ -1,11 +1,12 @@
 import type { DaneFirmy, DaneFormularza, ProblemWalidacji, StatusPolaImportu, StatusyPolImportu } from './typy'
+import { pobierzBladKontaktu } from './walidacjaKontaktowSzczegolow'
 
 const polaOdbiorcyZNabywcy: Partial<Record<keyof DaneFirmy, keyof DaneFirmy>> = {
   imieNazwiskoOdbiorcy: 'osobaKontaktowa',
 }
 
 export function pobierzEfektywneDaneOdbiorcy(dane: Pick<DaneFormularza, 'nabywca' | 'odbiorca' | 'czyNabywcaJestOdbiorca'>): DaneFirmy {
-  return dane.czyNabywcaJestOdbiorca ? dane.nabywca : dane.odbiorca
+  return dane.czyNabywcaJestOdbiorca ? { ...dane.nabywca, imieNazwiskoOdbiorcy: dane.nabywca.osobaKontaktowa } : dane.odbiorca
 }
 
 function pobierzKluczNabywcy(kluczOdbiorcy: keyof DaneFirmy) {
@@ -30,12 +31,14 @@ export function zbudujBledyDanychKlienta(dane: Pick<DaneFormularza, 'nabywca' | 
     poziom: 'blad' as const,
     czyBlokuje: true,
   }))
-  const bledyEmail: ProblemWalidacji[] = (['nabywca', 'odbiorca'] as const).flatMap((obiekt) => {
+  const bledyKontaktu: ProblemWalidacji[] = (['nabywca', 'odbiorca'] as const).flatMap((obiekt) => {
     if (obiekt === 'odbiorca' && dane.czyNabywcaJestOdbiorca) return []
-    const email = dane[obiekt].email.trim()
-    return email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? [{ sekcja: 'Dane klienta', pole: `${obiekt}.email`, komunikat: `${obiekt === 'nabywca' ? 'Nabywca' : 'Odbiorca'}: popraw adres email`, poziom: 'blad', czyBlokuje: true }] : []
+    return (['email', 'telefon'] as const).flatMap((pole) => {
+      const blad = pobierzBladKontaktu(pole, dane[obiekt][pole])
+      return blad ? [{ sekcja: 'Dane klienta', pole: `${obiekt}.${pole}`, komunikat: `${obiekt === 'nabywca' ? 'Nabywca' : 'Odbiorca'}: ${blad}`, poziom: 'blad' as const, czyBlokuje: true }] : []
+    })
   })
-  return [...braki, ...bledyEmail]
+  return [...braki, ...bledyKontaktu]
 }
 
 export function pobierzEfektywneStatusyPolOdbiorcy(
@@ -55,7 +58,7 @@ export function pobierzEfektywneStatusyPolOdbiorcy(
     } else if (status) {
       statusyEfektywne[`odbiorca.${kluczOdbiorcy}`] = status
     } else if (!wartosc.trim()) {
-      statusyEfektywne[`odbiorca.${kluczOdbiorcy}`] = statusyPol[`odbiorca.${kluczOdbiorcy}`] ?? 'brak'
+      statusyEfektywne[`odbiorca.${kluczOdbiorcy}`] = 'brak'
     } else {
       delete statusyEfektywne[`odbiorca.${kluczOdbiorcy}`]
     }

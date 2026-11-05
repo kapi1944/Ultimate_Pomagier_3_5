@@ -1,4 +1,5 @@
 import { domyslnyHarmonogramPracy, normalizujHarmonogramPracy, type HarmonogramPracy } from '../../moduly/zamkniete/pulpit/logika/harmonogramPracy'
+import { domyslnaOsCzasu, normalizujOsCzasu, type KonfiguracjaOsiCzasu } from '../../moduly/zamkniete/pulpit/logika/czasDnia'
 
 export const paletyInterfejsu = [
   'EMERALD_DARK',
@@ -47,6 +48,8 @@ export type UstawieniaAplikacji = {
     wysokoscPrzyciskuMenu: 'KOMPAKTOWA' | 'STANDARDOWA' | 'DUZA'
   }
   pulpit: {
+    osCzasu: KonfiguracjaOsiCzasu
+    osieUzytkownikow: Record<string, KonfiguracjaOsiCzasu>
     harmonogramPracy: HarmonogramPracy
     dniPracy: number[]
     poczatekDnia: string
@@ -97,6 +100,8 @@ export const domyslneUstawieniaAplikacji: UstawieniaAplikacji = {
     wysokoscPrzyciskuMenu: 'STANDARDOWA',
   },
   pulpit: {
+    osCzasu: { ...domyslnaOsCzasu },
+    osieUzytkownikow: {},
     harmonogramPracy: structuredClone(domyslnyHarmonogramPracy),
     dniPracy: [1, 2, 3, 4, 5],
     poczatekDnia: '07:45',
@@ -245,6 +250,8 @@ export function normalizujUstawieniaAplikacji(dane: unknown): UstawieniaAplikacj
       ),
     },
     pulpit: {
+      osCzasu: normalizujOsCzasu(pulpit.osCzasu, { poczatek: poczatekDnia, koniec: koniecDnia }),
+      osieUzytkownikow: Object.fromEntries(Object.entries(jakoObiekt(pulpit.osieUzytkownikow)).map(([id, os]) => [id, normalizujOsCzasu(os, { poczatek: poczatekDnia, koniec: koniecDnia })])),
       harmonogramPracy: normalizujHarmonogramPracy(pulpit.harmonogramPracy),
       dniPracy: Array.isArray(pulpit.dniPracy) && pulpit.dniPracy.every((dzien: unknown) => typeof dzien === 'number' && Number.isInteger(dzien) && dzien >= 0 && dzien <= 6)
         ? [...new Set<number>(pulpit.dniPracy)]

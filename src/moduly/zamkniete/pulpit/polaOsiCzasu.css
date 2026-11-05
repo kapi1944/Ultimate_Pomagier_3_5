@@ -1,0 +1,7 @@
+.pola-osi-czasu { display: grid; gap: 12px; min-width: 0; }
+.pola-osi-czasu fieldset { min-width: 0; border: 1px solid var(--ui-obramowanie); border-radius: var(--ui-promien-pola); }
+.pola-osi-czasu__wiersz { display: flex; flex-wrap: wrap; gap: 12px; }
+.pola-osi-czasu label { display: grid; gap: 6px; min-width: 0; }
+.pola-osi-czasu p { margin: 0; color: var(--ui-tekst-drugi); }
+.pola-osi-czasu input { box-sizing: border-box; min-height: 44px; max-width: 100%; }
+.pola-osi-czasu input[type="range"] { width: 100%; accent-color: var(--ui-akcent); padding-inline: 0; }

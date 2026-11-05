@@ -1,5 +1,5 @@
 import { czyTrybDemonstracyjny } from '../../aplikacja/logowanie/uwierzytelnianie'
-import { pobierzProjekcjeKont } from '../../aplikacja/logowanie/projekcjaKont'
+import { pobierzProjekcjeKont, subskrybujProjekcjeKont } from '../../aplikacja/logowanie/projekcjaKont'
 import { czyTrwaPodgladUzytkownika } from './stanPodgladuUzytkownika'
 import { pobierzSesje } from '../../aplikacja/logowanie/sesjaUzytkownika'
 import { daneStartoweUzytkownikow, utworzIdUzytkownika } from './daneUzytkownikow'
@@ -8,6 +8,25 @@ import { normalizujKlucz, sprawdzStruktureUzytkownika, walidujKonto, walidujUnik
 import { czyMozeZarzadzacUzytkownikami } from './uprawnienia'
 
 export const kluczMagazynuUzytkownikow = 'ultimatePomagier.uzytkownicy.v1'
+const zdarzenieZmianyUzytkownikow = 'ultimatePomagier:zmianaUzytkownikow'
+
+export function subskrybujUzytkownikow(poZmianie: () => void) {
+  const zakonczSubskrypcje = subskrybujProjekcjeKont(poZmianie)
+  function poZmianieStorage(zdarzenie: StorageEvent) {
+    if (zdarzenie.key === kluczMagazynuUzytkownikow || zdarzenie.key === null) poZmianie()
+  }
+  if (typeof window !== 'undefined') {
+    window.addEventListener(zdarzenieZmianyUzytkownikow, poZmianie)
+    window.addEventListener('storage', poZmianieStorage)
+  }
+  return () => {
+    zakonczSubskrypcje()
+    if (typeof window !== 'undefined') {
+      window.removeEventListener(zdarzenieZmianyUzytkownikow, poZmianie)
+      window.removeEventListener('storage', poZmianieStorage)
+    }
+  }
+}
 export const kluczKopiiUzytkownikow = 'ultimatePomagier.uzytkownicy.kopiaPrzedZmiana.v2'
 export const kluczKopiiMigracjiUzytkownikow = 'ultimatePomagier.uzytkownicy.kopiaPrzedMigracja.v2'
 export type WpisHistoriiKonta = { czas: string; wykonujacyId: string; uzytkownikId: string; operacja: string; pola: string[]; wynik: 'SUKCES' | 'ODRZUCONO' }
@@ -83,6 +102,7 @@ function zapiszBaze(baza: BazaUzytkownikow) {
   const poprzedni = localStorage.getItem(kluczMagazynuUzytkownikow)
   if (poprzedni !== null) localStorage.setItem(kluczKopiiUzytkownikow, poprzedni)
   localStorage.setItem(kluczMagazynuUzytkownikow, JSON.stringify(baza))
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(zdarzenieZmianyUzytkownikow))
 }
 
 // Niskopoziomowy zapis używany również przez obsługę sesji; nie nadaje uprawnień.

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { czyJestAdministratorem } from '../../../kartoteki/uzytkownicy/uprawnienia'
 import { useKontekstUzytkownika } from '../../../aplikacja/logowanie/useKontekstUzytkownika'
 import { dataWarszawska, wystapieniaDnia, wlascicielWystapienia, type WystapienieRutyny } from './logika/rutyny'
-import { pozycjaGodzinyNaOsi, type ZakresDniaPracy } from './logika/czasDnia'
+import { czyGodzinaWOsi, normalizujOsCzasu, pozycjaGodzinyNaOsi, type ZakresDniaPracy } from './logika/czasDnia'
 import { zmienWykonanieRutyny } from './uslugi/rutynyPulpitu'
 import type { useRutynyPulpitu } from './useRutynyPulpitu'
 import { blokiNaDzien, type BlokPracy } from './logika/harmonogramPracy'
@@ -13,11 +13,18 @@ export default function RutynyNaOsi({ daneRutyn, data, uzytkownikId, zakresDniaP
   const { zalogowanyUzytkownik } = useKontekstUzytkownika()
   const [blad, ustawBlad] = useState('')
   const { stan } = daneRutyn
-  const wystapienia = wystapieniaDnia(stan.rutyny, stan.wykonania, data).filter((wpis) => {
+  const wystapienia = wystapieniaDnia(stan.rutyny, stan.wykonania, data, daneRutyn.kalendarzPracy).filter((wpis) => {
     const rutyna = stan.rutyny.find((rutyna) => rutyna.id === wpis.rutynaId)
     return rutyna && wlascicielWystapienia(rutyna, wpis) === uzytkownikId
   })
-  const dostepneBloki = blokiNaDzien(blokiPracy, data)
+  const dostepneBloki = blokiNaDzien(blokiPracy, data, daneRutyn.kalendarzPracy, uzytkownikId)
+  const os = normalizujOsCzasu(zakresDniaPracy.osCzasu, zakresDniaPracy)
+  const godzinowe = wystapienia.filter((wpis) => wpis.godzina || dostepneBloki.some((blok) => blok.id === wpis.blokPracyId))
+  const widoczneGodzinowe = godzinowe.filter((wpis) => {
+    const blok = dostepneBloki.find((blok) => blok.id === wpis.blokPracyId)
+    return blok ? blok.koniec > os.poczatek && blok.poczatek < os.koniec : czyGodzinaWOsi(wpis.godzina!, zakresDniaPracy)
+  })
+  const pozaOsia = godzinowe.filter((wpis) => !widoczneGodzinowe.includes(wpis))
   function kontrolki(wpis: WystapienieRutyny) {
     const blok = dostepneBloki.find((blok) => blok.id === wpis.blokPracyId)
     return <div className={'pulpit-rutyna__kontrolki' + (wpis.wykonane ? ' pulpit-rutyna__kontrolki--wykonane' : '')}>
@@ -30,12 +37,13 @@ export default function RutynyNaOsi({ daneRutyn, data, uzytkownikId, zakresDniaP
   }
   return <>
     {(blad || daneRutyn.blad) && <p role="alert">{blad || daneRutyn.blad}</p>}
-    <div className="pulpit-rutyny-godzinowe">{wystapienia.filter((wpis) => wpis.godzina || dostepneBloki.some((blok) => blok.id === wpis.blokPracyId)).map((wpis) => {
+    <div className="pulpit-rutyny-godzinowe">{widoczneGodzinowe.map((wpis) => {
       const blok = dostepneBloki.find((blok) => blok.id === wpis.blokPracyId)
       const pozycja = pozycjaGodzinyNaOsi(blok ? blok.poczatek : wpis.godzina!, zakresDniaPracy)
       const koniec = blok ? pozycjaGodzinyNaOsi(blok.koniec, zakresDniaPracy) : pozycja
       return <div key={wpis.rutynaId} className="pulpit-rutyna">{blok ? <span aria-hidden="true" className="pulpit-rutyna__przedzial" style={{ left: pozycja + '%', width: koniec - pozycja + '%' }} /> : <span aria-hidden="true" className="pulpit-rutyna__punkt" style={{ left: pozycja + '%' }} />}<div style={{ marginLeft: `clamp(0px, calc(${(pozycja + koniec) / 2}% - 150px), calc(100% - 300px))` }}>{kontrolki(wpis)}</div></div>
     })}</div>
+    {pozaOsia.length > 0 && <details className="pulpit-poza-osia pulpit-rutyny-poza-osia"><summary>Rutyny poza zakresem osi ({pozaOsia.length})</summary>{pozaOsia.map((wpis) => <div key={wpis.rutynaId}><small>{(wpis.godzina ?? dostepneBloki.find((blok) => blok.id === wpis.blokPracyId)!.poczatek) < os.poczatek ? 'Przed' : 'Po'} zakresem</small>{kontrolki(wpis)}</div>)}</details>}
     {wystapienia.some((wpis) => !wpis.godzina && !dostepneBloki.some((blok) => blok.id === wpis.blokPracyId)) && <div className="pulpit-rutyny-bez-godziny"><strong>Rutyny bez godziny</strong>{wystapienia.filter((wpis) => !wpis.godzina && !dostepneBloki.some((blok) => blok.id === wpis.blokPracyId)).map((wpis) => <div key={wpis.rutynaId}>{kontrolki(wpis)}</div>)}</div>}
   </>
 }

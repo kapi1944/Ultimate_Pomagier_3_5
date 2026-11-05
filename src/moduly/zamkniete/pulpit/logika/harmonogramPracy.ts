@@ -1,6 +1,9 @@
+import { ocenDzienPracy, walidujWyjatkiKalendarza, type KalendarzPracy, type WyjatekKalendarzaPracy } from '../../../../wspolne/czas/kalendarzPracy'
+
 export type PrzedzialGodzin = { poczatek: string; koniec: string }
 export type BlokPracy = PrzedzialGodzin & { id: string; nazwa: string; dni: number[]; wlaczony: boolean }
 export type HarmonogramPracy = {
+  wyjatkiKalendarza?: WyjatekKalendarzaPracy[]
   blokiPracy: BlokPracy[]
   kurier: { tydzien: Record<number, PrzedzialGodzin | null>; wyjatki: Record<string, PrzedzialGodzin | null> }
 }
@@ -40,6 +43,7 @@ function czyData(wartosc: string) {
 export function walidujHarmonogramPracy(dane: unknown): string[] {
   if (!czyObiekt(dane) || !Array.isArray(dane.blokiPracy) || !czyObiekt(dane.kurier) || !czyObiekt(dane.kurier.tydzien) || !czyObiekt(dane.kurier.wyjatki)) return ['Nieprawidłowa konfiguracja harmonogramu.']
   const bledy: string[] = []
+  if (dane.wyjatkiKalendarza !== undefined) bledy.push(...walidujWyjatkiKalendarza(dane.wyjatkiKalendarza))
   const bloki: BlokPracy[] = []
   for (const blok of dane.blokiPracy) {
     if (!czyObiekt(blok) || typeof blok.id !== 'string' || !blok.id || typeof blok.nazwa !== 'string' || !blok.nazwa.trim() || typeof blok.wlaczony !== 'boolean' || !Array.isArray(blok.dni) || !blok.dni.length || blok.dni.some((dzien) => !Number.isInteger(dzien) || dzien < 0 || dzien > 6) || !czyPrzedzial(blok)) {
@@ -65,9 +69,12 @@ export function normalizujHarmonogramPracy(dane: unknown): HarmonogramPracy {
   return structuredClone(walidujHarmonogramPracy(dane).length ? domyslnyHarmonogramPracy : dane as HarmonogramPracy)
 }
 
-export function blokiNaDzien(bloki: BlokPracy[], data: string): BlokPracy[] {
+export function blokiNaDzien(bloki: BlokPracy[], data: string, kalendarz?: KalendarzPracy, uzytkownikId = ''): BlokPracy[] {
   if (!czyData(data)) return []
-  const dzien = new Date(data + 'T12:00:00').getDay()
+  if (kalendarz && !ocenDzienPracy(data, uzytkownikId, kalendarz).roboczy) return []
+  let dzien = new Date(data + 'T12:00:00Z').getUTCDay()
+  // Wyjątkowy dzień pracy bez własnych bloków korzysta z pierwszego dnia tygodnia pracy.
+  if (kalendarz && !kalendarz.dniPracy.includes(dzien) && !bloki.some((blok) => blok.wlaczony && blok.dni.includes(dzien))) dzien = kalendarz.dniPracy[0] ?? 1
   return bloki.filter((blok) => blok.wlaczony && blok.dni.includes(dzien))
 }
 

@@ -38,6 +38,7 @@ type WlasciwosciPolaWyboru = WspolneWlasciwosciPola & {
   ustawWartosc: (wartosc: string) => void
   opcje: string[]
   etykietyOpcji?: Record<string, string>
+  niedostepneOpcje?: string[]
 }
 
 type WlasciwosciPolaCheckbox = WspolneWlasciwosciPola & {
@@ -99,7 +100,7 @@ function OpakowaniePola({ etykieta, pole, statusyPol, blad, disabled, dzieci, ch
       </span>
       {zawartosc}
       {komunikatBledu && <span className="szczegoly-pole__blad" id={pobierzIdBleduPola(pole)}>{komunikatBledu}</span>}
-      {!komunikatBledu && komunikatStatusu && <span className="szczegoly-pole__pomoc">{komunikatStatusu}</span>}
+      {!komunikatBledu && komunikatStatusu && <span className="szczegoly-pole__pomoc" id={pobierzIdBleduPola(pole)}>{komunikatStatusu}</span>}
     </label>
   )
 }
@@ -123,7 +124,7 @@ export function PoleTekstowe({
   return (
     <OpakowaniePola blad={komunikatBledu} disabled={disabled} etykieta={etykieta} pole={pole} statusyPol={statusyPol}>
       <input
-        aria-describedby={komunikatBledu ? pobierzIdBleduPola(pole) : undefined}
+        aria-describedby={komunikatBledu || pobierzKomunikatStatusu(pole, statusyPol) ? pobierzIdBleduPola(pole) : undefined}
         aria-invalid={Boolean(komunikatBledu)}
         disabled={disabled}
         id={pobierzIdPola(pole, idGrupy)}
@@ -200,14 +201,14 @@ export function PoleSuwak({
   )
 }
 
-export function PoleWyboru({ etykieta, pole, statusyPol, wartosc, ustawWartosc, opcje, etykietyOpcji, blad, disabled, idGrupy }: WlasciwosciPolaWyboru) {
+export function PoleWyboru({ etykieta, pole, statusyPol, wartosc, ustawWartosc, opcje, etykietyOpcji, niedostepneOpcje, blad, disabled, idGrupy }: WlasciwosciPolaWyboru) {
   const bladZWalidacji = useBladPola(pole, disabled)
   const komunikatBledu = blad ?? bladZWalidacji
   return (
     <OpakowaniePola blad={komunikatBledu} disabled={disabled} etykieta={etykieta} pole={pole} statusyPol={statusyPol}>
       <select aria-describedby={komunikatBledu ? pobierzIdBleduPola(pole) : undefined} aria-invalid={Boolean(komunikatBledu)} disabled={disabled} id={pobierzIdPola(pole, idGrupy)} value={wartosc} onChange={(zdarzenie) => ustawWartosc(zdarzenie.target.value)}>
         {opcje.map((opcja) => (
-          <option key={opcja} value={opcja}>
+          <option disabled={niedostepneOpcje?.includes(opcja)} key={opcja} value={opcja}>
             {etykietyOpcji?.[opcja] ?? opcja}
           </option>
         ))}

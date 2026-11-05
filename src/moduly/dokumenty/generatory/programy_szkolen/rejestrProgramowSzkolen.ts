@@ -90,19 +90,26 @@ export function zapiszProgramWRejestrze(dane: DaneZapisuProgramu) {
     typ: 'PROGRAM_SZKOLENIA',
     tytul,
     generatorId: 'programy_szkolen',
+    dokumentLogicznyId: dane.tryb === 'utworz_nowa' ? poprzedni?.dokumentLogicznyId : undefined,
     daneDokumentu,
     ustawieniaDokumentu,
     szkolenieId: dane.powiazania?.szkolenieId ?? dane.metadane.szkolenieId ?? null,
     klientId: dane.powiazania?.klientId ?? dane.metadane.klient ?? null,
     organizatorId: dane.powiazania?.organizatorId ?? dane.metadane.organizator,
-    powiazania: dane.powiazania,
-    integralnosc: dane.integralnosc,
+    powiazania: dane.powiazania ?? (dane.tryb === 'utworz_nowa' ? poprzedni?.powiazania : undefined),
+    integralnosc: dane.integralnosc ?? (dane.tryb === 'utworz_nowa' ? poprzedni?.integralnosc : undefined),
     autorId: dane.uzytkownikId ?? null,
     wlascicielId: dane.uzytkownikId ?? null,
     ostatnioModyfikujacyId: dane.uzytkownikId ?? null,
     poprzedniaWersjaId: dane.tryb === 'utworz_nowa' ? poprzedni?.id ?? null : null,
     dokumentNadrzednyId: dane.tryb === 'utworz_nowa' ? poprzedni?.dokumentNadrzednyId ?? poprzedni?.id ?? null : null,
   })
+
+  if (dane.tryb === 'utworz_nowa' && poprzedni) {
+    const korzenId = poprzedni.dokumentNadrzednyId ?? poprzedni.id
+    dokument.wersja = Math.max(...repozytoriumWspolnychDokumentow.pobierzWszystkie()
+      .filter((obecny) => obecny.id === korzenId || obecny.dokumentNadrzednyId === korzenId).map((obecny) => obecny.wersja)) + 1
+  }
 
   repozytoriumWspolnychDokumentow.utworz(dokument)
   return dokument

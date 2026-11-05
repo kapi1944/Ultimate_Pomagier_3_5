@@ -1,4 +1,6 @@
 import { synchronizujAdresPaczki, walidujWysylkePaczki } from '../logikaWysylkiPaczki'
+import { walidujEmail } from '../../../../wspolne/walidacja/walidatoryDanych'
+import { pobierzBladKontaktu } from '../walidacjaKontaktowSzczegolow'
 import { odtworzStatusyZatwierdzen, przelaczZatwierdzenie, kluczZatwierdzenia } from '../komponenty/zatwierdzaniePol'
 import { pobierzTrenerowZKartoteki } from '../../../../kartoteki/trenerzyKartoteki'
 import { pobierzKlientowZKartoteki } from '../../../../kartoteki/klienciKartoteki'
@@ -112,7 +114,7 @@ function czyObiekt(wartosc: unknown): wartosc is Record<string, unknown> {
 }
 
 function czyEmailPoprawny(wartosc: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(wartosc.trim())
+  return walidujEmail(wartosc)
 }
 
 function czyKodPocztowyPoprawny(wartosc: string) {
@@ -219,7 +221,7 @@ function normalizujDane(dane?: Partial<DaneFormularza> & { uwagiWewnetrzne?: str
       dlaWysylaczy: uwagiStarsze.dlaWysylaczy ?? (obecne as { uwagiDlaWysylaczy?: string }).uwagiDlaWysylaczy ?? '',
     },
     nabywca,
-    odbiorca: czyNabywcaJestOdbiorca ? { ...nabywca } : odbiorca,
+    odbiorca,
     czyNabywcaJestOdbiorca,
     wysylkaNaSiedzibeOdbiorcy: Boolean(obecne.wysylkaNaSiedzibeOdbiorcy),
     wysylkaPaczkiDotyczy: Boolean(obecne.wysylkaPaczkiDotyczy),
@@ -473,8 +475,9 @@ function zbudujProblemyWalidacjiDanych(dane: DaneFormularza): ProblemWalidacji[]
   }
 
   if (dane.wysylkaPaczkiDotyczy) {
-    if (dane.odbiorcaPaczki.email && !czyEmailPoprawny(dane.odbiorcaPaczki.email)) {
-      dodaj('Wysyłka paczki', 'odbiorcaPaczki.email', 'Wysyłka paczki: popraw adres email', false, 'ostrzezenie')
+    for (const pole of ['email', 'telefon'] as const) {
+      const blad = pobierzBladKontaktu(pole, dane.odbiorcaPaczki[pole])
+      if (blad) dodaj('Wysyłka paczki', `odbiorcaPaczki.${pole}`, `Wysyłka paczki: ${blad}`, false, 'ostrzezenie')
     }
 
     if (dane.odbiorcaPaczki.kodPocztowy && !czyKodPocztowyPoprawny(dane.odbiorcaPaczki.kodPocztowy)) {

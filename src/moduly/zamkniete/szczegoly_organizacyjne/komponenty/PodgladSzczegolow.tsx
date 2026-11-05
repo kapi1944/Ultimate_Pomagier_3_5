@@ -4,6 +4,7 @@ import type { DaneAdresatow, DaneDokumentacjiMaterialow, DaneDodatkowychWymogow,
 import { etykietyStatusowPol } from '../stale'
 import { formatujDateRejestru, oznaczeniaStatusowSzczegolow } from '../prezentacjaRejestruSzczegolow'
 import { pobierzNazweOpiekuna } from '../uzytkownicySzczegolow'
+import { pobierzEfektywneDaneOdbiorcy, pobierzEfektywneStatusyPolOdbiorcy } from '../logikaDanychOdbiorcy'
 import './podgladSzczegolow.css'
 
 type KluczPola = Exclude<keyof DaneFormularza | keyof DaneFirmy | keyof DaneOdbiorcyPaczki | keyof DaneDokumentacjiMaterialow | keyof DaneDodatkowychWymogow | keyof DaneUwag | keyof GrupaSzkoleniowa | keyof TrenerGrupy | keyof UczestnikGrupy | keyof DaneAdresatow | keyof DyspozycjaMaterialowa, 'id'>
@@ -59,7 +60,7 @@ function SekcjaPodgladu({ tytul, children, rozwinieta = true }: { tytul: string;
 export function PodgladSzczegolow({ rekord, zamknij }: { rekord: OpublikowaneSzczegolyOrganizacyjne | WersjaRoboczaGeneratora; zamknij: () => void }) {
   const zawartosc = useRef<HTMLDivElement>(null)
   const dane = rekord.dane
-  const statusy = rekord.statusyPol
+  const statusy = pobierzEfektywneStatusyPolOdbiorcy(dane, rekord.statusyPol)
   const czyOpublikowany = 'numerWersji' in rekord
   const wersja = czyOpublikowany ? `Wersja ${rekord.numerWersji}` : `Kopia robocza ${rekord.etykietaWersji}`
   const pola = (wartosci: object, sciezka = '') => <PolaPodgladu dane={wartosci} sciezka={sciezka} statusy={statusy} />
@@ -96,7 +97,7 @@ export function PodgladSzczegolow({ rekord, zamknij }: { rekord: OpublikowaneSzc
         <div><dt>Przeglądana wersja</dt><dd>{wersja}</dd></div>
         {czyOpublikowany && <><div><dt>Pierwsza publikacja</dt><dd>{formatujDateRejestru(rekord.dataPierwszejPublikacji)}</dd></div><div><dt>Ostatnia publikacja</dt><dd>{formatujDateRejestru(rekord.dataOstatniejPublikacji)}</dd></div></>}
       </dl>{pola({ powodNiezrealizowania: dane.powodNiezrealizowania })}</SekcjaPodgladu>
-      <SekcjaPodgladu tytul="Dane klienta">{pola({ czyNabywcaJestOdbiorca: dane.czyNabywcaJestOdbiorca, nabywca: dane.nabywca, odbiorca: dane.odbiorca })}</SekcjaPodgladu>
+      <SekcjaPodgladu tytul="Dane klienta">{pola({ czyNabywcaJestOdbiorca: dane.czyNabywcaJestOdbiorca, nabywca: dane.nabywca, odbiorca: pobierzEfektywneDaneOdbiorcy(dane) })}</SekcjaPodgladu>
       {rekord.grupy.length === 0 && <SekcjaPodgladu tytul="Grupy szkoleniowe">Nie podano</SekcjaPodgladu>}
       {rekord.grupy.map((grupa, indeks) => {
         const { id, trenerzy, cenaNetto, trybCeny, vat, terminPlatnosci, protokol, mechanizmPodzielonejPlatnosci, dataUmowy, numerUmowy, liczbaGodzin, rodzajGodzin, nazwaNiestandardowychGodzin, liczbaMinutNiestandardowychGodzin, ...organizacja } = grupa

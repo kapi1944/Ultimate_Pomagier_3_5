@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { pobierzRutyny, zdarzenieZmianyRutyn } from './uslugi/rutynyPulpitu'
 import type { StanRutyn } from './logika/rutyny'
+import { pobierzKalendarzPracy } from '../../../wspolne/czas/serwisKalendarzaPracy'
+import { zdarzenieZmianyUstawienAplikacji } from '../../../aplikacja/ustawienia/magazynUstawienAplikacji'
 
 function odczytajRutyny(): { stan: StanRutyn; blad: string } {
   try { return { stan: pobierzRutyny(), blad: '' } }
@@ -15,7 +17,8 @@ export function useRutynyPulpitu() {
     window.addEventListener('focus', odswiez)
     window.addEventListener('storage', odswiez)
     window.addEventListener(zdarzenieZmianyRutyn, odswiez)
-    return () => { window.clearInterval(zegar); window.removeEventListener('focus', odswiez); window.removeEventListener('storage', odswiez); window.removeEventListener(zdarzenieZmianyRutyn, odswiez) }
+    window.addEventListener(zdarzenieZmianyUstawienAplikacji, odswiez)
+    return () => { window.clearInterval(zegar); window.removeEventListener('focus', odswiez); window.removeEventListener('storage', odswiez); window.removeEventListener(zdarzenieZmianyRutyn, odswiez); window.removeEventListener(zdarzenieZmianyUstawienAplikacji, odswiez) }
   }, [])
-  return { ...odczyt, odswiez }
+  return { ...odczyt, odswiez, kalendarzPracy: pobierzKalendarzPracy() }
 }

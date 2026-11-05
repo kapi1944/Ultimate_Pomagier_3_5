@@ -1,5 +1,8 @@
 import { useState } from 'react'
 import { dniHarmonogramu, walidujHarmonogramPracy, type HarmonogramPracy, type PrzedzialGodzin } from '../../moduly/zamkniete/pulpit/logika/harmonogramPracy'
+import { useKontekstUzytkownika } from '../logowanie/useKontekstUzytkownika'
+import { czyJestPracownikiemWewnetrznym, pobierzNazweWyswietlanaUzytkownika } from '../../kartoteki/uzytkownicy/typyUzytkownikow'
+import { walidujWyjatkiKalendarza, type WyjatekKalendarzaPracy } from '../../wspolne/czas/kalendarzPracy'
 
 function PolaPrzedzialu({ wartosc, zmien }: { wartosc: PrzedzialGodzin | null; zmien: (wartosc: PrzedzialGodzin | null) => void }) {
   return <>
@@ -9,8 +12,20 @@ function PolaPrzedzialu({ wartosc, zmien }: { wartosc: PrzedzialGodzin | null; z
 }
 
 export default function UstawieniaHarmonogramu({ wartosc, zmien }: { wartosc: HarmonogramPracy; zmien: (wartosc: HarmonogramPracy) => void }) {
+  const { aktywniUzytkownicy } = useKontekstUzytkownika()
   const [dataWyjatku, ustawDateWyjatku] = useState('')
+  const [wyjatekKalendarza, ustawWyjatekKalendarza] = useState<Omit<WyjatekKalendarzaPracy, 'id'>>({ od: '', do: '', rodzaj: 'WOLNE', powod: '' })
+  const [bladKalendarza, ustawBladKalendarza] = useState('')
+  const wyjatkiKalendarza = wartosc.wyjatkiKalendarza ?? []
   const bledy = walidujHarmonogramPracy(wartosc)
+  function dodajWyjatekKalendarza() {
+    const wpis = { ...wyjatekKalendarza, id: crypto.randomUUID(), powod: wyjatekKalendarza.powod.trim() }
+    const bledy = walidujWyjatkiKalendarza([...wyjatkiKalendarza, wpis])
+    if (bledy.length) { ustawBladKalendarza(bledy.join(' ')); return }
+    zmien({ ...wartosc, wyjatkiKalendarza: [...wyjatkiKalendarza, wpis] })
+    ustawBladKalendarza('')
+    ustawWyjatekKalendarza({ od: '', do: '', rodzaj: 'WOLNE', powod: '' })
+  }
   function przesun(indeks: number, kierunek: number) {
     const bloki = [...wartosc.blokiPracy]
     const cel = indeks + kierunek
@@ -19,6 +34,29 @@ export default function UstawieniaHarmonogramu({ wartosc, zmien }: { wartosc: Ha
     zmien({ ...wartosc, blokiPracy: bloki })
   }
   return <section className="ustawienia__karta ustawienia-harmonogram">
+    <h2>Kalendarz pracy</h2>
+    <p>Kalendarz korzysta z dni tygodnia wybranych w ustawieniach Pulpitu i polskich świąt, w tym Wigilii od 2025 roku. Działa offline w strefie Europe/Warsaw.</p>
+    <p>Pierwszeństwo: indywidualny dzień pracy → indywidualne nieobecności → firmowy dzień wolny → firmowy dzień pracy → święto → tydzień pracy. Przy nakładających się nieobecnościach: zwolnienie → urlop → inna nieobecność → dzień wolny. Dzień wolny za święto w sobotę wprowadź z datą ustaloną w firmie.</p>
+    <fieldset>
+      <legend>Dodaj wyjątek kalendarza pracy</legend>
+      <div className="ustawienia-harmonogram__wiersz">
+        <label>Zakres wyjątku<select value={wyjatekKalendarza.uzytkownikId ?? ''} onChange={(zdarzenie) => ustawWyjatekKalendarza({ ...wyjatekKalendarza, uzytkownikId: zdarzenie.target.value || undefined, rodzaj: !zdarzenie.target.value && !['PRACA', 'WOLNE'].includes(wyjatekKalendarza.rodzaj) ? 'WOLNE' : wyjatekKalendarza.rodzaj })}><option value="">Cała firma</option>{aktywniUzytkownicy.filter(czyJestPracownikiemWewnetrznym).map((osoba) => <option key={osoba.id} value={osoba.id}>{pobierzNazweWyswietlanaUzytkownika(osoba)}</option>)}</select></label>
+        <label>Od dnia<input type="date" value={wyjatekKalendarza.od} onChange={(zdarzenie) => ustawWyjatekKalendarza({ ...wyjatekKalendarza, od: zdarzenie.target.value, do: wyjatekKalendarza.do || zdarzenie.target.value })} /></label>
+        <label>Do dnia włącznie<input type="date" value={wyjatekKalendarza.do} onChange={(zdarzenie) => ustawWyjatekKalendarza({ ...wyjatekKalendarza, do: zdarzenie.target.value })} /></label>
+        <label>Rodzaj wyjątku<select value={wyjatekKalendarza.rodzaj} onChange={(zdarzenie) => ustawWyjatekKalendarza({ ...wyjatekKalendarza, rodzaj: zdarzenie.target.value as WyjatekKalendarzaPracy['rodzaj'] })}><option value="WOLNE">Dodatkowy dzień wolny</option><option value="PRACA">Wyjątkowy dzień pracujący</option>{wyjatekKalendarza.uzytkownikId && <><option value="URLOP">Urlop</option><option value="ZWOLNIENIE">Zwolnienie</option><option value="NIEOBECNOSC">Inna nieobecność</option></>}</select></label>
+        <label>Powód<input value={wyjatekKalendarza.powod} onChange={(zdarzenie) => ustawWyjatekKalendarza({ ...wyjatekKalendarza, powod: zdarzenie.target.value })} /></label>
+        <button type="button" onClick={dodajWyjatekKalendarza}>Dodaj wyjątek kalendarza</button>
+      </div>
+      {bladKalendarza && <p role="alert">{bladKalendarza}</p>}
+    </fieldset>
+    <p>Wyjątki zostaną utrwalone przyciskiem zapisu ustawień. Zmiana kalendarza przelicza wystąpienia bez przesuwania rutyn i bez usuwania historii wykonań.</p>
+    {(['FIRMA', 'OSOBY'] as const).map((zakres) => <div key={zakres}>
+      <h3>{zakres === 'FIRMA' ? 'Firmowe dni wolne i pracujące' : 'Indywidualne nieobecności i dni pracujące'}</h3>
+      <ul>{wyjatkiKalendarza.filter((wpis) => zakres === 'FIRMA' ? !wpis.uzytkownikId : Boolean(wpis.uzytkownikId)).map((wpis) => {
+        const osoba = aktywniUzytkownicy.find((osoba) => osoba.id === wpis.uzytkownikId)
+        return <li key={wpis.id}>{wpis.od}–{wpis.do} · {wpis.uzytkownikId ? osoba ? pobierzNazweWyswietlanaUzytkownika(osoba) : 'Nieaktywny użytkownik' : 'Cała firma'} · {wpis.rodzaj === 'PRACA' ? 'Dzień pracy' : 'Wolne / nieobecność'} · {wpis.powod} <button type="button" onClick={() => zmien({ ...wartosc, wyjatkiKalendarza: wyjatkiKalendarza.filter((inny) => inny.id !== wpis.id) })}>Usuń wyjątek: {wpis.powod}</button></li>
+      })}</ul>
+    </div>)}
     <h2>Bloki pracy</h2>
     <p>Kolejność określa listę wyboru rutyn; pozycja na osi wynika z godzin. Wyłączenie lub usunięcie bloku zachowuje powiązania rutyn i wymaga ich ponownego przypisania.</p>
     {wartosc.blokiPracy.map((blok, indeks) => <fieldset key={blok.id}>

@@ -1664,7 +1664,7 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
         <PasekAkcjiGeneratora className="program-szkolen__akcje">
           <PrzyciskPaneluGeneratora className="program-szkolen__przycisk">Ustawienia programu</PrzyciskPaneluGeneratora>
           <StatusZapisuDokumentu stan={stanZapisu} />
-          <AkcjeEksportuPdf
+          <AkcjeEksportuPdf dokumentId={aktywnaKopiaId} odciskFormularza={JSON.stringify(daneProgramu)}
             silnikPdf="raster_legacy"
             className="program-szkolen__akcje-eksportu"
             classNamePrzycisku="program-szkolen__przycisk"

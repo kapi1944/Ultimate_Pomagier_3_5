@@ -5,6 +5,112 @@ import test from 'node:test'
 const wymagaj = createRequire(import.meta.url)
 const { chromium } = wymagaj(process.env.POMAGIER_PLAYWRIGHT || 'playwright')
 
+test('oś: zakres, kompresja, podgląd, współrzędne, wyjątki widoku i uprawnienia', { timeout: 180000 }, async () => {
+  const przegladarka = await chromium.launch({ channel: 'chrome', headless: true })
+  try {
+    for (const rozmiar of [{ width: 1500, height: 870 }, { width: 980, height: 720 }, { width: 390, height: 844 }, { width: 1024, height: 600 }]) {
+      const kontekst = await przegladarka.newContext({ viewport: rozmiar, timezoneId: 'Europe/Warsaw', hasTouch: true })
+      const strona = await kontekst.newPage()
+      const bledy = []
+      strona.on('pageerror', (blad) => bledy.push(blad.message))
+      await strona.clock.install({ time: new Date('2026-11-02T03:00:00Z') })
+      await strona.goto(process.env.POMAGIER_ADRES || 'http://127.0.0.1:5196')
+      await strona.getByRole('button', { name: 'Otwórz demonstrację Architekta', exact: true }).click()
+      const os = strona.locator('.pulpit-os-czasu')
+      await os.waitFor()
+      const danePrzed = await strona.evaluate(async () => {
+        const { pobierzStanPulpitu, zapiszStanPulpitu } = await import('/src/moduly/zamkniete/pulpit/uslugi/magazynPulpitu.ts')
+        const id = JSON.parse(localStorage.getItem('ultimatePomagier.sesjaUzytkownika.v1')).uzytkownikId
+        const zadaniaReczne = ['05:00', '10:00', '20:00'].map((godzina, indeks) => ({ id: 'os-test-' + indeks, tytul: 'Zadanie osi ' + godzina, data: '2026-11-02', godzina, utworzono: '2026-11-02T03:00:00Z', status: 'OTWARTE', priorytet: 'ZWYKLE', typZrodla: 'RECZNE', typZadania: 'INNE', wlascicielId: id, zadaniodawcaId: id, zadaniobiorcaId: id, przypomnienia: [], czyAutomatyczne: false, czyTerminKrytyczny: false, miniatura: { daneUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', nazwaPliku: 'test.png', szerokosc: 1, wysokosc: 1 } }))
+        const rutyny = ['05:00', 'BLOK', '20:00'].map((godzina, indeks) => ({ id: 'rutyna-osi-' + indeks, tytul: 'Rutyna osi ' + godzina, wlascicielId: id, wersje: [{ od: '2026-11-02', aktywna: true, harmonogram: { rodzaj: 'DNI_ROBOCZE' }, ...(godzina === 'BLOK' ? { blokPracyId: 'paczkowanie' } : { godzina }) }] }))
+        zapiszStanPulpitu({ ...pobierzStanPulpitu(), zadaniaReczne, rutyny: { rutyny, wykonania: [], historia: [] } })
+        window.dispatchEvent(new Event('storage'))
+        return { id, zadaniaReczne, rutyny }
+      })
+      await os.locator('.pulpit-deadline').waitFor()
+      assert.match(await os.getAttribute('aria-label'), /06:00 do 18:00/)
+      assert.equal(await os.locator('.pulpit-deadline').count(), 1)
+      assert.equal(await os.locator('.pulpit-rutyna__punkt').count(), 0)
+      assert.equal(await os.locator('.pulpit-rutyna__przedzial').count(), 1)
+      assert.equal(await os.locator('.pulpit-os-czasu__wskaznik').count(), 0)
+      assert.match(await strona.locator('.pulpit-czas-poza-osia').innerText(), /04:00.*PREFAJRANT/)
+      await strona.getByText('Zadania poza zakresem osi (2)', { exact: true }).click()
+      await strona.getByRole('button', { name: 'Przed zakresem · 05:00 · Zadanie osi 05:00', exact: true }).click()
+      await strona.getByRole('heading', { name: 'Zadanie osi 05:00', exact: true }).waitFor()
+      await strona.getByRole('button', { name: 'Zamknij panel', exact: true }).click()
+
+      const panel = strona.getByRole('form', { name: 'Dostosuj oś', exact: true })
+      await strona.getByRole('button', { name: '⚙ Dostosuj oś', exact: true }).click()
+      assert.equal(await panel.getByRole('slider').inputValue(), '25')
+      for (const skala of [10, 100]) {
+        await panel.getByRole('slider').focus()
+        await panel.getByRole('slider').press(skala === 10 ? 'Home' : 'End')
+        const pomiar = await os.evaluate((element) => {
+          const linia = element.querySelector('.pulpit-os-czasu__linia').getBoundingClientRect()
+          const pozycja = (selektor) => { const prostokat = element.querySelector(selektor).getBoundingClientRect(); return [(prostokat.left - linia.left) / linia.width, prostokat.width / linia.width] }
+          const etykiety = [...element.querySelectorAll('.pulpit-os-czasu__etykieta')].map((wpis) => { const prostokat = wpis.getBoundingClientRect(); return { lewo: prostokat.left, prawo: prostokat.right, tekst: wpis.textContent } })
+          const miniatura = element.querySelector('.pulpit-os-czasu__miniatura').getBoundingClientRect()
+          return { praca: pozycja('.pulpit-os-czasu__odcinek--praca'), zadanie: pozycja('.pulpit-deadline'), blok: pozycja('.pulpit-rutyna__przedzial'), kurier: pozycja('.pulpit-okno-kuriera'), miniatura: (miniatura.left + miniatura.width / 2 - linia.left) / linia.width, etykiety }
+        })
+        const jednostki = 495 + 225 * skala / 100
+        const oczekiwane = { praca: [105 * skala / 100 / jednostki, 495 / jednostki], zadanie: [(105 * skala / 100 + 135) / jednostki, 0], blok: [(105 * skala / 100 + 135) / jednostki, 180 / jednostki], kurier: [(105 * skala / 100 + 345) / jednostki, 150 / jednostki] }
+        for (const nazwa of ['praca', 'zadanie', 'blok', 'kurier']) for (let indeks = 0; indeks < 2; indeks++) assert.ok(Math.abs(pomiar[nazwa][indeks] - oczekiwane[nazwa][indeks]) < .002, JSON.stringify({ nazwa, skala, rozmiar, pomiar, oczekiwane }))
+        assert.ok(Math.abs(pomiar.miniatura - oczekiwane.zadanie[0]) < .002)
+        assert.equal(pomiar.etykiety[0].tekst, '06:00')
+        assert.equal(pomiar.etykiety.at(-1).tekst, '18:00')
+        for (let indeks = 1; indeks < pomiar.etykiety.length; indeks++) assert.ok(pomiar.etykiety[indeks].lewo >= pomiar.etykiety[indeks - 1].prawo + 1)
+      }
+      await panel.getByLabel('Godzina od', { exact: true }).fill('08:00')
+      assert.equal(await panel.getByRole('button', { name: 'Zapisz', exact: true }).isDisabled(), true)
+      await panel.getByRole('alert').waitFor()
+      await panel.getByLabel('Godzina od', { exact: true }).fill('06:00')
+      await panel.getByLabel('Godzina do', { exact: true }).fill('15:00')
+      assert.equal(await panel.getByRole('button', { name: 'Zapisz', exact: true }).isDisabled(), true)
+      await panel.getByRole('button', { name: 'Anuluj', exact: true }).click()
+      assert.equal(await strona.evaluate(() => localStorage.getItem('ultimatePomagier.ustawieniaAplikacji.v1')), null)
+      await strona.getByRole('button', { name: 'Pokaż pełną dobę jednorazowo', exact: true }).click()
+      assert.equal(await os.locator('.pulpit-deadline').count(), 3)
+      assert.equal(await os.locator('.pulpit-rutyna__punkt').count(), 2)
+      await strona.getByRole('button', { name: 'Wróć do zapisanego zakresu', exact: true }).click()
+      await strona.getByRole('button', { name: '⚙ Dostosuj oś', exact: true }).click()
+      await panel.getByLabel('Godzina od', { exact: true }).fill('07:45')
+      await panel.getByLabel('Godzina do', { exact: true }).fill('16:00')
+      await panel.getByRole('button', { name: 'Zapisz', exact: true }).click()
+      await panel.waitFor({ state: 'detached' })
+      await strona.reload()
+      await os.waitFor()
+      assert.match(await os.getAttribute('aria-label'), /07:45 do 16:00/)
+      await strona.getByRole('button', { name: '⚙ Dostosuj oś', exact: true }).click()
+      await panel.getByRole('button', { name: 'Przywróć domyślne', exact: true }).click()
+      assert.equal(await panel.getByRole('slider').inputValue(), '25')
+      assert.equal(await panel.getByLabel('Godzina od', { exact: true }).inputValue(), '06:00')
+      if (process.env.POMAGIER_ZRZUT_OSI) await strona.screenshot({ path: `${process.env.POMAGIER_ZRZUT_OSI}-${rozmiar.width}.png`, fullPage: true })
+      await panel.press('Escape')
+      assert.match(await os.getAttribute('aria-label'), /07:45 do 16:00/)
+      assert.ok(await strona.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1))
+
+      const danePo = await strona.evaluate(() => ({ ustawienia: JSON.parse(localStorage.getItem('ultimatePomagier.ustawieniaAplikacji.v1')), pulpit: JSON.parse(localStorage.getItem('ultimatePomagier.pulpit.v1')) }))
+      assert.deepEqual(danePo.pulpit.zadaniaReczne, danePrzed.zadaniaReczne)
+      assert.deepEqual(danePo.pulpit.rutyny.rutyny, danePrzed.rutyny)
+      assert.deepEqual(danePo.ustawienia.pulpit.osCzasu, { poczatek: '06:00', koniec: '18:00', skalaPozaPraca: 25 })
+      assert.equal(danePo.ustawienia.pulpit.poczatekDnia, '07:45')
+      assert.equal(danePo.ustawienia.pulpit.koniecDnia, '16:00')
+      await strona.getByRole('button', { name: 'Otwórz menu', exact: true }).click()
+      await strona.getByRole('button', { name: 'USTAWIENIA', exact: true }).click()
+      await strona.getByRole('tab', { name: 'Pulpit', exact: true }).click()
+      await strona.getByLabel('Początek dnia', { exact: true }).fill('05:00')
+      await strona.getByLabel('Koniec dnia', { exact: true }).fill('20:00')
+      await strona.getByText('Rozszerzono zakres osi, aby obejmował nowe godziny pracy.', { exact: true }).waitFor()
+      await strona.getByRole('button', { name: 'Zapisz ustawienia', exact: true }).click()
+      const poRozszerzeniu = await strona.evaluate(() => JSON.parse(localStorage.getItem('ultimatePomagier.ustawieniaAplikacji.v1')))
+      assert.equal(poRozszerzeniu.pulpit.osieUzytkownikow[danePrzed.id].poczatek, '05:00')
+      assert.equal(poRozszerzeniu.pulpit.osieUzytkownikow[danePrzed.id].koniec, '20:00')
+      assert.deepEqual(bledy, [])
+      await kontekst.close()
+    }
+  } finally { await przegladarka.close() }
+})
+
 test('harmonogram: formularze, wspólne wykonania, czas i bloki, daty, kurier, motywy i skale', { timeout: 180000 }, async () => {
   const przegladarka = await chromium.launch({ executablePath: process.env.POMAGIER_CHROME || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true })
   try {

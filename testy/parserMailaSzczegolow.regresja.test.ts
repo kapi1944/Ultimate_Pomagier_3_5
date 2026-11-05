@@ -16,6 +16,46 @@ const mailOze = readFileSync(new URL('./fixtures/mailOrganizacyjnyOze.txt', impo
 const trenerOze = { id: 'trener-oze', imieNazwisko: 'Rafał Wojtaszek', telefon: '', email: 'rafal@example.org' }
 const nazwaKlientaOze = 'Wojewódzki Fundusz Ochrony Środowiska i Gospodarki Wodnej w Łodzi'
 
+for (const wartosc of ['E-mail: szkolenia@pej.pl', 'Email: szkolenia@pej.pl', 'Mail: szkolenia@pej.pl', 'Adres e-mail: szkolenia@pej.pl', 'mailto:szkolenia@pej.pl', '  EMAIL :  <szkolenia@pej.pl>; ', '[szkolenia@pej.pl](mailto:szkolenia@pej.pl)', '<a href="mailto:szkolenia@pej.pl">Napisz do nas</a>', 'Adres e-mail:\n\nszkolenia@pej.pl']) {
+  test(`czysty adres importu: ${wartosc}`, () => {
+    const tresc = `Email nabywcy:\n${wartosc}\nEmail odbiorcy: ${wartosc}\nRaport na adres:\n${wartosc}`
+    const wynik = parsujMailaSzczegolow(tresc)
+    assert.equal(wynik.daneFormularza.nabywca?.email, 'szkolenia@pej.pl')
+    assert.equal(wynik.daneFormularza.odbiorca?.email, 'szkolenia@pej.pl')
+    assert.equal(wynik.daneFormularza.nabywca?.sposobWysylkiRaportu, 'szkolenia@pej.pl')
+    assert.equal(wynik.daneFormularza.zrodloImportuMaila, tresc)
+  })
+}
+test('import nie obcina poprawnych części adresu ani opisu sposobu wysyłki', () => {
+  const wynik = parsujMailaSzczegolow("Email nabywcy: o'connor+szkolenia@firma.com\nRaport na adres: Proszę wysłać raport do kontakt@firma.pl po szkoleniu")
+  assert.equal(wynik.daneFormularza.nabywca?.email, "o'connor+szkolenia@firma.com")
+  assert.equal(wynik.daneFormularza.nabywca?.sposobWysylkiRaportu, 'Proszę wysłać raport do kontakt@firma.pl po szkoleniu')
+})
+for (const email of ['kontakt@firma.pl12345', 'kontakt@@firma.pl', 'kontakt@', 'pierwszy@firma.pl drugi@firma.pl']) {
+  test(`niejednoznaczny import zachowuje adres do korekty: ${email}`, () => {
+    const wynik = parsujMailaSzczegolow(`Email nabywcy: ${email}`)
+    assert.equal(wynik.daneFormularza.nabywca?.email, email)
+    assert.ok(wynik.polaNiepewne.includes('nabywca.email'))
+  })
+}
+test('błędny telefon importowany nie traci liter i wymaga weryfikacji', () => {
+  const wynik = parsujMailaSzczegolow('Dane osoby kontaktowej: Anna Nowak\ntel. 785 660 226dsf\nEmail: anna@firma.pl')
+  assert.equal(wynik.daneFormularza.nabywca?.telefon, '785 660 226dsf')
+  assert.ok(wynik.polaNiepewne.includes('nabywca.telefon'))
+})
+for (const email of ['kontakt__szkolenia@firma.pl', 'kontakt|szkolenia@firma.pl', 'kontakt**szkolenia@firma.pl']) {
+  test(`import zachowuje poprawne znaki części lokalnej: ${email}`, () => {
+    assert.equal(parsujMailaSzczegolow(`Email nabywcy: ${email}`).daneFormularza.nabywca?.email, email)
+  })
+}
+test('błędne kontakty paczki są zachowane do weryfikacji', () => {
+  const wynik = parsujMailaSzczegolow('Materiały na adres:\nFirma testowa\nul. Testowa 1\n00-001 Warszawa\nTelefon: 785 660 226dsf\nEmail: kontakt@firma.pl12345')
+  assert.equal(wynik.daneFormularza.odbiorcaPaczki?.telefon, '785 660 226dsf')
+  assert.equal(wynik.daneFormularza.odbiorcaPaczki?.email, 'kontakt@firma.pl12345')
+  assert.ok(wynik.polaNiepewne.includes('odbiorcaPaczki.telefon'))
+  assert.ok(wynik.polaNiepewne.includes('odbiorcaPaczki.email'))
+})
+
 test('normalizacja i ekstrakcja sekcji mają wspólne granice bez utraty oryginału', () => {
   const tresc = '**-Trener\nProwadzący:**\n\nRafał Wojtaszek\n-Liczba uczestników: 50 osób'
   const sekcje = znajdzSekcjeMaila(normalizujTrescMaila(tresc), ['Trener prowadzący'])

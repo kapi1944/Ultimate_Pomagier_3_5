@@ -2,7 +2,9 @@ import FormularzZakupu, { type DaneFormularzaZakupu } from './FormularzZakupu'
 import { czyJestZamawiaczem, czyMozeWysylac } from '../../../kartoteki/uzytkownicy/uprawnienia'
 import { useEffect, useId, useMemo, useRef, useState, type ClipboardEvent, type CSSProperties, type Dispatch, type DragEvent, type SetStateAction } from 'react'
 import { useKontekstUzytkownika } from '../../../aplikacja/logowanie/useKontekstUzytkownika'
-import { pobierzUstawieniaAplikacji, zdarzenieZmianyUstawienAplikacji } from '../../../aplikacja/ustawienia/magazynUstawienAplikacji'
+import { pobierzUstawieniaAplikacji, zapiszOsUzytkownika, zdarzenieZmianyUstawienAplikacji } from '../../../aplikacja/ustawienia/magazynUstawienAplikacji'
+import PolaOsiCzasu from './PolaOsiCzasu'
+import { czyGodzinaWOsi, czyTerazWOsi, normalizujOsCzasu, walidujOsCzasu, type KonfiguracjaOsiCzasu } from './logika/czasDnia'
 import { blokiNaDzien, oknoKurieraNaDzien } from './logika/harmonogramPracy'
 import { pobierzUzytkownikow } from '../../../kartoteki/uzytkownicy/magazynUzytkownikow'
 import { pobierzNazweUzytkownika, pobierzNazweWyswietlanaUzytkownika, type Uzytkownik } from '../../../kartoteki/uzytkownicy/typyUzytkownikow'
@@ -16,9 +18,12 @@ import { zbudujWysylkiMonitora } from './logika/monitorWysylek'
 import { otworzLubUtworzChecklistePulpitu, oznaczWysylkeChecklisty } from './uslugi/checklistyPulpitu'
 import type { WysylkaMonitora } from './logika/monitorWysylek'
 import MonitorWysylek from './MonitorWysylek'
+import type { Dokument } from '../../../wspolne/dokumenty/modelDokumentu'
+import { zdarzenieZmianyRejestruDokumentow } from '../../../wspolne/dokumenty/rejestrDokumentow'
 import WidokRutyn from './DailyRoutines'
 import RutynyNaOsi from './RutynyNaOsi'
 import { useRutynyPulpitu } from './useRutynyPulpitu'
+import { dataWarszawska } from '../../../wspolne/czas/kalendarzPracy'
 import { generujZadaniaAutomatyczne } from './logika/zadaniaAutomatyczne'
 import { czyMoznaZmienicKontekstPulpitu } from './logika/kontekstPulpitu'
 import { obliczLicznikiPulpitu } from './logika/podsumowaniePulpitu'
@@ -32,6 +37,7 @@ import { Przycisk, Komunikat, PustyStan, PanelWysuwany, OknoDialogowe } from '..
 type FiltrPulpitu = 'WSZYSTKIE' | 'DO_ZROBIENIA' | 'PILNE' | 'PACZKI' | 'BLOKADY'
 
 type WlasciwosciPulpitu = {
+  otworzDokument?: (dokument: Dokument<unknown, unknown>) => void
   otworzRekordZrodlowy?: (idSzkolenia?: string) => void
   otworzDokumenty?: () => void
   otworzPaczke?: (idChecklisty: string, paczkaId?: string) => void
@@ -504,12 +510,18 @@ function IkonaZakupow() {
   return <svg aria-hidden="true" className="pulpit-kafelek__ikona" fill="none" viewBox="0 0 24 24"><path d="M3 4h2l2.2 10.1a2 2 0 0 0 2 1.6h7.9a2 2 0 0 0 1.9-1.4L21 7H7" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" /><circle cx="10" cy="19" fill="currentColor" r="1.3" /><circle cx="17" cy="19" fill="currentColor" r="1.3" /></svg>
 }
 
-export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, otworzPaczke }: WlasciwosciPulpitu) {
+export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, otworzPaczke, otworzDokument }: WlasciwosciPulpitu) {
   const { zalogowanyUzytkownik, aktywniUzytkownicy } = useKontekstUzytkownika()
   const daneRutyn = useRutynyPulpitu()
+  const [roboczaOs, ustawRoboczaOs] = useState<KonfiguracjaOsiCzasu | null>(null)
+  const [pelnaOs, ustawPelnaOs] = useState(false)
+  const [komunikatOsi, ustawKomunikatOsi] = useState('')
+  const [szerokoscOsi, ustawSzerokoscOsi] = useState(900)
+  const kontenerOsiRef = useRef<HTMLDivElement>(null)
+  const przyciskOsiRef = useRef<HTMLButtonElement>(null)
   const [wybranaRutynaId, ustawWybranaRutyneId] = useState<string | null>(null)
   const [teraz, ustawTeraz] = useState(() => new Date())
-  const [data, ustawDate] = useState(() => dataTekstowa(new Date()))
+  const [data, ustawDate] = useState(() => dataWarszawska(new Date()))
   const [filtr, ustawFiltr] = useState<FiltrPulpitu>('WSZYSTKIE')
   const [stan, ustawStan] = useState(pobierzStanPulpitu)
   const [wybranyUzytkownikId, ustawWybranegoUzytkownikaId] = useState(zalogowanyUzytkownik?.id ?? '')
@@ -533,7 +545,13 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
   const ustawieniaAplikacji = pobierzUstawieniaAplikacji()
   const zachowaniePrzewijania: ScrollBehavior = ustawieniaAplikacji.dostepnosc.ograniczAnimacje || (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) ? 'auto' : 'smooth'
   const widoczneKafelki = ustawieniaAplikacji.pulpit.widoczneKafelki
+  const godzinyPracy = { poczatek: ustawieniaAplikacji.pulpit.poczatekDnia, koniec: ustawieniaAplikacji.pulpit.koniecDnia }
+  const zapisanaOs = normalizujOsCzasu(ustawieniaAplikacji.pulpit.osieUzytkownikow[zalogowanyUzytkownik?.id ?? ''] ?? ustawieniaAplikacji.pulpit.osCzasu, godzinyPracy)
+  const osCzasu = pelnaOs ? { ...zapisanaOs, poczatek: '00:00', koniec: '23:59' } : normalizujOsCzasu(roboczaOs ?? zapisanaOs, godzinyPracy)
   const zakresDniaPracy: ZakresDniaPracy = {
+    osCzasu,
+    kalendarzPracy: daneRutyn.kalendarzPracy,
+    uzytkownikId: wybranyUzytkownikId,
     dniPracy: ustawieniaAplikacji.pulpit.dniPracy,
     poczatek: ustawieniaAplikacji.pulpit.poczatekDnia,
     koniec: ustawieniaAplikacji.pulpit.koniecDnia,
@@ -541,15 +559,34 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
   const szkoleniaDostepne = useMemo(() => pobierzSzczegolyDoChecklisty().map((szczegoly) => ({ id: szczegoly.id, nazwa: szczegoly.nazwa })), [])
 
   useEffect(() => {
+    const kontener = kontenerOsiRef.current
+    if (!kontener || typeof ResizeObserver === 'undefined') return
+    const obserwator = new ResizeObserver(([wpis]) => ustawSzerokoscOsi(wpis.contentRect.width))
+    obserwator.observe(kontener)
+    return () => obserwator.disconnect()
+  }, [filtr])
+
+  function zamknijUstawieniaOsi() { ustawRoboczaOs(null); przyciskOsiRef.current?.focus() }
+  function zapiszUstawieniaOsi(zdarzenie: React.FormEvent) {
+    zdarzenie.preventDefault()
+    if (!roboczaOs || walidujOsCzasu(roboczaOs, godzinyPracy).length) return
+    if (!zapiszOsUzytkownika(roboczaOs, zalogowanyUzytkownik)) { ustawKomunikatOsi('Nie udało się zapisać preferencji osi. Zachowano podgląd.'); return }
+    ustawKomunikatOsi('Zapisano własny widok osi. Godziny pracy pozostają bez zmian.')
+    zamknijUstawieniaOsi()
+  }
+
+  useEffect(() => {
     const identyfikator = window.setInterval(() => { ustawTeraz(new Date()); odswiezDanePulpitu() }, 60_000)
     function odswiezDanePulpitu() { ustawStan(pobierzStanPulpitu()) }
     window.addEventListener('focus', odswiezDanePulpitu)
     window.addEventListener('storage', odswiezDanePulpitu)
+    window.addEventListener(zdarzenieZmianyRejestruDokumentow, odswiezDanePulpitu)
     window.addEventListener(zdarzenieZmianyUstawienAplikacji, odswiezDanePulpitu)
     return () => {
       window.clearInterval(identyfikator)
       window.removeEventListener('focus', odswiezDanePulpitu)
       window.removeEventListener('storage', odswiezDanePulpitu)
+      window.removeEventListener(zdarzenieZmianyRejestruDokumentow, odswiezDanePulpitu)
       window.removeEventListener(zdarzenieZmianyUstawienAplikacji, odswiezDanePulpitu)
     }
   }, [])
@@ -560,6 +597,8 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
   const paczki = useMemo(() => zbudujWysylkiMonitora(pobierzSzczegolyDoChecklisty(), pobierzChecklistyPaczek(), stan.wyslanePaczki).filter((paczka) => !paczka.wlascicielId || paczka.wlascicielId === wybranyUzytkownikId), [stan.wyslanePaczki, wybranyUzytkownikId])
   const zadaniaAktywneDnia = zadania.filter((zadanie) => zadanie.status === 'OTWARTE' && czyZadanieDotyczyDnia(zadanie, data))
   const zadaniaGodzinowe = pobierzZadaniaDeadline(zadaniaAktywneDnia, data, teraz, zakresDniaPracy)
+  const zadaniaNaOsi = zadaniaGodzinowe.filter((zadanie) => czyGodzinaWOsi(pobierzGodzineMarkeraZadania(zadanie, zakresDniaPracy)!, zakresDniaPracy))
+  const zadaniaPozaOsia = zadaniaGodzinowe.filter((zadanie) => !zadaniaNaOsi.includes(zadanie))
   const zadaniaWykonane = zadania.filter((zadanie) => zadanie.status === 'WYKONANE' && czyZadanieDotyczyDnia(zadanie, data))
   const pilne = zadania.filter((zadanie) => zadanie.status === 'OTWARTE' && (zadanie.priorytet === 'PILNE' || zadanie.priorytet === 'ASAP' || czyZadanieOpoznione(zadanie, teraz, zakresDniaPracy)))
   const liczniki = obliczLicznikiPulpitu(zadania, paczki, teraz, data, zakresDniaPracy)
@@ -567,11 +606,11 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
   const liczbaAktywnychZapotrzebowanZakupowych = obliczLiczbeAktywnychZapotrzebowanZakupowych(stan.zapotrzebowaniaZakupowe)
   const czyObserwowanyJestZalogowanym = wybranyUzytkownikId === zalogowanyUzytkownik?.id
   const wskaznikCzasu = pobierzStanWskaznikaCzasu(teraz, zakresDniaPracy)
-  const etykietyOsi = pobierzEtykietyOsiCzasu(zakresDniaPracy)
-  const czyWybranyDzienPracy = czyDzienPracy(new Date(data + 'T12:00:00'), zakresDniaPracy)
+  const etykietyOsi = pobierzEtykietyOsiCzasu(zakresDniaPracy, szerokoscOsi)
+  const czyWybranyDzienPracy = czyDzienPracy(data, zakresDniaPracy)
   const graniceDniaPracy = pobierzGraniceDniaPracyNaOsi(zakresDniaPracy)
   const blokiPracy = ustawieniaAplikacji.pulpit.harmonogramPracy.blokiPracy
-  const blokiDnia = blokiNaDzien(blokiPracy, data)
+  const blokiDnia = blokiNaDzien(blokiPracy, data, daneRutyn.kalendarzPracy, wybranyUzytkownikId)
   const oknoKuriera = oknoKurieraNaDzien(ustawieniaAplikacji.pulpit.harmonogramPracy.kurier, data)
   const opisKuriera = oknoKuriera ? `Spodziewany odbiór kuriera: ${oknoKuriera.poczatek}–${oknoKuriera.koniec}. Orientacyjny przedział, bez potwierdzenia przyjazdu.` : ''
 
@@ -902,28 +941,35 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
         <div><h2 id="plan-dnia">Plan dnia</h2><p>{formatujDate(data)}</p></div>
         <div className="pulpit-nawigacja-daty">
           <Przycisk className="pulpit-nawigacja-daty__strzalka" aria-label="Poprzedni dzień" onClick={() => ustawDate(przesunDate(data, -1))} type="button">&lsaquo;</Przycisk>
-          <Przycisk className="pulpit-nawigacja-daty__dzisiaj" onClick={() => ustawDate(dataTekstowa(new Date()))} type="button">Dzisiaj</Przycisk>
+          <Przycisk className="pulpit-nawigacja-daty__dzisiaj" onClick={() => ustawDate(dataWarszawska(new Date()))} type="button">Dzisiaj</Przycisk>
           <Przycisk className="pulpit-nawigacja-daty__strzalka" aria-label="Następny dzień" onClick={() => ustawDate(przesunDate(data, 1))} type="button">&rsaquo;</Przycisk>
           <input aria-label="Wybierz datę planu" onChange={(zdarzenie) => ustawDate(zdarzenie.target.value)} type="date" value={data} />
         </div>
+        <button ref={przyciskOsiRef} className="pulpit-dostosuj-os" type="button" aria-expanded={roboczaOs !== null} aria-controls="pulpit-panel-osi" onClick={() => { ustawPelnaOs(false); ustawRoboczaOs({ ...zapisanaOs }); ustawKomunikatOsi('') }}>⚙ Dostosuj oś</button>
       </div>
-      <div className="pulpit-os-czasu__przewijanie" tabIndex={0} role="region" aria-label="Oś dnia — przewijanie poziome"><div className="pulpit-os-czasu" aria-label={czyWybranyDzienPracy ? 'Dobowa oś czasu od 00:00 do 23:59; dzień pracy od ' + zakresDniaPracy.poczatek + ' do ' + zakresDniaPracy.koniec : 'Dobowa oś czasu od 00:00 do 23:59; dzień wolny'}>
+      {roboczaOs && <form id="pulpit-panel-osi" className="pulpit-panel-osi" aria-label="Dostosuj oś" onSubmit={zapiszUstawieniaOsi} onKeyDown={(zdarzenie) => { if (zdarzenie.key === 'Escape') { zdarzenie.stopPropagation(); zamknijUstawieniaOsi() } }}>
+        <PolaOsiCzasu wartosc={roboczaOs} zmien={ustawRoboczaOs} praca={godzinyPracy} />
+        <div className="pulpit-panel-osi__akcje"><Przycisk type="button" onClick={() => ustawRoboczaOs(normalizujOsCzasu(undefined, godzinyPracy))}>Przywróć domyślne</Przycisk><Przycisk type="submit" disabled={walidujOsCzasu(roboczaOs, godzinyPracy).length > 0}>Zapisz</Przycisk><Przycisk type="button" onClick={zamknijUstawieniaOsi}>Anuluj</Przycisk></div>
+      </form>}
+      {komunikatOsi && <p role="status">{komunikatOsi}</p>}
+      {data === dataWarszawska(teraz) && !czyTerazWOsi(teraz, zakresDniaPracy) && <p className="pulpit-czas-poza-osia" role="status">Teraz {new Intl.DateTimeFormat('pl-PL', { timeZone: 'Europe/Warsaw', hour: '2-digit', minute: '2-digit' }).format(teraz)} · {wskaznikCzasu.etykieta} · poza zakresem osi</p>}
+      <div ref={kontenerOsiRef} className="pulpit-os-czasu__przewijanie" tabIndex={0} role="region" aria-label="Oś dnia — przewijanie poziome"><div className="pulpit-os-czasu" aria-label={`Oś czasu od ${osCzasu.poczatek} do ${osCzasu.koniec}; ` + (czyWybranyDzienPracy ? 'dzień pracy od ' + zakresDniaPracy.poczatek + ' do ' + zakresDniaPracy.koniec : 'dzień wolny')}>
         <div className="pulpit-os-czasu__miniatury">
-          {zadaniaGodzinowe.map((zadanie) => <MiniaturaZadaniaNaOsi key={'miniatura-' + zadanie.id} otworz={() => otworzZadanie(zadanie)} zakresDniaPracy={zakresDniaPracy} zadanie={zadanie} />)}
+          {zadaniaNaOsi.map((zadanie) => <MiniaturaZadaniaNaOsi key={'miniatura-' + zadanie.id} otworz={() => otworzZadanie(zadanie)} zakresDniaPracy={zakresDniaPracy} zadanie={zadanie} />)}
         </div>
         <div className="pulpit-os-czasu__linia">
           {czyWybranyDzienPracy ? <><div className="pulpit-os-czasu__odcinek pulpit-os-czasu__odcinek--przed-praca" style={{ width: graniceDniaPracy.poczatek + '%' }} />
           <div className="pulpit-os-czasu__odcinek pulpit-os-czasu__odcinek--praca" style={{ left: graniceDniaPracy.poczatek + '%', width: graniceDniaPracy.koniec - graniceDniaPracy.poczatek + '%' }} />
           <div className="pulpit-os-czasu__odcinek pulpit-os-czasu__odcinek--po-pracy" style={{ left: graniceDniaPracy.koniec + '%', width: 100 - graniceDniaPracy.koniec + '%' }} /></> : <div className="pulpit-os-czasu__odcinek pulpit-os-czasu__odcinek--po-pracy" style={{ width: '100%' }} />}
-          {blokiDnia.map((blok, indeks) => {
+          {blokiDnia.filter((blok) => blok.koniec > osCzasu.poczatek && blok.poczatek < osCzasu.koniec).map((blok, indeks) => {
             const poczatek = pozycjaGodzinyNaOsi(blok.poczatek, zakresDniaPracy)
             const koniec = pozycjaGodzinyNaOsi(blok.koniec, zakresDniaPracy)
             const opis = blok.nazwa + ': ' + blok.poczatek + '–' + blok.koniec
             return <span key={blok.id} tabIndex={0} aria-label={opis} title={opis} className={'pulpit-blok-pracy pulpit-blok-pracy--' + indeks % 3} style={{ left: poczatek + '%', width: koniec - poczatek + '%' }}><span>{blok.nazwa}</span><span className="pulpit-blok-pracy__podpowiedz" role="tooltip">{opis}</span></span>
           })}
-          {oknoKuriera && <span tabIndex={0} role="note" aria-label={opisKuriera} title={opisKuriera} className="pulpit-okno-kuriera" style={{ left: pozycjaGodzinyNaOsi(oknoKuriera.poczatek, zakresDniaPracy) + '%', width: pozycjaGodzinyNaOsi(oknoKuriera.koniec, zakresDniaPracy) - pozycjaGodzinyNaOsi(oknoKuriera.poczatek, zakresDniaPracy) + '%' }}><span className="pulpit-okno-kuriera__podpowiedz" role="tooltip">{opisKuriera}</span></span>}
+          {oknoKuriera && oknoKuriera.koniec > osCzasu.poczatek && oknoKuriera.poczatek < osCzasu.koniec && <span tabIndex={0} role="note" aria-label={opisKuriera} title={opisKuriera} className="pulpit-okno-kuriera" style={{ left: pozycjaGodzinyNaOsi(oknoKuriera.poczatek, zakresDniaPracy) + '%', width: pozycjaGodzinyNaOsi(oknoKuriera.koniec, zakresDniaPracy) - pozycjaGodzinyNaOsi(oknoKuriera.poczatek, zakresDniaPracy) + '%' }}><span className="pulpit-okno-kuriera__podpowiedz" role="tooltip">{opisKuriera}</span></span>}
           <div className="pulpit-os-czasu__postep" style={{ width: wskaznikCzasu.pozycja + '%' }} />
-          {data === dataTekstowa(teraz) && <div className="pulpit-os-czasu__wskaznik" style={{ left: wskaznikCzasu.pozycja + '%' }}>
+          {data === dataWarszawska(teraz) && czyTerazWOsi(teraz, zakresDniaPracy) && <div className="pulpit-os-czasu__wskaznik" style={{ left: wskaznikCzasu.pozycja + '%' }}>
             <span className={'pulpit-os-czasu__etykieta-teraz pulpit-os-czasu__etykieta-teraz--' + wskaznikCzasu.wyrownanieEtykiety.toLocaleLowerCase('pl')}>{wskaznikCzasu.etykieta}</span>
           </div>}
         </div>
@@ -933,12 +979,14 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
             const klasaKrawedzi = pozycja <= 5 ? ' pulpit-os-czasu__etykieta--lewo' : pozycja >= 95 ? ' pulpit-os-czasu__etykieta--prawo' : ''
             return <span className={'pulpit-os-czasu__etykieta' + klasaKrawedzi} key={etykieta} style={{ left: pozycja + '%' }}>{etykieta}</span>
           })}
-          {czyWybranyDzienPracy ? <><span className="pulpit-os-czasu__etykieta-pracy" style={{ left: graniceDniaPracy.poczatek + '%' }}>Start pracy {zakresDniaPracy.poczatek}</span>
-          <span className="pulpit-os-czasu__etykieta-pracy" style={{ left: graniceDniaPracy.koniec + '%' }}>Koniec pracy {zakresDniaPracy.koniec}</span></> : <span className="pulpit-os-czasu__etykieta-pracy" style={{ left: 0 }}>Dzień wolny</span>}
+          {czyWybranyDzienPracy ? <><span className="pulpit-os-czasu__etykieta-pracy" style={{ left: graniceDniaPracy.poczatek + '%', transform: graniceDniaPracy.poczatek < 15 ? 'none' : undefined }}>Start pracy {zakresDniaPracy.poczatek}</span>
+          <span className="pulpit-os-czasu__etykieta-pracy" style={{ left: graniceDniaPracy.koniec + '%', transform: graniceDniaPracy.koniec > 85 ? 'translateX(-100%)' : undefined, top: (graniceDniaPracy.koniec - graniceDniaPracy.poczatek) * szerokoscOsi / 100 < 250 ? 34 : undefined }}>Koniec pracy {zakresDniaPracy.koniec}</span></> : <span className="pulpit-os-czasu__etykieta-pracy" style={{ left: 0, transform: 'none' }}>Dzień wolny</span>}
         </div>
-        <div className="pulpit-os-czasu__zadania">{zadaniaGodzinowe.map((zadanie) => <MarkerDeadline key={zadanie.id} otworz={() => otworzZadanie(zadanie)} zakresDniaPracy={zakresDniaPracy} uzytkownicy={uzytkownicy} zadanie={zadanie} />)}</div>
+        <div className="pulpit-os-czasu__zadania">{zadaniaNaOsi.map((zadanie) => <MarkerDeadline key={zadanie.id} otworz={() => otworzZadanie(zadanie)} zakresDniaPracy={zakresDniaPracy} uzytkownicy={uzytkownicy} zadanie={zadanie} />)}</div>
         <RutynyNaOsi blokiPracy={blokiPracy} daneRutyn={daneRutyn} data={data} uzytkownikId={wybranyUzytkownikId} zakresDniaPracy={zakresDniaPracy} otworz={(id) => { ustawWybranaRutyneId(id); window.setTimeout(() => document.getElementById('podsumowanie-rutyn')?.scrollIntoView({ block: 'start' }), 0) }} />
       </div></div>
+      {zadaniaPozaOsia.length > 0 && <details className="pulpit-poza-osia"><summary>Zadania poza zakresem osi ({zadaniaPozaOsia.length})</summary><ul>{zadaniaPozaOsia.map((zadanie) => { const godzina = pobierzGodzineMarkeraZadania(zadanie, zakresDniaPracy)!; return <li key={zadanie.id}><Przycisk type="button" onClick={() => otworzZadanie(zadanie)}>{godzina < osCzasu.poczatek ? 'Przed' : 'Po'} zakresem · {godzina} · {zadanie.tytul}</Przycisk></li> })}</ul></details>}
+      {!roboczaOs && <Przycisk className="pulpit-pelna-os" type="button" onClick={() => ustawPelnaOs(!pelnaOs)}>{pelnaOs ? 'Wróć do zapisanego zakresu' : 'Pokaż pełną dobę jednorazowo'}</Przycisk>}
 
 
       <div className="pulpit-podsekcja">
@@ -1068,6 +1116,8 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
     {pokazPaczki && <MonitorWysylek
       key={wybranyUzytkownikId}
       wysylki={paczki}
+      uzytkownikId={zalogowanyUzytkownik?.id ?? null}
+      otworzDokument={otworzDokument}
       czyMozeWysylac={czyMozeWysylac(zalogowanyUzytkownik)}
       teraz={teraz}
       otworzSzkolenie={otworzRekordZrodlowy}

@@ -11,7 +11,7 @@ import './rutyny.css'
 type Zakladka = 'Dzisiaj' | 'Ten tydzień' | 'Historia' | 'Zarządzaj rutynami'
 type Formularz = { id: string; tytul: string; opis: string; instrukcja: string; link: string; wlascicielId: string; priorytet: 'ZWYKLE' | 'PILNE'; rodzaj: HarmonogramRutyny['rodzaj']; dni: number[]; liczba: number; od: string; aktywna: boolean; godzina: string; blokPracyId: string; planowanyCzas: 'GODZINA' | 'BLOK' | 'BEZ_CZASU' }
 const dniTygodnia = [{ numer: 1, nazwa: 'Pn' }, { numer: 2, nazwa: 'Wt' }, { numer: 3, nazwa: 'Śr' }, { numer: 4, nazwa: 'Cz' }, { numer: 5, nazwa: 'Pt' }, { numer: 6, nazwa: 'Sb' }, { numer: 0, nazwa: 'Nd' }]
-function pustyFormularz(wlascicielId: string, dzisiaj: string): Formularz { return { id: '', tytul: '', opis: '', instrukcja: '', link: '', wlascicielId, priorytet: 'ZWYKLE', rodzaj: 'CODZIENNIE', dni: [], liczba: 3, od: dzisiaj, aktywna: true, godzina: '', blokPracyId: '', planowanyCzas: 'BEZ_CZASU' } }
+function pustyFormularz(wlascicielId: string, dzisiaj: string): Formularz { return { id: '', tytul: '', opis: '', instrukcja: '', link: '', wlascicielId, priorytet: 'ZWYKLE', rodzaj: 'DNI_ROBOCZE', dni: [], liczba: 3, od: dzisiaj, aktywna: true, godzina: '', blokPracyId: '', planowanyCzas: 'BEZ_CZASU' } }
 
 function Pasek({ wystapienia }: { wystapienia: WystapienieRutyny[] }) {
   const postep = obliczPostep(wystapienia)
@@ -22,7 +22,7 @@ function Pasek({ wystapienia }: { wystapienia: WystapienieRutyny[] }) {
 
 export default function WidokRutyn({ otworzMonitor, daneRutyn, wybranaRutynaId, zamknijSzczegoly }: { otworzMonitor: () => void; daneRutyn: ReturnType<typeof useRutynyPulpitu>; wybranaRutynaId: string | null; zamknijSzczegoly: () => void }) {
   const { zalogowanyUzytkownik, aktywniUzytkownicy } = useKontekstUzytkownika()
-  const { stan, odswiez } = daneRutyn
+  const { stan, odswiez, kalendarzPracy } = daneRutyn
   const blokiPracy = pobierzUstawieniaAplikacji().pulpit.harmonogramPracy.blokiPracy
   const [blad, ustawBlad] = useState('')
   const dzisiaj = dataWarszawska(new Date())
@@ -37,10 +37,10 @@ export default function WidokRutyn({ otworzMonitor, daneRutyn, wybranaRutynaId, 
   if (!czyPracownik || !zalogowanyUzytkownik) return null
   const uzytkownik = zalogowanyUzytkownik
   const widoczne = (wystapienia: WystapienieRutyny[]) => wystapienia.filter((wpis) => { const rutyna = stan.rutyny.find((pozycja) => pozycja.id === wpis.rutynaId); return rutyna && ((czyAdmin && zakres === 'ZESPOL') || wlascicielWystapienia(rutyna, wpis) === uzytkownik.id) })
-  const dzienne = widoczne(wystapieniaDnia(stan.rutyny, stan.wykonania, dzisiaj))
-  const tygodniowe = widoczne(wystapieniaTygodnia(stan.rutyny, stan.wykonania, dzisiaj))
-  const zalegleDni = Array.from({ length: 30 }, (_, indeks) => dodajDni(dzisiaj, -indeks - 1)).flatMap((data) => widoczne(wystapieniaDnia(stan.rutyny, stan.wykonania, data))).filter((wpis) => !wpis.wykonane)
-  const zalegleCele = Array.from({ length: 4 }, (_, indeks) => dodajDni(poczatekTygodnia(dzisiaj), -7 * (indeks + 1))).flatMap((data) => widoczne(wystapieniaTygodnia(stan.rutyny, stan.wykonania, data))).filter((wpis) => wpis.numer > 0 && !wpis.wykonane)
+  const dzienne = widoczne(wystapieniaDnia(stan.rutyny, stan.wykonania, dzisiaj, kalendarzPracy))
+  const tygodniowe = widoczne(wystapieniaTygodnia(stan.rutyny, stan.wykonania, dzisiaj, kalendarzPracy))
+  const zalegleDni = Array.from({ length: 30 }, (_, indeks) => dodajDni(dzisiaj, -indeks - 1)).flatMap((data) => widoczne(wystapieniaDnia(stan.rutyny, stan.wykonania, data, kalendarzPracy))).filter((wpis) => !wpis.wykonane)
+  const zalegleCele = Array.from({ length: 4 }, (_, indeks) => dodajDni(poczatekTygodnia(dzisiaj), -7 * (indeks + 1))).flatMap((data) => widoczne(wystapieniaTygodnia(stan.rutyny, stan.wykonania, data, kalendarzPracy))).filter((wpis) => wpis.numer > 0 && !wpis.wykonane)
   const zalegle = [...zalegleDni, ...zalegleCele]
   function wykonaj(wpis: WystapienieRutyny, wartosc: boolean) { try { zmienWykonanieRutyny(wpis, wartosc, uzytkownik); odswiez(); ustawBlad('') } catch (wyjatek) { ustawBlad(wyjatek instanceof Error ? wyjatek.message : 'Nie udało się zmienić rutyny.') } }
   function edytuj(rutyna: Rutyna) {
@@ -50,7 +50,7 @@ export default function WidokRutyn({ otworzMonitor, daneRutyn, wybranaRutynaId, 
   }
   function zapiszFormularz(zdarzenie: FormEvent) {
     zdarzenie.preventDefault(); if (!formularz) return
-    const harmonogram: HarmonogramRutyny = formularz.rodzaj === 'CODZIENNIE' ? { rodzaj: 'CODZIENNIE' } : formularz.rodzaj === 'DNI_TYGODNIA' ? { rodzaj: 'DNI_TYGODNIA', dni: formularz.dni } : { rodzaj: 'CEL_TYGODNIOWY', liczba: formularz.liczba }
+    const harmonogram: HarmonogramRutyny = formularz.rodzaj === 'DNI_ROBOCZE' ? { rodzaj: 'DNI_ROBOCZE' } : formularz.rodzaj === 'CODZIENNIE' ? { rodzaj: 'CODZIENNIE' } : formularz.rodzaj === 'DNI_TYGODNIA' ? { rodzaj: 'DNI_TYGODNIA', dni: formularz.dni } : { rodzaj: 'CEL_TYGODNIOWY', liczba: formularz.liczba }
     const rutyna: Rutyna = { id: formularz.id || crypto.randomUUID(), tytul: formularz.tytul, opis: formularz.opis, instrukcja: formularz.instrukcja, link: formularz.link, wlascicielId: formularz.wlascicielId, priorytet: formularz.priorytet, wersje: [{ od: formularz.od, aktywna: formularz.aktywna, ...(formularz.planowanyCzas === 'GODZINA' && formularz.rodzaj !== 'CEL_TYGODNIOWY' ? { godzina: formularz.godzina } : {}), ...(formularz.planowanyCzas === 'BLOK' && formularz.rodzaj !== 'CEL_TYGODNIOWY' ? { blokPracyId: formularz.blokPracyId } : {}), harmonogram }] }
     try { zapiszRutyne(rutyna, uzytkownik); odswiez(); ustawFormularz(null); ustawBlad('') } catch (wyjatek) { ustawBlad(wyjatek instanceof Error ? wyjatek.message : 'Nie udało się zapisać rutyny.') }
   }
@@ -80,7 +80,8 @@ export default function WidokRutyn({ otworzMonitor, daneRutyn, wybranaRutynaId, 
           <label>Link (HTTP lub HTTPS)<input type="url" value={formularz.link} onChange={(zdarzenie) => ustawFormularz({ ...formularz, link: zdarzenie.target.value })} /></label>
           {czyAdmin && <label>Przypisanie<select value={formularz.wlascicielId} onChange={(zdarzenie) => ustawFormularz({ ...formularz, wlascicielId: zdarzenie.target.value })}>{aktywniUzytkownicy.filter(czyJestPracownikiemWewnetrznym).map((osoba) => <option value={osoba.id} key={osoba.id}>{pobierzNazweWyswietlanaUzytkownika(osoba)}</option>)}</select></label>}
           <label>Priorytet<select value={formularz.priorytet} onChange={(zdarzenie) => ustawFormularz({ ...formularz, priorytet: zdarzenie.target.value === 'PILNE' ? 'PILNE' : 'ZWYKLE' })}><option value="ZWYKLE">Zwykły</option><option value="PILNE">Pilny</option></select></label>
-          <label>Częstotliwość<select value={formularz.rodzaj} onChange={(zdarzenie) => ustawFormularz({ ...formularz, rodzaj: zdarzenie.target.value as HarmonogramRutyny['rodzaj'] })}><option value="CODZIENNIE">Codziennie</option><option value="DNI_TYGODNIA">Wybrane dni tygodnia</option><option value="CEL_TYGODNIOWY">N razy w tygodniu</option></select></label>
+          <label>Częstotliwość<select value={formularz.rodzaj} onChange={(zdarzenie) => ustawFormularz({ ...formularz, rodzaj: zdarzenie.target.value as HarmonogramRutyny['rodzaj'] })}><option value="DNI_ROBOCZE">Dni robocze (domyślna)</option><option value="CODZIENNIE">Codziennie</option><option value="DNI_TYGODNIA">Wybrane dni tygodnia</option><option value="CEL_TYGODNIOWY">N razy w tygodniu</option></select></label>
+          {formularz.rodzaj === 'DNI_ROBOCZE' && <p>Rutyna wykonywana w zaplanowane dni pracy, z pominięciem świąt, urlopów i innych dni wolnych</p>}
           {formularz.rodzaj === 'DNI_TYGODNIA' && <fieldset><legend>Dni tygodnia</legend>{dniTygodnia.map((dzien) => <label key={dzien.numer}><input type="checkbox" checked={formularz.dni.includes(dzien.numer)} onChange={(zdarzenie) => ustawFormularz({ ...formularz, dni: zdarzenie.target.checked ? [...formularz.dni, dzien.numer] : formularz.dni.filter((numer) => numer !== dzien.numer) })} /> {dzien.nazwa}</label>)}</fieldset>}
           {formularz.rodzaj === 'CEL_TYGODNIOWY' && <label>Razy w tygodniu<input type="number" min="1" max="50" required value={formularz.liczba} onChange={(zdarzenie) => ustawFormularz({ ...formularz, liczba: Number(zdarzenie.target.value) })} /></label>}
           {formularz.rodzaj !== 'CEL_TYGODNIOWY' && <>

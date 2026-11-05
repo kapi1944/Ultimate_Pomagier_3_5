@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict'
 import { blokiNaDzien, domyslnyHarmonogramPracy, normalizujHarmonogramPracy, oknoKurieraNaDzien, walidujHarmonogramPracy } from '../src/moduly/zamkniete/pulpit/logika/harmonogramPracy'
-import { pozycjaGodzinyNaOsi } from '../src/moduly/zamkniete/pulpit/logika/czasDnia'
+import { czyGodzinaWOsi, czyTerazWOsi, domyslnaOsCzasu, normalizujOsCzasu, pobierzEtykietyOsiCzasu, pozycjaGodzinyNaOsi, walidujOsCzasu } from '../src/moduly/zamkniete/pulpit/logika/czasDnia'
 import { normalizujUstawieniaAplikacji } from '../src/aplikacja/ustawienia/modelUstawienAplikacji'
-import { eksportujUstawieniaAplikacji, importujUstawieniaAplikacji, kluczUstawienAplikacji, pobierzUstawieniaAplikacji, zapiszUstawieniaAplikacji } from '../src/aplikacja/ustawienia/magazynUstawienAplikacji'
+import { eksportujUstawieniaAplikacji, importujUstawieniaAplikacji, kluczUstawienAplikacji, pobierzUstawieniaAplikacji, zapiszOsUzytkownika, zapiszUstawieniaAplikacji } from '../src/aplikacja/ustawienia/magazynUstawienAplikacji'
 import { wystapieniaDnia, type Rutyna } from '../src/moduly/zamkniete/pulpit/logika/rutyny'
 import { pobierzRutyny, zapiszRutyne, zmienWykonanieRutyny } from '../src/moduly/zamkniete/pulpit/uslugi/rutynyPulpitu'
 import type { Uzytkownik } from '../src/kartoteki/uzytkownicy/typyUzytkownikow'
@@ -100,3 +100,66 @@ assert.equal(pobierzRutyny().rutyny.length, 1)
 assert.equal(wystapieniaDnia(pobierzRutyny().rutyny, [], '2026-11-01')[0].blokPracyId, 'paczkowanie')
 assert.equal(blokiNaDzien(pobierzUstawieniaAplikacji().pulpit.harmonogramPracy.blokiPracy, '2026-11-01').length, 0)
 console.log('Harmonogram pracy: bloki, dni, kurier, granice, wyjątki, zgodność storage i synchronizacja rutyn — OK')
+
+// Prezentacja czasu nie modyfikuje godzin pracy ani terminów.
+const praca = { poczatek: '07:45', koniec: '16:00' }
+assert.deepEqual(domyslnaOsCzasu, { poczatek: '06:00', koniec: '18:00', skalaPozaPraca: 25 })
+assert.deepEqual(normalizujOsCzasu(undefined), domyslnaOsCzasu)
+for (const skalaPozaPraca of [10, 25, 50, 100]) {
+  const zakres = { ...praca, osCzasu: { ...domyslnaOsCzasu, skalaPozaPraca } }
+  const jednostki = 495 + 225 * skalaPozaPraca / 100
+  assert.equal(pozycjaGodzinyNaOsi('06:00', zakres), 0)
+  assert.equal(pozycjaGodzinyNaOsi('18:00', zakres), 100)
+  assert.ok(Math.abs(pozycjaGodzinyNaOsi('07:45', zakres) - 105 * skalaPozaPraca / jednostki) < 1e-9)
+  assert.ok(Math.abs(pozycjaGodzinyNaOsi('16:00', zakres) - (105 * skalaPozaPraca / 100 + 495) / jednostki * 100) < 1e-9)
+  const pozaPraca = pozycjaGodzinyNaOsi('07:00', zakres) - pozycjaGodzinyNaOsi('06:00', zakres)
+  const podczasPracy = pozycjaGodzinyNaOsi('10:00', zakres) - pozycjaGodzinyNaOsi('09:00', zakres)
+  assert.ok(Math.abs(pozaPraca / podczasPracy - skalaPozaPraca / 100) < 1e-9)
+  const etykiety = pobierzEtykietyOsiCzasu(zakres, 720)
+  assert.equal(etykiety[0], '06:00')
+  assert.equal(etykiety.at(-1), '18:00')
+  assert.equal(new Set(etykiety).size, etykiety.length)
+  for (let indeks = 1; indeks < etykiety.length; indeks++) assert.ok((pozycjaGodzinyNaOsi(etykiety[indeks], zakres) - pozycjaGodzinyNaOsi(etykiety[indeks - 1], zakres)) / 100 * 720 >= 76 - 1e-9)
+  assert.ok(pobierzEtykietyOsiCzasu(zakres, 300).length < pobierzEtykietyOsiCzasu(zakres, 1500).length)
+}
+const dokladnaOs = { ...praca, osCzasu: { ...praca, skalaPozaPraca: 10 } }
+assert.equal(pozycjaGodzinyNaOsi(praca.poczatek, dokladnaOs), 0)
+assert.equal(pozycjaGodzinyNaOsi(praca.koniec, dokladnaOs), 100)
+assert.equal(czyGodzinaWOsi('05:59', dokladnaOs), false)
+assert.equal(czyGodzinaWOsi('20:00', dokladnaOs), false)
+assert.equal(czyTerazWOsi(new Date('2026-11-02T05:00:00'), dokladnaOs), false)
+for (const os of [{ ...domyslnaOsCzasu, poczatek: '08:00' }, { ...domyslnaOsCzasu, koniec: '15:00' }, { ...domyslnaOsCzasu, poczatek: '18:00', koniec: '06:00' }, { ...domyslnaOsCzasu, koniec: '24:00' }, { ...domyslnaOsCzasu, skalaPozaPraca: 0 }, { ...domyslnaOsCzasu, skalaPozaPraca: 11 }, { ...domyslnaOsCzasu, skalaPozaPraca: NaN }]) {
+  assert.ok(walidujOsCzasu(os, praca).length)
+  for (const godzina of ['06:00', '12:00', '23:59', 'błąd']) assert.ok(Number.isFinite(pozycjaGodzinyNaOsi(godzina, { ...praca, osCzasu: os })))
+}
+
+const zgodneUstawienia = pobierzUstawieniaAplikacji()
+const przedPreferencja = structuredClone(zgodneUstawienia)
+const terminyPrzed = structuredClone(pobierzRutyny())
+assert.equal(zapiszOsUzytkownika({ ...domyslnaOsCzasu, skalaPozaPraca: 100 }, pracownik), true)
+assert.deepEqual(pobierzUstawieniaAplikacji().pulpit.osCzasu, przedPreferencja.pulpit.osCzasu)
+assert.equal(pobierzUstawieniaAplikacji().pulpit.osieUzytkownikow.u.skalaPozaPraca, 100)
+assert.equal(pobierzUstawieniaAplikacji().pulpit.poczatekDnia, przedPreferencja.pulpit.poczatekDnia)
+assert.deepEqual(pobierzRutyny(), terminyPrzed)
+assert.equal(zapiszOsUzytkownika(domyslnaOsCzasu, null), false)
+assert.equal(zapiszOsUzytkownika(domyslnaOsCzasu, { ...pracownik, status: 'NIEAKTYWNY' }), false)
+const przedBledem = magazyn.get(kluczUstawienAplikacji)
+const blednaOs = { ...zgodneUstawienia, pulpit: { ...zgodneUstawienia.pulpit, osCzasu: { ...domyslnaOsCzasu, poczatek: '09:00' } } }
+assert.equal(zapiszUstawieniaAplikacji(blednaOs), false)
+assert.equal(importujUstawieniaAplikacji(JSON.stringify(blednaOs)).ok, false)
+assert.equal(magazyn.get(kluczUstawienAplikacji), przedBledem)
+const noweGodziny = pobierzUstawieniaAplikacji()
+noweGodziny.pulpit.poczatekDnia = '05:00'
+noweGodziny.pulpit.koniecDnia = '20:00'
+assert.equal(zapiszUstawieniaAplikacji(noweGodziny), true)
+assert.equal(pobierzUstawieniaAplikacji().pulpit.osCzasu.poczatek, '05:00')
+assert.equal(pobierzUstawieniaAplikacji().pulpit.osCzasu.koniec, '20:00')
+assert.equal(pobierzUstawieniaAplikacji().pulpit.osieUzytkownikow.u.koniec, '20:00')
+assert.equal(importujUstawieniaAplikacji(eksportujUstawieniaAplikacji()).ok, true)
+const stareOsie = importujUstawieniaAplikacji(JSON.stringify({ wersja: 1, pulpit: { poczatekDnia: '04:00', koniecDnia: '21:00' } }))
+assert.equal(stareOsie.ok, true)
+if (stareOsie.ok) {
+  assert.equal(stareOsie.ustawienia.pulpit.poczatekDnia, '04:00')
+  assert.deepEqual(stareOsie.ustawienia.pulpit.osCzasu, { poczatek: '04:00', koniec: '21:00', skalaPozaPraca: 25 })
+}
+console.log('Oś czasu: współrzędne, 10–100%, walidacja, etykiety, preferencje użytkownika i zgodność ustawień — OK')

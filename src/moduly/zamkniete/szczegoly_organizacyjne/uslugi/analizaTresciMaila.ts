@@ -12,6 +12,7 @@ export const etykietyPolMaila = {
 const etykietyDzielone = [...Object.values(etykietyPolMaila).flat(),
   'Materiały na adres', 'Materiały wysłać na adres', 'Adres wysyłki', 'Adres dostawy', 'Adres do wysyłki', 'Wysyłka materiałów', 'Materiały szkoleniowe wysłać do', 'Przesyłka na adres', 'Paczka na adres', 'Adres odbiorcy',
   'Dane osoby kontaktowej', 'Kontakt po stronie klienta', 'Osoba do kontaktu', 'Opiekun szkolenia', 'Opiekun projektu', 'Osoba odpowiedzialna',
+  'Raport na adres', 'Email nabywcy', 'E-mail nabywcy', 'Email odbiorcy', 'E-mail odbiorcy', 'Adres e-mail', 'E-mail', 'Email', 'Mail',
   'Materiały szkoleniowe', 'Lista obecności', 'Materiały dodatkowe', 'Nazwa odbiorcy', 'Osoba kontaktowa',
   'Miejsce szkolenia', 'Miejsce szkolenia zapewnione przez Zamawiającego', 'Sala szkoleniowa zapewniona przez Zamawiającego',
   'Cena netto', 'Cena brutto', 'Wartość netto', 'Oświadczenie VAT', 'Termin płatności', 'Tytuł szkolenia', 'Program szkolenia',
@@ -125,6 +126,7 @@ export function normalizujTrescMaila(tresc: string, zachowajFormatowanie = false
     .replace(/\r\n?/g, '\n')
     .replace(/[\u2028\u2029]/g, '\n')
     .replace(/<!--[\s\S]*?-->|<(style|script)\b[^>]*>[\s\S]*?<\/\1>/gi, '')
+    .replace(/<a\b[^>]*\bhref\s*=\s*["']mailto:([^"'?]+)(?:\?[^"']*)?["'][^>]*>([\s\S]*?)<\/a>/gi, (_calosc, adres: string, opis: string) => opis.includes('@') ? opis : adres)
     .replace(/<t[dh]\b[^>]*>([\s\S]*?)<\/t[dh]>/gi, (_calosc, zawartosc: string) => `${zawartosc}\t`)
     .replace(/<(?:br|hr)\b[^>]*>|<\/?(?:p|div|tr|td|th|table|li|h[1-6])\b[^>]*>/gi, '\n')
     .replace(/<\/?[a-z][a-z\d:-]*(?:\s[^<>]*)?\s*\/?>/gi, '')
@@ -136,8 +138,7 @@ export function normalizujTrescMaila(tresc: string, zachowajFormatowanie = false
     .replace(/[\u200b\uFEFF\u00ad]|\u200c|\u200d/g, '')
   if (zachowajFormatowanie) return tekst
   return scalPodzieloneEtykiety(tekst
-    .replace(/\*\*|__/g, '')
-    .replace(/\|/g, '\t')
+    .replace(/[^\s<>()[\]",;:]+@[^\s<>()[\]",;:?]+|\*\*|__|\|/g, (fragment) => fragment.includes('@') ? fragment : fragment === '|' ? '\t' : '')
     .split('\n')
     .map(normalizujWierszTabeli)
     .map((wiersz) => wiersz.replace(/[^\S\n]+/g, ' ').trim().replace(/^(?:>\s*|#{1,6}\s+|[-*•–—]\s*(?=\p{L}))/gu, ''))

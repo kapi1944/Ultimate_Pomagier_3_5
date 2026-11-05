@@ -1653,7 +1653,7 @@ export default function WidokDyplomow() {
           <PrzyciskPaneluGeneratora className="dyplomy__przycisk">
             Ustawienia dyplomu
           </PrzyciskPaneluGeneratora>
-          <AkcjeEksportuPdf
+          <AkcjeEksportuPdf dokumentId={localStorage.getItem(kluczDokumentuDyplomow)} odciskFormularza={JSON.stringify(dane)}
             classNamePrzycisku="dyplomy__przycisk dyplomy__przycisk--glowny"
             czyMoznaEksportowac={() => !problemy.length}
             daneNazwyEksportu={daneNazwyDyplomu}

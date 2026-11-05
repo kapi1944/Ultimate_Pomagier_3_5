@@ -20,7 +20,8 @@ import SekcjaFormularza from '../komponenty/SekcjaFormularza'
 import { useGeneratorSzczegolow } from '../hooki/useGeneratorSzczegolow'
 import { porownajSnapshotyWersji } from '../logikaPorownaniaWersji'
 import { pobierzEfektywneDaneOdbiorcy } from '../logikaDanychOdbiorcy'
-import { opiekunowieSzczegolow } from '../uzytkownicySzczegolow'
+import { pobierzKontoSzczegolow, pobierzOpiekunowSzczegolow } from '../uzytkownicySzczegolow'
+import { subskrybujUzytkownikow } from '../../../../kartoteki/uzytkownicy/magazynUzytkownikow'
 import type { DaneFirmy, DaneFormularza, OrganizatorSzkolenia, StatusLogotypow, WpisHistoriiSzczegolow } from '../typy'
 import { pobierzLiczbeUkrytychWpisowHistorii, pobierzWidoczneWpisyHistorii } from './widoczneWpisyHistorii'
 import './widokNowychSzczegolowOrganizacyjnych.css'
@@ -43,8 +44,6 @@ const sekcjeNawigacji = [
   { id: 'eksport-import', etykieta: 'JSON' },
 ]
 
-const nazwyOpiekunow = ['Kasia RB', 'Iza', 'Kamila', 'Dawid']
-const opcjeOpiekunow = ['', ...nazwyOpiekunow.flatMap((nazwa) => opiekunowieSzczegolow.filter((osoba) => osoba.id === nazwa).map((osoba) => osoba.id))]
 const kluczPrzypieciaPaneluJakosci = 'ultimatePomagier.panelJakosciPrzypiety'
 const kluczWysuwaniaPaneluJakosci = 'ultimatePomagier.panelJakosciWysuwanieZKrawedzi'
 const zdarzenieZmianyPreferencjiPaneluJakosci = 'ultimatePomagier:zmianaPreferencjiPaneluJakosci'
@@ -266,6 +265,16 @@ type WlasciwosciWidokuNowychSzczegolow = {
 
 export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }: WlasciwosciWidokuNowychSzczegolow) {
   const generator = useGeneratorSzczegolow()
+  const [opiekunowie, ustawOpiekunow] = useState(pobierzOpiekunowSzczegolow)
+  useEffect(() => {
+    const odswiez = () => ustawOpiekunow(pobierzOpiekunowSzczegolow())
+    const zakoncz = subskrybujUzytkownikow(odswiez)
+    odswiez()
+    return zakoncz
+  }, [])
+  const opiekunId = generator.daneFormularza.opiekunId
+  const historycznyOpiekun = opiekunId && !opiekunowie.some((osoba) => osoba.id === opiekunId) ? opiekunId : undefined
+  const opcjeOpiekunow = ['', ...opiekunowie.map((osoba) => osoba.id), ...(historycznyOpiekun ? [historycznyOpiekun] : [])]
   const [odswiezaczDokumentow, ustawOdswiezaczDokumentow] = useState(0)
   const aktywnaWersja = generator.kopieRobocze.find((kopia) => kopia.id === generator.aktywnaKopiaId) ?? null
   const szczegolyOrganizacyjneId = generator.zrodloOpublikowanegoId ?? aktywnaWersja?.id ?? null
@@ -659,7 +668,8 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
             <PoleWyboru
               etykieta="Opiekun"
               opcje={opcjeOpiekunow}
-              etykietyOpcji={{ '': 'Wybierz opiekuna', ...Object.fromEntries(nazwyOpiekunow.map((nazwa) => [nazwa, nazwa])) }}
+              etykietyOpcji={{ '': 'Wybierz opiekuna', ...Object.fromEntries(opiekunowie.map((osoba) => [osoba.id, osoba.nazwa])), ...(historycznyOpiekun ? { [historycznyOpiekun]: `${pobierzKontoSzczegolow(historycznyOpiekun)?.nazwa ?? 'Dotychczasowy opiekun'} (niedostępny)` } : {}) }}
+              niedostepneOpcje={historycznyOpiekun ? [historycznyOpiekun] : []}
               pole="opiekunId"
               statusyPol={generator.statusyPol}
               wartosc={generator.daneFormularza.opiekunId}
@@ -742,6 +752,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
         </SekcjaFormularza>
 
         <div className="szczegoly-uklad-sekcji">
+          <div className="szczegoly-kolumna-sekcji">
           <SekcjaFormularza id="pakiet-podstawowy" tytul="Pakiet podstawowy">
             <div className="szczegoly-lista-wymogow">
               {pozycjePakietu.map(([klucz, etykieta]) => (
@@ -763,6 +774,28 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
             </div>
           </SekcjaFormularza>
 
+          <SekcjaFormularza id="materialy-szkoleniowe" tytul="Materiały szkoleniowe">
+            <div className="szczegoly-lista-wymogow">
+              {pozycjeMaterialow.map(([klucz, etykieta]) => (
+                <WierszWymoguRozszerzony
+                  etykieta={etykieta}
+                  key={klucz}
+                  pole={`dokumentacja.${klucz}`}
+                  wlaczony={Boolean(generator.daneFormularza.dokumentacja[klucz])}
+                  ustawWlaczony={(wartosc) => aktualizujDokumentacje(klucz, wartosc)}
+                  wariantPrzelacznika="druk-online"
+                  wzorKlienta={Boolean(generator.daneFormularza.dokumentacja.wzoryKlienta[klucz])}
+                  ustawWzorKlienta={(wartosc) => aktualizujWzorDokumentacji(klucz, wartosc)}
+                  szczegolyWzoruKlienta={generator.daneFormularza.dokumentacja.szczegolyWzorowKlienta[klucz]}
+                  podgladWzoruKlienta={podgladyWzorowKlienta[klucz]}
+                  ustawPlikWzoruKlienta={(plik) => aktualizujPlikWzoruDokumentacji(klucz, plik)}
+                  ustawUwagiWzoruKlienta={(uwagi) => aktualizujSzczegolyWzoruDokumentacji(klucz, 'uwagi', uwagi)}
+                />
+              ))}
+            </div>
+          </SekcjaFormularza>
+          </div>
+          <div className="szczegoly-kolumna-sekcji">
           <SekcjaFormularza id="dodatkowe-wymogi" tytul="Dodatkowe wymogi">
             <div className="szczegoly-lista-wymogow">
               <div
@@ -790,29 +823,6 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
                   pokazWzorKlienta={false}
                   wzorKlienta={Boolean(generator.daneFormularza.dodatkoweWymogi.wzoryKlienta[klucz])}
                   ustawWzorKlienta={(wartosc) => aktualizujWzorDodatkowegoWymogu(klucz, wartosc)}
-                />
-              ))}
-            </div>
-          </SekcjaFormularza>
-        </div>
-
-        <div className="szczegoly-uklad-sekcji">
-          <SekcjaFormularza id="materialy-szkoleniowe" tytul="Materiały szkoleniowe">
-            <div className="szczegoly-lista-wymogow">
-              {pozycjeMaterialow.map(([klucz, etykieta]) => (
-                <WierszWymoguRozszerzony
-                  etykieta={etykieta}
-                  key={klucz}
-                  pole={`dokumentacja.${klucz}`}
-                  wlaczony={Boolean(generator.daneFormularza.dokumentacja[klucz])}
-                  ustawWlaczony={(wartosc) => aktualizujDokumentacje(klucz, wartosc)}
-                  wariantPrzelacznika="druk-online"
-                  wzorKlienta={Boolean(generator.daneFormularza.dokumentacja.wzoryKlienta[klucz])}
-                  ustawWzorKlienta={(wartosc) => aktualizujWzorDokumentacji(klucz, wartosc)}
-                  szczegolyWzoruKlienta={generator.daneFormularza.dokumentacja.szczegolyWzorowKlienta[klucz]}
-                  podgladWzoruKlienta={podgladyWzorowKlienta[klucz]}
-                  ustawPlikWzoruKlienta={(plik) => aktualizujPlikWzoruDokumentacji(klucz, plik)}
-                  ustawUwagiWzoruKlienta={(uwagi) => aktualizujSzczegolyWzoruDokumentacji(klucz, 'uwagi', uwagi)}
                 />
               ))}
             </div>
@@ -861,6 +871,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
               />
             </div>
           </SekcjaFormularza>
+          </div>
         </div>
 
         <div className="szczegoly-uwagi-dodatkowe szczegoly-uwagi-dodatkowe--osobne">

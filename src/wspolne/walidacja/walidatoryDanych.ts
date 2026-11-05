@@ -8,7 +8,7 @@ export type DaneTelefonu = {
 }
 
 const wzorzecImienia = /^[A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż]+(?:[ -][A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż]+)*$/
-const wzorzecEmail = /^[^\s@ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]+@[^\s@ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]+\.[^\s@ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]+$/
+const wzorzecEmail = /^[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i
 const wzorzecBezSpacji = /^\S+$/
 
 export function normalizujNumerTelefonu(numer: string) {
