@@ -180,11 +180,11 @@ Właściciel pliku obejmuje wszystkie warunki renderowania, stany pusty/błąd/�
 | `src/moduly/zakupy/magazyn/WidokStanowMagazynowych.tsx` | V4-19 | — | — | 1 |
 | `src/moduly/zamkniete/pulpit/DailyRoutines.tsx` | V4-04 | — | — | 5 |
 | `src/moduly/zamkniete/pulpit/DokumentyWysylki.tsx` | V4-04 | — | — | 1 |
-| `src/moduly/zamkniete/pulpit/RutynyNaOsi.tsx` | V4-04 | — | — | 1 |
+| `src/moduly/zamkniete/pulpit/RutynyNaOsi.tsx` | V4-04 | — | — | 2 |
 | `src/moduly/zamkniete/pulpit/PolaOsiCzasu.tsx` | V4-04 | V4-22 | — | 0 |
 | `src/moduly/zamkniete/pulpit/FormularzZakupu.tsx` | V4-04 | — | V4-04 | 2 |
 | `src/moduly/zamkniete/pulpit/MonitorWysylek.tsx` | V4-04 | — | — | 1 |
-| `src/moduly/zamkniete/pulpit/WidokPulpitu.tsx` | V4-04 | — | V4-04 | 15 |
+| `src/moduly/zamkniete/pulpit/WidokPulpitu.tsx` | V4-04 | — | V4-04 | 16 |
 | `src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/KartaGrupySzkoleniowej.tsx` | V4-07 | — | — | 1 |
 | `src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/KontekstBledowPol.tsx` | V4-07 | — | — | 0 |
 | `src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/PanelDokumentowPowiazanych.tsx` | V4-07 | V4-08, V4-10, V4-11, V4-12, V4-13, V4-14, V4-15 | — | 1 |

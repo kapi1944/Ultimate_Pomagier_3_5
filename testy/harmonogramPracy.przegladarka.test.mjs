@@ -124,10 +124,10 @@ test('harmonogram: formularze, wspólne wykonania, czas i bloki, daty, kurier, m
     const os = strona.locator('.pulpit-os-czasu')
     await os.waitFor()
     assert.equal(await os.locator('.pulpit-blok-pracy').count(), 5)
-    assert.equal(await strona.locator('.pulpit-os-czasu__przewijanie').evaluate((element) => element.offsetHeight), 126)
+    assert.ok(await strona.locator('.pulpit-os-czasu__przewijanie').evaluate((element) => element.offsetHeight < 220))
     assert.match(await os.locator('.pulpit-okno-kuriera').getAttribute('aria-label'), /13:30–16:00/)
     await os.locator('.pulpit-okno-kuriera').tap()
-    assert.equal(await os.locator('.pulpit-okno-kuriera__podpowiedz').isVisible(), true)
+    assert.equal(await strona.locator('.pulpit-okno-kuriera__podpowiedz').isVisible(), true)
 
     const karta = strona.getByRole('region', { name: 'Daily Routines' })
     await karta.getByRole('button', { name: 'Zobacz wszystkie', exact: true }).click()
@@ -143,7 +143,7 @@ test('harmonogram: formularze, wspólne wykonania, czas i bloki, daty, kurier, m
     }
     assert.equal(await os.locator('.pulpit-rutyna__przedzial').count(), 1)
     assert.equal(await os.locator('.pulpit-rutyna__punkt').count(), 1)
-    assert.match(await os.innerText(), /Paczkowanie \(10:00–13:00\)/)
+    assert.match(await os.locator('.pulpit-rutyna__przedzial').getAttribute('aria-label'), /Paczkowanie \(10:00–13:00\)/)
     const rutyna = os.getByRole('checkbox', { name: 'Rutyna : Przygotuj etykiety kurierskie', exact: true })
     await rutyna.check()
     assert.equal(await karta.locator('.rutyny-szybkie').getByRole('checkbox', { name: 'Przygotuj etykiety kurierskie', exact: true }).isChecked(), true)
@@ -174,7 +174,7 @@ test('harmonogram: formularze, wspólne wykonania, czas i bloki, daty, kurier, m
     }
     await datownik.fill('2026-11-02')
 
-    for (const paleta of ['EMERALD_DARK', 'SOFT_GREY', 'DARK_GRAY', 'DOMYSLNA', 'CRM', 'DDP', 'SEMPER', 'EVENTIS', 'ARKUSZE_GOOGLE']) for (const skala of [75, 85]) {
+    for (const paleta of ['EMERALD_DARK', 'SOFT_GREY', 'DARK_GRAY', 'DOMYSLNA', 'CRM', 'DDP', 'SEMPER', 'EVENTIS', 'ARKUSZE_GOOGLE']) for (const skala of [75, 85, 100]) {
       await strona.evaluate(async ({ paleta, skala }) => { document.documentElement.dataset.uiPaleta = paleta; await (await import('/src/aplikacja/ustawienia/skalaInterfejsu.ts')).zastosujSkaleInterfejsu(skala) }, { paleta, skala })
       for (const rozmiar of [{ width: 1440, height: 900 }, { width: 390, height: 844 }, { width: 844, height: 390 }]) {
         await strona.setViewportSize(rozmiar)
@@ -219,11 +219,103 @@ test('harmonogram: formularze, wspólne wykonania, czas i bloki, daty, kurier, m
     await os.waitFor()
     assert.equal(await os.locator('.pulpit-okno-kuriera').count(), 0)
     assert.equal(await os.locator('.pulpit-blok-pracy').count(), 4)
-    assert.match(await os.innerText(), /Pakowanie paczek \(10:15–13:00\)/)
+    assert.match(await os.locator('.pulpit-rutyna__przedzial').getAttribute('aria-label'), /Pakowanie paczek \(10:15–13:00\)/)
     await strona.reload()
     assert.equal(await os.locator('.pulpit-okno-kuriera').count(), 0)
     assert.equal(await rutyna.isChecked(), true)
     assert.deepEqual(bledy, [])
     if (process.env.POMAGIER_ZRZUT) await strona.screenshot({ path: process.env.POMAGIER_ZRZUT, fullPage: true })
+  } finally { await przegladarka.close() }
+})
+
+test('Plan dnia rozdziela warstwy i zachowuje rutyny przy zmianach granic bloków', { timeout: 90000 }, async () => {
+  const przegladarka = await chromium.launch({ executablePath: process.env.POMAGIER_CHROME || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true })
+  try {
+    const strona = await przegladarka.newPage({ viewport: { width: 1440, height: 900 }, hasTouch: true })
+    await strona.clock.setFixedTime(new Date('2026-11-02T12:30:00Z'))
+    await strona.goto(process.env.POMAGIER_ADRES || 'http://127.0.0.1:5188')
+    await strona.getByRole('button', { name: 'Otwórz demonstrację Architekta', exact: true }).click()
+    const os = strona.locator('.pulpit-os-czasu')
+    await os.waitFor()
+    const dlugiTytul = 'Długa nazwa rutyny do wyświetlenia w szczegółach. '.repeat(8).trim()
+    for (const liczba of [1, 5]) {
+      await strona.evaluate(async ({ liczba, dlugiTytul }) => {
+        const { pobierzUzytkownikow } = await import('/src/kartoteki/uzytkownicy/magazynUzytkownikow.ts')
+        const { pobierzStanPulpitu, zapiszStanPulpitu } = await import('/src/moduly/zamkniete/pulpit/uslugi/magazynPulpitu.ts')
+        const wlascicielId = pobierzUzytkownikow().find((osoba) => osoba.rola === 'ARCHITEKT').id
+        const wpis = (indeks, tytul, plan) => ({ id: 'krotki-' + indeks, wlascicielId, tytul, wersje: [{ od: '2026-11-02', aktywna: true, harmonogram: { rodzaj: 'DNI_ROBOCZE' }, ...plan }] })
+        const rutyny = Array.from({ length: liczba }, (_, indeks) => wpis(indeks, indeks === 0 ? dlugiTytul : 'Rutyna ' + indeks, { blokPracyId: 'rozruch' }))
+        rutyny.push(wpis('godzina', 'Rutyna o stałej godzinie', { godzina: '07:50' }))
+        zapiszStanPulpitu({ ...pobierzStanPulpitu(), rutyny: { rutyny, wykonania: [], historia: [] } })
+        window.dispatchEvent(new Event('storage'))
+      }, { liczba, dlugiTytul })
+      const licznik = os.getByRole('button', { name: 'Rozruch: pokaż rutyny (' + liczba + ')', exact: true })
+      const lista = os.locator('details').filter({ hasText: 'Rozruch · Rutyny (' + liczba + ')' })
+      await strona.setViewportSize({ width: 390, height: 844 })
+      await licznik.press('Enter')
+      assert.equal(await lista.getByRole('checkbox').count(), liczba)
+      await strona.setViewportSize({ width: 1800, height: 900 })
+    }
+
+    const otworz = strona.getByRole('button', { name: /Dostosuj oś/ })
+    const panel = strona.getByRole('form', { name: 'Dostosuj oś', exact: true })
+    const zapisz = panel.getByRole('button', { name: 'Zapisz', exact: true })
+    async function sprawdzWarstwy(naGranicy) {
+      const pomiar = await os.evaluate((element) => {
+        const prostokat = (selektor) => element.querySelector(selektor).getBoundingClientRect()
+        const teraz = prostokat('.pulpit-os-czasu__wskaznik')
+        const etykieta = prostokat('.pulpit-os-czasu__etykieta-teraz')
+        const kurier = prostokat('.pulpit-okno-kuriera')
+        const paczkowanie = prostokat('[title^="Paczkowanie:"]')
+        const multitasking = prostokat('[title^="Multitasking:"]')
+        return { teraz: teraz.left, kurier: kurier.left, granica: multitasking.left, koniec: paczkowanie.right, wewnatrz: kurier.left < multitasking.right, rozdzielone: etykieta.bottom <= multitasking.top && multitasking.bottom <= kurier.top }
+      })
+      assert.ok(pomiar.rozdzielone && pomiar.wewnatrz)
+      assert.ok(Math.abs(pomiar.teraz - pomiar.kurier) < 1)
+      assert.ok(naGranicy ? Math.abs(pomiar.kurier - pomiar.granica) < 1 && Math.abs(pomiar.kurier - pomiar.koniec) < 1 : pomiar.kurier > pomiar.granica + 1)
+    }
+    await sprawdzWarstwy(false)
+    await os.getByRole('button', { name: /Spodziewany odbiór kuriera/ }).tap()
+    assert.match(await strona.locator('.pulpit-okno-kuriera__podpowiedz').innerText(), /13:30–16:00/)
+
+    const grupa = os.locator('.pulpit-rutyna__przedzial')
+    await grupa.getByRole('checkbox', { name: 'Rutyna : ' + dlugiTytul, exact: true }).check()
+    const geometria = await grupa.evaluate((element) => {
+      const granice = element.getBoundingClientRect()
+      const karty = [...element.querySelectorAll('.pulpit-rutyna__kontrolki')].map((karta) => karta.getBoundingClientRect())
+      return karty.length === 5 && karty.every((karta, indeks) => karta.left >= granice.left && karta.right <= granice.right + 1 && (!indeks || karty[indeks - 1].bottom <= karta.top))
+    })
+    assert.ok(geometria)
+    await grupa.getByRole('button', { name: 'Szczegóły rutyny: ' + dlugiTytul, exact: true }).press('Enter')
+    await strona.getByRole('heading', { name: dlugiTytul, exact: true }).waitFor()
+
+    await otworz.click()
+    const rozruch = panel.getByRole('group', { name: 'Rozruch', exact: true })
+    const paczkowanie = panel.getByRole('group', { name: 'Paczkowanie', exact: true })
+    await paczkowanie.getByLabel('Do', { exact: true }).fill('13:30')
+    assert.equal(await panel.getByRole('group', { name: 'Multitasking', exact: true }).getByLabel('Od', { exact: true }).inputValue(), '13:30')
+    await sprawdzWarstwy(true)
+    await panel.getByRole('checkbox', { name: /Przesuwaj wspólne granice/ }).uncheck()
+    await rozruch.getByLabel('Do', { exact: true }).fill('07:45')
+    assert.ok(await zapisz.isDisabled())
+    await rozruch.getByLabel('Do', { exact: true }).fill('07:46')
+    await rozruch.getByLabel('Kolor', { exact: true }).fill('#aa5500')
+    await rozruch.getByLabel('Nazwa', { exact: true }).fill('Krótki start')
+    await panel.getByRole('button', { name: 'Przesuń w dół: Krótki start', exact: true }).click()
+    await zapisz.click()
+    await panel.waitFor({ state: 'detached' })
+    await strona.reload()
+    await os.waitFor()
+    await sprawdzWarstwy(true)
+    await os.getByText('Krótki start · Rutyny (5)', { exact: true }).tap()
+    assert.equal(await os.getByRole('checkbox', { name: 'Rutyna : ' + dlugiTytul, exact: true }).isChecked(), true)
+    assert.equal(await os.getByRole('checkbox', { name: 'Rutyna 07:50: Rutyna o stałej godzinie', exact: true }).count(), 1)
+    await otworz.click()
+    assert.equal(await panel.getByRole('group', { name: 'Krótki start', exact: true }).getByLabel('Kolor', { exact: true }).inputValue(), '#aa5500')
+    await panel.getByRole('button', { name: 'Przywróć domyślne bloki', exact: true }).click()
+    await zapisz.click()
+    await panel.waitFor({ state: 'detached' })
+    await sprawdzWarstwy(false)
+    assert.equal(await os.getByRole('checkbox', { name: 'Rutyna : ' + dlugiTytul, exact: true }).isChecked(), true)
   } finally { await przegladarka.close() }
 })

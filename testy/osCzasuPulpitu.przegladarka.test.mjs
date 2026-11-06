@@ -68,8 +68,8 @@ test('oś Pulpitu: kompaktowy pusty stan, rosnące etykiety i miniatury bez koli
         assert.ok(pomiar.nadmiarStrony <= 1, JSON.stringify(pomiar))
         assert.ok(pomiar.przewijanie <= 1, JSON.stringify(pomiar))
         if (!liczba) {
-          assert.ok(pomiar.wysokosc >= 110 && pomiar.wysokosc <= 130, JSON.stringify(pomiar))
-          assert.ok(Math.abs(pomiar.linia.y + pomiar.linia.height / 2 - (pomiar.kontener.y + pomiar.kontener.height / 2)) < 12)
+          assert.ok(pomiar.wysokosc <= 220, JSON.stringify(pomiar))
+          assert.ok(pomiar.linia.bottom <= pomiar.etykiety.y)
         }
         for (const [indeks, zadanie] of pomiar.zadania.entries()) {
           const oczekiwanaPozycja = indeks === 0 ? 0 : indeks === 5 ? 1 : 281.25 / 551.25

@@ -4,7 +4,8 @@ import {
   type UstawieniaAplikacji,
 } from './modelUstawienAplikacji'
 import { zastosujSkaleInterfejsu } from './skalaInterfejsu'
-import { walidujHarmonogramPracy } from '../../moduly/zamkniete/pulpit/logika/harmonogramPracy'
+import { walidujHarmonogramPracy, type BlokPracy } from '../../moduly/zamkniete/pulpit/logika/harmonogramPracy'
+import { czyJestAdministratorem } from '../../kartoteki/uzytkownicy/uprawnienia'
 import { normalizujOsCzasu, walidujOsCzasu, type KonfiguracjaOsiCzasu } from '../../moduly/zamkniete/pulpit/logika/czasDnia'
 import { czyKontoJestAktywne, type Uzytkownik } from '../../kartoteki/uzytkownicy/typyUzytkownikow'
 
@@ -142,9 +143,18 @@ export function walidujUstawieniaOsi(dane: object): string[] {
   return [...new Set(bledy)]
 }
 
-export function zapiszOsUzytkownika(os: KonfiguracjaOsiCzasu, uzytkownik: Uzytkownik | null): boolean {
+export function zapiszOsUzytkownika(os: KonfiguracjaOsiCzasu, uzytkownik: Uzytkownik | null, zmianaBlokow?: { poprzednie: BlokPracy[]; nowe: BlokPracy[] }): boolean {
   if (!uzytkownik || !czyKontoJestAktywne(uzytkownik)) return false
   const ustawienia = pobierzUstawieniaAplikacji()
-  if (walidujOsCzasu(os, { poczatek: ustawienia.pulpit.poczatekDnia, koniec: ustawienia.pulpit.koniecDnia }).length) return false
-  return zapiszUstawieniaAplikacji({ ...ustawienia, pulpit: { ...ustawienia.pulpit, osieUzytkownikow: { ...ustawienia.pulpit.osieUzytkownikow, [uzytkownik.id]: { ...os } } } })
+  const { pulpit } = ustawienia
+  if (walidujOsCzasu(os, { poczatek: pulpit.poczatekDnia, koniec: pulpit.koniecDnia }).length) return false
+  if (zmianaBlokow && (!czyJestAdministratorem(uzytkownik) || JSON.stringify(zmianaBlokow.poprzednie) !== JSON.stringify(pulpit.harmonogramPracy.blokiPracy))) return false
+  return zapiszUstawieniaAplikacji({
+    ...ustawienia,
+    pulpit: {
+      ...pulpit,
+      harmonogramPracy: zmianaBlokow ? { ...pulpit.harmonogramPracy, blokiPracy: zmianaBlokow.nowe } : pulpit.harmonogramPracy,
+      osieUzytkownikow: { ...pulpit.osieUzytkownikow, [uzytkownik.id]: { ...os } },
+    },
+  })
 }

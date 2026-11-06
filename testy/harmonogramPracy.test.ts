@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { blokiNaDzien, domyslnyHarmonogramPracy, normalizujHarmonogramPracy, oknoKurieraNaDzien, walidujHarmonogramPracy } from '../src/moduly/zamkniete/pulpit/logika/harmonogramPracy'
+import { blokiNaDzien, domyslnyHarmonogramPracy, normalizujHarmonogramPracy, oknoKurieraNaDzien, walidujHarmonogramPracy, zmienGraniceBloku } from '../src/moduly/zamkniete/pulpit/logika/harmonogramPracy'
 import { czyGodzinaWOsi, czyTerazWOsi, domyslnaOsCzasu, normalizujOsCzasu, pobierzEtykietyOsiCzasu, pozycjaGodzinyNaOsi, walidujOsCzasu } from '../src/moduly/zamkniete/pulpit/logika/czasDnia'
 import { normalizujUstawieniaAplikacji } from '../src/aplikacja/ustawienia/modelUstawienAplikacji'
 import { eksportujUstawieniaAplikacji, importujUstawieniaAplikacji, kluczUstawienAplikacji, pobierzUstawieniaAplikacji, zapiszOsUzytkownika, zapiszUstawieniaAplikacji } from '../src/aplikacja/ustawienia/magazynUstawienAplikacji'
@@ -15,6 +15,18 @@ assert.deepEqual(domyslny.blokiPracy.map(({ nazwa, poczatek, koniec }) => [nazwa
   ['Rozruch', '07:45', '08:30'], ['Przygotowania', '08:30', '10:00'], ['Paczkowanie', '10:00', '13:00'], ['Multitasking', '13:00', '15:00'], ['Podsumowania', '15:00', '16:00'],
 ])
 assert.deepEqual(walidujHarmonogramPracy(domyslny), [])
+const [rozruch, przygotowania] = domyslny.blokiPracy
+const przesuniete = zmienGraniceBloku(domyslny.blokiPracy, rozruch, 'koniec', '08:15', true)
+assert.equal(przesuniete[1].poczatek, '08:15')
+assert.deepEqual(walidujHarmonogramPracy({ ...domyslny, blokiPracy: przesuniete }), [])
+assert.equal(przygotowania.poczatek, '08:30')
+const zPrzerwa = zmienGraniceBloku(domyslny.blokiPracy, rozruch, 'koniec', '08:15', false)
+assert.equal(zPrzerwa[1].poczatek, '08:30')
+assert.deepEqual(walidujHarmonogramPracy({ ...domyslny, blokiPracy: zPrzerwa }), [])
+assert.ok(walidujHarmonogramPracy({ ...domyslny, blokiPracy: zmienGraniceBloku(domyslny.blokiPracy, rozruch, 'koniec', rozruch.poczatek, true) }).length)
+const zKolorem = { ...domyslny, blokiPracy: [{ ...rozruch, kolor: '#ab1234' }, ...domyslny.blokiPracy.slice(1)] }
+assert.deepEqual(normalizujHarmonogramPracy(zKolorem), zKolorem)
+assert.match(walidujHarmonogramPracy({ ...domyslny, blokiPracy: [{ ...rozruch, kolor: 'red' }] }).join(), /kolor/)
 assert.equal(blokiNaDzien(domyslny.blokiPracy, '2026-11-02').length, 5)
 assert.equal(blokiNaDzien(domyslny.blokiPracy, '2026-11-07').length, 0)
 assert.equal(blokiNaDzien(domyslny.blokiPracy, '').length, 0)
@@ -143,6 +155,13 @@ assert.equal(pobierzUstawieniaAplikacji().pulpit.poczatekDnia, przedPreferencja.
 assert.deepEqual(pobierzRutyny(), terminyPrzed)
 assert.equal(zapiszOsUzytkownika(domyslnaOsCzasu, null), false)
 assert.equal(zapiszOsUzytkownika(domyslnaOsCzasu, { ...pracownik, status: 'NIEAKTYWNY' }), false)
+const administrator: Uzytkownik = { ...pracownik, id: 'administrator', rola: 'ADMINISTRATOR' }
+const harmonogramPrzedEdycja = pobierzUstawieniaAplikacji().pulpit.harmonogramPracy
+const zmianaBlokow = { poprzednie: harmonogramPrzedEdycja.blokiPracy, nowe: zKolorem.blokiPracy }
+assert.equal(zapiszOsUzytkownika(domyslnaOsCzasu, pracownik, zmianaBlokow), false)
+assert.equal(zapiszOsUzytkownika(domyslnaOsCzasu, administrator, zmianaBlokow), true)
+assert.equal(zapiszOsUzytkownika(domyslnaOsCzasu, administrator, zmianaBlokow), false)
+assert.deepEqual(pobierzUstawieniaAplikacji().pulpit.harmonogramPracy, { ...harmonogramPrzedEdycja, blokiPracy: zmianaBlokow.nowe })
 const przedBledem = magazyn.get(kluczUstawienAplikacji)
 const blednaOs = { ...zgodneUstawienia, pulpit: { ...zgodneUstawienia.pulpit, osCzasu: { ...domyslnaOsCzasu, poczatek: '09:00' } } }
 assert.equal(zapiszUstawieniaAplikacji(blednaOs), false)

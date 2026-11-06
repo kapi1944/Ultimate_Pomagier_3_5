@@ -1066,7 +1066,7 @@
         "OknoDialogowe otwarty tytul={edytowanyZakup ? 'Edytuj zakup' : 'Zgłoś zakup'} zamknij={() => ustawCzyDodawanieZakupu(false)}",
         "PanelWysuwany otwarty tytul=\"Aktualne zapotrzebowania zakupowe\" zamknij={() => ustawCzyWykazZakupowOtwarty(false)}",
         "PanelWysuwany otwarty tytul=\"Szczegóły zadania\" zamknij={() => ustawWybraneZadanie(null)}",
-        "button ref={przyciskOsiRef} className=\"pulpit-dostosuj-os\" type=\"button\" aria-expanded={roboczaOs !== null} aria-controls=\"pulpit-panel-osi\" onClick={() => { ustawPelnaOs(false); ustawRoboczaOs({ ...zapisanaOs }); ustawKomunikatOsi('') }}",
+        "button ref={przyciskOsiRef} className=\"pulpit-dostosuj-os\" type=\"button\" aria-expanded={roboczaOs !== null} aria-controls=\"pulpit-panel-osi\" onClick={() => { ustawPelnaOs(false); ustawRoboczaOs({ ...zapisanaOs }); ustawRoboczeBloki(czyJestAdministratorem(zalogowanyUzytkownik) ? { poprzednie: harmonogram.blokiPracy, nowe: harmonogram.blokiPracy } : null); ustawKomunikatOsi('') }}",
         "details className=\"pulpit-poza-osia\"",
         "details className=\"pulpit-terminy\"",
         "details className=\"pulpit-wykonane\"",
@@ -1074,6 +1074,7 @@
         "div className=\"pulpit-drawer__naglowek\"",
         "div className=\"pulpit-modal__akcje\"",
         "div className=\"pulpit-panel-osi__akcje\"",
+        "fieldset className=\"pulpit-panel-osi__bloki\"",
         "form className=\"pulpit-formularz-zadania\" onPaste={obsluzWklejenie} onSubmit={(zdarzenie) => { zdarzenie.preventDefault(); zapisz() }}",
         "form id=\"pulpit-panel-osi\" className=\"pulpit-panel-osi\" aria-label=\"Dostosuj oś\" onSubmit={zapiszUstawieniaOsi} onKeyDown={(zdarzenie) => { if (zdarzenie.key === 'Escape') { zdarzenie.stopPropagation(); zamknijUstawieniaOsi() } }}"
       ],
@@ -1522,7 +1523,8 @@
     "src/moduly/zamkniete/pulpit/RutynyNaOsi.tsx": {
       "zadanie": "V4-04",
       "powierzchnie": [
-        "details className=\"pulpit-poza-osia pulpit-rutyny-poza-osia\""
+        "details className=\"pulpit-poza-osia pulpit-rutyny-poza-osia\"",
+        "details key={blok.id} id={identyfikatorList + blok.id} className=\"pulpit-poza-osia\""
       ],
       "ukonczoneEtapy": [],
       "wspoldzieloneZ": []

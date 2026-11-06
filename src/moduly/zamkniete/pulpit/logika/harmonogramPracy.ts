@@ -1,7 +1,7 @@
 import { ocenDzienPracy, walidujWyjatkiKalendarza, type KalendarzPracy, type WyjatekKalendarzaPracy } from '../../../../wspolne/czas/kalendarzPracy'
 
 export type PrzedzialGodzin = { poczatek: string; koniec: string }
-export type BlokPracy = PrzedzialGodzin & { id: string; nazwa: string; dni: number[]; wlaczony: boolean }
+export type BlokPracy = PrzedzialGodzin & { id: string; nazwa: string; dni: number[]; wlaczony: boolean; kolor?: string }
 export type HarmonogramPracy = {
   wyjatkiKalendarza?: WyjatekKalendarzaPracy[]
   blokiPracy: BlokPracy[]
@@ -40,6 +40,17 @@ function czyData(wartosc: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(wartosc) && Number.isFinite(data.getTime()) && data.toISOString().slice(0, 10) === wartosc
 }
 
+export function zmienGraniceBloku(bloki: BlokPracy[], blok: BlokPracy, granica: keyof PrzedzialGodzin, godzina: string, polacz: boolean): BlokPracy[] {
+  const przeciwna = granica === 'poczatek' ? 'koniec' : 'poczatek'
+  return bloki.map((wpis) => {
+    if (wpis.id === blok.id) return { ...wpis, [granica]: godzina }
+    if (polacz && blok.wlaczony && wpis.wlaczony && czyPoprawnaGodzina(godzina) &&
+      wpis[przeciwna] === blok[granica] && wpis.dni.length === blok.dni.length &&
+      wpis.dni.every((dzien) => blok.dni.includes(dzien))) return { ...wpis, [przeciwna]: godzina }
+    return wpis
+  })
+}
+
 export function walidujHarmonogramPracy(dane: unknown): string[] {
   if (!czyObiekt(dane) || !Array.isArray(dane.blokiPracy) || !czyObiekt(dane.kurier) || !czyObiekt(dane.kurier.tydzien) || !czyObiekt(dane.kurier.wyjatki)) return ['Nieprawidłowa konfiguracja harmonogramu.']
   const bledy: string[] = []
@@ -51,6 +62,7 @@ export function walidujHarmonogramPracy(dane: unknown): string[] {
       continue
     }
     const poprawny = blok as BlokPracy
+    if (poprawny.kolor !== undefined && (typeof poprawny.kolor !== 'string' || !/^#[\da-f]{6}$/i.test(poprawny.kolor))) bledy.push('Podaj poprawny kolor bloku pracy.')
     if (bloki.some((inny) => inny.id === poprawny.id)) bledy.push('Identyfikatory bloków muszą być unikalne.')
     if (poprawny.wlaczony && bloki.some((inny) => inny.wlaczony && inny.dni.some((dzien) => poprawny.dni.includes(dzien)) && inny.poczatek < poprawny.koniec && poprawny.poczatek < inny.koniec)) bledy.push('Aktywne bloki pracy nie mogą nakładać się w tych samych dniach.')
     bloki.push(poprawny)

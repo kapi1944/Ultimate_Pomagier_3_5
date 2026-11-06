@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { dniHarmonogramu, walidujHarmonogramPracy, type HarmonogramPracy, type PrzedzialGodzin } from '../../moduly/zamkniete/pulpit/logika/harmonogramPracy'
+import { dniHarmonogramu, walidujHarmonogramPracy, zmienGraniceBloku, type BlokPracy, type HarmonogramPracy, type PrzedzialGodzin } from '../../moduly/zamkniete/pulpit/logika/harmonogramPracy'
 import { useKontekstUzytkownika } from '../logowanie/useKontekstUzytkownika'
 import { czyJestPracownikiemWewnetrznym, pobierzNazweWyswietlanaUzytkownika } from '../../kartoteki/uzytkownicy/typyUzytkownikow'
 import { walidujWyjatkiKalendarza, type WyjatekKalendarzaPracy } from '../../wspolne/czas/kalendarzPracy'
@@ -25,13 +25,6 @@ export default function UstawieniaHarmonogramu({ wartosc, zmien }: { wartosc: Ha
     zmien({ ...wartosc, wyjatkiKalendarza: [...wyjatkiKalendarza, wpis] })
     ustawBladKalendarza('')
     ustawWyjatekKalendarza({ od: '', do: '', rodzaj: 'WOLNE', powod: '' })
-  }
-  function przesun(indeks: number, kierunek: number) {
-    const bloki = [...wartosc.blokiPracy]
-    const cel = indeks + kierunek
-    if (cel < 0 || cel >= bloki.length) return
-    ;[bloki[indeks], bloki[cel]] = [bloki[cel], bloki[indeks]]
-    zmien({ ...wartosc, blokiPracy: bloki })
   }
   return <section className="ustawienia__karta ustawienia-harmonogram">
     <h2>Kalendarz pracy</h2>
@@ -59,20 +52,7 @@ export default function UstawieniaHarmonogramu({ wartosc, zmien }: { wartosc: Ha
     </div>)}
     <h2>Bloki pracy</h2>
     <p>Kolejność określa listę wyboru rutyn; pozycja na osi wynika z godzin. Wyłączenie lub usunięcie bloku zachowuje powiązania rutyn i wymaga ich ponownego przypisania.</p>
-    {wartosc.blokiPracy.map((blok, indeks) => <fieldset key={blok.id}>
-      <legend>{blok.nazwa || 'Nowy blok'}</legend>
-      <div className="ustawienia-harmonogram__wiersz">
-        <label>Nazwa<input value={blok.nazwa} onChange={(zdarzenie) => zmien({ ...wartosc, blokiPracy: wartosc.blokiPracy.map((wpis) => wpis.id === blok.id ? { ...wpis, nazwa: zdarzenie.target.value } : wpis) })} /></label>
-        <label>Od<input type="time" value={blok.poczatek} onChange={(zdarzenie) => zmien({ ...wartosc, blokiPracy: wartosc.blokiPracy.map((wpis) => wpis.id === blok.id ? { ...wpis, poczatek: zdarzenie.target.value } : wpis) })} /></label>
-        <label>Do<input type="time" value={blok.koniec} onChange={(zdarzenie) => zmien({ ...wartosc, blokiPracy: wartosc.blokiPracy.map((wpis) => wpis.id === blok.id ? { ...wpis, koniec: zdarzenie.target.value } : wpis) })} /></label>
-        <label><input type="checkbox" role="switch" checked={blok.wlaczony} onChange={(zdarzenie) => zmien({ ...wartosc, blokiPracy: wartosc.blokiPracy.map((wpis) => wpis.id === blok.id ? { ...wpis, wlaczony: zdarzenie.target.checked } : wpis) })} /> Włączony</label>
-        <button type="button" aria-label={'Przesuń w górę: ' + blok.nazwa} disabled={indeks === 0} onClick={() => przesun(indeks, -1)}>↑</button>
-        <button type="button" aria-label={'Przesuń w dół: ' + blok.nazwa} disabled={indeks === wartosc.blokiPracy.length - 1} onClick={() => przesun(indeks, 1)}>↓</button>
-        <button type="button" onClick={() => zmien({ ...wartosc, blokiPracy: wartosc.blokiPracy.filter((wpis) => wpis.id !== blok.id) })}>Usuń blok {blok.nazwa}</button>
-      </div>
-      <div className="ustawienia-harmonogram__wiersz">{[1, 2, 3, 4, 5, 6, 0].map((dzien) => <label key={dzien}><input type="checkbox" checked={blok.dni.includes(dzien)} onChange={(zdarzenie) => zmien({ ...wartosc, blokiPracy: wartosc.blokiPracy.map((wpis) => wpis.id === blok.id ? { ...wpis, dni: zdarzenie.target.checked ? [...wpis.dni, dzien] : wpis.dni.filter((numer) => numer !== dzien) } : wpis) })} />{dniHarmonogramu[dzien]}</label>)}</div>
-    </fieldset>)}
-    <button type="button" onClick={() => zmien({ ...wartosc, blokiPracy: [...wartosc.blokiPracy, { id: crypto.randomUUID(), nazwa: 'Nowy blok', poczatek: '16:00', koniec: '17:00', dni: [1, 2, 3, 4, 5], wlaczony: false }] })}>Dodaj blok pracy</button>
+    <PolaBlokowPracy bloki={wartosc.blokiPracy} zmien={(blokiPracy) => zmien({ ...wartosc, blokiPracy })} pelnaKonfiguracja />
     <h2>Spodziewane okna odbioru kuriera</h2>
     <p>Przedział jest orientacyjny. Wyjątek dla daty ma pierwszeństwo przed tygodniem; wyłącz odbiór w dni wolne i święta, gdy znasz odwołanie.</p>
     {[1, 2, 3, 4, 5, 6, 0].map((dzien) => <fieldset key={dzien}><legend>{dniHarmonogramu[dzien]}</legend><div className="ustawienia-harmonogram__wiersz"><PolaPrzedzialu wartosc={wartosc.kurier.tydzien[dzien]} zmien={(okno) => zmien({ ...wartosc, kurier: { ...wartosc.kurier, tydzien: { ...wartosc.kurier.tydzien, [dzien]: okno } } })} /></div></fieldset>)}
@@ -81,4 +61,41 @@ export default function UstawieniaHarmonogramu({ wartosc, zmien }: { wartosc: Ha
     {Object.entries(wartosc.kurier.wyjatki).sort(([pierwsza], [druga]) => pierwsza.localeCompare(druga)).map(([data, okno]) => <fieldset key={data}><legend>{data}</legend><div className="ustawienia-harmonogram__wiersz"><PolaPrzedzialu wartosc={okno} zmien={(przedzial) => zmien({ ...wartosc, kurier: { ...wartosc.kurier, wyjatki: { ...wartosc.kurier.wyjatki, [data]: przedzial } } })} /><button type="button" onClick={() => zmien({ ...wartosc, kurier: { ...wartosc.kurier, wyjatki: Object.fromEntries(Object.entries(wartosc.kurier.wyjatki).filter(([klucz]) => klucz !== data)) } })}>Usuń wyjątek {data}</button></div></fieldset>)}
     {bledy.length > 0 && <div role="alert">{bledy.map((blad) => <p key={blad}>{blad}</p>)}</div>}
   </section>
+}
+
+export function PolaBlokowPracy({ bloki, zmien, pelnaKonfiguracja = false }: {
+  bloki: BlokPracy[]
+  zmien: (bloki: BlokPracy[]) => void
+  pelnaKonfiguracja?: boolean
+}) {
+  const [polacz, ustawPolacz] = useState(true)
+  function przesun(indeks: number, kierunek: number) {
+    const nowaKolejnosc = [...bloki]
+    const cel = indeks + kierunek
+    if (cel < 0 || cel >= bloki.length) return
+    ;[nowaKolejnosc[indeks], nowaKolejnosc[cel]] = [nowaKolejnosc[cel], nowaKolejnosc[indeks]]
+    zmien(nowaKolejnosc)
+  }
+  return <>
+    {!pelnaKonfiguracja && <label><input type="checkbox" checked={polacz} onChange={(zdarzenie) => ustawPolacz(zdarzenie.target.checked)} /> Przesuwaj wspólne granice bloków o tych samych dniach pracy</label>}
+    {bloki.map((blok, indeks) => {
+      const aktualizuj = (pola: Partial<BlokPracy>) => zmien(bloki.map((wpis) => wpis.id === blok.id ? { ...wpis, ...pola } : wpis))
+      return <fieldset key={blok.id}>
+        <legend>{blok.nazwa || 'Nowy blok'}</legend>
+        <div className="ustawienia-harmonogram__wiersz">
+          <label>Nazwa<input value={blok.nazwa} onChange={(zdarzenie) => aktualizuj({ nazwa: zdarzenie.target.value })} /></label>
+          <label>Od<input type="time" value={blok.poczatek} onChange={(zdarzenie) => zmien(zmienGraniceBloku(bloki, blok, 'poczatek', zdarzenie.target.value, !pelnaKonfiguracja && polacz))} /></label>
+          <label>Do<input type="time" value={blok.koniec} onChange={(zdarzenie) => zmien(zmienGraniceBloku(bloki, blok, 'koniec', zdarzenie.target.value, !pelnaKonfiguracja && polacz))} /></label>
+          <label>Kolor<input type="color" value={blok.kolor ?? '#64748b'} onChange={(zdarzenie) => aktualizuj({ kolor: zdarzenie.target.value })} /></label>
+          {blok.kolor && <button type="button" onClick={() => aktualizuj({ kolor: undefined })}>Kolor motywu</button>}
+          {pelnaKonfiguracja && <label><input type="checkbox" role="switch" checked={blok.wlaczony} onChange={(zdarzenie) => aktualizuj({ wlaczony: zdarzenie.target.checked })} /> Włączony</label>}
+          <button type="button" aria-label={'Przesuń w górę: ' + blok.nazwa} disabled={indeks === 0} onClick={() => przesun(indeks, -1)}>↑</button>
+          <button type="button" aria-label={'Przesuń w dół: ' + blok.nazwa} disabled={indeks === bloki.length - 1} onClick={() => przesun(indeks, 1)}>↓</button>
+          {pelnaKonfiguracja && <button type="button" onClick={() => zmien(bloki.filter((wpis) => wpis.id !== blok.id))}>Usuń blok {blok.nazwa}</button>}
+        </div>
+        {pelnaKonfiguracja && <div className="ustawienia-harmonogram__wiersz">{[1, 2, 3, 4, 5, 6, 0].map((dzien) => <label key={dzien}><input type="checkbox" checked={blok.dni.includes(dzien)} onChange={(zdarzenie) => aktualizuj({ dni: zdarzenie.target.checked ? [...blok.dni, dzien] : blok.dni.filter((numer) => numer !== dzien) })} />{dniHarmonogramu[dzien]}</label>)}</div>}
+      </fieldset>
+    })}
+    {pelnaKonfiguracja && <button type="button" onClick={() => zmien([...bloki, { id: crypto.randomUUID(), nazwa: 'Nowy blok', poczatek: '16:00', koniec: '17:00', dni: [1, 2, 3, 4, 5], wlaczony: false }])}>Dodaj blok pracy</button>}
+  </>
 }
