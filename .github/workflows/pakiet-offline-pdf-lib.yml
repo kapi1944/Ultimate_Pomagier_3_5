@@ -1,0 +1,126 @@
+name: Pakiet offline pdf-lib
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  przygotuj-pakiet:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pobranie repozytorium
+        uses: actions/checkout@v4
+
+      - name: Konfiguracja Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Dodanie pdf-lib z oficjalnego rejestru npm
+        run: npm install pdf-lib@1.17.1 --registry=https://registry.npmjs.org/
+
+      - name: Weryfikacja wersji i działania biblioteki
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict'
+          import { readFileSync } from 'node:fs'
+          import { PDFDocument } from 'pdf-lib'
+
+          const dokument = await PDFDocument.create()
+          dokument.addPage([420, 595])
+          const bajty = await dokument.save()
+          const ponownieWczytany = await PDFDocument.load(bajty)
+          assert.equal(ponownieWczytany.getPageCount(), 1)
+          console.log(`pdf-lib ${JSON.parse(readFileSync('node_modules/pdf-lib/package.json', 'utf8')).version} działa; strony: ${ponownieWczytany.getPageCount()}`)
+          NODE
+          npm ls pdf-lib
+          npm run build
+          npm audit --omit=dev --audit-level=high
+
+      - name: Sprawdzenie importu TypeScript
+        run: |
+          cat > .github-pdf-lib-weryfikacja.ts <<'TS'
+          import { PDFDocument, type PDFPage } from 'pdf-lib'
+
+          export async function sprawdzTypyPdfLib(): Promise<{ strony: PDFPage[]; bajty: Uint8Array }> {
+            const dokument = await PDFDocument.create()
+            dokument.addPage([420, 595])
+            return { strony: dokument.getPages(), bajty: await dokument.save() }
+          }
+          TS
+          npx tsc --noEmit --strict --target ES2022 --module ESNext --moduleResolution Bundler --lib ES2022,DOM .github-pdf-lib-weryfikacja.ts
+          rm .github-pdf-lib-weryfikacja.ts
+
+      - name: Utworzenie manifestu zależności do instalacji offline
+        run: |
+          mkdir -p pakiet-offline/node_modules
+          node --input-type=module <<'NODE'
+          import { cpSync, existsSync, mkdirSync, readFileSync } from 'node:fs'
+          import { dirname, resolve } from 'node:path'
+
+          const katalogRepo = process.cwd()
+          const katalogZaleznosci = resolve(katalogRepo, 'pakiet-offline/node_modules')
+          const blokada = JSON.parse(readFileSync('package-lock.json', 'utf8'))
+          const wpisy = blokada.packages
+          const wybrane = new Set()
+          const kolejka = ['node_modules/pdf-lib']
+
+          while (kolejka.length) {
+            const sciezkaPakietu = kolejka.pop()
+            if (!sciezkaPakietu || wybrane.has(sciezkaPakietu)) continue
+            const wpis = wpisy[sciezkaPakietu]
+            if (!wpis) throw new Error(`Brak wpisu ${sciezkaPakietu} w package-lock.json.`)
+            wybrane.add(sciezkaPakietu)
+
+            for (const nazwa of Object.keys({ ...wpis.dependencies, ...wpis.optionalDependencies })) {
+              let katalog = sciezkaPakietu
+              let odnaleziony
+              while (katalog) {
+                const kandydat = `${katalog}/node_modules/${nazwa}`
+                if (wpisy[kandydat]) { odnaleziony = kandydat; break }
+                const granica = katalog.lastIndexOf('/node_modules/')
+                if (granica < 0) break
+                katalog = katalog.slice(0, granica)
+              }
+              if (!odnaleziony && wpisy[`node_modules/${nazwa}`]) odnaleziony = `node_modules/${nazwa}`
+              if (!odnaleziony) throw new Error(`Nie znaleziono zależności ${nazwa} wymaganej przez ${sciezkaPakietu}.`)
+              kolejka.push(odnaleziony)
+            }
+          }
+
+          for (const sciezkaPakietu of wybrane) {
+            const zrodlo = resolve(katalogRepo, sciezkaPakietu)
+            const cel = resolve(katalogRepo, 'pakiet-offline', sciezkaPakietu)
+            if (!existsSync(resolve(zrodlo, 'package.json'))) throw new Error(`Brak zainstalowanych plików ${sciezkaPakietu}.`)
+            mkdirSync(dirname(cel), { recursive: true })
+            cpSync(zrodlo, cel, { recursive: true, dereference: false })
+          }
+
+          const pdfLib = resolve(katalogZaleznosci, 'pdf-lib/package.json')
+          if (JSON.parse(readFileSync(pdfLib, 'utf8')).version !== '1.17.1') throw new Error('Pakiet offline nie zawiera pdf-lib@1.17.1.')
+          console.log(`Dodano do pakietu ${wybrane.size} katalogów zależności.`)
+          NODE
+          cp package.json package-lock.json pakiet-offline/
+          cat > pakiet-offline/INSTALACJA.txt <<'TXT'
+          Pakiet przygotowano przez workflow GitHub Actions „Pakiet offline pdf-lib”.
+          Zawiera package.json, package-lock.json oraz pełne katalogi pakietów wymaganych przez pdf-lib@1.17.1.
+          Skopiuj zawartość katalogu node_modules z tego pakietu do katalogu node_modules projektu,
+          a package.json i package-lock.json do katalogu głównego projektu.
+          Pakiet nie zawiera tokenów ani poświadczeń.
+          TXT
+
+      - name: Sprawdzenie archiwum ZIP
+        run: |
+          zip -qr pdf-lib-offline.zip pakiet-offline
+          unzip -t pdf-lib-offline.zip
+          unzip -l pdf-lib-offline.zip
+
+      - name: Udostępnienie ZIP do pobrania
+        uses: actions/upload-artifact@v4
+        with:
+          name: pdf-lib-offline
+          path: pdf-lib-offline.zip
+          if-no-files-found: error
+          retention-days: 30
