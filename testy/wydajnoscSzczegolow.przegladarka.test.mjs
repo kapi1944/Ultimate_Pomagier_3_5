@@ -7,6 +7,75 @@ const wymagaj = createRequire(import.meta.url)
 const { chromium } = wymagaj(process.env.POMAGIER_PLAYWRIGHT || 'playwright')
 const adres = process.env.POMAGIER_ADRES || 'http://127.0.0.1:5173'
 
+test('pakiet podstawowy mieści kontrolki w jednym rzędzie i zachowuje zapisane wybory', { timeout: 60000 }, async () => {
+  const przegladarka = await chromium.launch({ executablePath: process.env.POMAGIER_CHROME, channel: process.env.POMAGIER_CHROME ? undefined : 'chrome', headless: true })
+  try {
+    const strona = await przegladarka.newPage({ viewport: { width: 1440, height: 1000 } })
+    await strona.goto(adres)
+    await strona.getByRole('button', { name: 'Otwórz demonstrację Architekta', exact: true }).click()
+    await strona.goto(`${adres}/szkolenia-zamkniete/szczegoly-organizacyjne/nowe`)
+    const kafelki = strona.locator('#pakiet-podstawowy .szczegoly-wiersz-wymogu')
+    await kafelki.first().waitFor()
+    assert.equal(await kafelki.count(), 5)
+
+    for (const szerokosc of [1440, 390]) {
+      await strona.setViewportSize({ width: szerokosc, height: 1000 })
+      for (const skala of [75, 85, 100]) {
+        await strona.evaluate(async (wartosc) => {
+          const { zastosujSkaleInterfejsu } = await import('/src/aplikacja/ustawienia/skalaInterfejsu.ts')
+          await zastosujSkaleInterfejsu(wartosc)
+        }, skala)
+        const pomiary = await kafelki.evaluateAll((elementy) => elementy.map((kafelek) => {
+          const nazwa = kafelek.firstElementChild.getBoundingClientRect()
+          const pole = kafelek.querySelector('input[type="checkbox"]')
+          const etykieta = pole.closest('label').getBoundingClientRect()
+          const przelacznik = kafelek.querySelector('[role="switch"]').getBoundingClientRect()
+          const srodek = (prostokat) => prostokat.top + prostokat.height / 2
+          return {
+            rozmiar: pole.offsetWidth,
+            wysokosc: kafelek.offsetHeight,
+            kontrolkiWRzedzie: Math.abs(srodek(etykieta) - srodek(przelacznik)) < 1 && etykieta.right < przelacznik.left,
+            nazwaWRzedzie: Math.abs(srodek(nazwa) - srodek(etykieta)) < 1 && nazwa.right <= etykieta.left,
+            nazwaNadKontrolkami: nazwa.bottom <= etykieta.top + 1,
+            bezPrzepelnienia: kafelek.scrollWidth <= kafelek.clientWidth,
+          }
+        }))
+        for (const pomiar of pomiary) {
+          const kontekst = `${szerokosc} px, ${skala}%: ${JSON.stringify(pomiar)}`
+          assert.equal(pomiar.rozmiar, 18, kontekst)
+          assert.ok(pomiar.kontrolkiWRzedzie && pomiar.bezPrzepelnienia, kontekst)
+          if (szerokosc === 1440) {
+            assert.ok(pomiar.nazwaWRzedzie && pomiar.wysokosc >= 52 && pomiar.wysokosc <= 60, kontekst)
+          } else {
+            assert.ok(pomiar.nazwaWRzedzie || pomiar.nazwaNadKontrolkami, kontekst)
+          }
+        }
+      }
+    }
+
+    await strona.setViewportSize({ width: 1440, height: 1000 })
+    const schowajPanel = strona.getByRole('button', { name: 'Schowaj panel', exact: true })
+    if (await schowajPanel.isVisible()) await schowajPanel.click()
+    const pierwszyKafelek = kafelki.first()
+    const checkbox = pierwszyKafelek.getByRole('checkbox', { name: 'Wzór klienta' })
+    const przelacznik = pierwszyKafelek.getByRole('switch')
+    const poprzedniWzor = await checkbox.isChecked()
+    const poprzedniTryb = await przelacznik.getAttribute('aria-checked')
+    await pierwszyKafelek.getByText('Wzór klienta', { exact: true }).click()
+    assert.equal(await checkbox.isChecked(), !poprzedniWzor)
+    await checkbox.press('Space')
+    assert.equal(await checkbox.isChecked(), poprzedniWzor)
+    await checkbox.press('Space')
+    await przelacznik.press('Enter')
+    assert.notEqual(await przelacznik.getAttribute('aria-checked'), poprzedniTryb)
+    await strona.getByRole('button', { name: 'Zapisz wersję roboczą', exact: true }).click()
+    await strona.goto(`${adres}/szkolenia-zamkniete/szczegoly-organizacyjne/kopie-robocze`)
+    await strona.getByRole('button', { name: 'Edytuj', exact: true }).first().click()
+    assert.equal(await checkbox.isChecked(), !poprzedniWzor)
+    assert.notEqual(await przelacznik.getAttribute('aria-checked'), poprzedniTryb)
+  } finally { await przegladarka.close() }
+})
+
 test('płynna edycja szczegółów z wieloma grupami i zachowanie bieżących danych', { timeout: 240000 }, async () => {
   const przegladarka = await chromium.launch({ executablePath: process.env.POMAGIER_CHROME, channel: process.env.POMAGIER_CHROME ? undefined : 'chrome', headless: true })
   try {

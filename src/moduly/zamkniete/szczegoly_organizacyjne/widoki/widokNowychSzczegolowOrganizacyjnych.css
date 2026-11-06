@@ -862,6 +862,59 @@ button.szczegoly-checklista__naglowek:hover {
   padding: 10px;
 }
 
+.szczegoly-lista-wymogow--dokumenty {
+  gap: 8px;
+}
+
+.szczegoly-wiersz-wymogu__kontrolki {
+  display: contents;
+}
+
+.szczegoly-wiersz-wymogu.szczegoly-wiersz-wymogu--z-wzorem {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 16px;
+  min-width: 0;
+  padding: 4px 12px;
+}
+
+.szczegoly-wiersz-wymogu--z-wzorem > .szczegoly-wiersz-wymogu__nazwa {
+  flex: 1 1 max-content;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.szczegoly-wiersz-wymogu--z-wzorem > .szczegoly-wiersz-wymogu__kontrolki {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+  margin-inline-start: auto;
+}
+
+.szczegoly-wiersz-wymogu__kontrolki > .szczegoly-checkbox {
+  cursor: pointer;
+}
+
+.szczegoly-wiersz-wymogu__kontrolki > .szczegoly-checkbox input {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  cursor: inherit;
+}
+
+.szczegoly-wiersz-wymogu__kontrolki > .szczegoly-checkbox input:focus-visible {
+  outline: 2px solid var(--ui-akcent);
+  outline-offset: 2px;
+}
+
+.szczegoly-wiersz-wymogu--z-wzorem > :is(.szczegoly-pole__blad, .szczegoly-wzor-klienta) {
+  flex: 0 0 100%;
+  min-width: 0;
+}
+
 .szczegoly-wiersz-wymogu--rozszerzony {
   grid-template-columns: minmax(180px, 1fr) auto minmax(140px, auto) minmax(160px, 220px);
 }
@@ -1384,7 +1437,6 @@ button.szczegoly-checklista__naglowek:hover {
   .szczegoly-karta-grupy__kolumna h4 { margin: 0; font-size: 1rem; color: var(--ui-akcent); }
   .szczegoly-karta-grupy__flagi { padding-top: 12px; }
   .szczegoly-wiersz-wymogu { grid-template-columns: minmax(0, 1fr) auto; gap: 16px; }
-  .szczegoly-wiersz-wymogu > .szczegoly-checkbox { grid-column: 1 / -1; }
   .szczegoly-wzor-klienta { grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }
   .szczegoly-wiersz-wymogu--przyjazd-aktywny { grid-template-columns: minmax(0, 1fr) minmax(0, 200px) auto; }
   .szczegoly-przelacznik-tak-nie__tor { box-shadow: none; border-color: var(--ui-obramowanie); }

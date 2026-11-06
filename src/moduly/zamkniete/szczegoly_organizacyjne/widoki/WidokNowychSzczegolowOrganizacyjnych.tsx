@@ -218,16 +218,18 @@ function WierszWymoguRozszerzony({
 }: WlasciwosciWierszaWymogu) {
   const blad = useBladPola(pole)
   return (
-    <div className="szczegoly-wiersz-wymogu">
-      <span>{etykieta}<ZnacznikBleduPola blad={blad} /></span>
-      <PrzelacznikTakNie etykieta={etykieta} pole={pole} wariant={wariantPrzelacznika} wlaczony={wlaczony} ustawWlaczony={ustawWlaczony} />
+    <div className={`szczegoly-wiersz-wymogu${pokazWzorKlienta ? ' szczegoly-wiersz-wymogu--z-wzorem' : ''}`}>
+      <span className="szczegoly-wiersz-wymogu__nazwa">{etykieta}<ZnacznikBleduPola blad={blad} /></span>
+      <div className="szczegoly-wiersz-wymogu__kontrolki">
+        {pokazWzorKlienta && (
+          <label className="szczegoly-checkbox">
+            <input checked={wzorKlienta} type="checkbox" onChange={(zdarzenie) => ustawWzorKlienta(zdarzenie.target.checked)} />
+            <span>Wzór klienta</span>
+          </label>
+        )}
+        <PrzelacznikTakNie etykieta={etykieta} pole={pole} wariant={wariantPrzelacznika} wlaczony={wlaczony} ustawWlaczony={ustawWlaczony} />
+      </div>
       {blad && <span className="szczegoly-pole__blad" id={pobierzIdBleduPola(pole)}>{blad}</span>}
-      {pokazWzorKlienta && (
-        <label className="szczegoly-checkbox">
-          <input checked={wzorKlienta} type="checkbox" onChange={(zdarzenie) => ustawWzorKlienta(zdarzenie.target.checked)} />
-          <span>Wzór klienta</span>
-        </label>
-      )}
       {pokazWzorKlienta && wzorKlienta && szczegolyWzoruKlienta && (
         <div className="szczegoly-wzor-klienta">
           <div className="szczegoly-wzor-klienta__plik">
@@ -766,7 +768,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
         <div className="szczegoly-uklad-sekcji">
           <div className="szczegoly-kolumna-sekcji">
           <SekcjaFormularza id="pakiet-podstawowy" tytul="Pakiet podstawowy">
-            <div className="szczegoly-lista-wymogow">
+            <div className="szczegoly-lista-wymogow szczegoly-lista-wymogow--dokumenty">
               {pozycjePakietu.map(([klucz, etykieta]) => (
                 <WierszWymoguRozszerzony
                   etykieta={etykieta}
@@ -787,7 +789,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
           </SekcjaFormularza>
 
           <SekcjaFormularza id="materialy-szkoleniowe" tytul="Materiały szkoleniowe">
-            <div className="szczegoly-lista-wymogow">
+            <div className="szczegoly-lista-wymogow szczegoly-lista-wymogow--dokumenty">
               {pozycjeMaterialow.map(([klucz, etykieta]) => (
                 <WierszWymoguRozszerzony
                   etykieta={etykieta}
