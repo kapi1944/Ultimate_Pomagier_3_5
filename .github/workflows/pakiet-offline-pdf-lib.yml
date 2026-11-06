@@ -39,7 +39,7 @@ jobs:
           npm run build
           npm audit --omit=dev --audit-level=high
 
-            - name: Sprawdzenie importu TypeScript
+      - name: Sprawdzenie importu TypeScript
         run: |
           trap 'rm -f .github-pdf-lib-weryfikacja.ts' EXIT
           cat > .github-pdf-lib-weryfikacja.ts <<'TS'
