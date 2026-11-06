@@ -1,12 +1,19 @@
 type KluczZdjecia = [dokumentId: string, paczkaId: string, zdjecieId: string]
 
-async function wykonajOperacjeZdjecia<T>(tryb: IDBTransactionMode, operacja: (magazyn: IDBObjectStore) => IDBRequest<T>) {
-  const baza = await new Promise<IDBDatabase>((rozwiaz, odrzuc) => {
+type ZapisZdjecia = { plik: Blob; odcisk: string }
+
+async function wykonajOperacjeZdjecia<T>(tryb: IDBTransactionMode, operacja: (magazyn: IDBObjectStore) => IDBRequest<T>, czyUtworzyc = true) {
+  const baza = await new Promise<IDBDatabase | null>((rozwiaz, odrzuc) => {
     const otwarcie = indexedDB.open('ultimatePomagier.zdjeciaPaczek', 1)
-    otwarcie.onupgradeneeded = () => { otwarcie.result.createObjectStore('zdjecia') }
+    let czyBrakBazy = false
+    otwarcie.onupgradeneeded = () => {
+      if (czyUtworzyc) otwarcie.result.createObjectStore('zdjecia')
+      else { czyBrakBazy = true; otwarcie.transaction?.abort() }
+    }
     otwarcie.onsuccess = () => rozwiaz(otwarcie.result)
-    otwarcie.onerror = () => odrzuc(otwarcie.error)
+    otwarcie.onerror = () => czyBrakBazy ? rozwiaz(null) : odrzuc(otwarcie.error)
   })
+  if (!baza) return null
   try {
     return await new Promise<T>((rozwiaz, odrzuc) => {
       const transakcja = baza.transaction('zdjecia', tryb)
@@ -31,6 +38,24 @@ export function usunPlikZdjeciaPaczki(klucz: KluczZdjecia) {
 }
 
 export async function pobierzPlikZdjeciaPaczki(klucz: KluczZdjecia, odcisk: string) {
-  const zapis = await wykonajOperacjeZdjecia<{ plik: Blob; odcisk: string } | undefined>('readonly', (magazyn) => magazyn.get(klucz))
+  const zapis = await wykonajOperacjeZdjecia<ZapisZdjecia | undefined>('readonly', (magazyn) => magazyn.get(klucz))
   return zapis?.odcisk === odcisk && zapis.plik instanceof Blob && zapis.plik.size > 0 ? zapis.plik : null
+}
+
+export async function pobierzZdjeciaPaczekDoBackupu() {
+  let zadanieKluczy: IDBRequest<IDBValidKey[]> | undefined
+  const zapisy = await wykonajOperacjeZdjecia<ZapisZdjecia[]>('readonly', (magazyn) => {
+    zadanieKluczy = magazyn.getAllKeys()
+    return magazyn.getAll()
+  }, false)
+  const klucze = zadanieKluczy?.result ?? []
+  if (klucze.length !== (zapisy?.length ?? 0)) throw new Error('Nie udało się spójnie odczytać zdjęć paczek.')
+  return (zapisy ?? []).map((zapis, indeks) => {
+    const klucz = klucze[indeks]
+    if (!Array.isArray(klucz) || klucz.length !== 3 || !klucz.every((id) => typeof id === 'string' && id)
+      || !(zapis?.plik instanceof Blob) || !zapis.plik.size || typeof zapis.odcisk !== 'string') {
+      throw new Error('Magazyn zdjęć zawiera nieprawidłowy rekord.')
+    }
+    return { klucz: klucz as KluczZdjecia, plik: zapis.plik, odcisk: zapis.odcisk }
+  })
 }

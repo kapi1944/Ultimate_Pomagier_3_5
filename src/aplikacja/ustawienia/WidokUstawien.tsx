@@ -31,6 +31,7 @@ import {
   walidujUstawieniaOsi,
 } from './magazynUstawienAplikacji'
 import { czyNalezyPrzypomniecOPelnymBackupu, odczytajKopieLokalna, pobierzListeKopiiLokalnych, przywrocBackup, przywrocKopieLokalna, serializujBackup, sprawdzBackup, utworzBackup, type BackupDanych, type KategoriaBackupu } from '../../wspolne/dane/backupDanych'
+import { sprawdzBackupMigracjiE4, utworzBackupMigracjiE4 } from '../../wspolne/dane/backupMigracjiE4'
 import { analizujMigracjeStarszychDokumentow, wykonajMigracjeStarszychDokumentow, type RaportMigracjiStarszychDokumentow } from '../../wspolne/dokumenty/migracjaStarszychDokumentow'
 import { pobierzStanRejestruDokumentow } from '../../wspolne/dokumenty/rejestrDokumentow'
 import './widokUstawien.css'
@@ -393,6 +394,27 @@ export default function WidokUstawien() {
     ustawKomunikat(`Przygotowano kopię danych: ${kategoria === 'WSZYSTKO' ? 'wszystko' : kategoria.toLowerCase()}.`)
   }
 
+  async function przygotujKopieMigracyjnaE4() {
+    ustawKomunikat('Odczytywanie danych i zdjęć paczek…')
+    try {
+      const kopia = await utworzBackupMigracjiE4()
+      pobierzPlikJson(`ultimate-pomagier-migracja-e4-${new Date().toISOString().slice(0, 10)}.json`, kopia)
+      ustawKomunikat('Przygotowano kopię migracyjną ze zdjęciami i sumami SHA-256.')
+    } catch (blad) {
+      ustawKomunikat(blad instanceof Error ? blad.message : 'Nie udało się utworzyć kopii migracyjnej.')
+    }
+  }
+
+  async function przeanalizujKopieMigracyjnaE4(plik: File | undefined) {
+    if (!plik) return
+    try {
+      const wynik = await sprawdzBackupMigracjiE4(await plik.text())
+      ustawKomunikat(`Analiza kopii potwierdziła ${wynik.dokumenty} dokumentów, ${wynik.historia} wpisów historii i ${wynik.zdjecia} plików zdjęć. Brakujące lub niespójne powiązania zdjęć – ${wynik.brakZdjec}. Zdjęcia archiwalne lub bez powiązania – ${wynik.zdjeciaArchiwalneLubBezPowiazania}.`)
+    } catch (blad) {
+      ustawKomunikat(blad instanceof Error ? blad.message : 'Nie udało się przeanalizować kopii migracyjnej.')
+    }
+  }
+
   async function wczytajBackup(plik: File | undefined) {
     if (!plik) return
     const wynik = sprawdzBackup(await plik.text())
@@ -537,6 +559,11 @@ export default function WidokUstawien() {
           <div className="ustawienia__akcje">
             <button type="button" onClick={() => eksportujDaneLokalne()}>Utwórz kopię teraz</button>
             {(['DOKUMENTY', 'SZCZEGOLY_ORGANIZACYJNE', 'PROGRAMY', 'PULPIT_I_ZADANIA', 'KARTOTEKI', 'USTAWIENIA'] as KategoriaBackupu[]).map((kategoria) => <button key={kategoria} type="button" onClick={() => eksportujDaneLokalne(kategoria)}>Eksportuj: {kategoria.replaceAll('_', ' ')}</button>)}
+          </div>
+          <p>Kopia migracyjna E4 zawiera dane z tego profilu oraz zdjęcia paczek. Analiza pliku odbywa się lokalnie.</p>
+          <div className="ustawienia__akcje">
+            <button type="button" onClick={() => { void przygotujKopieMigracyjnaE4() }}>Pobierz kopię migracyjną E4</button>
+            <label className="ustawienia__import">Przeanalizuj kopię E4<input accept="application/json,.json" onChange={(zdarzenie) => { void przeanalizujKopieMigracyjnaE4(zdarzenie.target.files?.[0]); zdarzenie.target.value = '' }} type="file" /></label>
           </div>
         </section>
 
