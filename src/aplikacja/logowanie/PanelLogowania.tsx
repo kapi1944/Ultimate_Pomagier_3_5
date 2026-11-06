@@ -69,8 +69,13 @@ export default function PanelLogowania({ otworzDemonstracje, poUwierzytelnieniu 
     } catch (blad) { ustawBlad(blad instanceof Error ? blad.message : 'Usługa tożsamości jest niedostępna.') } finally { ustawHaslo(''); ustawPowtorzoneHaslo(''); ustawCzyTrwaLogowanie(false) }
   }
   function zmienEtap(nowy: 'logowanie' | 'kod') { ustawEtap(nowy); ustawHaslo(''); ustawPowtorzoneHaslo(''); ustawKod(''); ustawZgode(''); ustawBlad('') }
+  const komunikatLogowania = czyLogowanieNatywne()
+    ? 'Konta i dane są lokalne dla tej instalacji. Logowanie działa bez internetu. Dane z innych urządzeń nie są automatycznie dostępne.'
+    : typeof window !== 'undefined' && window.location.protocol === 'https:'
+      ? 'Użyj konta skonfigurowanego przez operatora usługi Pomagiera. Dokumenty i checklisty są przechowywane w tym profilu przeglądarki.'
+      : 'Logowanie wymaga skonfigurowanej lokalnej usługi kont lub aplikacji natywnej. Bez zaufanej warstwy logowanie produkcyjne jest niedostępne.'
   return <main className="panel-logowania"><form className="panel-logowania__formularz" onSubmit={obsluzLogowanie}>
-    <header><img alt="Ultimate Pomagier" className="panel-logowania__logo" src="/logo-ultimate-pomagier.png" /><h1>{informacjeOWersji.nazwaProduktu}</h1><p>Zaloguj się do swojego obszaru pracy.</p><Komunikat>{czyLogowanieNatywne() ? 'Konta i dane są lokalne dla tej instalacji. Logowanie działa bez internetu. Dane z innych urządzeń nie są automatycznie dostępne.' : 'Logowanie wymaga skonfigurowanej lokalnej usługi kont lub aplikacji natywnej. Bez zaufanej warstwy logowanie produkcyjne jest niedostępne.'}</Komunikat>{czyTrybDemonstracyjny && <Komunikat>Lokalny tryb demonstracyjny — bez bezpiecznej weryfikacji tożsamości. Używaj wyłącznie do pracy demonstracyjnej.</Komunikat>}</header>
+    <header><img alt="Ultimate Pomagier" className="panel-logowania__logo" src="/logo-ultimate-pomagier.png" /><h1>{informacjeOWersji.nazwaProduktu}</h1><p>Zaloguj się do swojego obszaru pracy.</p><Komunikat>{komunikatLogowania}</Komunikat>{czyTrybDemonstracyjny && <Komunikat>Lokalny tryb demonstracyjny — bez bezpiecznej weryfikacji tożsamości. Używaj wyłącznie do pracy demonstracyjnej.</Komunikat>}</header>
     <div className="panel-logowania__wybor">
       {etap !== 'logowanie' && <h2>{etap === 'konfiguracja' ? 'Pierwsza konfiguracja konta lokalnego' : etap === 'haslo' ? '🔐 Ustaw nowe hasło' : 'Dokończ resetowanie hasła'}</h2>}
       {etap === 'logowanie' && czyLogowanieNatywne() && <h2>Logowanie lokalne</h2>}

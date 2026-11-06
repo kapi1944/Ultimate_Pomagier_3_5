@@ -11,7 +11,9 @@ export async function wykonajOperacjeTozsamosci(operacja: string, dane: Record<s
     const { invoke } = await import('@tauri-apps/api/core')
     try { return await invoke<unknown>('operacja_konta', { operacja, dane }) } catch (blad) { throw new Error(typeof blad === 'string' ? blad : 'Nie udało się wykonać operacji konta.', { cause: blad }) }
   }
-  if (window.location.origin !== 'http://127.0.0.1:47831') throw new Error('Uruchom lokalną usługę kont i otwórz http://127.0.0.1:47831. Na tym adresie logowanie produkcyjne jest niedostępne.')
+  if (window.location.protocol !== 'https:' && window.location.origin !== 'http://127.0.0.1:47831') {
+    throw new Error('Otwórz skonfigurowaną usługę Pomagiera przez HTTPS albo uruchom lokalną usługę kont na http://127.0.0.1:47831.')
+  }
   const odpowiedz = await fetch('/api/konta', { method: 'POST', credentials: 'same-origin', cache: 'no-store', headers: { 'Content-Type': 'application/json', 'X-Pomagier-Konta': '1' }, body: JSON.stringify({ operacja, dane }) })
   if (!odpowiedz.ok) throw new Error('Usługa kont odrzuciła żądanie.')
   const wynik: unknown = await odpowiedz.json()
