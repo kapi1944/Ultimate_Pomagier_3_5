@@ -225,6 +225,201 @@ test('kontrolki liczbowe mieszczą się w dużym i wąskim oknie przy trzech ska
   } finally { await przegladarka.close() }
 })
 
+test('segmenty udostępniają fokus, opisy i wybór z klawiatury, a przełącznik aktywuje się raz na klawisz', { timeout: 60000 }, async () => {
+  const przegladarka = await uruchomPrzegladarke()
+  try {
+    const strona = await przegladarka.newPage()
+    await strona.goto(`${adres}/testy/poleSegmentoweSzczegolow.przegladarka.html`)
+    const wybor = strona.getByRole('group', { name: 'Wybór', exact: true })
+    const pierwsza = wybor.getByRole('button', { name: 'Pierwsza' })
+    const druga = wybor.getByRole('button', { name: 'Druga' })
+    const trzecia = wybor.getByRole('button', { name: 'Trzecia' })
+    const czyMaFokus = (kontrolka) => kontrolka.evaluate((element) => element === document.activeElement)
+
+    await pierwsza.waitFor()
+    assert.equal(await wybor.getByRole('button', { pressed: true }).count(), 0)
+    assert.equal(await pierwsza.getAttribute('id'), 'szczegoly-pole-wybor')
+    assert.equal(await pierwsza.getAttribute('aria-invalid'), 'true')
+    assert.equal(await strona.locator('#szczegoly-blad-wybor').textContent(), 'Wybierz opcję.')
+    assert.equal(await pierwsza.getAttribute('aria-describedby'), 'szczegoly-blad-wybor')
+
+    await strona.getByRole('button', { name: 'Początek' }).press('Tab')
+    assert.equal(await czyMaFokus(pierwsza), true)
+    assert.equal(await pierwsza.evaluate((element) => getComputedStyle(element).outlineStyle), 'solid')
+    await strona.keyboard.press('Tab')
+    assert.equal(await czyMaFokus(druga), true)
+    await strona.keyboard.press('Enter')
+    assert.equal(await druga.getAttribute('aria-pressed'), 'true')
+    assert.equal(await druga.getAttribute('id'), 'szczegoly-pole-wybor')
+    assert.equal(await druga.getAttribute('aria-invalid'), 'false')
+    assert.equal(await strona.locator('#szczegoly-blad-wybor').textContent(), 'Sprawdź tę wartość przed wprowadzeniem szkolenia.')
+    await strona.keyboard.press('Shift+Tab')
+    assert.equal(await czyMaFokus(pierwsza), true)
+    await strona.keyboard.press('Space')
+    assert.equal(await pierwsza.getAttribute('aria-pressed'), 'true')
+    await trzecia.press('Space')
+    assert.equal(await strona.locator('#wybor-model').textContent(), 'Trzecia')
+
+    const wylaczone = await strona.getByRole('group', { name: 'Wyłączony wybór' }).getByRole('button').all()
+    assert.equal(wylaczone.length, 3)
+    for (const opcja of wylaczone) assert.equal(await opcja.isDisabled(), true)
+    await wylaczone[0].evaluate((element) => element.click())
+    assert.equal(await strona.locator('#wybor-model').textContent(), 'Trzecia')
+
+    const przelacznik = strona.getByRole('switch', { name: 'Przełącznik' })
+    await strona.keyboard.press('Tab')
+    assert.equal(await czyMaFokus(przelacznik), true)
+    await strona.keyboard.press('Enter')
+    assert.equal(await przelacznik.getAttribute('aria-checked'), 'true')
+    assert.equal(await strona.locator('#aktywacje').textContent(), '1')
+    await strona.keyboard.press('Space')
+    assert.equal(await przelacznik.getAttribute('aria-checked'), 'false')
+    assert.equal(await strona.locator('#aktywacje').textContent(), '2')
+    assert.equal(await strona.locator('#wyslania').textContent(), '0')
+  } finally { await przegladarka.close() }
+})
+
+test('segmenty grup zachowują rozliczenia, statusy importu i wartości zapisane w kopii', { timeout: 60000 }, async () => {
+  const przegladarka = await uruchomPrzegladarke()
+  try {
+    const strona = await przegladarka.newPage({ viewport: { width: 1440, height: 1000 } })
+    await strona.goto(adres)
+    await strona.getByRole('button', { name: 'Otwórz demonstrację Architekta', exact: true }).click()
+    await strona.goto(`${adres}/szkolenia-zamkniete/szczegoly-organizacyjne/nowe`)
+    const wersja = await strona.evaluate(async () => {
+      const { poczatkoweDaneFormularza, poczatkowaGrupa, poczatkowiAdresaci } = await import('/src/moduly/zamkniete/szczegoly_organizacyjne/danePoczatkowe.ts')
+      const { wersjaEksportuSzczegolow } = await import('/src/moduly/zamkniete/szczegoly_organizacyjne/uslugi/magazynWersjiRoboczych.ts')
+      return {
+        id: 'test-segmenty-grup', wersja: wersjaEksportuSzczegolow,
+        dane: { ...poczatkoweDaneFormularza, tytulSzkolenia: 'Test segmentów grup' },
+        grupy: [
+          { ...poczatkowaGrupa, id: 'segmenty-a', formaSzkolenia: 'Stacjonarne', miejsce: 'Sala klienta', ktoZapewniaSale: 'Klient', liczbaUczestnikow: 3, cenaNetto: 5000.01, trybCeny: 'za grupę', vat: 'Nie – 23%' },
+          { ...poczatkowaGrupa, id: 'segmenty-b', formaSzkolenia: 'Online', miejsce: 'Online', trybCeny: 'za osobę', vat: 'Min. 70%' },
+          { ...poczatkowaGrupa, id: 'segmenty-c', formaSzkolenia: 'Stacjonarne', trybCeny: 'za grupę', vat: 'ZW – 100%' },
+        ],
+        adresaci: poczatkowiAdresaci,
+        statusyPol: { 'grupy.0.vat': 'zaimportowane', 'grupy.1.vat': 'niepewne', 'grupy.2.vat': 'zaimportowane' },
+      }
+    })
+    await strona.locator('input[accept=".json,application/json"]').setInputFiles({ name: 'grupy.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(wersja)) })
+    const grupy = strona.locator('.szczegoly-karta-grupy')
+    await grupy.nth(2).waitFor()
+    const pierwsza = grupy.first()
+    const forma = pierwsza.getByRole('group', { name: 'Forma szkolenia', exact: true })
+    const tryb = pierwsza.getByRole('group', { name: 'Sposób naliczania ceny', exact: true })
+    const vat = pierwsza.getByRole('group', { name: 'Oświadczenie VAT', exact: true })
+    const miejsce = pierwsza.getByRole('combobox', { name: 'Miejsce', exact: true })
+    const mpp = pierwsza.getByRole('switch', { name: 'Mechanizm podzielonej płatności (MPP)', exact: true })
+    const zaznaczone = (grupa) => grupa.getByRole('button', { pressed: true }).textContent()
+
+    assert.equal(await zaznaczone(forma), 'Stacjonarne')
+    assert.equal(await miejsce.inputValue(), 'Sala klienta')
+    assert.equal(await pierwsza.getByRole('textbox', { name: 'Kto zapewnia salę' }).inputValue(), 'Klient')
+    await forma.getByRole('button', { name: 'Online' }).click()
+    assert.equal(await miejsce.inputValue(), 'Online')
+    assert.equal(await miejsce.isDisabled(), true)
+    assert.equal(await pierwsza.getByRole('textbox', { name: 'Kto zapewnia łącze' }).inputValue(), 'Klient')
+    await forma.getByRole('button', { name: 'Stacjonarne' }).click()
+    assert.equal(await miejsce.inputValue(), '')
+    assert.equal(await miejsce.isEnabled(), true)
+    assert.equal(await pierwsza.getByRole('textbox', { name: 'Kto zapewnia salę' }).inputValue(), 'Klient')
+
+    assert.equal(await zaznaczone(tryb), 'za grupę')
+    assert.equal(await mpp.isDisabled(), true)
+    assert.equal(await mpp.getAttribute('aria-checked'), 'false')
+    const suma = pierwsza.getByRole('textbox', { name: /^Cena za grupę/ })
+    await tryb.getByRole('button', { name: 'za osobę' }).click()
+    assert.equal((await suma.inputValue()).replace(/\s/g, ''), '15000,03')
+    assert.equal(await mpp.getAttribute('aria-checked'), 'true')
+    await suma.fill('15000,01')
+    await suma.blur()
+    assert.equal((await suma.inputValue()).replace(/\s/g, ''), '15000,01')
+    await tryb.getByRole('button', { name: 'za grupę' }).click()
+    assert.equal(await suma.count(), 0)
+    assert.equal(await mpp.getAttribute('aria-checked'), 'false')
+    await tryb.getByRole('button', { name: 'za osobę' }).click()
+    assert.equal((await suma.inputValue()).replace(/\s/g, ''), '15000,01')
+
+    assert.equal(await zaznaczone(vat), 'Nie – 23%')
+    const opisy = await grupy.getByRole('group', { name: 'Oświadczenie VAT' }).getByRole('button', { pressed: true }).evaluateAll((przyciski) => przyciski.map((przycisk) => przycisk.getAttribute('aria-describedby')))
+    assert.ok(opisy.every(Boolean))
+    assert.equal(new Set(opisy).size, 3)
+    for (const id of opisy) assert.equal(await strona.locator(`[id="${id}"]`).count(), 1)
+    for (const opcja of ['Min. 70%', 'ZW – 100%', 'Min. 70%', 'Nie – 23%']) {
+      await vat.getByRole('button', { name: opcja, exact: true }).click()
+      assert.equal(await zaznaczone(vat), opcja)
+      assert.equal(await vat.getByRole('button', { pressed: true }).count(), 1)
+    }
+    assert.equal(await grupy.nth(1).getByRole('button', { name: 'Zatwierdź: grupy.1.vat', exact: true }).count(), 1)
+
+    const pobierzMigawke = (klucz) => strona.evaluate((klucz) => JSON.parse(localStorage.getItem(`ultimatePomagier.szczegolyOrganizacyjne.${klucz}`)), klucz)
+    await strona.waitForFunction(() => JSON.parse(localStorage.getItem('ultimatePomagier.szczegolyOrganizacyjne.autosave'))?.grupy[0].cenaNetto === 15000.01 / 3)
+    const autosave = await pobierzMigawke('autosave')
+    assert.deepEqual(autosave.grupy.map(({ id, formaSzkolenia, trybCeny, vat }) => [id, formaSzkolenia, trybCeny, vat]), [
+      ['segmenty-a', 'Stacjonarne', 'za osobę', 'Nie – 23%'],
+      ['segmenty-b', 'Online', 'za osobę', 'Min. 70%'],
+      ['segmenty-c', 'Stacjonarne', 'za grupę', 'ZW – 100%'],
+    ])
+    assert.equal(autosave.grupy[0].mechanizmPodzielonejPlatnosci, true)
+    assert.deepEqual(autosave.statusyPol, {
+      ...wersja.statusyPol, 'grupy.0.vat': 'reczne', 'grupy.0.formaSzkolenia': 'reczne', 'grupy.0.trybCeny': 'reczne', 'grupy.0.cenaNetto': 'reczne',
+    })
+
+    await strona.getByRole('button', { name: 'Zapisz wersję roboczą', exact: true }).click()
+    await strona.goto(`${adres}/szkolenia-zamkniete/szczegoly-organizacyjne/kopie-robocze`)
+    await strona.getByRole('button', { name: 'Edytuj', exact: true }).first().click()
+    await grupy.nth(2).waitFor()
+    const zapisana = await pobierzMigawke('aktualnaWersja')
+    assert.deepEqual(zapisana.grupy, autosave.grupy)
+    assert.deepEqual(zapisana.statusyPol, autosave.statusyPol)
+    for (const [indeks, grupa] of zapisana.grupy.entries()) {
+      for (const [nazwa, wartosc] of [['Forma szkolenia', grupa.formaSzkolenia], ['Sposób naliczania ceny', grupa.trybCeny], ['Oświadczenie VAT', grupa.vat]]) {
+        assert.equal(await zaznaczone(grupy.nth(indeks).getByRole('group', { name: nazwa, exact: true })), wartosc)
+      }
+    }
+  } finally { await przegladarka.close() }
+})
+
+test('segmenty grup mieszczą się przy 1440 i 390 px oraz trzech skalach', { timeout: 60000 }, async () => {
+  const przegladarka = await uruchomPrzegladarke()
+  try {
+    const strona = await przegladarka.newPage()
+    await strona.addInitScript(() => localStorage.setItem('ultimatePomagier.panelJakosciWysuwanieZKrawedzi', 'false'))
+    await strona.goto(adres)
+    await strona.getByRole('button', { name: 'Otwórz demonstrację Architekta', exact: true }).click()
+    await strona.goto(`${adres}/szkolenia-zamkniete/szczegoly-organizacyjne/nowe`)
+    const segmenty = strona.locator('.szczegoly-pole-segmentowe')
+    await segmenty.first().waitFor()
+    assert.equal(await segmenty.count(), 3)
+    mkdirSync('tmp/ux-1b', { recursive: true })
+    for (const szerokosc of [1440, 390]) {
+      await strona.setViewportSize({ width: szerokosc, height: 1000 })
+      for (const skala of [75, 85, 100]) {
+        await strona.evaluate(async (wartosc) => {
+          const { zastosujSkaleInterfejsu } = await import('/src/aplikacja/ustawienia/skalaInterfejsu.ts')
+          await zastosujSkaleInterfejsu(wartosc)
+        }, skala)
+        const zamknijPanel = strona.getByRole('button', { name: 'Schowaj panel', exact: true })
+        if (await zamknijPanel.isVisible()) await zamknijPanel.click()
+        const pomiary = await segmenty.evaluateAll((elementy) => elementy.map((element) => ({
+          przepelnienie: element.scrollWidth - element.clientWidth,
+          miesciSie: element.getBoundingClientRect().right <= element.parentElement.getBoundingClientRect().right + 1,
+          przyciski: Array.from(element.children, (przycisk) => ({
+            wysokosc: przycisk.getBoundingClientRect().height,
+            przepelnienie: przycisk.scrollWidth - przycisk.clientWidth,
+          })),
+        })))
+        for (const pomiar of pomiary) {
+          assert.equal(pomiar.przepelnienie, 0, `${szerokosc}px, ${skala}%`)
+          assert.ok(pomiar.miesciSie && pomiar.przyciski.every(({ wysokosc, przepelnienie }) => wysokosc >= 32 && przepelnienie === 0), JSON.stringify(pomiar))
+        }
+        await strona.getByRole('group', { name: 'Oświadczenie VAT' }).evaluate((element) => element.scrollIntoView({ block: 'center' }))
+        await strona.screenshot({ path: `tmp/ux-1b/segmenty-${szerokosc}-${skala}.png` })
+      }
+    }
+  } finally { await przegladarka.close() }
+})
+
 test('pakiet podstawowy mieści kontrolki w jednym rzędzie i zachowuje zapisane wybory', { timeout: 60000 }, async () => {
   const przegladarka = await uruchomPrzegladarke()
   try {

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="pl">
+<meta charset="utf-8">
+<title>Test segmentów i przełącznika Szczegółów</title>
+<body>
+  <main id="formularz" class="szczegoly-organizacyjne"></main>
+  <script type="module">
+    import { createElement, useState } from 'react'
+    import { createRoot } from 'react-dom/client'
+    import '../src/wspolne/komponenty/tokeny.css'
+    import { PoleSegmentowe } from '../src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/PolaSzczegolow.tsx'
+    import PrzelacznikTakNie from '../src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/PrzelacznikTakNie.tsx'
+
+    function FormularzTestowy() {
+      const [wartosc, ustawWartosc] = useState('')
+      const [wlaczony, ustawWlaczony] = useState(false)
+      const [aktywacje, ustawAktywacje] = useState(0)
+      const [wyslania, ustawWyslania] = useState(0)
+      const opcje = ['Pierwsza', 'Druga', 'Trzecia']
+
+      return createElement('form', { onSubmit: (zdarzenie) => {
+        zdarzenie.preventDefault()
+        ustawWyslania((liczba) => liczba + 1)
+      } },
+        createElement('button', { type: 'button' }, 'Początek'),
+        createElement(PoleSegmentowe, {
+          etykieta: 'Wybór', pole: 'wybor', opcje, wartosc, ustawWartosc,
+          statusyPol: { wybor: 'niepewne' }, blad: wartosc ? undefined : 'Wybierz opcję.',
+        }),
+        createElement(PoleSegmentowe, {
+          etykieta: 'Wyłączony wybór', pole: 'wylaczony', opcje, wartosc: 'Druga', disabled: true,
+          statusyPol: { wylaczony: 'zaimportowane' }, ustawWartosc,
+        }),
+        createElement(PrzelacznikTakNie, {
+          etykieta: 'Przełącznik', wlaczony, ustawWlaczony: (wartosc) => {
+            ustawWlaczony(wartosc)
+            ustawAktywacje((liczba) => liczba + 1)
+          },
+        }),
+        createElement('output', { id: 'wybor-model' }, wartosc),
+        createElement('output', { id: 'aktywacje' }, aktywacje),
+        createElement('output', { id: 'wyslania' }, wyslania),
+      )
+    }
+
+    createRoot(document.getElementById('formularz')).render(createElement(FormularzTestowy))
+  </script>
+</body>
+</html>

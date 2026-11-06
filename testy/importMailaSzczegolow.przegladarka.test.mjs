@@ -288,7 +288,7 @@ test('import V4 w formularzu: kartoteki, lokalizacja, rozliczenia, jakość i oc
     assert.equal(await pole('dataDo').inputValue(), '2026-10-29')
     assert.equal(await strona.locator('input[aria-label="Miejsce"]').inputValue(), 'Hotel Bulwary, ul. Rzeczna 8, 39-300 Mielec')
     assert.equal((await pole('cenaNetto').inputValue()).replace(/\s/g, ''), '8700,00')
-    assert.equal(await pole('vat').inputValue(), 'Nie – 23%')
+    assert.equal(await strona.getByRole('group', { name: 'Oświadczenie VAT' }).getByRole('button', { pressed: true }).textContent(), 'Nie – 23%')
     assert.equal(await pole('liczbaUczestnikow').inputValue(), '19')
     assert.equal(await pole('terminPlatnosci').inputValue(), '60')
     assert.equal(await strona.locator('input[list^="trenerzy-"]').inputValue(), 'Renata Stefaniuk')
@@ -374,9 +374,10 @@ test('import OZE w formularzu: wartości A–G, statusy, ręczne 48 osób i pono
     const sprawdzPola = async (liczbaUczestnikow) => {
       const rozwin = strona.getByRole('button', { name: 'Rozwiń grupę', exact: true })
       if (await rozwin.count()) await rozwin.first().click()
-      for (const [nazwa, wartosc] of Object.entries({ nazwaKlienta: 'Wojewódzki Fundusz Ochrony Środowiska i Gospodarki Wodnej w Łodzi', liczbaUczestnikow, liczbaGodzin: '6', rodzajGodzin: 'Zegarowe (60 min)', vat: 'ZW – 100%', dataOd: '2026-11-06', dataDo: '2026-11-06', terminPlatnosci: '14' })) {
+      for (const [nazwa, wartosc] of Object.entries({ nazwaKlienta: 'Wojewódzki Fundusz Ochrony Środowiska i Gospodarki Wodnej w Łodzi', liczbaUczestnikow, liczbaGodzin: '6', rodzajGodzin: 'Zegarowe (60 min)', dataOd: '2026-11-06', dataDo: '2026-11-06', terminPlatnosci: '14' })) {
         assert.equal(await pole(nazwa).inputValue(), wartosc, nazwa)
       }
+      assert.equal(await strona.getByRole('group', { name: 'Oświadczenie VAT' }).getByRole('button', { pressed: true }).textContent(), 'ZW – 100%')
       assert.equal((await pole('cenaNetto').inputValue()).replace(/\s/g, ''), '7500,00')
       assert.equal(await strona.locator('input[list^="trenerzy-"]').inputValue(), 'Rafał Wojtaszek')
       assert.match(await pole('programSzkolenia').inputValue(), /1\. Pompy ciepła\n   - Dobór urządzeń/)

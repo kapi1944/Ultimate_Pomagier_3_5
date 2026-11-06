@@ -43,6 +43,12 @@ type WlasciwosciPolaWyboru = WspolneWlasciwosciPola & {
   niedostepneOpcje?: string[]
 }
 
+type WlasciwosciPolaSegmentowego<Opcja extends string> = WspolneWlasciwosciPola & {
+  opcje: readonly Opcja[]
+  wartosc: NoInfer<Opcja>
+  ustawWartosc: (wartosc: NoInfer<Opcja>) => void
+}
+
 type WlasciwosciPolaCheckbox = WspolneWlasciwosciPola & {
   zaznaczone: boolean
   ustawZaznaczone: (wartosc: boolean) => void
@@ -87,19 +93,19 @@ export function ZnacznikBleduPola({ blad }: { blad?: string }) {
   return blad ? <span aria-hidden="true" className="szczegoly-pole__kropka-bledu" /> : null
 }
 
-function OpakowaniePola({ etykieta, pole, statusyPol, blad, disabled, dzieci, children, idKontrolki, idOpisu = pobierzIdBleduPola(pole) }: WspolneWlasciwosciPola & { idKontrolki?: string; idOpisu?: string }) {
+function OpakowaniePola({ etykieta, pole, statusyPol, blad, disabled, dzieci, children, idKontrolki, idEtykiety, idOpisu = pobierzIdBleduPola(pole) }: WspolneWlasciwosciPola & { idKontrolki?: string; idEtykiety?: string; idOpisu?: string }) {
   const status = statusyPol[pole]
   const zawartosc = dzieci ?? children
   const komunikatStatusu = pobierzKomunikatStatusu(pole, statusyPol)
   const bladZWalidacji = useBladPola(pole, disabled)
   const komunikatBledu = blad ?? bladZWalidacji
-  const Opakowanie = idKontrolki ? 'div' : 'label'
+  const Opakowanie = idKontrolki || idEtykiety ? 'div' : 'label'
   const Etykieta = idKontrolki ? 'label' : 'span'
 
   return (
     <Opakowanie className={`szczegoly-pole ${status ? klasyStatusowPol[status] : ''} ${disabled ? 'szczegoly-pole--disabled' : ''}`}>
       <span className="szczegoly-pole__naglowek">
-        <Etykieta className="szczegoly-pole__etykieta" htmlFor={idKontrolki}>{etykieta}<ZnacznikBleduPola blad={komunikatBledu} /></Etykieta>
+        <Etykieta className="szczegoly-pole__etykieta" htmlFor={idKontrolki} id={idEtykiety}>{etykieta}<ZnacznikBleduPola blad={komunikatBledu} /></Etykieta>
         <ZnacznikStatusu pole={pole} statusyPol={statusyPol} />
       </span>
       {zawartosc}
@@ -304,6 +310,40 @@ export function PoleWyboru({ etykieta, pole, statusyPol, wartosc, ustawWartosc, 
           </option>
         ))}
       </select>
+    </OpakowaniePola>
+  )
+}
+
+export function PoleSegmentowe<Opcja extends string>({
+  etykieta, pole, statusyPol, wartosc, ustawWartosc, opcje, blad, disabled, idGrupy,
+}: WlasciwosciPolaSegmentowego<Opcja>) {
+  const bladZWalidacji = useBladPola(pole, disabled)
+  const komunikatBledu = blad ?? bladZWalidacji
+  const idKontrolki = pobierzIdPola(pole, idGrupy)
+  const idEtykiety = `${idKontrolki}-etykieta`
+  const idOpisu = komunikatBledu || pobierzKomunikatStatusu(pole, statusyPol) ? pobierzIdBleduPola(pole) : undefined
+  const opcjaDocelowa = opcje.includes(wartosc) ? wartosc : opcje[0]
+
+  return (
+    <OpakowaniePola blad={komunikatBledu} disabled={disabled} etykieta={etykieta} pole={pole} statusyPol={statusyPol} idEtykiety={idEtykiety}>
+      <div aria-labelledby={idEtykiety} className="szczegoly-pole-segmentowe" role="group">
+        {opcje.map((opcja) => (
+          <button
+            aria-describedby={idOpisu}
+            aria-invalid={Boolean(komunikatBledu)}
+            aria-pressed={wartosc === opcja}
+            disabled={disabled}
+            id={opcjaDocelowa === opcja ? idKontrolki : undefined}
+            key={opcja}
+            type="button"
+            onClick={() => {
+              if (wartosc !== opcja) ustawWartosc(opcja)
+            }}
+          >
+            {opcja}
+          </button>
+        ))}
+      </div>
     </OpakowaniePola>
   )
 }
