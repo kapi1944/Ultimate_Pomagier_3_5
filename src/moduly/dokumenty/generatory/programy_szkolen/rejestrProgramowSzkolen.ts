@@ -36,7 +36,7 @@ function rozdzielProgram(dane: ModelProgramuSzkolenia) {
   return { daneDokumentu, ustawienia }
 }
 
-function polaczProgram(dokument: Dokument<unknown, unknown>): ModelProgramuSzkolenia {
+export function polaczProgram(dokument: Dokument<unknown, unknown>): ModelProgramuSzkolenia {
   const ustawieniaRejestru = czyObiekt(dokument.ustawieniaDokumentu) && czyObiekt(dokument.ustawieniaDokumentu.ustawienia)
     ? dokument.ustawieniaDokumentu.ustawienia
     : undefined

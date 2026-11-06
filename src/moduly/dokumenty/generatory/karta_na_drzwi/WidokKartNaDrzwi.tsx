@@ -21,7 +21,7 @@ const pola: Array<[KluczPolaKartyNaDrzwi, string, 'input' | 'textarea']> = [['ty
 function pobierzSzablonyWlasne(): WlasnySzablonKartyNaDrzwi[] { try { const dane = JSON.parse(localStorage.getItem(kluczSzablonow) ?? '[]'); return Array.isArray(dane) ? dane as WlasnySzablonKartyNaDrzwi[] : [] } catch { return [] } }
 function zapiszSzablonyWlasne(szablony: WlasnySzablonKartyNaDrzwi[]) { localStorage.setItem(kluczSzablonow, JSON.stringify(szablony)) }
 function kopiaUstawien(ustawienia: UstawieniaSzablonuKartyNaDrzwi): UstawieniaSzablonuKartyNaDrzwi { return JSON.parse(JSON.stringify(ustawienia)) as UstawieniaSzablonuKartyNaDrzwi }
-function RenderujZestawEksportu({ dane, zasobyObrazow }: { dane: DaneKartyNaDrzwi; zasobyObrazow: Record<string, string | undefined> }) {
+export function RenderujZestawEksportu({ dane, zasobyObrazow }: { dane: DaneKartyNaDrzwi; zasobyObrazow: Record<string, string | undefined> }) {
   const ustawienia = dane.ustawieniaSzablonu
   if (ustawienia.format === 'a4' || !ustawienia.kilkaKartNaArkuszuA4) return <>{dane.karty.map((karta) => <RendererKartyNaDrzwi karta={karta} ustawieniaSzablonu={ustawienia} zasobyObrazow={zasobyObrazow} key={karta.id} />)}</>
   const uklad = pobierzUkladKartNaArkuszuA4(ustawienia.format, ustawienia.orientacja); const strony = Array.from({ length: Math.ceil(dane.karty.length / uklad.liczbaKart) }, (_, indeks) => dane.karty.slice(indeks * uklad.liczbaKart, (indeks + 1) * uklad.liczbaKart))

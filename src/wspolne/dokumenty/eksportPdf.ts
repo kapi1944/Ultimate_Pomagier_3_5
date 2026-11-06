@@ -44,7 +44,7 @@ export function pobierzWymiaryStronyPdf(orientacja: 'pionowa' | 'pozioma' = 'pio
     : { szerokoscMm: szerokosc, wysokoscMm: wysokosc, orientacjaJsPdf: 'portrait' as const }
 }
 
-export async function pobierzPdfDokumentu(ustawienia: UstawieniaEksportuPdf) {
+export async function renderujPdfDokumentu(ustawienia: UstawieniaEksportuPdf) {
   if (ustawienia.silnikPdf === 'semantyczny') {
     const { renderujScenePdf, wczytajFontyPdf, wczytajObrazyPdf } = await import('./rendererPdf')
     await document.fonts?.ready
@@ -52,11 +52,15 @@ export async function pobierzPdfDokumentu(ustawienia: UstawieniaEksportuPdf) {
     await new Promise<void>((rozwiaz) => window.requestAnimationFrame(() => window.requestAnimationFrame(() => rozwiaz())))
     const scena = zmierzScenePdf(pobierzStronyDokumentu(ustawienia.obszarDokumentu))
     const [fonty, obrazy] = await Promise.all([wczytajFontyPdf(), wczytajObrazyPdf(scena)])
-    renderujScenePdf(scena, fonty, obrazy).save(utworzNazwePlikuPdf(ustawienia.nazwaPliku))
-    return
+    return renderujScenePdf(scena, fonty, obrazy)
   }
-  const { pobierzRasterPdfLegacy } = await import('./eksportPdfLegacy')
-  return pobierzRasterPdfLegacy(ustawienia)
+  const { renderujRasterPdfLegacy } = await import('./eksportPdfLegacy')
+  return renderujRasterPdfLegacy(ustawienia)
+}
+
+export async function pobierzPdfDokumentu(ustawienia: UstawieniaEksportuPdf) {
+  const pdf = await renderujPdfDokumentu(ustawienia)
+  pdf.save(utworzNazwePlikuPdf(ustawienia.nazwaPliku))
 }
 
 export async function drukujDokument(obszar?: HTMLElement, orientacja: 'pionowa' | 'pozioma' = 'pionowa', format: 'a4' | 'a5' | 'a6' = 'a4') {

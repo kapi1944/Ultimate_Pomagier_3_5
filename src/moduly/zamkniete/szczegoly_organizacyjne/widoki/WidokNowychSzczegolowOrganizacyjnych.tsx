@@ -1043,6 +1043,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
 
         <PanelPrzygotowaniaDokumentow
           wersja={aktywnaWersja}
+          wersjaPakietu={aktywnaWersja ? { ...aktywnaWersja, dane: generator.daneFormularza, grupy: generator.grupy } : null}
           otworzDokument={otworzDokument}
           poUtworzeniu={() => ustawOdswiezaczDokumentow((obecny) => obecny + 1)}
         />

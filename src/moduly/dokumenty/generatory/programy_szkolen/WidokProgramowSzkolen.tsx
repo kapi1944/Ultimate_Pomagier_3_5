@@ -2220,3 +2220,53 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
 }
 
 export default WidokProgramowSzkolen
+
+export function RendererProgramuDoPakietu({ zapis, zasobyObrazow }: { zapis: unknown; zasobyObrazow: Record<string, string | undefined> }) {
+  const daneProgramu = normalizujZapisProgramu(zapis)
+  const { ustawienia, trescProgramu, logotypProgramu } = daneProgramu
+  const dokumentProgramu = utworzDokumentProgramuSzkolenia(daneProgramu)
+  const bledy = walidujProgramSzkolenia(daneProgramu, dokumentProgramu).filter((problem) => problem.czyBlokujeEksport)
+  if (bledy.length) throw new Error(bledy.map((problem) => problem.komunikat).join('; '))
+  const tytulZCudzyslowem = formatujTytulSzkolenia(pobierzTytulDokumentuProgramu(daneProgramu.tytulSzkolenia), ustawienia.formatCudzyslowu)
+  const kolorAkcentu = pobierzKolorAkcentu(ustawienia)
+  const profil = daneProfilowFirmy[ustawienia.profilFirmy]
+  const kontekst = utworzKontekstSwobodnychBlokowProgramu(daneProgramu, {
+    nazwaOrganizatora: profil.nazwa, kontaktOrganizatora: profil.kontakt, stopkaOrganizatora: profil.stopka,
+    logotypOrganizatora: ustawienia.profilFirmy === 'semper' ? logotypSemper : '/logo-iist.png',
+    mapaOrganizatora: ustawienia.profilFirmy === 'semper' ? mapaPolskiSemper : undefined,
+  })
+  const kontekstSwobodnychBlokow = { ...kontekst, zasobyObrazow: { ...zasobyObrazow, ...kontekst.zasobyObrazow } }
+  const presetWygladu = ustawienia.presetWygladu
+  const gruboscObramowaniaTytulu = Number.isFinite(ustawienia.gruboscObramowaniaTytulu) ? Math.min(10, Math.max(0, ustawienia.gruboscObramowaniaTytulu)) : domyslneUstawienia.gruboscObramowaniaTytulu
+  const trybRenderowania = 'finalny' as const
+  return <section className="program-szkolen"><style>{styleProgramuSzkolenia}</style>          <RendererStronProgramu
+            czyFormatowanieSkryptowe={ustawienia.formatowanieSkryptowe}
+            czyJustowac={ustawienia.czyJustowac}
+            czyNieDzielicPunktowGlownych={ustawienia.czyNieDzielicPunktowGlownych}
+            czyPogrubiacNaglowkiListyProgramu={ustawienia.czyPogrubiacNaglowkiListyProgramu}
+            dokument={dokumentProgramu}
+            elementyIdentyfikacji={ustawienia.elementyIdentyfikacji}
+            gruboscObramowaniaTytulu={gruboscObramowaniaTytulu}
+            kolorAkcentu={kolorAkcentu}
+            kontaktOrganizatora={profil.kontakt}
+            kontekstSwobodnychBlokow={kontekstSwobodnychBlokow}
+            logotypUzytkownika={ustawienia.blokiSwobodne?.some((blok) => blok.id === ID_LOGOTYPU_PROGRAMU) ? undefined : logotypProgramu}
+            nazwaOrganizatora={profil.nazwa}
+            preset={presetWygladu}
+            profilFirmy={ustawienia.profilFirmy}
+            separacjaModulow={ustawienia.separacjaModulow}
+            szerokoscLogotypu={ustawienia.szerokoscLogotypu}
+            stopkaOrganizatora={profil.stopka}
+            czyAkcentowacNazweOrganizatoraWStopce={ustawienia.czyAkcentowacNazweOrganizatoraWStopce}
+            stylDni={ustawienia.stylDni}
+            separatorTytuluDnia={ustawienia.separatorTytuluDnia}
+            stylListyGlownej={ustawienia.stylListyGlownej}
+            stylPodpunktow={ustawienia.stylPodpunktow}
+            mnoznikInterlinii={ustawienia.mnoznikInterlinii}
+            mnoznikOdstepuMiedzyDniami={ustawienia.mnoznikOdstepuMiedzyDniami}
+            stylePoziomowListy={ustawienia.stylePoziomowListy}
+            tekstSurowy={trescProgramu}
+            trybRenderowania={trybRenderowania}
+            tytul={tytulZCudzyslowem || 'Program szkolenia'}
+          /></section>
+}

@@ -1,13 +1,13 @@
 import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
-import { pobierzStronyDokumentu, pobierzWymiaryStronyPdf, pobierzPodzialStronA4, utworzNazwePlikuPdf, type UstawieniaEksportuPdf } from './eksportPdf'
+import { pobierzStronyDokumentu, pobierzWymiaryStronyPdf, pobierzPodzialStronA4, type UstawieniaEksportuPdf } from './eksportPdf'
 
 function przywrocSkaleKopii(kopia: Document) {
   kopia.documentElement.style.zoom = '1'
   kopia.documentElement.style.setProperty('--ui-skala-przegladarki', '1')
 }
 
-export async function pobierzRasterPdfLegacy({ obszarDokumentu, nazwaPliku, orientacja = 'pionowa', format = 'a4', marginesMm = 12 }: UstawieniaEksportuPdf) {
+export async function renderujRasterPdfLegacy({ obszarDokumentu, orientacja = 'pionowa', format = 'a4', marginesMm = 12 }: UstawieniaEksportuPdf) {
   await document.fonts?.ready
   await Promise.all(Array.from(obszarDokumentu.querySelectorAll('img')).map((obraz) => obraz.decode()))
   const stronyDokumentu = pobierzStronyDokumentu(obszarDokumentu)
@@ -18,8 +18,8 @@ export async function pobierzRasterPdfLegacy({ obszarDokumentu, nazwaPliku, orie
     / (Number(stylInterfejsu.getPropertyValue('--ui-skala-przegladarki')) || 1)
   // Odtwarzamy viewport sprzed natywnego zoomu, aby eksport nie zmieniał breakpointów dokumentu.
   const oknoEksportu = {
-    windowWidth: Math.round(window.innerWidth * skalaOkna),
-    windowHeight: Math.round(window.innerHeight * skalaOkna),
+    windowWidth: obszarDokumentu.ownerDocument !== document ? obszarDokumentu.ownerDocument.defaultView!.innerWidth : Math.round(window.innerWidth * skalaOkna),
+    windowHeight: obszarDokumentu.ownerDocument !== document ? obszarDokumentu.ownerDocument.defaultView!.innerHeight : Math.round(window.innerHeight * skalaOkna),
   }
 
   if (stronyDokumentu.length) {
@@ -37,8 +37,7 @@ export async function pobierzRasterPdfLegacy({ obszarDokumentu, nazwaPliku, orie
       pdf.addImage(kanwaStrony.toDataURL('image/png'), 'PNG', 0, 0, wymiaryStrony.szerokoscMm, wymiaryStrony.wysokoscMm, undefined, 'FAST')
     }
 
-    pdf.save(utworzNazwePlikuPdf(nazwaPliku))
-    return
+    return pdf
   }
 
   const kanwa = await html2canvas(obszarDokumentu, {
@@ -61,5 +60,5 @@ export async function pobierzRasterPdfLegacy({ obszarDokumentu, nazwaPliku, orie
     pdf.addImage(fragment.toDataURL('image/png'), 'PNG', marginesMm, marginesMm, szerokoscDrukuMm, (strona.wysokosc / kanwa.width) * szerokoscDrukuMm, undefined, 'FAST')
   })
 
-  pdf.save(utworzNazwePlikuPdf(nazwaPliku))
+  return pdf
 }

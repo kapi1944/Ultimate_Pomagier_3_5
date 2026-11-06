@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { lazy, Suspense, useRef, useState } from 'react'
 import type { Dokument } from '../../../../wspolne/dokumenty/modelDokumentu'
 import {
   czyDokumentJestGrupowy,
@@ -14,10 +14,13 @@ import {
 } from '../../../../wspolne/integracje/szczegolyDoDokumentow'
 import type { WersjaRoboczaGeneratora } from '../typy'
 
+const PanelPakietu = lazy(() => import('../../../../wspolne/dokumenty/pakietyDoZatwierdzenia/PanelPakietu'))
+
 const wszystkieRodzaje: RodzajDokumentuZeSzczegolow[] = ['program', 'lista', 'ankieta', 'dyplomy', 'karty', 'checklista']
 
 type WlasciwosciPaneluPrzygotowaniaDokumentow = {
   wersja: WersjaRoboczaGeneratora | null
+  wersjaPakietu?: WersjaRoboczaGeneratora | null
   otworzDokument: (dokument: Dokument<unknown, unknown>) => void
   poUtworzeniu: () => void
 }
@@ -35,7 +38,9 @@ function etykietaWyniku(wynik: WynikUtworzeniaDokumentu) {
   return `⚠ ${wynik.etykieta} — błąd: ${wynik.komunikat}`
 }
 
-export default function PanelPrzygotowaniaDokumentow({ wersja, otworzDokument, poUtworzeniu }: WlasciwosciPaneluPrzygotowaniaDokumentow) {
+export default function PanelPrzygotowaniaDokumentow({ wersja, wersjaPakietu = wersja, otworzDokument, poUtworzeniu }: WlasciwosciPaneluPrzygotowaniaDokumentow) {
+  const [czyPakiet, ustawCzyPakiet] = useState(false)
+  const przyciskPakietu = useRef<HTMLButtonElement>(null)
   const [wyniki, ustawWyniki] = useState<WynikUtworzeniaDokumentu[]>([])
   const [czyPokazacDodatkowe, ustawCzyPokazacDodatkowe] = useState(false)
   const [czyPotwierdzicWszystkie, ustawCzyPotwierdzicWszystkie] = useState(false)
@@ -127,6 +132,9 @@ export default function PanelPrzygotowaniaDokumentow({ wersja, otworzDokument, p
           <button disabled={!wersja} type="button" onClick={() => ustawCzyPokazacDodatkowe(true)}>Utwórz dokumenty dodatkowe</button>
           <button disabled={!wersja} type="button" onClick={() => ustawCzyPotwierdzicWszystkie(true)}>Utwórz wszystkie dokumenty</button>
         </div>
+
+        <button ref={przyciskPakietu} disabled={!wersjaPakietu} type="button" onClick={() => ustawCzyPakiet(true)}>📄 Przygotuj PDF do zatwierdzenia</button>
+        {czyPakiet && wersjaPakietu && <Suspense fallback={<p role="status">Wczytywanie generatora pakietu PDF…</p>}><PanelPakietu key={wersjaPakietu.zrodloOpublikowanegoId ?? wersjaPakietu.id} wersja={wersjaPakietu} otworzDokument={otworzDokument} poUtworzeniu={poUtworzeniu} zamknij={() => { ustawCzyPakiet(false); przyciskPakietu.current?.focus() }} /></Suspense>}
 
         {czyPokazacDodatkowe && (
           <div className="szczegoly-dokumenty-wybor">

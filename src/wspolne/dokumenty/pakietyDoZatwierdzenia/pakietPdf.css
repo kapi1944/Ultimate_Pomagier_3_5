@@ -1,0 +1,25 @@
+.pakiet-pdf { display:grid; gap:18px; min-width:0; padding:16px; border:1px solid var(--ui-obramowanie,#cbd5e1); border-radius:8px; background:var(--ui-pole,#fff); color:var(--ui-tekst,#172033); }
+.pakiet-pdf h3 { margin:0 0 12px; }
+.pakiet-pdf fieldset { min-width:0; display:grid; gap:12px; border:1px solid var(--ui-obramowanie,#cbd5e1); border-radius:6px; }
+.pakiet-pdf label { display:flex; align-items:center; gap:8px; flex-wrap:wrap; overflow-wrap:anywhere; }
+.pakiet-pdf input[type=checkbox] { width:20px; height:20px; flex:none; }
+.pakiet-pdf button { min-height:42px; padding:8px 12px; cursor:pointer; }
+.pakiet-pdf button:disabled { cursor:default; opacity:.55; }
+.pakiet-pdf select { max-width:100%; min-height:42px; }
+.pakiet-pdf__metadane { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr)); gap:12px; margin:0; }
+.pakiet-pdf__metadane dt { color:var(--ui-tekst-drugi,#475569); font-size:.85em; }
+.pakiet-pdf__metadane dd { margin:4px 0 0; overflow-wrap:anywhere; }
+.pakiet-pdf__akcje { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.pakiet-pdf__lista { display:grid; gap:10px; list-style:none; padding:0; margin:0; }
+.pakiet-pdf__lista li { min-width:0; }
+.pakiet-pdf__lista li:focus-within { outline:2px solid var(--ui-akcent,#2563eb); outline-offset:2px; }
+.pakiet-pdf__blad,[data-stan-pakietu=brak],[data-stan-pakietu=bledny],[data-stan-pakietu=nieaktualny] { color:var(--ui-blad,#b42318); }
+.pakiet-pdf__stopka { display:grid; gap:12px; padding:12px; border-top:1px solid var(--ui-obramowanie,#cbd5e1); }
+.pakiet-pdf__stopka button:last-child { background:var(--ui-akcent,#2563eb); color:#fff; }
+.pakiet-pdf__podglad { min-width:0; }
+.pakiet-pdf__strony { max-height:75vh; overflow:auto; padding:12px; background:#d9dfe7; }
+.pakiet-pdf__strony section { width:max-content; margin:0 auto 18px; }
+.pakiet-pdf__strony p { color:#172033; }
+.pakiet-pdf__strony canvas { display:block; background:#fff; }
+.pakiet-pdf progress { width:100%; }
+@media(max-width:600px) { .pakiet-pdf { padding:10px; } .pakiet-pdf__akcje { align-items:stretch; } .pakiet-pdf__stopka button { flex:1 1 100%; } }

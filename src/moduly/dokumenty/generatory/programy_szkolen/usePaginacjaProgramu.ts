@@ -8,11 +8,11 @@ import {
 } from './paginatorProgramu'
 
 function pobierzWysokosc(element: Element | null) {
-  return element instanceof HTMLElement ? element.getBoundingClientRect().height : Number.NaN
+  return element ? element.getBoundingClientRect().height : Number.NaN
 }
 
 function pobierzWartoscStylu(element: Element | null, nazwa: 'gap' | 'marginBottom') {
-  if (!(element instanceof HTMLElement)) {
+  if (!element) {
     return Number.NaN
   }
 

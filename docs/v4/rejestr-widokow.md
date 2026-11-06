@@ -277,3 +277,7 @@ Lokalna karta KartaRejestruSzczegolow należy do V4-06. Wspólny arkusz `src/mod
 | `src/moduly/narzedzia/poprawiacz_prezentacji/WlasciwosciObiektu.tsx` | V4-17 | — | — | 2 |
 
 Poprawiacz prezentacji (03.11.2026): wspólny stan oryginału i kopii roboczej, tryby roboczy/pełnoekranowy/porównawczy, strukturalne różnice, podgląd PDF oraz bezpieczna edycja i historia. Tryby są podwidokami istniejącej trasy; bez nowych identyfikatorów nawigacji.
+
+| `src/wspolne/dokumenty/pakietyDoZatwierdzenia/PanelPakietu.tsx` | V4-09 | V4-07, V4-08 | — | 1 |
+| `src/wspolne/dokumenty/pakietyDoZatwierdzenia/PodgladPakietu.tsx` | V4-09 | V4-07, V4-08 | — | 0 |
+| `src/wspolne/dokumenty/pakietyDoZatwierdzenia/renderujDokumentPakietu.tsx` | V4-09 | V4-07, V4-08 | — | 0 |

@@ -1587,6 +1587,35 @@
       ],
       "ukonczoneEtapy": [],
       "wspoldzieloneZ": []
+    },
+    "src/wspolne/dokumenty/pakietyDoZatwierdzenia/PanelPakietu.tsx": {
+      "zadanie": "V4-09",
+      "powierzchnie": [
+        "details"
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": [
+        "V4-07",
+        "V4-08"
+      ]
+    },
+    "src/wspolne/dokumenty/pakietyDoZatwierdzenia/PodgladPakietu.tsx": {
+      "zadanie": "V4-09",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": [
+        "V4-07",
+        "V4-08"
+      ]
+    },
+    "src/wspolne/dokumenty/pakietyDoZatwierdzenia/renderujDokumentPakietu.tsx": {
+      "zadanie": "V4-09",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": [
+        "V4-07",
+        "V4-08"
+      ]
     }
   },
   "realizacjaEtapow": {

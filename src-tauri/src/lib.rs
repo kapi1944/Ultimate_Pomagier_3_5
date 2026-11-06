@@ -5,8 +5,11 @@ use tauri::Manager;
 mod konta_desktop;
 #[cfg(desktop)]
 mod ochrona_lokalna;
+mod pakiety_pdf;
 #[cfg(desktop)]
 mod prezentacje;
+#[cfg(desktop)]
+mod zapis_pdf;
 
 #[cfg(mobile)]
 struct StanKont {
@@ -106,6 +109,7 @@ pub fn uruchom() {
     let konstruktor = konstruktor.invoke_handler(tauri::generate_handler![
         czy_aktualizacje_dostepne,
         informacje_o_platformie,
+        pakiety_pdf::zapisz_pakiet_pdf,
         prezentacje::renderuj_prezentacje,
         konta_desktop::operacja_konta,
         konta_desktop::otworz_obszar_konta,
@@ -117,7 +121,8 @@ pub fn uruchom() {
     let konstruktor = konstruktor.invoke_handler(tauri::generate_handler![
         czy_aktualizacje_dostepne,
         operacja_konta,
-        informacje_o_platformie
+        informacje_o_platformie,
+        pakiety_pdf::zapisz_pakiet_pdf
     ]);
     konstruktor
         .run(tauri::generate_context!())

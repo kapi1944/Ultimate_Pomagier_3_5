@@ -574,11 +574,10 @@ function utworzDomyslnyZapis(): ZapisDyplomow {
   }
 }
 
-function wczytajZapisDyplomow(): ZapisDyplomow {
+function odczytajZapisDyplomow(zapis: string | null): ZapisDyplomow {
   const domyslnyZapis = utworzDomyslnyZapis()
 
   try {
-    const zapis = localStorage.getItem(kluczZapisuDyplomow)
 
     if (!zapis) {
       return domyslnyZapis
@@ -991,6 +990,27 @@ function StronaDyplomu({ dane, uczestnik }: { dane: ZapisDyplomow; uczestnik: Uc
       </div>
     </article>
   )
+}
+
+function wczytajZapisDyplomow() {
+  return odczytajZapisDyplomow(localStorage.getItem(kluczZapisuDyplomow))
+}
+
+export function RendererDyplomowDoPakietu({ daneDokumentu, tryb }: { daneDokumentu: unknown; tryb: 'wzor' | 'wszyscy' }) {
+  const zapis = odczytajZapisDyplomow(JSON.stringify(daneDokumentu))
+  const dane = tryb === 'wzor' ? {
+    ...zapis,
+    uczestnicyTekst: '',
+    uczestnicy: [{ ...utworzUczestnika('', 0, zapis), imieNazwisko: '', czyPustyDyplom: true, numerRejestru: 'WZÓR', drugaStrona: zapis.drugaStronaAktywna }],
+    // Dodatki indywidualne nie trafiają do anonimowego wzorca.
+    dodatki: [],
+  } : zapis
+  const problemy = sprawdzDaneDyplomu(dane)
+  if (problemy.length) throw new Error(problemy.join('; '))
+  return <div className="dyplomy">{dane.uczestnicy.filter(czyUczestnikDoDruku).map((uczestnik) => <div key={uczestnik.id}>
+    <StronaDyplomu dane={dane} uczestnik={uczestnik} />
+    {dane.drugaStronaAktywna && dane.czyPokazacDrugaStrone && uczestnik.drugaStrona && <StronaDrugaDyplomu dane={dane} uczestnik={uczestnik} />}
+  </div>)}</div>
 }
 
 export default function WidokDyplomow() {

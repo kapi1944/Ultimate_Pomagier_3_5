@@ -4,7 +4,7 @@
   "version": "4.0.0",
   "type": "module",
   "scripts": {
-    "pretest": "node --import ./testy/rejestrujLoaderTs.mjs testy/zapisRejestruPrzyBrakuMiejsca.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/swobodneBlokiDokumentu.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/wspolnyStandardGeneratorow.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/generatoryOperacyjne.test.ts && node --import ./testy/rejestrujLoaderTs.mjs --test testy/indeksLokalizacjiSzczegolow.test.ts && npm run test:bezpieczenstwo",
+    "pretest": "node --import ./testy/rejestrujLoaderTs.mjs testy/zapisRejestruPrzyBrakuMiejsca.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/swobodneBlokiDokumentu.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/wspolnyStandardGeneratorow.test.ts && node --import ./testy/rejestrujLoaderTs.mjs testy/generatoryOperacyjne.test.ts && node --import ./testy/rejestrujLoaderTs.mjs --test testy/indeksLokalizacjiSzczegolow.test.ts && npm run test:bezpieczenstwo && npm run test:pakiety-pdf",
     "dev": "vite",
     "test:bezpieczenstwo": "node --test testy/izolacjaTrybuDemo.test.mjs testy/bezpieczenstwoZaleznosci.test.mjs",
     "test:szczegoly:przegladarka": "node --test testy/wydajnoscSzczegolow.przegladarka.test.mjs",
@@ -39,6 +39,8 @@
     "test:konta:desktop": "npm run build && node skrypty/kontaLokalne.mjs --buduj-desktop-testowy && node --test testy/kontaDesktop.natywne.test.mjs",
     "test:konta:demo": "node --test testy/kontaDesktop.demo.test.mjs",
     "test:reset-hasel:przegladarka": "node skrypty/kontaLokalne.mjs --buduj-usluge-testowa && node --import ./testy/rejestrujLoaderTs.mjs --test testy/resetowanieHasel.przegladarka.test.mjs",
+    "test:pakiety-pdf": "node --import ./testy/rejestrujLoaderTs.mjs --test testy/scalaniePakietuPdf.test.ts testy/wyborPakietuPdf.test.ts",
+    "test:pakiety-pdf:przegladarka": "node --import ./testy/rejestrujLoaderTs.mjs --test testy/pakietyPdf.przegladarka.test.mjs",
     "test:e2e": "node skrypty/uruchomTestyPrzegladarkowe.mjs"
   },
   "dependencies": {
@@ -56,6 +58,7 @@
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "jszip": "^3.10.2",
+    "pdf-lib": "1.17.1",
     "pdfjs-dist": "^6.2.108",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
