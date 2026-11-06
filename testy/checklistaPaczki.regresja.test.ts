@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import type { KontekstDokumentuSzkolenia } from '../src/wspolne/integracje/szczegolyDoDokumentow/index.ts'
@@ -10,6 +11,8 @@ import type { WersjaRoboczaGeneratora } from '../src/moduly/zamkniete/szczegoly_
 import { zastosujDyspozycjeMaterialoweChecklisty, potwierdzIloscDyspozycji } from '../src/moduly/dokumenty/generatory/checklisty_paczek/dyspozycjeChecklistyPaczki.ts'
 import { zbudujNazweEksportowanegoDokumentu, utworzIdentyfikatorDokumentu } from '../src/wspolne/dokumenty/nazwyDokumentow.ts'
 import { repozytoriumWspolnychDokumentow } from '../src/wspolne/dokumenty/rejestrDokumentow.ts'
+import { zakodujAdresEtykiety } from '../src/moduly/dokumenty/generatory/checklisty_paczek/kodQrEtykiety.ts'
+import { odczytajCelEtykiety, pobierzEtykietyPaczek, utworzAdresyEtykiety } from '../src/moduly/dokumenty/generatory/checklisty_paczek/modelEtykietyPaczki.ts'
 import {
   czyMoznaEksportowacCheckliste,
   pobierzDaneSzkoleniaChecklisty,
@@ -47,6 +50,7 @@ import {
   otworzPonownieCheckliste,
   pobierzChecklistePaczki,
   pobierzChecklistyPaczek,
+  pobierzZrodloEtykiety,
   ustawStatusChecklisty,
   utworzChecklistePaczkiZeZrodla,
   zarejestrujWydrukChecklisty,
@@ -765,7 +769,10 @@ test('1.2.3: 0/30, 12/30 i 30/30 wymagają policzenia, potwierdzenia ilości i o
   for (const nazwa of ['Ankiety', 'Lista obecności', 'Certyfikaty / Dyplomy']) assert.equal(pobierzPozycje(dane, nazwa).czyNieDotyczy, true)
 
   dane = ustawStatusOperacyjnyPaczki(dane, paczkaId, 'GOTOWA')
-  assert.equal(dane.paczki[0].statusOperacyjny, 'GOTOWA')
+  assert.equal(dane.paczki[0].statusOperacyjny, 'W_PRZYGOTOWANIU')
+  assert.equal(repozytoriumWspolnychDokumentow.aktualizuj(dokument.id, {
+    daneDokumentu: { ...dane, paczki: dane.paczki.map((paczka) => ({ ...paczka, statusOperacyjny: 'GOTOWA' })) },
+  }), null)
   assert.equal(dane.statusChecklisty, 'KOPIA_ROBOCZA')
   dane = zmienIloscPrzygotowanaPozycji(dane, pozycjaId, 29)
   assert.equal(dane.paczki[0].statusOperacyjny, 'W_PRZYGOTOWANIU')
@@ -773,6 +780,49 @@ test('1.2.3: 0/30, 12/30 i 30/30 wymagają policzenia, potwierdzenia ilości i o
   assert.equal(pobierzPostepKompletowaniaPaczki(dane, paczkaId).procent, 0)
   dane = zmienIloscPrzygotowanaPozycji(dane, pozycjaId, 30)
   assert.equal(pobierzPostepKompletowaniaPaczki(dane, paczkaId).procent, 0)
+})
+
+test('etykiety grupy korzystają z właściwego źródła, a korekty dotyczą wybranej paczki', () => {
+  magazyn.clear()
+  const wersja = utworzWersjeZMailem()
+  wersja.dane.organizator = 'IIST'
+  wersja.dane.kodSzkolenia = 'KOD-ZRODLOWY'
+  wersja.dane.odbiorcaPaczki.informacjaNaEtykiecie = 'Materiał dla trenera'
+  wersja.grupy.push({ ...structuredClone(wersja.grupy[0]), id: 'grupa-2', nazwa: 'Grupa druga', liczbaUczestnikow: 19 })
+  zapiszWersjeRobocza(wersja)
+  const dokument = utworzChecklistePaczkiZeZrodla(kontekstWersji(wersja), wersja.grupy[1].id, daneZrodla(), 'autor')!
+  const [pierwsza] = pobierzEtykietyPaczek(dokument, pobierzZrodloEtykiety(dokument.daneDokumentu))
+  assert.equal(pierwsza.razem, 1)
+  assert.equal(pierwsza.grupa, wersja.grupy[1].nazwa)
+  assert.equal(pierwsza.uczestnicy, 19)
+  assert.equal(pierwsza.logo, '/logo-iist.png')
+  assert.equal(pierwsza.uwagi, 'Materiał dla trenera')
+  const dwiePaczki = duplikujPaczkeChecklisty(dokument.daneDokumentu, pierwsza.paczkaId)
+  const trzyPaczki = duplikujPaczkeChecklisty(dwiePaczki, pierwsza.paczkaId)
+  const pozycja = pierwsza.pozycje[0]
+  trzyPaczki.korektyEtykiet = { [pierwsza.paczkaId]: { kod: 'TEST-19', pozycje: { [pozycja.id]: { ilosc: 7 } } } }
+  const etykiety = pobierzEtykietyPaczek({ ...dokument, daneDokumentu: trzyPaczki }, pobierzZrodloEtykiety(trzyPaczki))
+  assert.deepEqual(etykiety.map((etykieta) => [etykieta.numer, etykieta.razem]), [[1, 3], [2, 3], [3, 3]])
+  assert.equal(etykiety[0].pozycje[0].ilosc, 7)
+  assert.equal(etykiety[1].pozycje[0].ilosc, pozycja.ilosc)
+  assert.equal(etykiety[0].kod, 'TEST-19')
+  assert.equal(etykiety[1].kod, 'KOD-ZRODLOWY')
+  assert.equal(new Set(etykiety.flatMap((etykieta) => Object.values(etykieta.adresy))).size, 9)
+  assert.equal(dokument.daneDokumentu.korektyEtykiet, undefined)
+})
+
+test('QR używają trzech tras z identyfikatorami, a matryca odpowiada wektorowi wzorcowemu', () => {
+  const adresy = utworzAdresyEtykiety('01234567-0123-4567-89ab-0123456789ab', 'paczka-glowna')
+  for (const [cel, sciezka] of Object.entries(adresy)) {
+    const adres = new URL(sciezka, 'http://127.0.0.1:5179')
+    assert.deepEqual(odczytajCelEtykiety(adres.search, adres.hash), { cel, paczkaId: 'paczka-glowna' })
+    assert.equal(adres.pathname, '/dokumenty/checklisty-paczek/01234567-0123-4567-89ab-0123456789ab')
+  }
+  const matryca = zakodujAdresEtykiety('http://127.0.0.1:5179' + adresy.k)
+  assert.equal(matryca.length, 41)
+  // Wektor odniesienia obliczony przez ReportLab w trybie bajtowym, wersja 6-L, maska 0.
+  assert.equal(createHash('sha256').update(matryca.flat().map(Number).join('')).digest('hex'), '27370b6036222ab7953e65192f68caff4395b6a9788f21db3c452278e5cc8b3f')
+  assert.throws(() => zakodujAdresEtykiety('a'.repeat(135)), /za długi/)
 })
 
 test('1.2.3: gotowość jednej paczki nie zależy od drugiej, zapis zachowuje logistykę i przypisuje historię po ID', () => {

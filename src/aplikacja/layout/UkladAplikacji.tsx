@@ -270,7 +270,7 @@ function renderujWidok(
     case 'karta_na_drzwi_kosz':
       return <WidokWszystkichDokumentow czyKosz opis="Usunięte karty na drzwi." otworzDokument={otworzDokument} tytul="Kosz — Karty na drzwi" typyStale={['KARTA_NA_DRZWI']} />
     case 'checklisty_paczek':
-      return <WidokChecklistPaczek dokumentIdZTrasy={pobierzIdChecklistyPaczkiZeSciezki()} />
+      return <WidokChecklistPaczek dokumentIdZTrasy={pobierzIdChecklistyPaczkiZeSciezki()} otworzDokument={otworzDokument} />
     case 'checklisty_paczek_kopie_robocze':
       return <WidokKopiiRoboczychDokumentow tytul="Kopie robocze — Checklisty paczek" opis="Robocze checklisty paczek ze wspólnego rejestru dokumentów." typyStale={['CHECKLISTA_PACZKI']} otworzDokument={otworzDokument} />
     case 'checklisty_paczek_wszystkie':

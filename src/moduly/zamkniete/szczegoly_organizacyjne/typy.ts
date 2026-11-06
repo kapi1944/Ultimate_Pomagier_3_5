@@ -154,6 +154,7 @@ export type DyspozycjeMaterialowe = Partial<Record<RodzajDyspozycjiMaterialowej,
 
 export type DaneFormularza = {
   tytulSzkolenia: string
+  kodSzkolenia?: string
   nazwaKlienta: string
   organizator: OrganizatorSzkolenia
   opiekunId: string

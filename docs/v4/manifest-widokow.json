@@ -736,6 +736,27 @@
       "ukonczoneEtapy": [],
       "wspoldzieloneZ": []
     },
+    "src/moduly/dokumenty/generatory/checklisty_paczek/CelEtykietyPaczki.tsx": {
+      "zadanie": "V4-15",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
+    },
+    "src/moduly/dokumenty/generatory/checklisty_paczek/PanelEtykietPaczek.tsx": {
+      "zadanie": "V4-15",
+      "powierzchnie": [
+        "details",
+        "details key={etykieta.paczkaId}"
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
+    },
+    "src/moduly/dokumenty/generatory/checklisty_paczek/WeryfikacjaZdjeciaPaczki.tsx": {
+      "zadanie": "V4-15",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
+    },
     "src/moduly/dokumenty/generatory/checklisty_paczek/WidokChecklistPaczek.tsx": {
       "zadanie": "V4-15",
       "powierzchnie": [

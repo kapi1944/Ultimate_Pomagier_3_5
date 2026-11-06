@@ -47,13 +47,13 @@ function kolorPdf(kolor: string) {
   return `#${liczby.slice(0, 3).map((liczba) => Math.round(liczba * alfa + 255 * (1 - alfa)).toString(16).padStart(2, '0')).join('')}`
 }
 
-export function zmierzScenePdf(strony: HTMLElement[]): ScenaPdf {
+export function zmierzScenePdf(strony: HTMLElement[], szerokoscMm = 210): ScenaPdf {
   if (!strony.length) throw new Error('Brak finalnych stron PDF.')
   return { strony: strony.map((strona) => {
     const granice = strona.getBoundingClientRect()
-    const skala = 210 / granice.width
+    const skala = szerokoscMm / granice.width
     // Style są mierzone przed zoomem i transformacją podglądu, geometria po nich.
-    const skalaStylu = 210 / parseFloat(window.getComputedStyle(strona).width)
+    const skalaStylu = szerokoscMm / parseFloat(window.getComputedStyle(strona).width)
     const elementy: ElementScenyPdf[] = []
     if (!opisyElementow.has(strona)) throw new Error('Strona nie ma modelu semantycznego PDF.')
     function odwiedz(element: Element, podkreslenieRodzica = false) {

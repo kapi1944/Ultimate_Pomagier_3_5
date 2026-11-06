@@ -159,6 +159,7 @@ export type ZalacznikChecklisty = {
   dodano: string
   autorId: string | null
   wersjaWydruku: number | null
+  weryfikacjaPaczki?: { paczkaId: string; etap: 'PO_SKOMPLETOWANIU'; odcisk: string }
 }
 
 export type WpisAudytuChecklisty = {
@@ -170,6 +171,8 @@ export type WpisAudytuChecklisty = {
   opis: string
   zmianyDyspozycji?: PorownanieDyspozycjiChecklisty[]
   zrodloDyspozycji?: Pick<MigawkaZrodlaChecklisty, 'szczegolyOrganizacyjneId' | 'grupaId' | 'odciskDanych' | 'dyspozycjeMaterialowe' | 'zrodloImportuMaila'>
+  potwierdzeniePaczki?: { zdjecieId: string; odcisk: string }
+  wydrukEtykiety?: { odcisk: string; wersja: number; format: string; tryb: 'termiczny' | 'kolorowy'; czyProbaQr: boolean; czyPotwierdzony?: boolean }
 }
 
 export type ProsbaOWeryfikacje = {
@@ -227,6 +230,7 @@ export type DaneChecklistyPaczki = {
   osobaPakujaca: string
   wersjeWydruku: WersjaWydrukuChecklisty[]
   zalaczniki: ZalacznikChecklisty[]
+  korektyEtykiet?: Record<string, { kod?: string; uwagi?: string; pozycje?: Record<string, { nazwa?: string; ilosc?: number }> }>
   historia: WpisAudytuChecklisty[]
   prosbyOWeryfikacje: ProsbaOWeryfikacje[]
   blokiSwobodne: BlokSwobodnyDokumentu[]
@@ -489,7 +493,7 @@ export function normalizujDaneChecklisty(dane: DaneChecklistyPaczki): DaneCheckl
     parametryLogistyczne: utworzParametryLogistycznePaczki(paczka.parametryLogistyczne),
   }))
   const domyslnaPaczkaId = paczki[0].id
-  return {
+  return uniewaznijGotowoscPaczek({
     ...dane,
     migawkaZrodla: migawka,
     szczegolyOrganizacyjneId: dane.szczegolyOrganizacyjneId ?? null,
@@ -523,7 +527,7 @@ export function normalizujDaneChecklisty(dane: DaneChecklistyPaczki): DaneCheckl
     wysokosc: dane.wysokosc ?? '',
     blokiSwobodne: bloki.length ? bloki : utworzBlokiSzablonuChecklistyPaczki(),
     wersjaSchematuBlokow: WERSJA_SCHEMATU_SWOBODNYCH_BLOKOW,
-  }
+  })
 }
 
 export function czyDaneOdbiorcySaKompletne(dane: DaneOdbiorcyChecklisty) {
@@ -566,6 +570,46 @@ export function pobierzPostepKompletowaniaPaczki(dane: DaneChecklistyPaczki, pac
   return { ...finalizacja, liczbaGotowych, liczbaWymaganych: wymagane.length, procent: wymagane.length ? Math.round(100 * liczbaGotowych / wymagane.length) : 100 }
 }
 
+export function pobierzOdciskKompletu(dane: DaneChecklistyPaczki, paczkaId: string) {
+  const szkolenie = pobierzDaneSzkoleniaChecklisty(dane)
+  const wymagane = dane.pozycje.filter((pozycja) => pozycja.paczkaId === paczkaId && pozycja.czyWymagana
+    && !pozycja.czyOpcjonalna && !pozycja.czyOnline && czyPozycjaJestAktywna(pozycja))
+  return JSON.stringify([dane.szczegolyOrganizacyjneId, dane.grupaId, szkolenie.liczbaUczestnikow,
+    wymagane.map((pozycja) => [pozycja.id, pozycja.nazwa, pozycja.wzorKlienta, pozycja.trybPrePost,
+      pozycja.uwagiDrukowane, pobierzIloscPozycji(pozycja, szkolenie.liczbaUczestnikow, new Set(szkolenie.terminy).size).koncowa,
+      pozycja.iloscPrzygotowana, pozycja.statusGotowosci]).sort((pierwsza, druga) => String(pierwsza[0]).localeCompare(String(druga[0])))])
+}
+
+export function czyIlosciPaczkiPotwierdzone(dane: DaneChecklistyPaczki, paczkaId: string) {
+  return czyMoznaFinalizowacCheckliste(dane, paczkaId).czyMozna && dane.pozycje.every((pozycja) =>
+    pozycja.paczkaId !== paczkaId || !pozycja.czyWymagana || pozycja.czyOpcjonalna || pozycja.czyOnline
+    || !czyPozycjaJestAktywna(pozycja) || pobierzStanKompletowaniaPozycji(dane, pozycja).czyMoznaPotwierdzic)
+}
+
+export function pobierzZdjecieKompletu(dane: DaneChecklistyPaczki, paczkaId: string, odcisk = pobierzOdciskKompletu(dane, paczkaId)) {
+  const potwierdzenia = dane.historia.filter((wpis) => wpis.paczkaId === paczkaId && wpis.potwierdzeniePaczki)
+  const ostatnieZdjecie = potwierdzenia.at(-1)?.potwierdzeniePaczki?.zdjecieId
+  const indeksPoprzedniegoZdjecia = dane.zalaczniki.findIndex((zdjecie) => zdjecie.id === ostatnieZdjecie)
+  const wykorzystane = new Set(potwierdzenia.map((wpis) => wpis.potwierdzeniePaczki?.zdjecieId))
+  return dane.zalaczniki.findLast((zalacznik, indeks) => indeks > indeksPoprzedniegoZdjecia && !wykorzystane.has(zalacznik.id) && zalacznik.typ === 'ZDJECIE_PACZKI'
+    && zalacznik.weryfikacjaPaczki?.paczkaId === paczkaId && zalacznik.weryfikacjaPaczki?.etap === 'PO_SKOMPLETOWANIU'
+    && zalacznik.weryfikacjaPaczki.odcisk === odcisk && zalacznik.dane === '')
+}
+
+export function uniewaznijGotowoscPaczek(dane: DaneChecklistyPaczki): DaneChecklistyPaczki {
+  return { ...dane, paczki: dane.paczki.map((paczka) => {
+    if (paczka.statusOperacyjny !== 'GOTOWA') return paczka
+    const wpis = dane.historia.findLast((obecny) => obecny.paczkaId === paczka.id && obecny.potwierdzeniePaczki)
+    const potwierdzenie = wpis?.potwierdzeniePaczki
+    const aktualne = wpis?.uzytkownikId && potwierdzenie && potwierdzenie.odcisk === pobierzOdciskKompletu(dane, paczka.id)
+      && dane.zalaczniki.some((zdjecie) => zdjecie.id === potwierdzenie.zdjecieId && zdjecie.typ === 'ZDJECIE_PACZKI'
+        && zdjecie.weryfikacjaPaczki?.paczkaId === paczka.id && zdjecie.weryfikacjaPaczki?.etap === 'PO_SKOMPLETOWANIU'
+        && zdjecie.weryfikacjaPaczki.odcisk === potwierdzenie.odcisk && zdjecie.dane === '')
+      && czyIlosciPaczkiPotwierdzone(dane, paczka.id)
+    return aktualne ? paczka : { ...paczka, statusOperacyjny: 'W_PRZYGOTOWANIU' }
+  }) }
+}
+
 function czyMoznaKompletowacPaczke(dane: DaneChecklistyPaczki, paczkaId: string) {
   const paczka = dane.paczki.find((obecna) => obecna.id === paczkaId)
   return dane.statusChecklisty !== 'ZARCHIWIZOWANA' && Boolean(paczka && paczka.statusOperacyjny !== 'WYSŁANA')
@@ -573,9 +617,8 @@ function czyMoznaKompletowacPaczke(dane: DaneChecklistyPaczki, paczkaId: string)
 
 function zastosujZmianeKompletowania(dane: DaneChecklistyPaczki, pozycja: PozycjaChecklisty): DaneChecklistyPaczki {
   const zmienione = { ...dane, pozycje: dane.pozycje.map((obecna) => obecna.id === pozycja.id ? pozycja : obecna) }
-  return { ...zmienione, paczki: zmienione.paczki.map((paczka) => paczka.id === pozycja.paczkaId
-    && (paczka.statusOperacyjny === 'ROBOCZA' || (paczka.statusOperacyjny === 'GOTOWA' && !czyMoznaFinalizowacCheckliste(zmienione, paczka.id).czyMozna))
-    ? { ...paczka, statusOperacyjny: 'W_PRZYGOTOWANIU' } : paczka) }
+  return uniewaznijGotowoscPaczek({ ...zmienione, paczki: zmienione.paczki.map((paczka) => paczka.id === pozycja.paczkaId
+    && paczka.statusOperacyjny === 'ROBOCZA' ? { ...paczka, statusOperacyjny: 'W_PRZYGOTOWANIU' } : paczka) })
 }
 
 export function zmienIloscPrzygotowanaPozycji(dane: DaneChecklistyPaczki, pozycjaId: string, ilosc: number | null): DaneChecklistyPaczki {
@@ -596,7 +639,7 @@ export function ustawPotwierdzenieKompletuPozycji(dane: DaneChecklistyPaczki, po
 
 export function ustawStatusOperacyjnyPaczki(dane: DaneChecklistyPaczki, paczkaId: string, status: StatusOperacyjnyPaczki): DaneChecklistyPaczki {
   if (dane.statusChecklisty === 'ZARCHIWIZOWANA' || !dane.paczki.some((paczka) => paczka.id === paczkaId)
-    || (status === 'GOTOWA' && !czyMoznaFinalizowacCheckliste(dane, paczkaId).czyMozna)) return dane
+    || status === 'GOTOWA') return dane
   return { ...dane, paczki: dane.paczki.map((paczka) => paczka.id === paczkaId ? { ...paczka, statusOperacyjny: status } : paczka) }
 }
 

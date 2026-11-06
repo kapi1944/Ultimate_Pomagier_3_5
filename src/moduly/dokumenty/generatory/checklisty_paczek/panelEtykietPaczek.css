@@ -1,0 +1,60 @@
+.etykiety-paczek__podglad {
+  display: grid;
+  gap: 1rem;
+  overflow: auto;
+  padding: 0.5rem;
+}
+
+.etykieta-paczki {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  padding: 4mm;
+  gap: 1.5mm;
+  outline: 1px solid #737373;
+  background: #fff;
+  color: #000;
+  font: 8pt/1.2 Arial, sans-serif;
+  overflow-wrap: anywhere;
+  overflow: auto;
+  --kolor-etykiety: #000;
+}
+.etykieta-paczki > * { flex-shrink: 0; }
+
+.etykieta-paczki[data-tryb="kolorowy"] { --kolor-etykiety: #184b86; }
+.etykieta-paczki h3, .etykieta-paczki p { margin: 0; }
+.checklista-paczki .etykieta-paczki :is(h3, p, small) { color: inherit; }
+.etykieta-paczki p, .etykieta-paczki small { white-space: pre-wrap; }
+.etykieta-paczki h3 { font-size: 12pt; line-height: 1.1; }
+.etykieta-paczki__naglowek, .etykieta-paczki__grupa, .etykieta-paczki__pozycja {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2mm;
+  align-items: start;
+}
+
+.etykieta-paczki__naglowek {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  border-bottom: 0.45mm solid var(--kolor-etykiety);
+  padding-bottom: 1mm;
+}
+
+.etykieta-paczki__naglowek > div:last-child { text-align: right; }
+.etykieta-paczki__naglowek img { display: block; width: 32mm; height: 9mm; object-fit: contain; }
+.etykieta-paczki__kod { color: var(--kolor-etykiety); font-size: 12pt; font-weight: 700; white-space: pre-wrap; }
+.etykieta-paczki__tresc { display: grid; gap: 0.65mm; }
+.etykieta-paczki__grupa strong { border: 0.25mm solid var(--kolor-etykiety); padding: 0.5mm 1mm; }
+.etykieta-paczki__zawartosc { border-top: 0.25mm solid var(--kolor-etykiety); padding-top: 0.6mm; }
+.etykieta-paczki__pozycja { border-bottom: 0.15mm solid var(--kolor-etykiety); padding: 0.25mm 0; white-space: pre-wrap; }
+.etykieta-paczki__pozycja small { display: block; font-size: 7pt; }
+.etykieta-paczki__stopka { margin-top: auto; text-align: center; font-size: 7pt; }
+.etykieta-paczki__stopka small { display: block; font-size: 7pt; }
+.etykieta-paczki__kody { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.etykieta-paczki__qr { position: relative; width: 25mm; height: 25mm; margin-inline: auto; background: #fff; }
+.etykieta-paczki__qr span { position: absolute; display: block; background: #000; }
+.etykieta-paczki__linki { display: flex; flex-wrap: wrap; gap: 1rem; margin-block: 0.75rem; }
+
+.etykieta-paczki[data-zwarta="true"] { gap: 1mm; font-size: 7.5pt; }
+.etykieta-paczki[data-zwarta="true"] h3, .etykieta-paczki[data-zwarta="true"] .etykieta-paczki__kod { font-size: 10pt; }
+.etykieta-paczki[data-zwarta="true"] .etykieta-paczki__naglowek img { height: 7mm; }
+.etykieta-paczki[data-zwarta="true"] .etykieta-paczki__tresc { gap: 0.4mm; }

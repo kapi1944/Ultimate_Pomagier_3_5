@@ -10,7 +10,7 @@ import './podgladSzczegolow.css'
 type KluczPola = Exclude<keyof DaneFormularza | keyof DaneFirmy | keyof DaneOdbiorcyPaczki | keyof DaneDokumentacjiMaterialow | keyof DaneDodatkowychWymogow | keyof DaneUwag | keyof GrupaSzkoleniowa | keyof TrenerGrupy | keyof UczestnikGrupy | keyof DaneAdresatow | keyof DyspozycjaMaterialowa, 'id'>
 
 const etykietyPol: Record<KluczPola, string> = {
-  tytulSzkolenia: 'Tytuł szkolenia', nazwaKlienta: 'Klient', organizator: 'Organizator', opiekunId: 'Opiekun', status: 'Status', statusSzkolenia: 'Status szkolenia', powodNiezrealizowania: 'Powód niezrealizowania',
+  tytulSzkolenia: 'Tytuł szkolenia', kodSzkolenia: 'Kod szkolenia', nazwaKlienta: 'Klient', organizator: 'Organizator', opiekunId: 'Opiekun', status: 'Status', statusSzkolenia: 'Status szkolenia', powodNiezrealizowania: 'Powód niezrealizowania',
   nabywca: 'Nabywca', odbiorca: 'Odbiorca', czyNabywcaJestOdbiorca: 'Nabywca jest odbiorcą',
   nazwa: 'Nazwa', nip: 'NIP', adres: 'Pełny adres', ulica: 'Ulica', nrBudynku: 'Numer budynku', nrLokalu: 'Numer lokalu', kodPocztowy: 'Kod pocztowy', miasto: 'Miejscowość', kraj: 'Kraj', osobaKontaktowa: 'Osoba kontaktowa klienta', imieNazwiskoOdbiorcy: 'Imię i nazwisko odbiorcy', telefon: 'Telefon', email: 'E-mail', sposobWysylkiRaportu: 'Sposób wysyłki raportu',
   wysylkaNaSiedzibeOdbiorcy: 'Wysyłka na siedzibę odbiorcy', wysylkaPaczkiDotyczy: 'Wysyłka paczki wymagana', odbiorcaPaczki: 'Odbiorca paczki', informacjaNaEtykiecie: 'Dopisek na etykietę', nazwaFirmy: 'Nazwa firmy odbiorcy paczki', imieNazwisko: 'Imię i nazwisko',
@@ -57,7 +57,7 @@ function SekcjaPodgladu({ tytul, children, rozwinieta = true }: { tytul: string;
   return <details className="podglad-szczegolow__sekcja" open={rozwinieta}><summary>{tytul}</summary>{children}</details>
 }
 
-export function PodgladSzczegolow({ rekord, zamknij }: { rekord: OpublikowaneSzczegolyOrganizacyjne | WersjaRoboczaGeneratora; zamknij: () => void }) {
+export function PodgladSzczegolow({ rekord, zamknij, grupaId }: { rekord: OpublikowaneSzczegolyOrganizacyjne | WersjaRoboczaGeneratora; zamknij: () => void; grupaId?: string }) {
   const zawartosc = useRef<HTMLDivElement>(null)
   const dane = rekord.dane
   const statusy = pobierzEfektywneStatusyPolOdbiorcy(dane, rekord.statusyPol)
@@ -96,10 +96,11 @@ export function PodgladSzczegolow({ rekord, zamknij }: { rekord: OpublikowaneSzc
         <div><dt>{czyOpublikowany ? 'Data publikacji' : 'Data zapisu'}</dt><dd>{formatujDateRejestru(czyOpublikowany ? rekord.dataPublikacji : rekord.dataZapisu)}</dd></div>
         <div><dt>Przeglądana wersja</dt><dd>{wersja}</dd></div>
         {czyOpublikowany && <><div><dt>Pierwsza publikacja</dt><dd>{formatujDateRejestru(rekord.dataPierwszejPublikacji)}</dd></div><div><dt>Ostatnia publikacja</dt><dd>{formatujDateRejestru(rekord.dataOstatniejPublikacji)}</dd></div></>}
-      </dl>{pola({ powodNiezrealizowania: dane.powodNiezrealizowania })}</SekcjaPodgladu>
+      </dl>{pola({ kodSzkolenia: dane.kodSzkolenia, powodNiezrealizowania: dane.powodNiezrealizowania })}</SekcjaPodgladu>
       <SekcjaPodgladu tytul="Dane klienta">{pola({ czyNabywcaJestOdbiorca: dane.czyNabywcaJestOdbiorca, nabywca: dane.nabywca, odbiorca: pobierzEfektywneDaneOdbiorcy(dane) })}</SekcjaPodgladu>
       {rekord.grupy.length === 0 && <SekcjaPodgladu tytul="Grupy szkoleniowe">Nie podano</SekcjaPodgladu>}
       {rekord.grupy.map((grupa, indeks) => {
+        if (grupaId && grupa.id !== grupaId) return null
         const { id, trenerzy, cenaNetto, trybCeny, vat, terminPlatnosci, protokol, mechanizmPodzielonejPlatnosci, dataUmowy, numerUmowy, liczbaGodzin, rodzajGodzin, nazwaNiestandardowychGodzin, liczbaMinutNiestandardowychGodzin, ...organizacja } = grupa
         const sciezka = `grupy.${indeks}`
         return <SekcjaPodgladu key={id} tytul={`Grupa ${indeks + 1} — ${grupa.nazwa || 'Bez nazwy'}`}>

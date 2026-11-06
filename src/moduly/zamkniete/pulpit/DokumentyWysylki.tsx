@@ -17,6 +17,7 @@ type WlasciwosciAkcji = {
   stan: StanDokumentuWysylki
   uzytkownikId: string | null
   otworzDokument?: (dokument: Dokument<unknown, unknown>) => void
+  czyPonownyDruk?: boolean
 }
 
 function KafelekDokumentuWysylki({ stan, otwarty, panelId, otworz }: { stan: StanDokumentuWysylki; otwarty: boolean; panelId: string; otworz: () => void }) {
@@ -30,8 +31,9 @@ function KafelekDokumentuWysylki({ stan, otwarty, panelId, otworz }: { stan: Sta
   </button>
 }
 
-function PanelAkcjiDokumentu({ wysylka, stan, uzytkownikId, otworzDokument }: WlasciwosciAkcji) {
+function PanelAkcjiDokumentu({ wysylka, stan, uzytkownikId, otworzDokument, czyPonownyDruk }: WlasciwosciAkcji) {
   const [ilosc, ustawIlosc] = useState(String(stan.brakujace || stan.wymagane || 1))
+  const [egzemplarzeDoDruku, ustawEgzemplarzeDoDruku] = useState(String(stan.brakujace || stan.wymagane || 1))
   const [wymagane, ustawWymagane] = useState(String(stan.wymagane))
   const [nieDotyczy, ustawNieDotyczy] = useState(stan.nieDotyczy)
   const [blad, ustawBlad] = useState('')
@@ -65,12 +67,12 @@ function PanelAkcjiDokumentu({ wysylka, stan, uzytkownikId, otworzDokument }: Wl
     return Number(tekst)
   }
 
-  function przejdzDoGeneratora(czyDruk: boolean) {
+  function przejdzDoGeneratora(liczbaEgzemplarzy?: number) {
     const dokument = stan.dokument
     if (!dokument || !otworzDokument) return
-    if (!czyDruk) { otworzDokument(dokument); return }
+    if (liczbaEgzemplarzy === undefined) { otworzDokument(dokument); return }
     void wykonaj(async (id) => {
-      const operacja = await zarejestrujWydrukMonitora(wysylka, stan, { operacjaId: id, status: 'ZLECONY', liczbaEgzemplarzy: stan.brakujace }, uzytkownikId)
+      const operacja = await zarejestrujWydrukMonitora(wysylka, stan, { operacjaId: id, status: 'ZLECONY', liczbaEgzemplarzy }, uzytkownikId)
       przygotujPrzejscieDoWydruku(operacja)
       otworzDokument(dokument)
     }, 'Przygotowano zlecenie druku. Potwierdź dopiero odebrane egzemplarze.')
@@ -87,12 +89,18 @@ function PanelAkcjiDokumentu({ wysylka, stan, uzytkownikId, otworzDokument }: Wl
     {stan.ostrzezenia.length > 0 && <ul>{stan.ostrzezenia.map((ostrzezenie) => <li key={ostrzezenie}>{ostrzezenie}</li>)}</ul>}
     {!stan.dokument && <p>Utwórz dokument w sekcji „Przygotuj dokumenty” Szczegółów organizacyjnych.</p>}
     <div className="monitor-dokument__akcje">
-      <button type="button" disabled={!stan.dokument || !otworzDokument || trwaZapis} onClick={() => przejdzDoGeneratora(false)}>Otwórz dokument</button>
+      <button type="button" disabled={!stan.dokument || !otworzDokument || trwaZapis} onClick={() => przejdzDoGeneratora()}>Otwórz dokument</button>
       <button type="button" disabled={!stan.dokument || !otworzDokument || trwaZapis} onClick={() => {
         if (stan.dokument && otworzDokument) { przygotujPrzejscieDoWydruku(null, stan.dokument.id); otworzDokument(stan.dokument) }
       }}>Podgląd dokumentu</button>
-      <button type="button" disabled={!mozeDrukowac || zablokowane || !stan.brakujace || !otworzDokument || trwaZapis} onClick={() => przejdzDoGeneratora(true)}>Drukuj brakujące egzemplarze ({stan.brakujace})</button>
+      <button type="button" disabled={!mozeDrukowac || zablokowane || !stan.brakujace || !otworzDokument || trwaZapis} onClick={() => przejdzDoGeneratora(stan.brakujace)}>Drukuj brakujące egzemplarze ({stan.brakujace})</button>
     </div>
+    {czyPonownyDruk && <fieldset disabled={!mozeDrukowac || zablokowane || !otworzDokument || trwaZapis}>
+      <legend>Ponowny druk</legend>
+      <label>Liczba egzemplarzy do druku<input type="number" min="1" step="1" value={egzemplarzeDoDruku} onChange={(zdarzenie) => ustawEgzemplarzeDoDruku(zdarzenie.target.value)} /></label>
+      <button type="button" disabled={!Number.isSafeInteger(Number(egzemplarzeDoDruku)) || Number(egzemplarzeDoDruku) < 1}
+        onClick={() => przejdzDoGeneratora(Number(egzemplarzeDoDruku))}>Drukuj ponownie</button>
+    </fieldset>}
     <fieldset disabled={!mozePotwierdzac || trwaZapis}>
       <legend>Wymagania wydruków</legend>
       <label>Wymagana liczba egzemplarzy<input type="number" min="0" step="1" value={wymagane} onChange={(zdarzenie) => ustawWymagane(zdarzenie.target.value)} /></label>
@@ -134,7 +142,7 @@ function PanelAkcjiDokumentu({ wysylka, stan, uzytkownikId, otworzDokument }: Wl
   </div>
 }
 
-export default function DokumentyWysylki({ wysylka, dokumenty, uzytkownikId, otworzDokument }: Omit<WlasciwosciAkcji, 'stan'> & { dokumenty: StanDokumentuWysylki[] }) {
+export default function DokumentyWysylki({ wysylka, dokumenty, uzytkownikId, otworzDokument, czyPonownyDruk }: Omit<WlasciwosciAkcji, 'stan'> & { dokumenty: StanDokumentuWysylki[] }) {
   const [wybranyRodzaj, ustawWybranyRodzaj] = useState<StanDokumentuWysylki['rodzaj'] | null>(null)
   const panelId = useId()
   const podsumowanie = podsumujDokumentyWysylki(dokumenty)
@@ -145,6 +153,6 @@ export default function DokumentyWysylki({ wysylka, dokumenty, uzytkownikId, otw
     <progress aria-label="Kompletność dokumentów" value={podsumowanie.procent} max="100">{podsumowanie.procent}%</progress>
     <p>Zawartość fizyczna: {wysylka.liczbaGotowych}/{wysylka.liczbaWymaganych} pozycji · Wysyłka: {wysylka.statusPrzesylki}</p>
     <div className="monitor-dokumenty__siatka">{dokumenty.map((stan) => <KafelekDokumentuWysylki key={stan.rodzaj} stan={stan} otwarty={wybranyRodzaj === stan.rodzaj} panelId={panelId} otworz={() => ustawWybranyRodzaj(wybranyRodzaj === stan.rodzaj ? null : stan.rodzaj)} />)}</div>
-    {wybrany && <div id={panelId}><PanelAkcjiDokumentu key={[wybrany.rodzaj, wybrany.wersjaDokumentuId, wybrany.odciskZrodla, wybrany.wymagane, wybrany.nieDotyczy].join(':')} wysylka={wysylka} stan={wybrany} uzytkownikId={uzytkownikId} otworzDokument={otworzDokument} /></div>}
+    {wybrany && <div id={panelId}><PanelAkcjiDokumentu key={[wybrany.rodzaj, wybrany.wersjaDokumentuId, wybrany.odciskZrodla, wybrany.wymagane, wybrany.nieDotyczy].join(':')} wysylka={wysylka} stan={wybrany} uzytkownikId={uzytkownikId} otworzDokument={otworzDokument} czyPonownyDruk={czyPonownyDruk} /></div>}
   </section>
 }

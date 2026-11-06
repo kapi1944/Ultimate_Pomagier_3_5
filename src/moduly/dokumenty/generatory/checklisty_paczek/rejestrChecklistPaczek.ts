@@ -2,6 +2,10 @@ import type { Dokument, StatusDokumentu } from '../../../../wspolne/dokumenty/mo
 import { utworzNowyDokument } from '../../../../wspolne/dokumenty/modelDokumentu'
 import { pobierzKolejnyNumerDziennyDokumentu, utworzIdentyfikatorDokumentu } from '../../../../wspolne/dokumenty/nazwyDokumentow'
 import { repozytoriumWspolnychDokumentow } from '../../../../wspolne/dokumenty/rejestrDokumentow'
+import { pobierzZalogowanegoUzytkownika } from '../../../../aplikacja/logowanie/sesjaUzytkownika'
+import { czyMozeWysylac } from '../../../../kartoteki/uzytkownicy/uprawnienia'
+import { usunPlikZdjeciaPaczki, zapiszPlikZdjeciaPaczki } from './zdjeciaPaczek'
+import { pobierzEtykietyPaczek, type TrybEtykiety } from './modelEtykietyPaczki'
 import {
   pobierzSzczegolyDoGeneratorow,
   zbudujKontekstZeSzczegolow,
@@ -14,7 +18,8 @@ import { utworzUstawieniaUkladuDokumentu } from '../../../../wspolne/dokumenty/u
 import { zastosujDyspozycjeMaterialoweChecklisty, czyMoznaImportowacDyspozycje } from './dyspozycjeChecklistyPaczki'
 import {
   normalizujDaneChecklisty,
-  czyMoznaFinalizowacCheckliste,
+  czyIlosciPaczkiPotwierdzone,
+  pobierzOdciskKompletu,
   pobierzDaneSzkoleniaChecklisty,
   czyMoznaEksportowacCheckliste,
   type DaneChecklistyPaczki,
@@ -133,6 +138,35 @@ export function pobierzChecklistyPowiazane(szczegolyOrganizacyjneId: string) {
   return pobierzChecklistyPaczek().filter((dokument) => dokument.daneDokumentu.szczegolyOrganizacyjneId === szczegolyOrganizacyjneId)
 }
 
+export function pobierzZrodloEtykiety(dane: DaneChecklistyPaczki) {
+  if (!dane.szczegolyOrganizacyjneId || !dane.grupaId) return undefined
+  const szczegoly = pobierzSzczegolyDoChecklisty()
+  return szczegoly.find((rekord) => rekord.id === dane.szczegolyOrganizacyjneId && rekord.grupy.some((grupa) => grupa.id === dane.grupaId))
+    ?? szczegoly.find((rekord) => rekord.zrodloKontekstu.szczegolyOrganizacyjneId === dane.szczegolyOrganizacyjneId && rekord.grupy.some((grupa) => grupa.id === dane.grupaId))
+}
+
+export function zarejestrujEksportEtykiet(id: string, etykiety: { paczkaId: string; odcisk: string }[], format: string, tryb: TrybEtykiety, czyProbaQr: boolean, czyPotwierdzony = false) {
+  const konto = pobierzZalogowanegoUzytkownika()
+  const dokument = pobierzChecklistePaczki(id)
+  if (!konto || !czyMozeWysylac(konto) || !dokument || dokument.czyUsunietyMiekko || !czyMoznaEksportowacCheckliste(dokument.daneDokumentu)) return null
+  const aktualne = pobierzEtykietyPaczek(dokument, pobierzZrodloEtykiety(dokument.daneDokumentu))
+  const wybrane = aktualne.filter((etykieta) => etykiety.some((oczekiwana) => oczekiwana.paczkaId === etykieta.paczkaId && oczekiwana.odcisk === etykieta.odcisk))
+  if (!wybrane.length || wybrane.length !== etykiety.length) return null
+  const historia = [...dokument.daneDokumentu.historia]
+  for (const etykieta of wybrane) {
+    const poprzednia = etykieta.wydruki.findLast((wpis) => !wpis.wydrukEtykiety?.czyPotwierdzony)?.wydrukEtykiety
+    const wersja = poprzednia?.odcisk === etykieta.odcisk && poprzednia.format === format && poprzednia.tryb === tryb
+      && Boolean(poprzednia.czyProbaQr) === czyProbaQr ? poprzednia.wersja : (poprzednia?.wersja ?? 0) + 1
+    if (czyPotwierdzony && (czyProbaQr || !poprzednia || poprzednia.wersja !== wersja)) return null
+    historia.push({
+      id: utworzId('audyt'), paczkaId: etykieta.paczkaId, typ: 'WYDRUK', data: new Date().toISOString(), uzytkownikId: konto.id,
+      opis: `${czyPotwierdzony ? 'Potwierdzono wydruk' : 'Wygenerowano PDF'} etykiety v${wersja}: ${etykieta.nazwaPaczki}.`,
+      wydrukEtykiety: { odcisk: etykieta.odcisk, wersja, format, tryb, czyProbaQr, czyPotwierdzony },
+    })
+  }
+  return repozytoriumWspolnychDokumentow.aktualizuj(id, { daneDokumentu: { ...dokument.daneDokumentu, historia } })
+}
+
 export function utworzChecklistePaczkiZeZrodla(kontekst: KontekstDokumentuSzkolenia, grupaId: string, daneZrodla: DaneZrodlaChecklisty, uzytkownikId: string | null) {
   const migawka = utworzMigawke(kontekst, grupaId, daneZrodla)
   if (!migawka) return null
@@ -170,9 +204,9 @@ function zapiszDaneChecklisty(id: string, dane: DaneChecklistyPaczki, uzytkownik
   const dokument = pobierzChecklistePaczki(id)
   if (!dokument || dokument.status === 'ZARCHIWIZOWANY') return null
   if (dane.paczki.some((paczka) => paczka.statusOperacyjny === 'GOTOWA'
-    && dokument.daneDokumentu.paczki.find((obecna) => obecna.id === paczka.id)?.statusOperacyjny !== 'GOTOWA'
-    && !czyMoznaFinalizowacCheckliste(dane, paczka.id).czyMozna)) return null
-  const znormalizowane = normalizujDaneChecklisty(dane)
+    && dokument.daneDokumentu.paczki.find((obecna) => obecna.id === paczka.id)?.statusOperacyjny !== 'GOTOWA')) return null
+  const zapisaneZalaczniki = dokument.daneDokumentu.zalaczniki
+  const znormalizowane = normalizujDaneChecklisty({ ...dane, zalaczniki: zapisaneZalaczniki })
   const zapisaneWpisy = new Set(dokument.daneDokumentu.historia.map((wpis) => wpis.id))
   const historia = [...dokument.daneDokumentu.historia, ...znormalizowane.historia.filter((wpis) => !zapisaneWpisy.has(wpis.id))]
   const zaktualizowane = dodajWpisHistorii({ ...znormalizowane, historia }, 'EDYCJA', uzytkownikId, opis)
@@ -207,15 +241,48 @@ export function ustawStatusChecklisty(id: string, statusChecklisty: StatusCheckl
 
 export function dodajZalacznikChecklisty(id: string, zalacznik: Omit<ZalacznikChecklisty, 'id' | 'dodano'>, uzytkownikId: string | null) {
   const dokument = pobierzChecklistePaczki(id)
-  if (!dokument || dokument.status === 'ZARCHIWIZOWANY') return null
+  if (!dokument || dokument.status === 'ZARCHIWIZOWANY' || zalacznik.typ === 'ZDJECIE_PACZKI') return null
   const nowyZalacznik: ZalacznikChecklisty = { ...zalacznik, id: utworzId('zalacznik'), dodano: new Date().toISOString(), autorId: uzytkownikId }
   const statusChecklisty = nowyZalacznik.typ === 'SKAN_PODPISANEJ_CHECKLISTY' ? 'KOMPLETNA' : dokument.daneDokumentu.statusChecklisty
   const dane = dodajWpisHistorii({ ...dokument.daneDokumentu, statusChecklisty, zalaczniki: [...dokument.daneDokumentu.zalaczniki, nowyZalacznik] }, 'DODANIE_ZALACZNIKA', uzytkownikId, `Dodano załącznik: ${nowyZalacznik.nazwa}.`)
   return repozytoriumWspolnychDokumentow.aktualizuj(id, { daneDokumentu: dane, status: pobierzStatusWspolny(statusChecklisty) }) as DokumentChecklistyPaczki | null
 }
 
+export async function dodajZdjeciePaczki(id: string, paczkaId: string, plik: File) {
+  const aktor = pobierzZalogowanegoUzytkownika()
+  if (!aktor || !czyMozeWysylac(aktor)) return null
+  function pobierzDane() {
+    const dokument = pobierzChecklistePaczki(id)
+    const dane = dokument?.daneDokumentu
+    const paczka = dane?.paczki.find((obecna) => obecna.id === paczkaId)
+    return dokument && !dokument.czyUsunietyMiekko && !dokument.czyZarchiwizowany && dane && paczka
+      && !['GOTOWA', 'WYSŁANA'].includes(paczka.statusOperacyjny) && czyIlosciPaczkiPotwierdzone(dane, paczkaId) ? dane : null
+  }
+  const danePrzed = pobierzDane()
+  if (!danePrzed) return null
+  const odcisk = pobierzOdciskKompletu(danePrzed, paczkaId)
+  const zdjecieId = utworzId('zdjecie')
+  const klucz: Parameters<typeof zapiszPlikZdjeciaPaczki>[0] = [id, paczkaId, zdjecieId]
+  await zapiszPlikZdjeciaPaczki(klucz, plik, odcisk)
+  let zapisano = false
+  try {
+    const dane = pobierzDane()
+    const konto = pobierzZalogowanegoUzytkownika()
+    if (!dane || pobierzOdciskKompletu(dane, paczkaId) !== odcisk || konto?.id !== aktor.id || !czyMozeWysylac(konto)) return null
+    const zdjecie: ZalacznikChecklisty = { id: zdjecieId, nazwa: plik.name, typ: 'ZDJECIE_PACZKI', dane: '', typMime: plik.type,
+      dodano: new Date().toISOString(), autorId: aktor.id, wersjaWydruku: null, weryfikacjaPaczki: { paczkaId, etap: 'PO_SKOMPLETOWANIU', odcisk } }
+    const zaktualizowane = dodajWpisHistorii({ ...dane, zalaczniki: [...dane.zalaczniki, zdjecie] }, 'DODANIE_ZALACZNIKA', aktor.id, 'Zapisano zdjęcie skompletowanej paczki.')
+    zaktualizowane.historia.at(-1)!.paczkaId = paczkaId
+    const wynik = repozytoriumWspolnychDokumentow.aktualizuj(id, { daneDokumentu: zaktualizowane })
+    zapisano = Boolean(wynik)
+    return wynik
+  } finally {
+    if (!zapisano) await usunPlikZdjeciaPaczki(klucz)
+  }
+}
+
 function odciskTresci(dane: DaneChecklistyPaczki) {
-  return JSON.stringify({ ...dane, identyfikator: undefined, historia: undefined, wersjeWydruku: undefined, zalaczniki: undefined, prosbyOWeryfikacje: undefined })
+  return JSON.stringify({ ...dane, identyfikator: undefined, historia: undefined, wersjeWydruku: undefined, zalaczniki: undefined, prosbyOWeryfikacje: undefined, korektyEtykiet: undefined })
 }
 
 export function zarejestrujWydrukChecklisty(id: string, uzytkownikId: string | null) {

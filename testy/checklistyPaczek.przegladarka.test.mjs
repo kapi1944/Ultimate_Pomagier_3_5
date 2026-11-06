@@ -2,11 +2,148 @@ import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import test from 'node:test'
+import { PDFDocument } from 'pdf-lib'
 
 // Playwright może pochodzić z lokalnego środowiska testowego lub pakietu Codex.
 const wymagaj = createRequire(import.meta.url)
 const { chromium } = wymagaj(process.env.POMAGIER_PLAYWRIGHT || 'playwright')
 const adres = process.env.POMAGIER_ADRES || 'http://localhost:5173'
+const zdjecieTestowe = { name: 'paczka.png', mimeType: 'image/png', buffer: Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEklEQVR4nGOUWBDAwMDAxAAGAAxSAQw3k/N7AAAAAElFTkSuQmCC', 'base64',
+) }
+
+test('etykiety: format PDF, trzy paczki, trzy cele, logowanie i ponowny druk', { timeout: 120000 }, async () => {
+  const przegladarka = await chromium.launch({ channel: 'chrome', headless: true })
+  try {
+    const strona = await przegladarka.newPage({ acceptDownloads: true, viewport: { width: 1366, height: 950 } })
+    strona.setDefaultTimeout(12000)
+    const bledy = []
+    strona.on('pageerror', (blad) => bledy.push(blad.message))
+    await strona.goto(adres)
+    await strona.getByRole('button', { name: 'Otwórz demonstrację Architekta', exact: true }).click()
+    const dane = await strona.evaluate(async () => {
+      const { poczatkoweDaneFormularza, poczatkowaGrupa, poczatkowiAdresaci } = await import('/src/moduly/zamkniete/szczegoly_organizacyjne/danePoczatkowe.ts')
+      const { zapiszWersjeRobocza } = await import('/src/moduly/zamkniete/szczegoly_organizacyjne/uslugi/magazynWersjiRoboczych.ts')
+      const { utworzDokumentZeSzczegolow } = await import('/src/wspolne/integracje/szczegolyDoDokumentow/fabrykiDokumentowZeSzczegolow.ts')
+      const { pobierzChecklistePaczki, zapiszChecklistePaczki } = await import('/src/moduly/dokumenty/generatory/checklisty_paczek/rejestrChecklistPaczek.ts')
+      const { duplikujPaczkeChecklisty } = await import('/src/moduly/dokumenty/generatory/checklisty_paczek/modelChecklistyPaczki.ts')
+      const tytul = 'Zarządzanie projektami i bezpieczeństwo procesów — warsztaty dla zespołów operacyjnych i administracji'
+      const wersja = { id: 'szczegoly-etykiet', dokumentId: 'szczegoly-etykiet', wersja: 'test', etykietaWersji: 'Test', nazwa: tytul, dataZapisu: new Date().toISOString(), autorId: 'administrator-kacper-madej', autorNazwa: 'Architekt',
+        dane: { ...structuredClone(poczatkoweDaneFormularza), tytulSzkolenia: tytul, kodSzkolenia: 'IIST-311', organizator: 'IIST', wysylkaPaczkiDotyczy: true,
+          odbiorcaPaczki: { ...poczatkoweDaneFormularza.odbiorcaPaczki, informacjaNaEtykiecie: 'Otwierać ostrożnie.' } },
+        grupy: ['Alfa', 'Beta'].map((nazwa, indeks) => ({ ...structuredClone(poczatkowaGrupa), id: 'grupa-' + nazwa, nazwa: 'Grupa ' + nazwa, miejsce: 'Poznań', dataOd: '2026-11-09', dataDo: '2026-11-10', liczbaUczestnikow: 12 + indeks })),
+        adresaci: poczatkowiAdresaci, statusyPol: {} }
+      zapiszWersjeRobocza(wersja)
+      const ankieta = utworzDokumentZeSzczegolow(wersja, 'ankieta', 'grupa-Beta', wersja.autorId).dokument
+      const innaGrupa = utworzDokumentZeSzczegolow(wersja, 'lista', 'grupa-Alfa', wersja.autorId).dokument
+      const checklista = utworzDokumentZeSzczegolow(wersja, 'checklista', 'grupa-Beta', wersja.autorId).dokument
+      const dokument = pobierzChecklistePaczki(checklista.id)
+      const pierwotne = { ...dokument.daneDokumentu,
+        pozycje: dokument.daneDokumentu.pozycje.filter((pozycja) => ['Ankiety', 'Karta na drzwi'].includes(pozycja.nazwa)) }
+      const paczkaId = pierwotne.paczki[0].id
+      const dwie = duplikujPaczkeChecklisty(pierwotne, paczkaId)
+      const trzy = duplikujPaczkeChecklisty(dwie, paczkaId)
+      trzy.paczki[1].nazwa = 'Druga paczka szkoleniowa'
+      trzy.paczki[2].nazwa = 'Trzecia paczka szkoleniowa'
+      zapiszChecklistePaczki(dokument.id, trzy, wersja.autorId)
+      return { dokumentId: dokument.id, drugaId: trzy.paczki[1].id, ankietaId: ankieta.id, innaGrupaId: innaGrupa.id, tytul }
+    })
+    const sciezka = '/dokumenty/checklisty-paczek/' + dane.dokumentId
+    await strona.goto(adres + sciezka)
+    await strona.getByRole('button', { name: 'Etykiety paczek', exact: true }).click()
+    const panel = strona.getByRole('region', { name: 'Etykiety paczek', exact: true })
+    const strony = panel.locator('[data-etykieta]')
+    assert.equal(await strony.count(), 3)
+    assert.match(await strony.nth(1).innerText(), /2 \/ 3[\s\S]*Grupa Beta[\s\S]*Uczestnicy: 13/)
+    assert.match(await strony.first().innerText(), /13 szt\.[\s\S]*2 szt\./)
+    assert.match(await strony.first().innerText(), /IIST-311/)
+    assert.equal(await strony.first().getAttribute('data-tryb'), 'termiczny')
+    assert.equal(await strony.first().getByRole('img', { name: 'IIST' }).count(), 1)
+    await panel.getByLabel('Tryb druku', { exact: true }).selectOption('kolorowy')
+    assert.equal(await strony.first().getAttribute('data-tryb'), 'kolorowy')
+    await panel.getByLabel('Tryb druku', { exact: true }).selectOption('termiczny')
+    await panel.getByLabel('Dodaj testowe QR w lokalnej przeglądarce', { exact: true }).check()
+    assert.equal(await strony.nth(1).locator('.etykieta-paczki__qr').count(), 3)
+    assert.equal(await strony.nth(1).locator('.etykieta-paczki__qr').evaluateAll((pola) => {
+      const geometria = pola.map((pole) => pole.getBoundingClientRect())
+      return geometria.every((pole) => pole.y === geometria[0].y && Math.abs(pole.width / geometria[0].width - 1) < 0.001)
+    }), true)
+
+    async function pobierzPdf(nazwa, szerokosc, wysokosc, liczbaStron) {
+      const [pobrany] = await Promise.all([strona.waitForEvent('download'), panel.getByRole('button', { name: nazwa, exact: true }).click()]).catch(async (blad) => {
+        throw new Error(`Eksport ${szerokosc} × ${wysokosc}: ${(await panel.getByRole('alert').allTextContents()).join(' ')}`, { cause: blad })
+      })
+      const bajty = await readFile(await pobrany.path())
+      const pdf = await PDFDocument.load(bajty)
+      assert.equal(pdf.getPageCount(), liczbaStron)
+      for (const stronaPdf of pdf.getPages()) {
+        assert.ok(Math.abs(stronaPdf.getWidth() * 25.4 / 72 - szerokosc) < 0.01)
+        assert.ok(Math.abs(stronaPdf.getHeight() * 25.4 / 72 - wysokosc) < 0.01)
+      }
+      return bajty
+    }
+    const pdf = await pobierzPdf('Pobierz PDF wszystkich etykiet', 100, 150, 3)
+    await mkdir('tmp/pdfs', { recursive: true })
+    await writeFile('tmp/pdfs/etykiety-test.pdf', pdf)
+    await panel.getByLabel('Format etykiety', { exact: true }).selectOption('100')
+    await pobierzPdf('Pobierz PDF etykiety', 100, 100, 1)
+    await panel.getByLabel('Format etykiety', { exact: true }).selectOption('wlasny')
+    await panel.getByLabel('Szerokość (mm)', { exact: true }).fill('125')
+    await panel.getByLabel('Wysokość (mm)', { exact: true }).fill('90')
+    await pobierzPdf('Pobierz PDF etykiety', 125, 90, 1)
+    await panel.getByText('Korekta treści do wydruku', { exact: true }).click()
+    await panel.getByLabel('Kod szkolenia', { exact: true }).fill('POZ-311')
+    await panel.getByLabel('Kod szkolenia', { exact: true }).press('Tab')
+    await panel.getByRole('alert').filter({ hasText: 'Nieaktualna etykieta' }).waitFor()
+    assert.match(await strony.first().innerText(), /POZ-311/)
+    await panel.getByLabel('Uwagi etykiety', { exact: true }).fill('Bardzo długie uwagi do wydruku. '.repeat(120))
+    await panel.getByLabel('Uwagi etykiety', { exact: true }).press('Tab')
+    await panel.getByRole('alert').filter({ hasText: 'Wybierz wyższy format dla paczek' }).waitFor()
+    assert.equal(await panel.getByRole('button', { name: 'Pobierz PDF etykiety', exact: true }).isDisabled(), true)
+    await panel.getByLabel('Paczka', { exact: true }).selectOption(dane.drugaId)
+    const cele = Object.fromEntries(await panel.getByRole('navigation', { name: 'Cele etykiety' }).getByRole('link').evaluateAll((linki) =>
+      linki.map((link) => [link.textContent, link.href])))
+    assert.equal(new Set(Object.values(cele)).size, 3)
+
+    await strona.evaluate(() => localStorage.removeItem('ultimatePomagier.sesjaUzytkownika.v1'))
+    await strona.goto(cele.Kompletowanie)
+    const logowanie = strona.getByRole('button', { name: 'Otwórz demonstrację Architekta', exact: true })
+    await logowanie.waitFor()
+    assert.equal(await strona.getByRole('region', { name: 'Panel kompletowania', exact: true }).count(), 0)
+    await logowanie.click()
+    await strona.getByRole('region', { name: 'Kompletowanie: Druga paczka szkoleniowa', exact: true }).waitFor()
+    assert.equal(strona.url(), cele.Kompletowanie)
+    await strona.goto(cele.Szczegóły)
+    const szczegoly = strona.getByRole('dialog')
+    await szczegoly.waitFor()
+    assert.match(await szczegoly.innerText(), /Grupa Beta/)
+    assert.doesNotMatch(await szczegoly.innerText(), /Grupa Alfa/)
+    await strona.goto(cele.Materiały)
+    await strona.getByRole('heading', { name: 'Materiały paczki', exact: true }).waitFor()
+    await strona.getByRole('button', { name: 'Przygotuj zestaw dokumentów', exact: true }).click()
+    const pakiet = strona.getByRole('region', { name: 'Dokumenty do zatwierdzenia' })
+    await pakiet.getByText('Grupa z etykiety: Grupa Beta', { exact: true }).waitFor()
+    assert.doesNotMatch(await pakiet.innerText(), /Grupa Alfa/)
+    await pakiet.getByText(/Brakujące dokumenty/).waitFor()
+    const materialy = strona.getByRole('region', { name: 'Dokumenty i wydruki', exact: true })
+    await materialy.getByRole('button', { name: /Ankieta/ }).click()
+    await materialy.getByLabel('Liczba egzemplarzy do druku', { exact: true }).fill('3')
+    await materialy.getByRole('button', { name: 'Drukuj ponownie', exact: true }).click()
+    const operacja = await strona.waitForFunction(async (id) => {
+      const { repozytoriumWspolnychDokumentow } = await import('/src/wspolne/dokumenty/rejestrDokumentow.ts')
+      return repozytoriumWspolnychDokumentow.pobierzHistorie(id).find((wpis) => wpis.typ === 'operacja_wydruku')?.dane
+    }, dane.ankietaId)
+    assert.equal((await operacja.jsonValue()).liczbaEgzemplarzy, 3)
+
+    await strona.goto(cele.Kompletowanie.replace(dane.drugaId, 'brakujaca'))
+    await strona.getByText('Nie znaleziono paczki wskazanej na etykiecie.', { exact: true }).waitFor()
+    const inneUrzadzenie = await przegladarka.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+    await inneUrzadzenie.goto(cele.Materiały)
+    await inneUrzadzenie.getByRole('button', { name: 'Otwórz demonstrację Architekta', exact: true }).click()
+    await inneUrzadzenie.getByText('Nie znaleziono checklisty w tym profilu przeglądarki.', { exact: true }).waitFor()
+    assert.deepEqual(bledy, [])
+  } finally { await przegladarka.close() }
+})
 
 test('checklisty: bezpośrednie wejście przy quota zachowuje formularz, shell i istniejący dokument', { timeout: 30000 }, async () => {
   const przegladarka = await chromium.launch({ channel: 'chrome', headless: true })
@@ -242,7 +379,22 @@ test('1.2.3: kompletowanie 30 egzemplarzy, dwie paczki, ponowienie zapisu, Pulpi
     assert.equal(await potwierdzenie.isEnabled(), true)
     await potwierdzenie.click()
     assert.equal(await panel.getByRole('progressbar').getAttribute('value'), '100')
+    assert.equal(await panel.getByRole('button', { name: 'Oznacz paczkę jako gotową', exact: true }).isDisabled(), true)
+    await panel.getByLabel('Zdjęcie gotowej paczki', { exact: true }).setInputFiles(zdjecieTestowe)
+    await panel.getByRole('link', { name: 'Otwórz zapisane zdjęcie paczki' }).waitFor()
+    const gotowaBezPliku = await strona.evaluate(async ({ dokumentId, pierwsza }) => {
+      const { pobierzChecklistePaczki } = await import('/src/moduly/dokumenty/generatory/checklisty_paczek/rejestrChecklistPaczek.ts')
+      const { usunPlikZdjeciaPaczki } = await import('/src/moduly/dokumenty/generatory/checklisty_paczek/zdjeciaPaczek.ts')
+      const { zatwierdzGotowoscPaczki } = await import('/src/wspolne/dokumenty/rejestrDokumentow.ts')
+      const zdjecie = pobierzChecklistePaczki(dokumentId).daneDokumentu.zalaczniki.at(-1)
+      await usunPlikZdjeciaPaczki([dokumentId, pierwsza, zdjecie.id])
+      return await zatwierdzGotowoscPaczki(dokumentId, pierwsza)
+    }, identyfikatory)
+    assert.equal(gotowaBezPliku, null)
+    await panel.getByLabel('Zdjęcie gotowej paczki', { exact: true }).setInputFiles(zdjecieTestowe)
+    await panel.getByRole('link', { name: 'Otwórz zapisane zdjęcie paczki' }).waitFor()
     await panel.getByRole('button', { name: 'Oznacz paczkę jako gotową', exact: true }).click()
+    await panel.getByText('Status operacyjny: Gotowa', { exact: true }).waitFor()
     assert.match(await panel.innerText(), /Status operacyjny: Gotowa/)
     assert.match(await panel.innerText(), /Materiały online/)
     assert.match(await panel.innerText(), /Drukuje klient/)
@@ -279,7 +431,11 @@ test('1.2.3: kompletowanie 30 egzemplarzy, dwie paczki, ponowienie zapisu, Pulpi
     assert.equal(await ilosc.inputValue(), '12')
     await ilosc.fill('30')
     await potwierdzenie.click()
+    assert.equal(await panel.getByRole('button', { name: 'Oznacz paczkę jako gotową', exact: true }).isDisabled(), true)
+    await panel.getByLabel('Zdjęcie gotowej paczki', { exact: true }).setInputFiles(zdjecieTestowe)
+    await panel.getByRole('link', { name: 'Otwórz zapisane zdjęcie paczki' }).waitFor()
     await panel.getByRole('button', { name: 'Oznacz paczkę jako gotową', exact: true }).click()
+    await panel.getByText('Status operacyjny: Gotowa', { exact: true }).waitFor()
     const stan = await strona.evaluate(async (id) => {
       const { pobierzChecklistePaczki } = await import('/src/moduly/dokumenty/generatory/checklisty_paczek/rejestrChecklistPaczek.ts')
       return pobierzChecklistePaczki(id).daneDokumentu
@@ -288,6 +444,10 @@ test('1.2.3: kompletowanie 30 egzemplarzy, dwie paczki, ponowienie zapisu, Pulpi
     assert.equal(stan.paczki[1].statusOperacyjny, 'ROBOCZA')
     assert.equal(stan.paczki[1].parametryLogistyczne.numerPrzesylki, 'ZACHOWAJ-123')
     assert.equal(stan.historia.at(-1).paczkaId, identyfikatory.pierwsza)
+    assert.equal(stan.historia.filter((wpis) => wpis.potwierdzeniePaczki).length, 2)
+    assert.equal(new Set(stan.historia.filter((wpis) => wpis.potwierdzeniePaczki).map((wpis) => wpis.potwierdzeniePaczki.zdjecieId)).size, 2)
+    assert.equal(stan.historia.at(-1).uzytkownikId, 'administrator-kacper-madej')
+    assert.ok(stan.zalaczniki.every((zalacznik) => zalacznik.dane === '' && zalacznik.weryfikacjaPaczki.paczkaId === identyfikatory.pierwsza))
     const trescPo = await podglad.innerHTML()
     await strona.getByRole('button', { name: 'Edycja checklisty', exact: true }).click()
     assert.equal(await podglad.innerHTML(), trescPo)

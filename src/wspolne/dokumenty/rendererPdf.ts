@@ -18,16 +18,18 @@ export async function wczytajFontyPdf(): Promise<FontyPdf> {
 }
 
 /** Jedna strona sceny jest jedną fizyczną stroną; renderer nigdy nie paginuje ponownie. */
-export function renderujScenePdf(scena: ScenaPdf, fonty: FontyPdf, obrazy: Record<string, string> = {}) {
+export function renderujScenePdf(scena: ScenaPdf, fonty: FontyPdf, obrazy: Record<string, string> = {}, wymiaryMm?: [number, number]) {
   if (!scena.strony.length) throw new Error('Brak stron PDF.')
-  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true, putOnlyUsedFonts: true })
+  const format = wymiaryMm ?? 'a4'
+  const orientacja = wymiaryMm && wymiaryMm[0] > wymiaryMm[1] ? 'landscape' : 'portrait'
+  const pdf = new jsPDF({ orientation: orientacja, unit: 'mm', format, compress: true, putOnlyUsedFonts: true })
   for (const styl of Object.keys(odmianyFontu) as StylTekstuPdf[]) {
     const nazwa = `LiberationSans-${odmianyFontu[styl]}.ttf`
     pdf.addFileToVFS(nazwa, fonty[styl])
     pdf.addFont(nazwa, 'LiberationSans', styl)
   }
   scena.strony.forEach((strona, indeks) => {
-    if (indeks) pdf.addPage('a4', 'portrait')
+    if (indeks) pdf.addPage(format, orientacja)
     for (const element of strona.elementy) {
       if (element.rodzaj === 'poczatek_grupy') {
         pdf.saveGraphicsState()

@@ -7,11 +7,15 @@ import { pobierzGotowyPakiet, przygotujPakiet, type GotowyPakiet, type PostepPak
 import PodgladPakietu from './PodgladPakietu'
 import './pakietPdf.css'
 
-type Wlasciwosci = { wersja: WersjaRoboczaGeneratora; otworzDokument: (dokument: Dokument<unknown, unknown>) => void; zamknij: () => void; poUtworzeniu: () => void }
-export default function PanelPakietu({ wersja, otworzDokument, zamknij, poUtworzeniu }: Wlasciwosci) {
+type Wlasciwosci = { wersja: WersjaRoboczaGeneratora; otworzDokument: (dokument: Dokument<unknown, unknown>) => void; zamknij: () => void; poUtworzeniu: () => void; grupaEtykietyId?: string }
+export default function PanelPakietu({ wersja, otworzDokument, zamknij, poUtworzeniu, grupaEtykietyId }: Wlasciwosci) {
   const metadane = pobierzMetadanePakietu(wersja)
   const dokumenty = pobierzDokumentyPakietu(wersja)
   const [poczatkowy] = useState(() => {
+    if (grupaEtykietyId) {
+      const nalezace = dokumenty.filter((dokument) => !dokument.powiazania.grupaId || dokument.powiazania.grupaId === grupaEtykietyId)
+      return { konfiguracja: { ...utworzDomyslnaKonfiguracje(nalezace), grupyId: [grupaEtykietyId] }, blad: '' }
+    }
     try { return { konfiguracja: odczytajKonfiguracjePakietu(metadane.szkolenieId, dokumenty), blad: '' } }
     catch (blad) { return { konfiguracja: utworzDomyslnaKonfiguracje(dokumenty), blad: String(blad) } }
   })
@@ -48,7 +52,7 @@ export default function PanelPakietu({ wersja, otworzDokument, zamknij, poUtworz
     ustawKonfiguracje(nowa)
     ustawPakiet(null)
     ustawKomunikat('')
-    try { zapiszKonfiguracjePakietu(metadane.szkolenieId, nowa); ustawBlad('') }
+    try { if (!grupaEtykietyId) zapiszKonfiguracjePakietu(metadane.szkolenieId, nowa); ustawBlad('') }
     catch (blad) { ustawBlad('Wybór jest aktywny, ale nie udało się go zapamiętać: ' + String(blad)) }
   }
   function przesun(id: string, celId: string) { zmienKonfiguracje({ kolejnosc: przeniesDokument(kolejnosc, id, celId) }) }
@@ -65,7 +69,7 @@ export default function PanelPakietu({ wersja, otworzDokument, zamknij, poUtworz
     kontroler.current = new AbortController()
     ustawCzyPracuje(true); ustawBlad(''); ustawPakiet(null); ustawKomunikat('')
     try {
-      zapiszKonfiguracjePakietu(metadane.szkolenieId, { ...konfiguracja, kolejnosc })
+      if (!grupaEtykietyId) zapiszKonfiguracjePakietu(metadane.szkolenieId, { ...konfiguracja, kolejnosc })
       const wynik = await przygotujPakiet(wersja, konfiguracja, kontroler.current.signal, ustawPostep)
       if (wynik.sygnatura !== sygnaturaZrodel(aktualneDane.current.wersja, aktualneDane.current.konfiguracja)) throw new Error('Szczegóły zmieniły się. Wygeneruj pakiet ponownie.')
       ustawPakiet(wynik)
@@ -92,11 +96,11 @@ export default function PanelPakietu({ wersja, otworzDokument, zamknij, poUtworz
     <header><h3 tabIndex={-1} ref={naglowek}>📄 Dokumenty do zatwierdzenia</h3><dl className="pakiet-pdf__metadane">
       {Object.entries({ Szkolenie: metadane.tytul, Klient: metadane.klient, Termin: metadane.termin, Organizator: metadane.organizator, Opiekun: metadane.opiekun }).map(([etykieta, wartosc]) => <div key={etykieta}><dt>{etykieta}</dt><dd>{wartosc}</dd></div>)}
     </dl><p>Odnaleziono dokumentów: {dokumenty.length}</p></header>
-    <fieldset disabled={czyPracuje}><legend>Grupy szkoleniowe</legend>
+    {grupaEtykietyId ? <p>Grupa z etykiety: {wersja.grupy.find((grupa) => grupa.id === grupaEtykietyId)?.nazwa}</p> : <fieldset disabled={czyPracuje}><legend>Grupy szkoleniowe</legend>
       <label><input type="checkbox" checked={konfiguracja.grupyId === null} onChange={(zdarzenie) => zmienGrupy(zdarzenie.target.checked ? null : [])} />Wszystkie grupy</label>
       {wersja.grupy.map((grupa) => <label key={grupa.id}><input type="checkbox" checked={konfiguracja.grupyId === null || konfiguracja.grupyId.includes(grupa.id)} onChange={(zdarzenie) => zmienGrupy(zdarzenie.target.checked ? [...(konfiguracja.grupyId ?? wersja.grupy.map((pozycja) => pozycja.id)), grupa.id] : (konfiguracja.grupyId ?? wersja.grupy.map((pozycja) => pozycja.id)).filter((id) => id !== grupa.id))} />{grupa.nazwa}</label>)}
       <small>Wyłączenie grupy odznacza jej dokumenty. Dokumenty wspólne występują jeden raz.</small>
-    </fieldset>
+    </fieldset>}
     <fieldset disabled={czyPracuje}><legend>Wybierz dokumenty</legend>
       <div className="pakiet-pdf__akcje"><button type="button" onClick={() => zmienKonfiguracje({ wybraneId: widoczneId.filter((id) => !sprawdzStanDokumentu(dokumenty.find((dokument) => dokument.id === id), wersja).blokuje) })}>Zaznacz wszystkie</button><button type="button" onClick={() => zmienKonfiguracje({ wybraneId: [] })}>Odznacz wszystkie</button><button type="button" onClick={() => odswiez((wartosc) => wartosc + 1)}>Odśwież dokumenty</button></div>
       <ol className="pakiet-pdf__lista">{widoczneId.map((id, indeks) => {

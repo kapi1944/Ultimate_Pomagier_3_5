@@ -667,6 +667,13 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
             wartosc={generator.daneFormularza.tytulSzkolenia}
             ustawWartosc={(wartosc) => generator.aktualizujDane((dane) => ({ ...dane, tytulSzkolenia: wartosc }), 'tytulSzkolenia')}
           />
+          <PoleTekstowe
+            etykieta="Kod szkolenia (opcjonalny)"
+            pole="kodSzkolenia"
+            statusyPol={generator.statusyPol}
+            wartosc={generator.daneFormularza.kodSzkolenia ?? ''}
+            ustawWartosc={(wartosc) => generator.aktualizujDane((dane) => ({ ...dane, kodSzkolenia: wartosc }), 'kodSzkolenia')}
+          />
           <div className="szczegoly-siatka szczegoly-siatka--trzy">
             <PoleTekstowe
               etykieta="Nazwa klienta"

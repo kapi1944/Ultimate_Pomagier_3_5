@@ -1,5 +1,9 @@
 import { czyDokumentMaNowszeDaneZrodlowe, statusyDokumentow, typyDokumentow, utworzNowyDokument, walidujDokument, type Dokument } from './modelDokumentu'
 import { czyBrakMiejscaWMagazynie, odczytajZapisRejestru, skompresujRejestr } from './serializacjaRejestruDokumentow'
+import { czyIlosciPaczkiPotwierdzone, normalizujDaneChecklisty, pobierzZdjecieKompletu, uniewaznijGotowoscPaczek, type DaneChecklistyPaczki } from '../../moduly/dokumenty/generatory/checklisty_paczek/modelChecklistyPaczki'
+import { pobierzPlikZdjeciaPaczki } from '../../moduly/dokumenty/generatory/checklisty_paczek/zdjeciaPaczek'
+import { pobierzZalogowanegoUzytkownika } from '../../aplikacja/logowanie/sesjaUzytkownika'
+import { czyMozeWysylac } from '../../kartoteki/uzytkownicy/uprawnienia'
 
 export const kluczRejestruDokumentow = 'ultimatePomagier.rejestrDokumentow.v1'
 export const kluczKopiiBezpieczenstwaRejestruDokumentow = 'ultimatePomagier.rejestrDokumentow.kopia-bezpieczenstwa'
@@ -132,11 +136,36 @@ export function pobierzStanRejestruDokumentow(): StanRejestruDokumentow {
 export function zapiszStanRejestruDokumentow(stan: StanRejestruDokumentow) { zapiszStan(stan) }
 
 function dodajHistorie(stan: StanRejestruDokumentow, dokument: Dokument<unknown, unknown> | null, typ: string, dane: unknown) { stan.historia.unshift({ id: utworzId('historia'), dokumentId: dokument?.id ?? null, dokumentLogicznyId: dokument?.dokumentLogicznyId ?? null, typ, data: new Date().toISOString(), dane, automatyczne: true }) }
-function aktualizujStan(id: string, zmien: (dokument: Dokument<unknown, unknown>) => Dokument<unknown, unknown>, typHistorii: string) {
+
+function pobierzDanePaczek(dokument: Dokument<unknown, unknown>) {
+  if (dokument.typ !== 'CHECKLISTA_PACZKI' || !dokument.daneDokumentu || typeof dokument.daneDokumentu !== 'object') return null
+  const dane = dokument.daneDokumentu as Partial<DaneChecklistyPaczki>
+  return typeof dane.identyfikator === 'string' && Array.isArray(dane.pozycje) && Array.isArray(dane.kategorie) ? dane as DaneChecklistyPaczki : null
+}
+
+function aktualizujStan(id: string, zmien: (dokument: Dokument<unknown, unknown>) => Dokument<unknown, unknown> | null, typHistorii: string, czyPotwierdzeniePaczki = false) {
   const stan = pobierzStanRejestruDokumentow()
   const indeks = stan.dokumenty.findIndex((dokument) => dokument.id === id)
   if (indeks === -1) return null
-  const dokument = zmien(stan.dokumenty[indeks])
+  const poprzedni = stan.dokumenty[indeks]
+  let dokument = zmien(poprzedni)
+  if (!dokument) return null
+  const dane = pobierzDanePaczek(dokument)
+  if (dane?.paczki && dokument.daneDokumentu !== poprzedni.daneDokumentu && !czyPotwierdzeniePaczki) {
+    const przed = pobierzDanePaczek(poprzedni)
+    const potwierdzenia = przed?.historia?.filter((wpis) => wpis.potwierdzeniePaczki) ?? []
+    if (dane.paczki?.some((paczka) => paczka.statusOperacyjny === 'GOTOWA'
+      && !przed?.paczki?.some((poprzednia) => poprzednia.id === paczka.id && poprzednia.statusOperacyjny === 'GOTOWA'))) return null
+    const potwierdzeniaPoId = new Map(potwierdzenia.map((wpis) => [wpis.id, wpis]))
+    const historia = (dane.historia ?? []).flatMap((wpis) => {
+      if (!wpis.potwierdzeniePaczki) return [wpis]
+      const zapisany = potwierdzeniaPoId.get(wpis.id)
+      potwierdzeniaPoId.delete(wpis.id)
+      return zapisany ? [zapisany] : []
+    })
+    historia.push(...potwierdzeniaPoId.values())
+    dokument = { ...dokument, daneDokumentu: uniewaznijGotowoscPaczek({ ...dane, historia, zalaczniki: dane.zalaczniki ?? [] }) }
+  }
   if (!walidujDokument(dokument).czyPoprawny) throw new Error('Zmiany naruszają model dokumentu.')
   stan.dokumenty[indeks] = dokument
   dodajHistorie(stan, dokument, typHistorii, { dokument })
@@ -144,10 +173,54 @@ function aktualizujStan(id: string, zmien: (dokument: Dokument<unknown, unknown>
   return dokument
 }
 
+export async function zatwierdzGotowoscPaczki(dokumentId: string, paczkaId: string) {
+  const aktor = pobierzZalogowanegoUzytkownika()
+  if (!aktor || !czyMozeWysylac(aktor)) return null
+  function pobierzStan(dokument: Dokument<unknown, unknown>) {
+    const zapis = pobierzDanePaczek(dokument)
+    if (!zapis || dokument.czyUsunietyMiekko || dokument.czyZarchiwizowany || dokument.status === 'ZARCHIWIZOWANY') return null
+    const dane = normalizujDaneChecklisty(zapis)
+    const paczka = dane.paczki.find((obecna) => obecna.id === paczkaId)
+    if (!paczka || paczka.statusOperacyjny === 'WYSŁANA' || paczka.statusOperacyjny === 'GOTOWA' || !czyIlosciPaczkiPotwierdzone(dane, paczkaId)) return null
+    const zdjecie = pobierzZdjecieKompletu(dane, paczkaId)
+    return zdjecie?.weryfikacjaPaczki ? { dane, paczka, zdjecieId: zdjecie.id, odcisk: zdjecie.weryfikacjaPaczki.odcisk } : null
+  }
+  const dokument = repozytoriumWspolnychDokumentow.pobierzPoId(dokumentId)
+  const przed = dokument && pobierzStan(dokument)
+  if (!przed || !await pobierzPlikZdjeciaPaczki([dokumentId, paczkaId, przed.zdjecieId], przed.odcisk)) return null
+  const konto = pobierzZalogowanegoUzytkownika()
+  if (konto?.id !== aktor.id || !czyMozeWysylac(konto)) return null
+  return aktualizujStan(dokumentId, (obecny) => {
+    const stan = pobierzStan(obecny)
+    if (!stan || stan.zdjecieId !== przed.zdjecieId || stan.odcisk !== przed.odcisk) return null
+    const data = new Date().toISOString()
+    const daneDokumentu: DaneChecklistyPaczki = {
+      ...stan.dane,
+      paczki: stan.dane.paczki.map((paczka) => paczka.id === paczkaId ? { ...paczka, statusOperacyjny: 'GOTOWA' } : paczka),
+      historia: [...stan.dane.historia, { id: utworzId('audyt'), paczkaId, typ: 'ZMIANA_STATUSU', data, uzytkownikId: aktor.id,
+        opis: 'Zatwierdzono kompletność paczki ze zdjęciem.', potwierdzeniePaczki: { zdjecieId: stan.zdjecieId, odcisk: stan.odcisk } }],
+    }
+    return { ...obecny, daneDokumentu, zmodyfikowano: data, zaktualizowano: data }
+  }, 'aktualizacja', true)
+}
+
 export const repozytoriumWspolnychDokumentow: RepozytoriumWspolnychDokumentow = {
   pobierzWszystkie: () => [...pobierzStanRejestruDokumentow().dokumenty].sort((pierwszy, drugi) => Date.parse(drugi.zmodyfikowano) - Date.parse(pierwszy.zmodyfikowano)),
   pobierzPoId: (id) => pobierzStanRejestruDokumentow().dokumenty.find((dokument) => dokument.id === id) ?? null,
-  utworz<TDane, TUstawienia>(dokument: Dokument<TDane, TUstawienia>) { const stan = pobierzStanRejestruDokumentow(); const rekord = dokument as Dokument<unknown, unknown>; if (stan.dokumenty.some((istniejacy) => istniejacy.id === rekord.id)) throw new Error('Dokument o tym identyfikatorze już istnieje.'); if (!walidujDokument(rekord).czyPoprawny) throw new Error('Nie można zapisać niepoprawnego dokumentu.'); stan.dokumenty.unshift(rekord); dodajHistorie(stan, rekord, 'utworzenie', { dokument: rekord }); zapiszStan(stan); return dokument },
+  utworz<TDane, TUstawienia>(dokument: Dokument<TDane, TUstawienia>) {
+    const stan = pobierzStanRejestruDokumentow()
+    const rekord: Dokument<unknown, unknown> = dokument
+    if (stan.dokumenty.some((istniejacy) => istniejacy.id === rekord.id)) throw new Error('Dokument o tym identyfikatorze już istnieje.')
+    if (!walidujDokument(rekord).czyPoprawny) throw new Error('Nie można zapisać niepoprawnego dokumentu.')
+    const paczki = pobierzDanePaczek(rekord)
+    if (paczki?.paczki?.some((paczka) => paczka.statusOperacyjny === 'GOTOWA') || paczki?.historia?.some((wpis) => wpis.potwierdzeniePaczki)) {
+      throw new Error('Zatwierdź gotowość paczki po zapisaniu dokumentu i zdjęcia.')
+    }
+    stan.dokumenty.unshift(rekord)
+    dodajHistorie(stan, rekord, 'utworzenie', { dokument: rekord })
+    zapiszStan(stan)
+    return dokument
+  },
   aktualizuj(id, zmiany) { const teraz = new Date().toISOString(); return aktualizujStan(id, (dokument) => ({ ...dokument, ...zmiany, id: dokument.id, utworzono: dokument.utworzono, zmodyfikowano: teraz, zaktualizowano: teraz }), 'aktualizacja') },
   archiwizuj(id) { const teraz = new Date().toISOString(); return aktualizujStan(id, (dokument) => ({ ...dokument, status: 'ZARCHIWIZOWANY', czyZarchiwizowany: true, zarchiwizowano: teraz, zmodyfikowano: teraz, zaktualizowano: teraz }), 'archiwizacja') },
   przywroc(id) { const teraz = new Date().toISOString(); return aktualizujStan(id, (dokument) => ({ ...dokument, status: 'GOTOWY', czyZarchiwizowany: false, zarchiwizowano: null, zmodyfikowano: teraz, zaktualizowano: teraz }), 'przywrocenie') },
