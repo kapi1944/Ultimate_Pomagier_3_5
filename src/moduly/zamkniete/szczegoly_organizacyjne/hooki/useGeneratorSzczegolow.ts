@@ -764,6 +764,9 @@ export function useGeneratorSzczegolow() {
       return
     }
 
+    const indeksZrodla = aktualneGrupy.current.findIndex((grupa) => grupa.id === id)
+    if (indeksZrodla === -1) return
+
     ustawGrupy((obecne) => {
       const indeks = obecne.findIndex((grupa) => grupa.id === id)
 
@@ -782,6 +785,11 @@ export function useGeneratorSzczegolow() {
 
       return [...obecne.slice(0, indeks + 1), kopia, ...obecne.slice(indeks + 1)].map(normalizujGrupe)
     })
+
+    ustawStatusyPol((obecne) => Object.fromEntries(Object.entries(obecne).map(([pole, status]) => [
+      pole.replace(/^grupy\.(\d+)\./, (prefiks, indeks) => Number(indeks) > indeksZrodla ? `grupy.${Number(indeks) + 1}.` : prefiks),
+      status,
+    ])))
   }, [czyMoznaEdytowac])
 
   const usunGrupe = useCallback(function usunGrupe(id: string, czyPotwierdzone: boolean) {

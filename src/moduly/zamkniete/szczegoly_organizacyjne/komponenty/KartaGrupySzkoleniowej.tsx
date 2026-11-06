@@ -608,6 +608,7 @@ function ZawartoscKartyGrupy({
               {bladTrenerow && <span className="szczegoly-pole__blad" id={pobierzIdBleduPola(poleTrenerow)}>{bladTrenerow}</span>}
             </label>
             <PoleLiczbowe
+              dopuszczajZero
               etykieta="Liczba uczestników"
               idGrupy={grupa.id}
               min={1}

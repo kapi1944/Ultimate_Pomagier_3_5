@@ -1,14 +1,232 @@
 import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
-import { writeFileSync } from 'node:fs'
+import { mkdirSync, writeFileSync } from 'node:fs'
 import test from 'node:test'
 
 const wymagaj = createRequire(import.meta.url)
 const { chromium } = wymagaj(process.env.POMAGIER_PLAYWRIGHT || 'playwright')
 const adres = process.env.POMAGIER_ADRES || 'http://127.0.0.1:5173'
 
+function uruchomPrzegladarke() {
+  const sciezkaChrome = process.env.POMAGIER_CHROME
+  return chromium.launch({ executablePath: sciezkaChrome, channel: sciezkaChrome ? undefined : 'chrome', headless: true })
+}
+
+test('kontrolka liczbowa zachowuje kroki dziesiętne, granice i edycję z klawiatury', { timeout: 60000 }, async () => {
+  const przegladarka = await uruchomPrzegladarke()
+  try {
+    const strona = await przegladarka.newPage()
+    await strona.goto(`${adres}/testy/kontrolkaLiczbowaSzczegolow.przegladarka.html`)
+    const pole = strona.getByRole('spinbutton', { name: 'Dziesiętne', exact: true })
+    const plus = strona.getByRole('button', { name: 'Zwiększ: Dziesiętne', exact: true })
+    const minus = strona.getByRole('button', { name: 'Zmniejsz: Dziesiętne', exact: true })
+    await plus.click()
+    assert.equal(await pole.inputValue(), '0.3')
+    assert.equal(await plus.isDisabled(), true)
+    assert.equal(await plus.evaluate((element) => element === document.activeElement), true)
+    await plus.press('Enter')
+    assert.equal(await pole.inputValue(), '0.3')
+    await minus.press('Space')
+    assert.equal(await pole.inputValue(), '0.2')
+    await pole.press('ArrowDown')
+    assert.equal(await pole.inputValue(), '0.1')
+    await pole.fill('-0.2')
+    await pole.press('ArrowDown')
+    assert.equal(await pole.inputValue(), '-0.3')
+    assert.equal(await minus.isDisabled(), true)
+    assert.equal(await pole.getAttribute('step'), '0.1')
+    assert.equal(await pole.getAttribute('min'), '-0.3')
+    assert.equal(await pole.getAttribute('max'), '0.3')
+
+    await pole.fill('')
+    assert.equal(await pole.inputValue(), '')
+    assert.equal(await strona.locator('#dziesietne-model').textContent(), '-0.3')
+    await pole.press('Tab')
+    assert.equal(await plus.evaluate((element) => element === document.activeElement), true)
+    await plus.press('Tab')
+    assert.equal(await pole.inputValue(), '-0.3')
+    await pole.fill('')
+    await plus.click()
+    assert.equal(await pole.inputValue(), '0.1')
+    await pole.fill('0.4')
+    assert.equal(await pole.getAttribute('aria-invalid'), 'true')
+    await pole.blur()
+    assert.equal(await pole.inputValue(), '0.1')
+
+    const puste = strona.getByRole('spinbutton', { name: 'Od trzech', exact: true })
+    assert.equal(await puste.inputValue(), '')
+    assert.equal(await strona.getByRole('button', { name: 'Zmniejsz: Od trzech', exact: true }).isDisabled(), true)
+    await strona.getByRole('button', { name: 'Zwiększ: Od trzech', exact: true }).click()
+    assert.equal(await puste.inputValue(), '3')
+    await puste.press('ArrowUp')
+    assert.equal(await puste.inputValue(), '5')
+    await puste.fill('-2')
+    assert.equal(await strona.locator('#puste-model').textContent(), '5')
+    await puste.blur()
+    assert.equal(await puste.inputValue(), '5')
+    assert.equal(await strona.getByRole('spinbutton', { name: 'Wyłączone', exact: true }).isDisabled(), true)
+    assert.equal(await strona.getByRole('button', { name: 'Zwiększ: Wyłączone', exact: true }).isDisabled(), true)
+    assert.equal(await strona.getByRole('button', { name: 'Zmniejsz: Wyłączone', exact: true }).isDisabled(), true)
+  } finally { await przegladarka.close() }
+})
+
+test('pola liczbowe zachowują fokus checklisty, opisy ARIA i przewijanie kółkiem', { timeout: 60000 }, async () => {
+  const przegladarka = await uruchomPrzegladarke()
+  try {
+    const strona = await przegladarka.newPage({ viewport: { width: 1440, height: 1000 } })
+    await strona.goto(adres)
+    await strona.getByRole('button', { name: 'Otwórz demonstrację Architekta', exact: true }).click()
+    await strona.goto(`${adres}/szkolenia-zamkniete/szczegoly-organizacyjne/nowe`)
+    const pole = strona.getByRole('spinbutton', { name: 'Liczba uczestników', exact: true })
+    await strona.getByRole('button', { name: 'Zwiń grupę', exact: true }).click()
+    await strona.getByRole('button', { name: 'Kontrola jakości', exact: true }).click()
+    await strona.getByRole('button', { name: /Grupy szkoleniowe.*Rozwiń listę błędów/ }).click()
+    await strona.getByRole('button', { name: 'Grupa 1: wpisz liczbę uczestników minimum 1', exact: true }).click()
+    await strona.waitForFunction(() => document.activeElement?.id.endsWith('liczbaUczestnikow'))
+    assert.equal(await pole.getAttribute('aria-invalid'), 'true')
+    const lista = strona.getByRole('textbox', { name: /^Uczestnicy/ })
+    const opisy = [await pole.getAttribute('aria-describedby'), await lista.getAttribute('aria-describedby')]
+    assert.ok(opisy.every(Boolean))
+    assert.notEqual(opisy[0], opisy[1])
+    for (const id of opisy) assert.equal(await strona.locator(`[id="${id}"]`).count(), 1)
+    await pole.press('ArrowUp')
+    assert.equal(await pole.inputValue(), '1')
+    assert.equal(await pole.getAttribute('aria-invalid'), 'false')
+    await pole.hover()
+    const obszar = strona.locator('.uklad-aplikacji__obszar-roboczy')
+    const przewiniecie = await obszar.evaluate((element) => element.scrollTop)
+    await strona.mouse.wheel(0, 240)
+    await strona.waitForFunction((wartosc) => document.querySelector('.uklad-aplikacji__obszar-roboczy').scrollTop > wartosc, przewiniecie)
+    assert.equal(await pole.inputValue(), '1')
+    assert.equal(await pole.evaluate((element) => element === document.activeElement), true)
+  } finally { await przegladarka.close() }
+})
+
+test('kroki w dwóch grupach zachowują ID, statusy importu i zapis kopii', { timeout: 60000 }, async () => {
+  const przegladarka = await uruchomPrzegladarke()
+  try {
+    const strona = await przegladarka.newPage({ viewport: { width: 1440, height: 1000 } })
+    await strona.goto(adres)
+    await strona.getByRole('button', { name: 'Otwórz demonstrację Architekta', exact: true }).click()
+    await strona.goto(`${adres}/szkolenia-zamkniete/szczegoly-organizacyjne/nowe`)
+    const wersja = await strona.evaluate(async () => {
+      const { poczatkoweDaneFormularza, poczatkowaGrupa, poczatkowiAdresaci } = await import('/src/moduly/zamkniete/szczegoly_organizacyjne/danePoczatkowe.ts')
+      const { wersjaEksportuSzczegolow } = await import('/src/moduly/zamkniete/szczegoly_organizacyjne/uslugi/magazynWersjiRoboczych.ts')
+      return {
+        id: 'test-kroki-grup', wersja: wersjaEksportuSzczegolow,
+        dane: { ...poczatkoweDaneFormularza, tytulSzkolenia: 'Test pól liczbowych' },
+        grupy: [
+          { ...poczatkowaGrupa, id: 'test-grupa-a', liczbaUczestnikow: 4, liczbaGodzin: 7.5, terminPlatnosci: 14 },
+          { ...poczatkowaGrupa, id: 'test-grupa-b', liczbaUczestnikow: 8, liczbaGodzin: 5, terminPlatnosci: 30 },
+        ],
+        adresaci: poczatkowiAdresaci,
+        statusyPol: { 'grupy.0.liczbaUczestnikow': 'zaimportowane', 'grupy.1.liczbaUczestnikow': 'niepewne', 'grupy.0.liczbaGodzin': 'zaimportowane', 'grupy.1.terminPlatnosci': 'zaimportowane' },
+      }
+    })
+    await strona.locator('input[accept=".json,application/json"]').setInputFiles({ name: 'grupy.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(wersja)) })
+    const uczestnicy = strona.getByRole('spinbutton', { name: 'Liczba uczestników', exact: true })
+    await uczestnicy.nth(1).waitFor()
+    assert.equal(await uczestnicy.nth(0).inputValue(), '4')
+    assert.equal(await uczestnicy.nth(1).inputValue(), '8')
+    const godziny = strona.getByRole('spinbutton', { name: 'Liczba godzin', exact: true })
+    const opisy = [await godziny.nth(0).getAttribute('aria-describedby'), await godziny.nth(2).getAttribute('aria-describedby')]
+    assert.ok(opisy.every(Boolean))
+    assert.notEqual(opisy[0], opisy[1])
+    for (const id of opisy) assert.equal(await strona.locator(`[id="${id}"]`).count(), 1)
+    await godziny.first().press('ArrowUp')
+    assert.equal(await godziny.nth(2).inputValue(), '8.5')
+
+    await uczestnicy.first().fill('')
+    await uczestnicy.first().blur()
+    assert.equal(await uczestnicy.first().inputValue(), '4')
+    const pierwszyLicznik = uczestnicy.first().locator('..')
+    await pierwszyLicznik.getByRole('button', { name: 'Zwiększ: Liczba uczestników' }).click()
+    assert.equal(await uczestnicy.nth(1).inputValue(), '8')
+    assert.equal(await strona.getByRole('button', { name: 'Zatwierdź: grupy.1.liczbaUczestnikow', exact: true }).count(), 1)
+    await uczestnicy.nth(1).press('ArrowDown')
+    await strona.getByRole('button', { name: 'Dodaj grupę', exact: true }).click()
+    await strona.getByRole('button', { name: 'Duplikuj grupę', exact: true }).first().click()
+
+    const pobierzStan = () => strona.evaluate(() => JSON.parse(localStorage.getItem('ultimatePomagier.szczegolyOrganizacyjne.aktualnaWersja')))
+    await strona.getByRole('button', { name: 'Zapisz wersję roboczą', exact: true }).click()
+    const zapisana = await pobierzStan()
+    assert.deepEqual(zapisana.grupy.map((grupa) => grupa.liczbaUczestnikow), [5, 5, 7, 0])
+    assert.equal(new Set(zapisana.grupy.map((grupa) => grupa.id)).size, 4)
+    assert.deepEqual([zapisana.grupy[0], zapisana.grupy[2]].map(({ id, liczbaGodzin, terminPlatnosci }) => [id, liczbaGodzin, terminPlatnosci]), [['test-grupa-a', 8.5, 14], ['test-grupa-b', 5, 30]])
+    assert.equal(zapisana.statusyPol['grupy.0.liczbaUczestnikow'], 'reczne')
+    assert.equal(zapisana.statusyPol['grupy.1.liczbaUczestnikow'], undefined)
+    assert.equal(zapisana.statusyPol['grupy.2.liczbaUczestnikow'], 'reczne')
+    assert.equal(zapisana.statusyPol['grupy.1.terminPlatnosci'], undefined)
+    assert.equal(zapisana.statusyPol['grupy.2.terminPlatnosci'], 'zaimportowane')
+    assert.equal(zapisana.statusyPol['grupy.3.terminPlatnosci'], undefined)
+    await strona.goto(`${adres}/szkolenia-zamkniete/szczegoly-organizacyjne/kopie-robocze`)
+    await strona.getByRole('button', { name: 'Edytuj', exact: true }).first().click()
+    await uczestnicy.nth(3).waitFor()
+    assert.deepEqual(await uczestnicy.evaluateAll((pola) => pola.map((pole) => pole.value)), ['5', '5', '7', '0'])
+    assert.equal(await uczestnicy.nth(3).getAttribute('aria-invalid'), 'true')
+    assert.deepEqual((await pobierzStan()).statusyPol, zapisana.statusyPol)
+  } finally { await przegladarka.close() }
+})
+
+test('kontrolki liczbowe mieszczą się w dużym i wąskim oknie przy trzech skalach', { timeout: 60000 }, async () => {
+  const przegladarka = await uruchomPrzegladarke()
+  try {
+    const strona = await przegladarka.newPage({ viewport: { width: 1440, height: 1000 } })
+    await strona.addInitScript(() => localStorage.setItem('ultimatePomagier.panelJakosciWysuwanieZKrawedzi', 'false'))
+    await strona.goto(adres)
+    await strona.getByRole('button', { name: 'Otwórz demonstrację Architekta', exact: true }).click()
+    await strona.goto(`${adres}/szkolenia-zamkniete/szczegoly-organizacyjne/nowe`)
+    await strona.getByRole('combobox', { name: 'Rodzaj godzin', exact: true }).first().selectOption('Niestandardowe')
+    const kontrolki = strona.locator('.szczegoly-kontrolka-liczbowa')
+    assert.equal(await kontrolki.count(), 6)
+    const minuty = strona.getByRole('spinbutton', { name: 'Ile minut:', exact: true })
+    const wartoscMinut = Number(await minuty.inputValue())
+    await strona.getByRole('button', { name: 'Zwiększ: Minuty wcześniejszego przyjazdu', exact: true }).click()
+    assert.equal(await minuty.inputValue(), String(wartoscMinut + 1))
+    mkdirSync('tmp/ux-1a', { recursive: true })
+
+    for (const szerokosc of [1440, 390]) {
+      await strona.setViewportSize({ width: szerokosc, height: 1000 })
+      for (const skala of [75, 85, 100]) {
+        await strona.evaluate(async (wartosc) => {
+          const { zastosujSkaleInterfejsu } = await import('/src/aplikacja/ustawienia/skalaInterfejsu.ts')
+          await zastosujSkaleInterfejsu(wartosc)
+        }, skala)
+        const zamknijPanel = strona.getByRole('button', { name: 'Schowaj panel', exact: true })
+        if (await zamknijPanel.isVisible()) await zamknijPanel.click()
+        const geometria = await kontrolki.evaluateAll((elementy) => elementy.map((kontrolka) => {
+          const [minus, pole, plus] = Array.from(kontrolka.children).map((element) => element.getBoundingClientRect())
+          return {
+            przepelnienie: kontrolka.scrollWidth - kontrolka.clientWidth,
+            wKontenerze: kontrolka.getBoundingClientRect().right <= kontrolka.parentElement.getBoundingClientRect().right + 1,
+            kolejnosc: minus.right <= pole.left && pole.right <= plus.left,
+            cel: Math.min(minus.width, minus.height, plus.width, plus.height),
+            roznicaBokow: Math.max(Math.abs(minus.width - minus.height), Math.abs(plus.width - plus.height)),
+            pole: pole.width,
+          }
+        }))
+        for (const pomiar of geometria) {
+          const opis = `${szerokosc}px, ${skala}%: ${JSON.stringify(pomiar)}`
+          assert.equal(pomiar.przepelnienie, 0, opis)
+          assert.ok(pomiar.wKontenerze && pomiar.kolejnosc && pomiar.cel >= 32 && pomiar.roznicaBokow < 1 && pomiar.pole >= 32, opis)
+        }
+        const liczbaGodzin = strona.getByRole('spinbutton', { name: 'Liczba godzin', exact: true }).first()
+        await liczbaGodzin.evaluate((element) => element.scrollIntoView({ block: 'center' }))
+        await liczbaGodzin.press('Tab')
+        const fokus = await strona.getByRole('button', { name: 'Zwiększ: Liczba godzin', exact: true }).first().evaluate((element) => ({
+          jestAktywny: element === document.activeElement,
+          obrys: getComputedStyle(element).outlineStyle,
+        }))
+        assert.deepEqual(fokus, { jestAktywny: true, obrys: 'solid' })
+        assert.equal(await zamknijPanel.isVisible(), false)
+        await strona.screenshot({ path: `tmp/ux-1a/pola-${szerokosc}-${skala}.png` })
+      }
+    }
+  } finally { await przegladarka.close() }
+})
+
 test('pakiet podstawowy mieści kontrolki w jednym rzędzie i zachowuje zapisane wybory', { timeout: 60000 }, async () => {
-  const przegladarka = await chromium.launch({ executablePath: process.env.POMAGIER_CHROME, channel: process.env.POMAGIER_CHROME ? undefined : 'chrome', headless: true })
+  const przegladarka = await uruchomPrzegladarke()
   try {
     const strona = await przegladarka.newPage({ viewport: { width: 1440, height: 1000 } })
     await strona.goto(adres)
@@ -77,7 +295,7 @@ test('pakiet podstawowy mieści kontrolki w jednym rzędzie i zachowuje zapisane
 })
 
 test('płynna edycja szczegółów z wieloma grupami i zachowanie bieżących danych', { timeout: 240000 }, async () => {
-  const przegladarka = await chromium.launch({ executablePath: process.env.POMAGIER_CHROME, channel: process.env.POMAGIER_CHROME ? undefined : 'chrome', headless: true })
+  const przegladarka = await uruchomPrzegladarke()
   try {
     const strona = await przegladarka.newPage({ viewport: { width: 1440, height: 1000 } })
     const bledy = []
@@ -243,7 +461,7 @@ test('płynna edycja szczegółów z wieloma grupami i zachowanie bieżących da
 })
 
 test('walidacja po edycji kompletnej grupy cofa status i chroni eksport', { timeout: 60000 }, async () => {
-  const przegladarka = await chromium.launch({ executablePath: process.env.POMAGIER_CHROME, channel: process.env.POMAGIER_CHROME ? undefined : 'chrome', headless: true })
+  const przegladarka = await uruchomPrzegladarke()
   try {
     const strona = await przegladarka.newPage()
     await strona.goto(adres)
