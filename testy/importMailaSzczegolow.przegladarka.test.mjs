@@ -105,7 +105,7 @@ test('kontakty i odbiorca: dynamiczne błędy, ARIA, kontrola jakości, import, 
   } finally { await przegladarka.close() }
 })
 
-test('Grid czterech sekcji: niezależne kolumny, menu, panel jakości, 85%, wąskie okno i dotyk', { timeout: 90000 }, async () => {
+test('Grid czterech sekcji: niezależne kolumny, menu, panel jakości, skale 75–100%, wąskie okno i dotyk', { timeout: 90000 }, async () => {
   const przegladarka = await chromium.launch({ channel: 'chrome', headless: true })
   try {
     const strona = await przegladarka.newPage({ viewport: { width: 1920, height: 1200 }, hasTouch: true })
@@ -116,42 +116,74 @@ test('Grid czterech sekcji: niezależne kolumny, menu, panel jakości, 85%, wąs
       localStorage.setItem('ultimatePomagier.panelJakosciWysuwanieZKrawedzi', 'false')
     })
     await strona.goto(`${adres}/szkolenia-zamkniete/szczegoly-organizacyjne/nowe`)
-    await strona.evaluate(async () => (await import('/src/aplikacja/ustawienia/skalaInterfejsu.ts')).zastosujSkaleInterfejsu(85))
     await strona.locator('[aria-controls="menu-glowne"]').click()
     const przypnij = strona.getByRole('button', { name: /Przypnij Menu/ })
     if (await przypnij.isVisible()) await przypnij.click()
-    for (const szerokosc of [1920, 1440, 1000, 768, 390]) {
-      await strona.setViewportSize({ width: szerokosc, height: 1200 })
-      for (const otwarty of [false, true]) {
-        if (otwarty) await strona.getByRole('button', { name: 'Kontrola jakości', exact: true }).tap()
-        else if (await strona.locator('.szczegoly-panel-jakosci--otwarty').count()) await strona.getByRole('button', { name: 'Schowaj panel', exact: true }).tap()
-        await strona.waitForTimeout(300)
-        const geometria = await strona.evaluate(() => {
-          const obszar = document.querySelector('.szczegoly-formularz')
-          const siatka = document.querySelector('.szczegoly-uklad-sekcji')
-          const prostokat = (id) => { const { x, y, width, height, bottom } = document.getElementById(id).getBoundingClientRect(); return { x, y, width, height, bottom } }
-          return { szerokosc: parseFloat(getComputedStyle(obszar).width), skala: getComputedStyle(document.documentElement).getPropertyValue('--ui-skala-przegladarki'), liczba: document.querySelectorAll('.szczegoly-uklad-sekcji').length, kolumny: siatka.children.length, pakiet: prostokat('pakiet-podstawowy'), materialy: prostokat('materialy-szkoleniowe'), dodatkowe: prostokat('dodatkowe-wymogi'), wymogi: prostokat('wymogi-materialow') }
-        })
-        assert.equal(geometria.skala.trim(), '0.85')
-        assert.equal(geometria.liczba, 1)
-        assert.equal(geometria.kolumny, 2)
-        if (szerokosc === 1920) assert.ok(geometria.szerokosc > 760)
-        if (szerokosc === 390) assert.ok(geometria.szerokosc <= 760)
-        assert.ok(geometria.materialy.y >= geometria.pakiet.bottom)
-        assert.ok(geometria.wymogi.y >= geometria.dodatkowe.bottom)
-        if (geometria.szerokosc > 760) {
-          assert.ok(Math.abs(geometria.pakiet.y - geometria.dodatkowe.y) < 2, JSON.stringify(geometria))
-          assert.ok(geometria.dodatkowe.x > geometria.pakiet.x + geometria.pakiet.width)
-          assert.ok(Math.abs(geometria.materialy.x - geometria.pakiet.x) < 2)
-          assert.ok(Math.abs(geometria.wymogi.x - geometria.dodatkowe.x) < 2)
-          assert.ok(geometria.materialy.y > geometria.wymogi.y, 'Krótka prawa kolumna nie rozciąga swoich sekcji do lewej')
-        } else {
-          assert.ok(Math.abs(geometria.pakiet.x - geometria.dodatkowe.x) < 2)
-          assert.ok(geometria.dodatkowe.y >= geometria.materialy.bottom)
-        }
-        if ([1920, 390].includes(szerokosc)) {
-          await strona.locator('#pakiet-podstawowy').scrollIntoViewIfNeeded()
-          await strona.screenshot({ path: `tmp/szczegoly-${szerokosc}-${otwarty ? 'panel' : 'bez-panelu'}.png` })
+    for (const skala of [75, 85, 100]) {
+      await strona.setViewportSize({ width: 1920, height: 1200 })
+      await strona.evaluate(async (wartosc) => (await import('/src/aplikacja/ustawienia/skalaInterfejsu.ts')).zastosujSkaleInterfejsu(wartosc), skala)
+      for (const szerokosc of [1920, 1440, 1000, 768, 390]) {
+        await strona.setViewportSize({ width: szerokosc, height: 1200 })
+        for (const otwarty of [false, true]) {
+          if (otwarty) await strona.getByRole('button', { name: 'Kontrola jakości', exact: true }).tap()
+          else if (await strona.locator('.szczegoly-panel-jakosci--otwarty').count()) await strona.getByRole('button', { name: 'Schowaj panel', exact: true }).tap()
+          await strona.waitForTimeout(300)
+          const geometria = await strona.evaluate(() => {
+            const obszar = document.querySelector('.szczegoly-formularz')
+            const siatka = document.querySelector('.szczegoly-uklad-sekcji')
+            const sekcje = ['pakiet-podstawowy', 'materialy-szkoleniowe', 'dodatkowe-wymogi', 'wymogi-materialow'].map((id) => document.getElementById(id))
+            const zmierz = () => {
+              const goraSiatki = siatka.getBoundingClientRect().top
+              return sekcje.map((sekcja) => {
+                const { x, top, width, height } = sekcja.getBoundingClientRect()
+                return { x, y: top - goraSiatki, width, height }
+              })
+            }
+            const szerokoscFormularza = parseFloat(getComputedStyle(obszar).width)
+            const bazowa = zmierz()
+            const poPowiekszeniu = szerokoscFormularza > 760 ? [sekcje[0], sekcje[2]].map((sekcja) => {
+              const styl = sekcja.getAttribute('style')
+              const odstep = parseFloat(getComputedStyle(sekcja).paddingBottom)
+              sekcja.style.paddingBottom = (odstep + 120) + 'px'
+              try { return zmierz() }
+              finally {
+                if (styl === null) sekcja.removeAttribute('style')
+                else sekcja.setAttribute('style', styl)
+              }
+            }) : []
+            return { szerokoscFormularza, skala: getComputedStyle(document.documentElement).getPropertyValue('--ui-skala-przegladarki'), liczba: document.querySelectorAll('.szczegoly-uklad-sekcji').length, kolumny: siatka.children.length, bazowa, poPowiekszeniu }
+          })
+          const kontekst = JSON.stringify({ skala, szerokosc, otwarty, geometria })
+          const [pakiet, materialy, dodatkowe, wymogi] = geometria.bazowa
+          assert.equal(Number(geometria.skala.trim()), skala / 100, kontekst)
+          assert.equal(geometria.liczba, 1, kontekst)
+          assert.equal(geometria.kolumny, 2, kontekst)
+          if (szerokosc === 1920) assert.ok(geometria.szerokoscFormularza > 760, kontekst)
+          if (szerokosc === 390) assert.ok(geometria.szerokoscFormularza <= 760, kontekst)
+          assert.ok(materialy.y > pakiet.y + pakiet.height, kontekst)
+          assert.ok(wymogi.y > dodatkowe.y + dodatkowe.height, kontekst)
+          if (geometria.szerokoscFormularza > 760) {
+            assert.ok(Math.abs(pakiet.y - dodatkowe.y) < 2, kontekst)
+            assert.ok(dodatkowe.x > pakiet.x + pakiet.width, kontekst)
+            assert.ok(Math.abs(materialy.x - pakiet.x) < 2, kontekst)
+            assert.ok(Math.abs(wymogi.x - dodatkowe.x) < 2, kontekst)
+            for (const [indeks, poZmianie] of geometria.poPowiekszeniu.entries()) {
+              const pierwsza = indeks * 2
+              const druga = pierwsza + 1
+              const obca = 2 - pierwsza
+              const przyrost = poZmianie[pierwsza].height - geometria.bazowa[pierwsza].height
+              assert.ok(przyrost > 80, kontekst)
+              assert.ok(Math.abs(poZmianie[druga].y - geometria.bazowa[druga].y - przyrost) < 2, kontekst)
+              assert.deepEqual(poZmianie.slice(obca, obca + 2), geometria.bazowa.slice(obca, obca + 2), kontekst)
+            }
+          } else {
+            assert.ok(Math.abs(pakiet.x - dodatkowe.x) < 2, kontekst)
+            assert.ok(dodatkowe.y > materialy.y + materialy.height, kontekst)
+          }
+          if (skala === 85 && [1920, 390].includes(szerokosc)) {
+            await strona.locator('#pakiet-podstawowy').scrollIntoViewIfNeeded()
+            await strona.screenshot({ path: `tmp/szczegoly-${szerokosc}-${otwarty ? 'panel' : 'bez-panelu'}.png` })
+          }
         }
       }
     }
