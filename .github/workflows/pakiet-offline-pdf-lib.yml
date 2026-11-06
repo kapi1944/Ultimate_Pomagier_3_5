@@ -39,8 +39,9 @@ jobs:
           npm run build
           npm audit --omit=dev --audit-level=high
 
-      - name: Sprawdzenie importu TypeScript
+            - name: Sprawdzenie importu TypeScript
         run: |
+          trap 'rm -f .github-pdf-lib-weryfikacja.ts' EXIT
           cat > .github-pdf-lib-weryfikacja.ts <<'TS'
           import { PDFDocument, type PDFPage } from 'pdf-lib'
 
@@ -50,8 +51,7 @@ jobs:
             return { strony: dokument.getPages(), bajty: await dokument.save() }
           }
           TS
-          npx tsc --noEmit --strict --target ES2022 --module ESNext --moduleResolution Bundler --lib ES2022,DOM .github-pdf-lib-weryfikacja.ts
-          rm .github-pdf-lib-weryfikacja.ts
+          npx tsc --ignoreConfig --noEmit --strict --target ES2022 --module ESNext --moduleResolution Bundler --lib ES2022,DOM .github-pdf-lib-weryfikacja.ts
 
       - name: Utworzenie manifestu zależności do instalacji offline
         run: |
