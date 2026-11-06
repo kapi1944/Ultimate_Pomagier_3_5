@@ -1,6 +1,6 @@
 # UX-0 · Szczegóły organizacyjne — baza regresji
 
-Audyt z 6 listopada 2026 r. dla `kapi1944/Ultimate_Pomagier_3_5`, HEAD `b51e9de485624e080f076195d4c4c0dfcf998f68` (zgodny z podanym punktem bazowym). Gałąź robocza `ux/szczegoly` jest w `tmp/ux-szczegoly`. Na `main` były trzy lokalne zmiany w Programach szkoleń oraz dwie w testach (`presetyProgramu.test.ts`, `pakietyPdf.przegladarka.test.mjs`). Pomiar i testy dotyczą czystego commita, a wskazane zmiany pozostały w głównym katalogu.
+Audyt z 6 listopada 2026 r. dla `kapi1944/Ultimate_Pomagier_3_5`. HEAD `main` to `b51e9de485624e080f076195d4c4c0dfcf998f68`, zgodny z podanym punktem bazowym. Pomiar i testy ponowiono na istniejącej gałęzi `ux/szczegoly` w `tmp/ux-szczegoly`, od czystego HEAD `3f41e3fb6176ffc1bb8746232c901ee6aff69225`. Różnica względem `main` obejmuje tylko ten raport. Trzy lokalne zmiany w Programach szkoleń oraz dwie w testach (`presetyProgramu.test.ts`, `pakietyPdf.przegladarka.test.mjs`) pozostały w głównym katalogu i nie weszły do pomiaru.
 
 ## Sekcje, pola i mapa regresji
 
@@ -58,35 +58,37 @@ Punkty wejścia w kodzie. [Widok formularza](../src/moduly/zamkniete/szczegoly_o
 - Import maila przetwarza `trescMaila` przez `parsujMailaSzczegolow` i `przygotujMapowanieImportuMaila`, scala dane i grupy, zapisuje wpis historii i zasila autosave. `rozpoznaneObszary` oraz komunikat są stanem UI. Treść źródłowa i dyspozycje materiałowe po zastosowaniu trafiają do danych formularza i odpowiedniej grupy. Wybór Word/PDF kończy się komunikatem i resetem kontrolki. Niepoprawny JSON kończy się komunikatem, a poprawny przekazuje dane do `wczytajWersje`.
 - Zmiany formularza i grup przechodzą przez `aktualizujDane`/`aktualizujGrupe`, normalizację i sprawdzenie cofnięcia `PEŁNE` do `NIEPEŁNE`. Edycja oznacza ścieżkę jako `reczne`. Statusy importu to `zaimportowane`, `brak`, `niepewne`, `reczne`, `zatwierdzone`. Indywidualne zatwierdzenia grup używają `zatwierdzenia.<zakodowane ID grupy>.<pole>` i są rzutowane na bieżące indeksy. Akceptacja zbiorcza ustawia `zaimportowane` i dodaje historię importu. Usuwanie i duplikowanie grup należy kontrolować również pod kątem przesunięcia kluczy pozycyjnych.
 - `synchronizujAdresPaczki` działa przy zmianach danych formularza. Skopiowanie adresu siedziby dotyczy danych firmy, adresu i kraju, z osobnymi danymi kontaktu. Nazwa i uwagi wzoru klienta przechodzą przez `dokumentacja.szczegolyWzorowKlienta`. Podgląd wzoru jest adresem `blob:` w stanie widoku. Logo trafia do migawki jako Data URL i nazwa. Dokumentacja zdjęciowa w Szczegółach to flaga wymogu. Zdjęcia operacyjne Checklisty zapisuje `zdjeciaPaczek.ts` w IndexedDB `ultimatePomagier.zdjeciaPaczek`, w kolekcji `zdjecia` pod kluczem `[dokumentId, paczkaId, zdjecieId]`. Dokument Checklisty w rejestrze przechowuje metadane.
+- `PanelPakietu` zapisuje konfigurację przy zmianie wyboru lub ustawień, zmianie kolejności przyciskami albo przeciąganiem i ponownie przy uruchomieniu podglądu. Sekcja pokazuje metadane szkolenia, klienta, terminu, organizatora i opiekuna, stan każdej pozycji oraz postęp i błędy generowania. Odświeża źródła również po zdarzeniach `storage` i `focus`. Wejście z etykiety paczki (`grupaEtykietyId`) ogranicza wybór do tej grupy i dokumentów wspólnych, ukrywa wybór grup i pomija trwały zapis konfiguracji. [Panel pakietu](../src/wspolne/dokumenty/pakietyDoZatwierdzenia/PanelPakietu.tsx)
+- Kopia migracyjna E4 z ustawień odczytuje klucze objęte backupem i pliki zdjęć z IndexedDB, sprawdza spójność odczytu i generuje osobny plik z sumami SHA-256. Analiza pliku sprawdza powiązania zdjęć przez ID dokumentu, paczki i zdjęcia. To odrębny przepływ od zapisu formularza i eksportu jego JSON. [Backup E4](../src/wspolne/dane/backupMigracjiE4.ts)
 
 ## Obserwacje z Chrome
 
-Pomiar ręczny objął nowy formularz w lokalnej demonstracji Architekta, otwarty panel jakości i widok Pakietu podstawowego. Użyto skali aplikacji, a nie emulacji zoomu systemowego. Chrome zwrócił rzeczywiste wymiary `innerWidth × innerHeight` 1800 × 1250 i 487 × 1055. Niezależnie repozytoryjny test ustawił viewporty 1440 × 1000 i 390 × 1000 oraz skale 75%, 85% i 100%.
+Pomiar ręczny objął nowy formularz w lokalnej demonstracji Architekta, otwarty panel jakości i widok Pakietu podstawowego. Skalę zmieniano skrótami aplikacji i odczytywano z `--ui-skala-interfejsu`. Chrome zwrócił `innerWidth × innerHeight` 1800 × 1250 i 487 × 1250. Niezależnie test repozytoryjny ustawił viewporty 1440 × 1000 i 390 × 1000 oraz skale 75%, 85% i 100%.
 
 | Okno według DOM | Skala aplikacji | Położenie sekcji | Pierwsza pozycja Pakietu |
 | --- | --- | --- | --- |
 | 1800 × 1250 | 75% | Dwie kolumny. Materiały pod Pakietem, odstęp 10 px | Nazwa i kontrolki w rzędzie, wysokość `offsetHeight` 59 px |
 | 1800 × 1250 | 85% | Dwie kolumny. Materiały pod Pakietem, odstęp 12 px | Nazwa i kontrolki w rzędzie, wysokość 58 px |
 | 1800 × 1250 | 100% | Dwie kolumny. Materiały pod Pakietem, odstęp 14 px | Nazwa i kontrolki w rzędzie, wysokość 57 px |
-| 487 × 1055 | 75% | Jedna kolumna, odstęp Pakiet → Materiały 10 px | Nazwa nie przechodzi nad kontrolki, wysokość 59 px |
-| 487 × 1055 | 85% | Jedna kolumna, odstęp Pakiet → Materiały 12 px | Nazwa nie przechodzi nad kontrolki, wysokość 58 px |
-| 487 × 1055 | 100% | Jedna kolumna, odstęp Pakiet → Materiały 14 px | Nazwa nad kontrolkami, wysokość 81 px |
+| 487 × 1250 | 75% | Jedna kolumna, odstęp Pakiet → Materiały 10 px | Nazwa na wysokości kontrolek, wysokość `offsetHeight` 59 px |
+| 487 × 1250 | 85% | Jedna kolumna, odstęp Pakiet → Materiały 12 px | Nazwa na wysokości kontrolek, wysokość 58 px |
+| 487 × 1250 | 100% | Jedna kolumna, odstęp Pakiet → Materiały 14 px | Nazwa na wysokości kontrolek, wysokość 57 px |
 
 We wszystkich sześciu pomiarach pierwszej pozycji checkbox i przełącznik pozostawały na tej samej wysokości. `scrollWidth - clientWidth` dla tej pozycji i dla elementu głównego dokumentu wynosiło 0. Test automatyczny potwierdził brak przepełnienia w każdym z pięciu wierszy Pakietu, checkbox 18 px i zachowanie wyborów po ponownym otwarciu zapisanej kopii. Pomiar obejmuje wskazane elementy. Pełny przegląd wszystkich pól z czytnikiem ekranu pozostaje poza tym pomiarem. [Test Szczegółów w Chrome](../testy/wydajnoscSzczegolow.przegladarka.test.mjs)
 
 1. Duże okno, 85%. Pasek sticky pozostaje nad formularzem. Pakiet i Materiały są w lewej kolumnie, a Dodatkowe wymogi i Wymogi dotyczące materiałów w prawej. Otwarty panel jakości ma własny obszar po prawej. Test siatki potwierdził, że zwiększenie wysokości jednej z górnych sekcji przesuwa wyłącznie sekcję pod nią przy dwukolumnowym układzie. [Zrzut 1920 px bez panelu](../tmp/szczegoly-1920-bez-panelu.png), [z panelem](../tmp/szczegoly-1920-panel.png).
-2. Wąskie okno, 85%. W szerokości 390 px „Karta informacyjna” przechodzi nad checkbox i switch, a pierwsze cztery wiersze mieszczą nazwę obok kontrolek. Pasek pokazuje początek listy kotwic. Otwarty panel jakości zasłania prawą część formularza i ma widoczny przycisk „Schowaj panel”. Przechwycenie wąskiego widoku w sesji pomiarowej 487 px zwróciło timeout `Page.captureScreenshot` (5000 ms). Zrzuty 390 px pochodzą z osobnego przebiegu testu. [Zrzut 390 px bez panelu](../tmp/szczegoly-390-bez-panelu.png), [z panelem](../tmp/szczegoly-390-panel.png).
+2. Wąskie okno, 85%. W szerokości 390 px „Karta informacyjna” przechodzi nad checkbox i switch, a pierwsze cztery wiersze mieszczą nazwę obok kontrolek. Pasek pokazuje początek listy kotwic. Otwarty panel jakości zasłania prawą część formularza i ma widoczny przycisk „Schowaj panel”. [Zrzut 390 px bez panelu](../tmp/szczegoly-390-bez-panelu.png), [z panelem](../tmp/szczegoly-390-panel.png).
 3. Pakiet PDF, 390 × 844 przy 85%. W górnej części panelu widać metadane pakietu i zawinięty nagłówek formularza. Scenariusz potwierdza wybór grup, kolejność i ponowne otwarcie. [Zrzut panelu PDF](../tmp/pakiety-pdf/panel-mobilny.png).
 
-Odsyłacze prowadzą do lokalnych artefaktów. Odpowiednie testy odtwarzają je w ignorowanym katalogu `tmp`.
+Odsyłacze prowadzą do obejrzanych zrzutów z ponowionych testów w ignorowanym katalogu `tmp`. Przechwycenie zrzutu w interaktywnej sesji Chrome przy 100% zwróciło timeout `Page.captureScreenshot` (5000 ms). Tabela pomiarowa opiera się na odczytach DOM, a opis zrzutów na artefaktach testów.
 
 ## Wynik testów bazowych
 
-Node.js `24.17.0`, npm `12.0.2`, Vite `8.1.6`, Chrome na Windows. Testy przeglądarkowe korzystały z `npm run dev:demo -- --port 5188 --strictPort` i `POMAGIER_ADRES=http://127.0.0.1:5188`.
+Node.js `24.17.0`, npm `12.0.2`, Vite `8.1.6`, Chrome na Windows. Testy przeglądarkowe korzystały z `npm run dev:demo -- --host 127.0.0.1 --port 5196 --strictPort` i `POMAGIER_ADRES=http://127.0.0.1:5196`.
 
 | Polecenie | Wynik | Zakres i uwagi |
 | --- | --- | --- |
-| `npm test` | Zaliczone, kod 0 | Pełny skrypt wraz z `pretest`, testami bezpieczeństwa i kont oraz testami domenowymi Szczegółów. |
+| `npm test` | Zaliczone, kod 0 | Pełny skrypt wraz z `pretest`, testami bezpieczeństwa i kont oraz testami domenowymi Szczegółów. Dwa historyczne scenariusze Checklisty mają jawne `test.skip`. |
 | `npm run test:szczegoly:przegladarka` | Zaliczone, 3/3 | Pięć wierszy przy trzech skalach i dwóch szerokościach, klawiatura i zapis. Edycja sześciu grup, import JSON, autosave, miejscownik i usuwanie grupy. Cofnięcie kompletności i blokada eksportu po edycji. |
 | `npm run test:pakiety-pdf` | Zaliczone, 16/16 | Wybór, kolejność, grupy, ponowny odczyt, sygnatura, format i kompletność stron. Ostrzeżenie PDF.js o `standardFontDataUrl`. |
 | `npm run test:pakiety-pdf:przegladarka` | Zaliczone, 6/6 | Panel w wąskim oknie, pojedynczy PDF Programu, scalanie i porównanie każdej strony z eksportami źródłowymi, tryby certyfikatów, anulowanie i blokady. |
@@ -95,7 +97,7 @@ Node.js `24.17.0`, npm `12.0.2`, Vite `8.1.6`, Chrome na Windows. Testy przeglą
 | `npm run build` | Zaliczone, kod 0 | TypeScript i Vite. Vite zgłosił ostrzeżenie o paczkach powyżej 500 kB po minifikacji. |
 | `git diff --check` | Zaliczone | Kontrola białych znaków w zmianie dokumentacyjnej. |
 
-Pierwszy serwer uruchomiony w sandboxie zgłaszał gotowość, ale Chrome zwracał `net::ERR_NETWORK_ACCESS_DENIED`, a spoza sandboxa `net::ERR_CONNECTION_TIMED_OUT`. Po uruchomieniu serwera i testów z dostępem do lokalnej pętli testy weszły do aplikacji. Pierwszy pełny przebieg PDF dał 5/6, ponieważ izolowany worktree rozwiązywał zależności z nadrzędnego katalogu i Vite nie serwował bezpośredniej ścieżki `/node_modules/pdfjs-dist/build/pdf.mjs`. Skopiowanie istniejącej lokalnej biblioteki `pdfjs-dist` do ignorowanego `node_modules` worktree dało HTTP 200 i pełne 6/6 przy ponowieniu. Kod i zależności śledzone przez Git pozostały bez zmian.
+W ponowionym przebiegu lokalny serwer był dostępny dla Chrome. Worktree korzystał z istniejących lokalnych zależności, w tym `pdfjs-dist` w jego ignorowanym `node_modules`, z którego Vite serwuje `/node_modules/pdfjs-dist/build/pdf.mjs` na potrzeby testu PDF.
 
 ## Ryzyka dla kolejnych etapów
 
