@@ -128,7 +128,9 @@ test('komponent checklisty zachowuje kontrakt rozwijania i dostępności', () =>
   assert.match(zrodlo, /hidden=\{!czyRozwinieta\}/)
   assert.match(zrodlo, /\{czyRozwinieta \? '▲' : '▼'\}/)
   assert.match(zrodlo, /\{wszystkieListyRozwiniete \? 'Zwiń wszystkie' : 'Rozwiń wszystkie'\}/)
-  assert.match(zrodlo, /onClick=\{\(\) => przejdzDoPolaFormularza\(blad\.pole, pozycja\.idSekcjiFormularza, blad\.idDocelowy\)\}/)
+  // UX-2: callback zamyka modal przed nawigacją; domyślnie nadal używa tego samego adaptera.
+  assert.match(zrodlo, /przejdzDoPola = przejdzDoPolaFormularza/)
+  assert.match(zrodlo, /onClick=\{\(\) => przejdzDoPola\(blad\.pole, pozycja\.idSekcjiFormularza, blad\.idDocelowy\)\}/)
 })
 
 test('kliknięcie błędu przekazuje pole, przewija je i odświeża timer podświetlenia', () => {
