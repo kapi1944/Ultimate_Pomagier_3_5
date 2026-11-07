@@ -72,6 +72,7 @@ export function sprawdzStanDokumentu(dokument: Dokument<unknown, unknown> | unde
 export function przygotujPlanPakietu(wersja: WersjaRoboczaGeneratora, konfiguracja: KonfiguracjaPakietu) {
   const dokumenty = pobierzDokumentyPakietu(wersja)
   if (!konfiguracja.wybraneId.length) throw new Error('Wybierz co najmniej jeden dokument.')
+  if (konfiguracja.grupyId?.some((id) => !wersja.grupy.some((grupa) => grupa.id === id))) throw new Error('Wybrana grupa nie istnieje już w szkoleniu. Zaktualizuj wybór grup pakietu.')
   const identyfikatory = [...new Set([...konfiguracja.kolejnosc, ...konfiguracja.wybraneId])].filter((id) => konfiguracja.wybraneId.includes(id))
   return identyfikatory.map((id) => {
     const dokument = dokumenty.find((pozycja) => pozycja.id === id)

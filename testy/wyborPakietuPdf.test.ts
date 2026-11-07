@@ -72,6 +72,23 @@ test('sygnatura wykrywa zmianę treści bez nowej wersji i nie zmienia źródeł
   repozytoriumWspolnychDokumentow.aktualizuj(dokument.id, { tytul: dokument.tytul + ' korekta' })
   assert.notEqual(sygnaturaZrodel(wersja, konfiguracja), sygnatura)
 })
+
+test('usunięta wybrana grupa blokuje także pakiet z dokumentami wspólnymi', () => {
+  const { wersja, konfiguracja, dokumenty } = przygotuj()
+  const program = dokumenty.find((dokument) => dokument.typ === 'PROGRAM_SZKOLENIA')!
+  assert.throws(() => przygotujPlanPakietu(wersja, { ...konfiguracja, grupyId: ['usunieta'], wybraneId: [program.id] }), /grupa nie istnieje/)
+  assert.equal(przygotujPlanPakietu(wersja, { ...konfiguracja, grupyId: [], wybraneId: [program.id] }).length, 1)
+})
+
+test('nieznany schemat i uszkodzona konfiguracja nie modyfikują istniejącego autosave', () => {
+  const { wersja, dokumenty, konfiguracja } = przygotuj()
+  for (const dane of [{ ...konfiguracja, wersjaSchematu: 2 }, { ...konfiguracja, wybraneId: [123] }]) {
+    repozytoriumWspolnychDokumentow.zapiszAutosave({ id: 'pakiet-do-zatwierdzenia:' + wersja.id, dokumentId: null, generatorId: 'pakiety_do_zatwierdzenia', dane })
+    const przed = [...magazyn.entries()]
+    assert.throws(() => odczytajKonfiguracjePakietu(wersja.id, dokumenty), /wersja|uszkodzona/)
+    assert.deepEqual([...magazyn.entries()], przed)
+  }
+})
 test('nazwa pliku usuwa niedozwolone znaki Windows i zawiera organizatora, tytuł i termin', () => {
   const metadane = pobierzMetadanePakietu(utworzWersjeTestowa())
   const nazwa = nazwaPlikuPakietu({ ...metadane, tytul: 'Prawo <a>: "test" / nowości? * |' })

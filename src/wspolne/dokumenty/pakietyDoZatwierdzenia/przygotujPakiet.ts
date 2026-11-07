@@ -3,6 +3,7 @@ import { wczytajFontyPdf } from '../rendererPdf'
 import { pobierzMetadanePakietu, przygotujPlanPakietu, sygnaturaZrodel, nazwaPlikuPakietu, type KonfiguracjaPakietu } from './modelPakietu'
 import { renderujDokumentPakietu, type WynikEksportuDokumentu } from './renderujDokumentPakietu'
 import { scalPakietPdf, type ScalonyPakiet } from './scalPakietPdf'
+import { wybierzMiejsceZapisuPakietu } from './zapisPakietu'
 
 export type GotowyPakiet = ScalonyPakiet & { sygnatura: string; nazwaPliku: string; blob: Blob }
 export type PostepPakietu = { procent: number; komunikat: string }
@@ -28,10 +29,14 @@ export async function przygotujPakiet(wersja: WersjaRoboczaGeneratora, konfigura
   return { ...wynik, sygnatura, nazwaPliku: nazwaPlikuPakietu(metadane), blob: new Blob([new Uint8Array(wynik.pdfBytes)], { type: 'application/pdf' }) }
 }
 
-export async function pobierzGotowyPakiet(pakiet: GotowyPakiet, wersja: WersjaRoboczaGeneratora, konfiguracja: KonfiguracjaPakietu): Promise<string> {
-  if (pakiet.sygnatura !== sygnaturaZrodel(wersja, konfiguracja)) throw new Error('Źródła lub ustawienia zmieniły się. Wygeneruj podgląd ponownie przed pobraniem.')
+export async function pobierzGotowyPakiet(pakiet: GotowyPakiet, wersja: WersjaRoboczaGeneratora, konfiguracja: KonfiguracjaPakietu, wybierzMiejsce = false): Promise<string> {
+  const sprawdzAktualnosc = () => {
+    if (pakiet.sygnatura !== sygnaturaZrodel(wersja, konfiguracja)) throw new Error('Źródła lub ustawienia zmieniły się. Wygeneruj podgląd ponownie przed pobraniem.')
+  }
+  sprawdzAktualnosc()
   const { isTauri, invoke } = await import('@tauri-apps/api/core')
-  if (isTauri()) return invoke<string>('zapisz_pakiet_pdf', { nazwa: pakiet.nazwaPliku, bajty: Array.from(pakiet.pdfBytes) })
+  if (isTauri()) return invoke<string>('zapisz_pakiet_pdf', { nazwa: pakiet.nazwaPliku, bajty: Array.from(pakiet.pdfBytes), wybierzMiejsce })
+  if (wybierzMiejsce) return wybierzMiejsceZapisuPakietu(pakiet.nazwaPliku, pakiet.blob, sprawdzAktualnosc)
   const adres = URL.createObjectURL(pakiet.blob)
   const odnosnik = document.createElement('a')
   try {
