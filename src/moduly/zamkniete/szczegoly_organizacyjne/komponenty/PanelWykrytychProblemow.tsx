@@ -10,6 +10,7 @@ type WlasciwosciPaneluProblemow = {
   ostatniAutosave?: string
   komunikatySystemowe?: string[]
   zaakceptujPolaNiepewne?: () => void
+  przejdzDoPola?: typeof przejdzDoPolaFormularza
 }
 
 type AkcjaRozwinietychSekcji =
@@ -42,6 +43,7 @@ export default function PanelWykrytychProblemow({
   ostatniAutosave,
   komunikatySystemowe = [],
   zaakceptujPolaNiepewne,
+  przejdzDoPola = przejdzDoPolaFormularza,
 }: WlasciwosciPaneluProblemow) {
   const [czyRozwiniety, ustawCzyRozwiniety] = useState(true)
   const [rozwinieteSekcje, wyslijAkcjeRozwinietychSekcji] = useReducer(zredukujRozwinieteSekcje, new Set<KluczSekcjiSzczegolow>())
@@ -128,7 +130,7 @@ export default function PanelWykrytychProblemow({
                         <ul hidden={!czyRozwinieta} id={idListyBledow}>
                           {pozycja.bledy.map((blad) => (
                             <li className={`szczegoly-problem szczegoly-problem--${blad.poziom}`} key={`${pozycja.klucz}-${blad.pole}-${blad.kodBledu ?? blad.komunikat}`}>
-                              <button className="szczegoly-checklista__blad" type="button" onClick={() => przejdzDoPolaFormularza(blad.pole, pozycja.idSekcjiFormularza, blad.idDocelowy)}>
+                              <button className="szczegoly-checklista__blad" type="button" onClick={() => przejdzDoPola(blad.pole, pozycja.idSekcjiFormularza, blad.idDocelowy)}>
                                 {blad.komunikat}
                               </button>
                             </li>

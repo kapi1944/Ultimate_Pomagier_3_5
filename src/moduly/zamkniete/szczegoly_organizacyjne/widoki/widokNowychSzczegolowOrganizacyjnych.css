@@ -1635,15 +1635,83 @@ button.szczegoly-checklista__naglowek:hover {
   background: color-mix(in srgb, var(--ui-pole) 42%, transparent);
   padding: 5px 8px;
 }
-@media screen and (min-width: 761px) {
-  .szczegoly-organizacyjne--panel-otwarty {
-    grid-template-columns: minmax(0, 1fr) min(var(--szerokosc-panelu-jakosci), 45cqw);
+@media screen {
+  .szczegoly-okno-jakosci { display: none; }
+  .szczegoly-okno-jakosci[open] { display: contents; }
+  .szczegoly-organizacyjne:not(.szczegoly-organizacyjne--panel-mobilny).szczegoly-organizacyjne--panel-otwarty {
+    grid-template-columns: minmax(0, 1fr) min(var(--szerokosc-panelu-jakosci), 32cqw);
+    column-gap: 16px;
   }
   .uklad-aplikacji .szczegoly-panel-jakosci {
     position: sticky;
     inset: 0 auto auto;
     grid-column: 2;
-    width: min(var(--szerokosc-panelu-jakosci), 45cqw);
+    width: min(var(--szerokosc-panelu-jakosci), 32cqw);
+    height: 100dvh;
+  }
+  .szczegoly-panel-jakosci__naglowek {
+    position: sticky;
+    top: -12px;
+    z-index: 1;
+    background: var(--ui-panel);
+    padding-block: 12px;
+  }
+  .szczegoly-organizacyjne--panel-mobilny {
+    grid-template-columns: minmax(0, 1fr);
+    column-gap: 0;
+    transition: none;
+  }
+  .szczegoly-organizacyjne--panel-mobilny .szczegoly-panel-jakosci__strefa-aktywacji,
+  .szczegoly-organizacyjne--panel-mobilny .szczegoly-panel-jakosci__sterowanie,
+  .szczegoly-organizacyjne--panel-mobilny .regulacja-szerokosci {
+    display: none;
+  }
+  .szczegoly-organizacyjne--panel-mobilny .szczegoly-okno-jakosci[open] {
+    position: fixed;
+    inset: var(--gora-drawera, 0px) auto auto calc(var(--lewa-drawera, 0px) + max(0px, var(--szerokosc-drawera, 100%) - 480px));
+    display: block;
+    box-sizing: border-box;
+    width: min(480px, var(--szerokosc-drawera, 100%));
+    max-width: var(--szerokosc-drawera, 100%);
+    height: var(--wysokosc-drawera, 100%);
+    max-height: var(--wysokosc-drawera, 100%);
+    margin: 0;
+    border: 0;
+    padding: 0;
+    color: var(--ui-tekst);
+    background: var(--ui-panel);
+    overflow: hidden;
+  }
+  .szczegoly-okno-jakosci::backdrop { background: rgb(0 0 0 / 55%); }
+  .uklad-aplikacji .szczegoly-organizacyjne--panel-mobilny .szczegoly-panel-jakosci {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    max-height: 100%;
+    border-radius: 0;
+    transform: none;
+    transition: none;
+    overscroll-behavior: contain;
+    padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  }
+  .szczegoly-organizacyjne--panel-mobilny .szczegoly-panel-jakosci__naglowek {
+    top: calc(-1 * max(12px, env(safe-area-inset-top)));
+    padding-top: max(12px, env(safe-area-inset-top));
+  }
+  .szczegoly-organizacyjne--panel-mobilny .szczegoly-panel-jakosci button,
+  .szczegoly-organizacyjne--panel-mobilny .szczegoly-sticky__akcje > button:first-child {
+    min-width: max(44px, calc(44px / var(--ui-skala-przegladarki, 1)));
+    min-height: max(44px, calc(44px / var(--ui-skala-przegladarki, 1)));
+  }
+  html:has(.szczegoly-okno-jakosci:modal),
+  .uklad-aplikacji__obszar-roboczy:has(.szczegoly-okno-jakosci:modal) {
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+  .uklad-aplikacji__obszar-roboczy:has(.szczegoly-organizacyjne--panel-mobilny) {
+    scrollbar-gutter: stable;
   }
 }
 
