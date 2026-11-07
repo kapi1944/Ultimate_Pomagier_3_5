@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
+import { normalizujProgramSzkolenia } from '../src/moduly/dokumenty/generatory/programy_szkolen/modelProgramuSzkolenia.ts'
 import {
   konfiguracjePresetowProgramu,
   domyslnyPresetNowegoProgramu,
@@ -8,8 +9,17 @@ import {
   zasugerujPresetProgramu,
 } from '../src/moduly/dokumenty/generatory/programy_szkolen/presetyProgramu.ts'
 
-test('nowy Program ma domyslny preset SEMPER wedlug dni', () => {
-  assert.equal(domyslnyPresetNowegoProgramu, 'SEMPER_WEDLUG_DNI')
+test('nowy Program używa dotychczasowego wyglądu i separatora pytań', () => {
+  assert.equal(domyslnyPresetNowegoProgramu, 'DOTYCHCZASOWY')
+  const { ustawienia } = normalizujProgramSzkolenia(undefined)
+  assert.equal(ustawienia.presetWygladu, 'DOTYCHCZASOWY')
+  assert.equal(ustawienia.separacjaModulow, 'separator-pytan')
+})
+
+test('zapisany preset i separacja mają pierwszeństwo przed domyślnymi', () => {
+  const { ustawienia } = normalizujProgramSzkolenia({ ustawienia: { presetWygladu: 'SEMPER_WEDLUG_DNI', separacjaModulow: 'ramka' } })
+  assert.equal(ustawienia.presetWygladu, 'SEMPER_WEDLUG_DNI')
+  assert.equal(ustawienia.separacjaModulow, 'ramka')
 })
 
 test('starszy Program bez presetu zachowuje wyglad dotychczasowy', () => {

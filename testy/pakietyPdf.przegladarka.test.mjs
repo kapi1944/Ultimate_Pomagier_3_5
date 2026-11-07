@@ -88,6 +88,50 @@ test('wybór, kolejność, grupy, ponowne otwarcie i telefon przy skali 85%', { 
   } finally { await przegladarka.close() }
 })
 
+test('nowy Program ma domyślny wygląd i białe uchwyty przełączników', { timeout: 90000 }, async () => {
+  const przegladarka = await chromium.launch({ channel: 'chrome', headless: true })
+  try {
+    const strona = await przegladarka.newPage({ viewport: { width: 1440, height: 1000 } })
+    await strona.goto(adres)
+    await strona.getByRole('button', { name: 'Otwórz demonstrację Architekta', exact: true }).click()
+    await strona.goto(adres + '/dokumenty/programy-szkolen')
+    await strona.getByRole('button', { name: 'Ustawienia programu', exact: true }).click()
+    const wyglad = strona.locator('select').filter({ has: strona.locator('option[value="DOTYCHCZASOWY"]') })
+    const separacja = strona.locator('select').filter({ has: strona.locator('option[value="separator-pytan"]') })
+    assert.equal(await wyglad.inputValue(), 'DOTYCHCZASOWY')
+    assert.equal(await separacja.inputValue(), 'separator-pytan')
+    assert.ok(await strona.getByTestId('program-strony').first().isVisible())
+    await wyglad.selectOption('SEMPER_WEDLUG_DNI')
+    await separacja.selectOption('ramka')
+    await strona.getByRole('button', { name: 'Przywróć domyślny wygląd', exact: true }).click()
+    assert.equal(await wyglad.inputValue(), 'DOTYCHCZASOWY')
+    assert.equal(await separacja.inputValue(), 'separator-pytan')
+
+    const przelacznik = strona.locator('.program-szkolen__przelacznik:enabled').first()
+    const odczytajStyl = () => przelacznik.evaluate((pole) => {
+      const uchwyt = getComputedStyle(pole, '::before')
+      return { kolor: uchwyt.backgroundColor, pozycja: uchwyt.transform, tor: getComputedStyle(pole).backgroundColor, szerokosc: pole.offsetWidth, wysokosc: pole.offsetHeight }
+    })
+    for (const skala of [75, 85, 100]) {
+      await strona.evaluate(async (wartosc) => {
+        const { zastosujSkaleInterfejsu } = await import('/src/aplikacja/ustawienia/skalaInterfejsu.ts')
+        await zastosujSkaleInterfejsu(wartosc)
+      }, skala)
+      await przelacznik.uncheck()
+      await przelacznik.hover()
+      const wylaczony = await odczytajStyl()
+      await przelacznik.press('Space')
+      const wlaczony = await odczytajStyl()
+      assert.equal(wylaczony.kolor, 'rgb(255, 255, 255)')
+      assert.equal(wlaczony.kolor, wylaczony.kolor)
+      assert.equal(wylaczony.pozycja, 'none')
+      assert.equal(wlaczony.pozycja, 'matrix(1, 0, 0, 1, 16, 0)')
+      assert.notEqual(wylaczony.tor, wlaczony.tor)
+      assert.deepEqual([wylaczony.szerokosc, wylaczony.wysokosc], [wlaczony.szerokosc, wlaczony.wysokosc])
+    }
+  } finally { await przegladarka.close() }
+})
+
 test('Program szkolenia nadal pobiera pojedynczy PDF z własnego generatora', { timeout: 120000 }, async () => {
   const { przegladarka, strona, panel } = await uruchom()
   try {

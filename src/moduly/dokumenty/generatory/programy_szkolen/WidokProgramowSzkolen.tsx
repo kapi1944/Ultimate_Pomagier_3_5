@@ -348,7 +348,7 @@ const styleProgramuSzkolenia = `
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: var(--ui-tekst);
+  background: #FFFFFF;
 }
 
 .program-szkolen .program-szkolen__przelacznik:checked {
@@ -358,7 +358,6 @@ const styleProgramuSzkolenia = `
 
 .program-szkolen__przelacznik:checked::before {
   transform: translateX(16px);
-  background: var(--ui-pole);
 }
 
 .program-szkolen__przelacznik:focus-visible {
@@ -1760,6 +1759,7 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
                 {!ustawienia.czyWyborPresetySwiadomy && presetWygladu !== sugestiaPresety && <p className="program-szkolen__opis">Sugestia na podstawie treści: {konfiguracjePresetowProgramu[sugestiaPresety].etykieta}.</p>}
               </label>
               <button className="program-szkolen__przycisk" onClick={() => wybierzPresetWygladu(presetWygladu)} type="button">Przywróć ustawienia presetu</button>
+              <button className="program-szkolen__przycisk" onClick={() => wybierzPresetWygladu(domyslneUstawienia.presetWygladu, false)} type="button">Przywróć domyślny wygląd</button>
 
               {presetWygladu !== 'DOTYCHCZASOWY' && (
                 <details className="program-szkolen__identyfikacja">
