@@ -39,7 +39,7 @@
     "test:konta:desktop": "npm run build && node skrypty/kontaLokalne.mjs --buduj-desktop-testowy && node --test testy/kontaDesktop.natywne.test.mjs",
     "test:konta:demo": "node --test testy/kontaDesktop.demo.test.mjs",
     "test:reset-hasel:przegladarka": "node skrypty/kontaLokalne.mjs --buduj-usluge-testowa && node --import ./testy/rejestrujLoaderTs.mjs --test testy/resetowanieHasel.przegladarka.test.mjs",
-    "test:pakiety-pdf": "node --import ./testy/rejestrujLoaderTs.mjs --test testy/scalaniePakietuPdf.test.ts testy/wyborPakietuPdf.test.ts",
+    "test:pakiety-pdf": "node --import ./testy/rejestrujLoaderTs.mjs --test testy/scalaniePakietuPdf.test.ts testy/wyborPakietuPdf.test.ts testy/zapisPakietuPdf.test.ts",
     "test:pakiety-pdf:przegladarka": "node --import ./testy/rejestrujLoaderTs.mjs --test testy/pakietyPdf.przegladarka.test.mjs",
     "test:e2e": "node skrypty/uruchomTestyPrzegladarkowe.mjs"
   },
