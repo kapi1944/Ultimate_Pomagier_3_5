@@ -148,6 +148,14 @@ test('UX-2: dostępne miejsce, menu, skale, zmiana trybu i niezależne kolumny',
         const szerokoscPo = await strona.evaluate(() => document.documentElement.scrollWidth)
         assert.ok(szerokoscPo <= szerokosc + 1, `${opis}: przed=${przepelnieniePrzed}, po=${szerokoscPo}`)
         assert.ok(await panel.evaluate((element) => element.scrollWidth <= element.clientWidth), opis)
+        const pakietMiesciKontrolki = await strona.locator('#pakiet-podstawowy .szczegoly-wiersz-wymogu').evaluateAll((kafelki) => kafelki.every((kafelek) => {
+          const checkbox = kafelek.querySelector('input[type="checkbox"]')
+          const etykieta = checkbox.closest('label').getBoundingClientRect()
+          const przelacznik = kafelek.querySelector('[role="switch"]').getBoundingClientRect()
+          return checkbox.offsetWidth === 18 && kafelek.scrollWidth <= kafelek.clientWidth
+            && Math.abs(etykieta.top + etykieta.height / 2 - przelacznik.top - przelacznik.height / 2) < 1 && etykieta.right < przelacznik.left
+        }))
+        assert.ok(pakietMiesciKontrolki, opis)
         if (mobilny) {
           assert.ok(Math.abs(granice.height - 960) < 2, opis)
           assert.equal((await strona.locator('.szczegoly-obszar-roboczy').boundingBox()).width, przed, opis)
@@ -601,13 +609,16 @@ test('segmenty grup mieszczą się przy 1440 i 390 px oraz trzech skalach', { ti
 test('pakiet podstawowy mieści kontrolki w jednym rzędzie i zachowuje zapisane wybory', { timeout: 60000 }, async () => {
   const przegladarka = await uruchomPrzegladarke()
   try {
-    const strona = await przegladarka.newPage({ viewport: { width: 1440, height: 1000 } })
+    const strona = await przegladarka.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' })
     await strona.goto(adres)
     await strona.getByRole('button', { name: 'Otwórz demonstrację Architekta', exact: true }).click()
     await strona.goto(`${adres}/szkolenia-zamkniete/szczegoly-organizacyjne/nowe`)
     const kafelki = strona.locator('#pakiet-podstawowy .szczegoly-wiersz-wymogu')
     await kafelki.first().waitFor()
     assert.equal(await kafelki.count(), 5)
+    // Mierzymy pełny formularz; macierz UX-2 osobno sprawdza geometrię z otwartym panelem.
+    const schowajPanel = strona.getByRole('button', { name: 'Schowaj panel', exact: true })
+    if (await schowajPanel.isVisible()) await schowajPanel.click()
 
     for (const szerokosc of [1440, 390]) {
       await strona.setViewportSize({ width: szerokosc, height: 1000 })
@@ -645,7 +656,6 @@ test('pakiet podstawowy mieści kontrolki w jednym rzędzie i zachowuje zapisane
     }
 
     await strona.setViewportSize({ width: 1440, height: 1000 })
-    const schowajPanel = strona.getByRole('button', { name: 'Schowaj panel', exact: true })
     if (await schowajPanel.isVisible()) await schowajPanel.click()
     const pierwszyKafelek = kafelki.first()
     const checkbox = pierwszyKafelek.getByRole('checkbox', { name: 'Wzór klienta' })

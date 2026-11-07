@@ -1710,7 +1710,7 @@ button.szczegoly-checklista__naglowek:hover {
     overflow: hidden;
     overscroll-behavior: none;
   }
-  .uklad-aplikacji__obszar-roboczy:has(.szczegoly-organizacyjne) {
+  .uklad-aplikacji__obszar-roboczy:has(.szczegoly-organizacyjne--panel-mobilny) {
     scrollbar-gutter: stable;
   }
 }
