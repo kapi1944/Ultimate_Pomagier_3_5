@@ -7,9 +7,42 @@ import {
   pobierzElementyIdentyfikacjiProgramu,
   zasugerujPresetProgramu,
 } from '../src/moduly/dokumenty/generatory/programy_szkolen/presetyProgramu.ts'
+import {
+  domyslnyProgramSzkolenia,
+  normalizujProgramSzkolenia,
+} from '../src/moduly/dokumenty/generatory/programy_szkolen/modelProgramuSzkolenia.ts'
 
-test('nowy Program ma domyslny preset SEMPER wedlug dni', () => {
-  assert.equal(domyslnyPresetNowegoProgramu, 'SEMPER_WEDLUG_DNI')
+test('nowy Program i reset korzystaja z dotychczasowego wygladu i separatora pytan', () => {
+  assert.equal(domyslnyPresetNowegoProgramu, 'DOTYCHCZASOWY')
+  for (const program of [domyslnyProgramSzkolenia, normalizujProgramSzkolenia(undefined), normalizujProgramSzkolenia({ ustawienia: {} })]) {
+    assert.equal(program.ustawienia.presetWygladu, 'DOTYCHCZASOWY')
+    assert.equal(program.ustawienia.separacjaModulow, 'separator-pytan')
+  }
+  assert.equal(konfiguracjePresetowProgramu.DOTYCHCZASOWY.separacjaModulow, 'separator-pytan')
+})
+
+test('zapisane presety i separatory zachowuja wszystkie ustawienia po ponownym odczycie', () => {
+  for (const presetWygladu of Object.keys(konfiguracjePresetowProgramu)) {
+    for (const separacjaModulow of ['brak', 'ramka', 'linia', 'separator-pytan']) {
+      const zapisany = normalizujProgramSzkolenia({
+        ...domyslnyProgramSzkolenia,
+        tytulSzkolenia: 'Istniejący program',
+        ustawienia: {
+          ...domyslnyProgramSzkolenia.ustawienia,
+          presetWygladu,
+          separacjaModulow,
+          czyWyborPresetySwiadomy: true,
+          czyJustowac: false,
+          formatowanieSkryptowe: false,
+          kolorAkcentuProgramu: '#123456',
+          elementyIdentyfikacji: { mapaPolski: false },
+        },
+      })
+      assert.equal(zapisany.ustawienia.presetWygladu, presetWygladu)
+      assert.equal(zapisany.ustawienia.separacjaModulow, separacjaModulow)
+      assert.deepEqual(normalizujProgramSzkolenia(JSON.parse(JSON.stringify(zapisany))), zapisany)
+    }
+  }
 })
 
 test('starszy Program bez presetu zachowuje wyglad dotychczasowy', () => {
