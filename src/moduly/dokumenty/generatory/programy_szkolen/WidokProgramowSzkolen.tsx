@@ -348,7 +348,7 @@ const styleProgramuSzkolenia = `
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: var(--ui-tekst);
+  background: #FFFFFF;
 }
 
 .program-szkolen .program-szkolen__przelacznik:checked {
@@ -358,7 +358,6 @@ const styleProgramuSzkolenia = `
 
 .program-szkolen__przelacznik:checked::before {
   transform: translateX(16px);
-  background: var(--ui-pole);
 }
 
 .program-szkolen__przelacznik:focus-visible {

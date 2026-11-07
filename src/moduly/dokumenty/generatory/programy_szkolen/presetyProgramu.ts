@@ -1,7 +1,7 @@
 import type { BlokDokumentu, DokumentBlokowy } from '../../../../wspolne/dokumenty/modelBlokowy'
 
 export type PresetWygladuProgramu = 'DOTYCHCZASOWY' | 'SEMPER_KOMPAKTOWY' | 'SEMPER_SZCZEGOLOWY' | 'SEMPER_WEDLUG_DNI'
-export const domyslnyPresetNowegoProgramu: PresetWygladuProgramu = 'SEMPER_WEDLUG_DNI'
+export const domyslnyPresetNowegoProgramu: PresetWygladuProgramu = 'DOTYCHCZASOWY'
 export type ElementyIdentyfikacjiProgramu = {
   naglowekKontaktowy: boolean
   gornySzaryPas: boolean
@@ -52,9 +52,9 @@ const elementySemper: ElementyIdentyfikacjiProgramu = {
 
 export const konfiguracjePresetowProgramu: Record<PresetWygladuProgramu, KonfiguracjaPresetyProgramu> = {
   DOTYCHCZASOWY: {
-    etykieta: 'Dotychczasowy wyglad',
+    etykieta: 'Dotychczasowy wygląd',
     elementyIdentyfikacji: { ...elementySemper, naglowekKontaktowy: false, gornySzaryPas: false, logoOrganizatora: false, etykietaProgramu: false, panelTytulu: false, stopkaFirmowa: false, hasloMarki: false, mapaPolski: false, numerStrony: false },
-    stylDni: 'pasek', separacjaModulow: 'ramka', stylPodpunktow: 'punktory', stylListyGlownej: 'numeracja', justowanie: false, czyPokazywacDni: true,
+    stylDni: 'pasek', separacjaModulow: 'separator-pytan', stylPodpunktow: 'punktory', stylListyGlownej: 'numeracja', justowanie: false, czyPokazywacDni: true,
   },
   SEMPER_KOMPAKTOWY: {
     etykieta: 'SEMPER — kompaktowy',
