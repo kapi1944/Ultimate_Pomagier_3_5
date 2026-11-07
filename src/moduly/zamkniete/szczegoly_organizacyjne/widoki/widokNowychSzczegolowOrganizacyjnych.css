@@ -443,6 +443,86 @@
   resize: vertical;
 }
 
+.szczegoly-pole-segmentowe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.szczegoly-organizacyjne .szczegoly-pole-segmentowe > button {
+  flex: 1 1 5rem;
+  min-width: 0;
+  min-height: 44px;
+  padding: 6px;
+  background: var(--ui-pole);
+  color: var(--ui-tekst);
+  font: inherit;
+  overflow-wrap: anywhere;
+}
+
+.szczegoly-organizacyjne .szczegoly-pole-segmentowe > button[aria-pressed="true"] {
+  border-color: var(--ui-focus);
+  background: color-mix(in srgb, var(--ui-pole) 80%, var(--ui-focus));
+  font-weight: 700;
+}
+
+.szczegoly-organizacyjne .szczegoly-pole-segmentowe > button:focus-visible {
+  outline: 3px solid var(--ui-focus);
+  outline-offset: -3px;
+}
+
+.szczegoly-kontrolka-liczbowa {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  gap: 6px;
+  width: 100%;
+  max-width: 15rem;
+}
+
+.szczegoly-kontrolka-liczbowa input[type="number"] {
+  appearance: textfield;
+  padding-inline: 4px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.szczegoly-kontrolka-liczbowa input::-webkit-inner-spin-button,
+.szczegoly-kontrolka-liczbowa input::-webkit-outer-spin-button {
+  display: none;
+}
+
+.szczegoly-kontrolka-liczbowa__minus {
+  --kolor-kroku: var(--ui-error);
+  --tlo-kroku: var(--ui-error-tlo);
+}
+
+.szczegoly-kontrolka-liczbowa__plus {
+  --kolor-kroku: var(--ui-success);
+  --tlo-kroku: var(--ui-success-tlo);
+}
+
+.szczegoly-organizacyjne .szczegoly-kontrolka-liczbowa > button {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-color: var(--kolor-kroku);
+  background: var(--tlo-kroku);
+  color: var(--kolor-kroku);
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.szczegoly-organizacyjne .szczegoly-kontrolka-liczbowa > button:not([aria-disabled="true"]):hover {
+  background: color-mix(in srgb, var(--tlo-kroku) 82%, var(--kolor-kroku));
+}
+
+.szczegoly-organizacyjne .szczegoly-kontrolka-liczbowa > button[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
 .szczegoly-pole input:disabled,
 .szczegoly-pole select:disabled,
 .szczegoly-pole textarea:disabled {
@@ -929,9 +1009,7 @@ button.szczegoly-checklista__naglowek:hover {
 
 .szczegoly-pole-minut {
   display: grid;
-  grid-template-columns: auto minmax(72px, 1fr);
-  gap: 8px;
-  align-items: center;
+  gap: 6px;
   color: var(--ui-tekst-drugi);
   font-size: 0.86rem;
 }

@@ -1,5 +1,5 @@
 import { KontekstZatwierdzania } from './zatwierdzaniePol'
-import { useContext, type ReactNode } from 'react'
+import { useContext, useState, type ComponentPropsWithoutRef, type ReactNode } from 'react'
 import { etykietyStatusowPol, klasyStatusowPol } from '../stale'
 import type { StatusyPolImportu } from '../typy'
 import { pobierzIdBleduPola, pobierzIdPola } from './identyfikatoryPol'
@@ -31,6 +31,8 @@ type WlasciwosciPolaLiczbowego = WspolneWlasciwosciPola & {
   min?: number
   max?: number
   krok?: number
+  dopuszczajZero?: boolean
+  wariantOpisu?: string
 }
 
 type WlasciwosciPolaWyboru = WspolneWlasciwosciPola & {
@@ -39,6 +41,12 @@ type WlasciwosciPolaWyboru = WspolneWlasciwosciPola & {
   opcje: string[]
   etykietyOpcji?: Record<string, string>
   niedostepneOpcje?: string[]
+}
+
+type WlasciwosciPolaSegmentowego<Opcja extends string> = WspolneWlasciwosciPola & {
+  opcje: readonly Opcja[]
+  wartosc: NoInfer<Opcja>
+  ustawWartosc: (wartosc: NoInfer<Opcja>) => void
 }
 
 type WlasciwosciPolaCheckbox = WspolneWlasciwosciPola & {
@@ -85,23 +93,25 @@ export function ZnacznikBleduPola({ blad }: { blad?: string }) {
   return blad ? <span aria-hidden="true" className="szczegoly-pole__kropka-bledu" /> : null
 }
 
-function OpakowaniePola({ etykieta, pole, statusyPol, blad, disabled, dzieci, children }: WspolneWlasciwosciPola) {
+function OpakowaniePola({ etykieta, pole, statusyPol, blad, disabled, dzieci, children, idKontrolki, idEtykiety, idOpisu = pobierzIdBleduPola(pole) }: WspolneWlasciwosciPola & { idKontrolki?: string; idEtykiety?: string; idOpisu?: string }) {
   const status = statusyPol[pole]
   const zawartosc = dzieci ?? children
   const komunikatStatusu = pobierzKomunikatStatusu(pole, statusyPol)
   const bladZWalidacji = useBladPola(pole, disabled)
   const komunikatBledu = blad ?? bladZWalidacji
+  const Opakowanie = idKontrolki || idEtykiety ? 'div' : 'label'
+  const Etykieta = idKontrolki ? 'label' : 'span'
 
   return (
-    <label className={`szczegoly-pole ${status ? klasyStatusowPol[status] : ''} ${disabled ? 'szczegoly-pole--disabled' : ''}`}>
+    <Opakowanie className={`szczegoly-pole ${status ? klasyStatusowPol[status] : ''} ${disabled ? 'szczegoly-pole--disabled' : ''}`}>
       <span className="szczegoly-pole__naglowek">
-        <span className="szczegoly-pole__etykieta">{etykieta}<ZnacznikBleduPola blad={komunikatBledu} /></span>
+        <Etykieta className="szczegoly-pole__etykieta" htmlFor={idKontrolki} id={idEtykiety}>{etykieta}<ZnacznikBleduPola blad={komunikatBledu} /></Etykieta>
         <ZnacznikStatusu pole={pole} statusyPol={statusyPol} />
       </span>
       {zawartosc}
-      {komunikatBledu && <span className="szczegoly-pole__blad" id={pobierzIdBleduPola(pole)}>{komunikatBledu}</span>}
-      {!komunikatBledu && komunikatStatusu && <span className="szczegoly-pole__pomoc" id={pobierzIdBleduPola(pole)}>{komunikatStatusu}</span>}
-    </label>
+      {komunikatBledu && <span className="szczegoly-pole__blad" id={idOpisu}>{komunikatBledu}</span>}
+      {!komunikatBledu && komunikatStatusu && <span className="szczegoly-pole__pomoc" id={idOpisu}>{komunikatStatusu}</span>}
+    </Opakowanie>
   )
 }
 
@@ -145,6 +155,88 @@ export function PoleTekstowe({
   )
 }
 
+type WlasciwosciKontrolkiLiczbowej = Pick<ComponentPropsWithoutRef<'input'>, 'id' | 'disabled' | 'aria-describedby' | 'aria-invalid'> & {
+  etykieta: string
+  wartosc: number | ''
+  ustawWartosc: (wartosc: number) => void
+  min?: number
+  max?: number
+  krok?: number
+  dopuszczajZero?: boolean
+}
+
+function rozlozLiczbeDziesietna(liczba: number) {
+  const [mantysa, wykladnik = '0'] = String(liczba).split('e')
+  const [calkowita, ulamkowa = ''] = mantysa.split('.')
+  return { cyfry: BigInt(calkowita + ulamkowa), wykladnik: Number(wykladnik) - ulamkowa.length }
+}
+
+function dodajKrokDziesietny(wartosc: number, krok: number) {
+  const baza = rozlozLiczbeDziesietna(wartosc)
+  const zmiana = rozlozLiczbeDziesietna(krok)
+  const wykladnik = Math.min(baza.wykladnik, zmiana.wykladnik)
+  const suma = baza.cyfry * 10n ** BigInt(baza.wykladnik - wykladnik) + zmiana.cyfry * 10n ** BigInt(zmiana.wykladnik - wykladnik)
+  return Number(`${suma}e${wykladnik}`)
+}
+
+export function KontrolkaLiczbowa({ etykieta, wartosc, ustawWartosc, min, max, krok = 1, dopuszczajZero, ...atrybuty }: WlasciwosciKontrolkiLiczbowej) {
+  const [wartoscRobocza, ustawWartoscRobocza] = useState<string | null>(null)
+  const widocznaWartosc = wartoscRobocza ?? wartosc
+  const liczba = widocznaWartosc === '' ? 0 : Number(widocznaWartosc)
+  const dolnaGranica = min ?? -Infinity
+  const gornaGranica = max ?? Infinity
+
+  function obliczZmiane(kierunek: -1 | 1) {
+    if (atrybuty.disabled || !Number.isFinite(liczba)) return null
+    if (kierunek < 0 ? liczba <= dolnaGranica : liczba >= gornaGranica) return null
+
+    // Puste pole zaczyna od zera. Pierwszy krok w dozwoloną stronę wchodzi w zakres pola.
+    const wynik = Math.max(dolnaGranica, Math.min(gornaGranica, dodajKrokDziesietny(liczba, kierunek * krok)))
+    return Number.isFinite(wynik) && wynik !== liczba ? wynik : null
+  }
+
+  function zastosujWartosc(wynik: number | null) {
+    if (wynik === null) return
+    ustawWartoscRobocza(null)
+    ustawWartosc(wynik)
+  }
+
+  const mniejszaWartosc = obliczZmiane(-1)
+  const wiekszaWartosc = obliczZmiane(1)
+
+  return (
+    <span className="szczegoly-kontrolka-liczbowa" onBlur={(zdarzenie) => {
+      if (!zdarzenie.currentTarget.contains(zdarzenie.relatedTarget)) ustawWartoscRobocza(null)
+    }}>
+      <button aria-disabled={mniejszaWartosc === null} aria-label={`Zmniejsz: ${etykieta}`} className="szczegoly-kontrolka-liczbowa__minus" disabled={atrybuty.disabled} type="button" onClick={() => zastosujWartosc(mniejszaWartosc)}>−</button>
+      <input
+        {...atrybuty}
+        aria-invalid={atrybuty['aria-invalid'] || (wartoscRobocza !== null && wartoscRobocza !== '')}
+        max={max}
+        min={min}
+        step={krok}
+        type="number"
+        value={widocznaWartosc}
+        onChange={(zdarzenie) => {
+          const { value, valueAsNumber } = zdarzenie.currentTarget
+          const miesciSieWZakresie = valueAsNumber >= dolnaGranica && valueAsNumber <= gornaGranica
+          if (Number.isFinite(valueAsNumber) && (miesciSieWZakresie || (dopuszczajZero && valueAsNumber === 0))) {
+            zastosujWartosc(valueAsNumber)
+          } else {
+            ustawWartoscRobocza(value)
+          }
+        }}
+        onKeyDown={(zdarzenie) => {
+          if (zdarzenie.key !== 'ArrowDown' && zdarzenie.key !== 'ArrowUp') return
+          zdarzenie.preventDefault()
+          zastosujWartosc(zdarzenie.key === 'ArrowUp' ? wiekszaWartosc : mniejszaWartosc)
+        }}
+      />
+      <button aria-disabled={wiekszaWartosc === null} aria-label={`Zwiększ: ${etykieta}`} className="szczegoly-kontrolka-liczbowa__plus" disabled={atrybuty.disabled} type="button" onClick={() => zastosujWartosc(wiekszaWartosc)}>+</button>
+    </span>
+  )
+}
+
 export function PoleLiczbowe({
   etykieta,
   pole,
@@ -157,22 +249,27 @@ export function PoleLiczbowe({
   blad,
   disabled,
   idGrupy,
+  dopuszczajZero,
+  wariantOpisu,
 }: WlasciwosciPolaLiczbowego) {
   const bladZWalidacji = useBladPola(pole, disabled)
   const komunikatBledu = blad ?? bladZWalidacji
+  const idKontrolki = pobierzIdPola(pole, idGrupy)
+  const idOpisu = pobierzIdBleduPola(wariantOpisu ? `${pole}.${wariantOpisu}` : pole)
   return (
-    <OpakowaniePola blad={komunikatBledu} disabled={disabled} etykieta={etykieta} pole={pole} statusyPol={statusyPol}>
-      <input
-        aria-describedby={komunikatBledu ? pobierzIdBleduPola(pole) : undefined}
+    <OpakowaniePola blad={komunikatBledu} disabled={disabled} etykieta={etykieta} pole={pole} statusyPol={statusyPol} idKontrolki={idKontrolki} idOpisu={idOpisu}>
+      <KontrolkaLiczbowa
+        aria-describedby={komunikatBledu || pobierzKomunikatStatusu(pole, statusyPol) ? idOpisu : undefined}
         aria-invalid={Boolean(komunikatBledu)}
         disabled={disabled}
-        id={pobierzIdPola(pole, idGrupy)}
+        dopuszczajZero={dopuszczajZero}
+        etykieta={etykieta}
+        id={idKontrolki}
         max={max}
         min={min}
-        step={krok}
-        type="number"
-        value={statusyPol[pole] === 'brak' && wartosc === 0 ? '' : wartosc}
-        onChange={(zdarzenie) => ustawWartosc(Number(zdarzenie.target.value))}
+        krok={krok}
+        wartosc={statusyPol[pole] === 'brak' && wartosc === 0 ? '' : wartosc}
+        ustawWartosc={ustawWartosc}
       />
     </OpakowaniePola>
   )
@@ -213,6 +310,40 @@ export function PoleWyboru({ etykieta, pole, statusyPol, wartosc, ustawWartosc, 
           </option>
         ))}
       </select>
+    </OpakowaniePola>
+  )
+}
+
+export function PoleSegmentowe<Opcja extends string>({
+  etykieta, pole, statusyPol, wartosc, ustawWartosc, opcje, blad, disabled, idGrupy,
+}: WlasciwosciPolaSegmentowego<Opcja>) {
+  const bladZWalidacji = useBladPola(pole, disabled)
+  const komunikatBledu = blad ?? bladZWalidacji
+  const idKontrolki = pobierzIdPola(pole, idGrupy)
+  const idEtykiety = `${idKontrolki}-etykieta`
+  const idOpisu = komunikatBledu || pobierzKomunikatStatusu(pole, statusyPol) ? pobierzIdBleduPola(pole) : undefined
+  const opcjaDocelowa = opcje.includes(wartosc) ? wartosc : opcje[0]
+
+  return (
+    <OpakowaniePola blad={komunikatBledu} disabled={disabled} etykieta={etykieta} pole={pole} statusyPol={statusyPol} idEtykiety={idEtykiety}>
+      <div aria-labelledby={idEtykiety} className="szczegoly-pole-segmentowe" role="group">
+        {opcje.map((opcja) => (
+          <button
+            aria-describedby={idOpisu}
+            aria-invalid={Boolean(komunikatBledu)}
+            aria-pressed={wartosc === opcja}
+            disabled={disabled}
+            id={opcjaDocelowa === opcja ? idKontrolki : undefined}
+            key={opcja}
+            type="button"
+            onClick={() => {
+              if (wartosc !== opcja) ustawWartosc(opcja)
+            }}
+          >
+            {opcja}
+          </button>
+        ))}
+      </div>
     </OpakowaniePola>
   )
 }

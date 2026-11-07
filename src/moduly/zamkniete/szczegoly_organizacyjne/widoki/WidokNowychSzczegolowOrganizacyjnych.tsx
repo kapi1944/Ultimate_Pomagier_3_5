@@ -916,6 +916,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
                     min={0}
                     pole={`grupy.${indeks}.liczbaGodzin`}
                     statusyPol={generator.statusyPol}
+                    wariantOpisu="harmonogram"
                     wartosc={grupa.liczbaGodzin}
                     ustawWartosc={(wartosc) => generator.aktualizujGrupe(grupa.id, (obecna) => ({ ...obecna, liczbaGodzin: wartosc }), `grupy.${indeks}.liczbaGodzin`)}
                   />

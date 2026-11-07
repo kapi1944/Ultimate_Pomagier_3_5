@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="pl">
+<meta charset="utf-8">
+<title>Test kontrolki liczbowej Szczegółów</title>
+<body>
+  <main id="formularz" class="szczegoly-organizacyjne"></main>
+  <script type="module">
+    import { createElement, useState } from 'react'
+    import { createRoot } from 'react-dom/client'
+    import { KontrolkaLiczbowa } from '../src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/PolaSzczegolow.tsx'
+    import '../src/moduly/zamkniete/szczegoly_organizacyjne/widoki/widokNowychSzczegolowOrganizacyjnych.css'
+
+    function PoleTestowe({ id, etykieta, poczatek, min, max, krok, disabled }) {
+      const [wartosc, ustawWartosc] = useState(poczatek)
+      return createElement('div', { className: 'szczegoly-pole' },
+        createElement('label', { htmlFor: id }, etykieta),
+        createElement(KontrolkaLiczbowa, { id, etykieta, wartosc, ustawWartosc, min, max, krok, disabled }),
+        createElement('output', { id: `${id}-model` }, String(wartosc)),
+      )
+    }
+
+    createRoot(document.getElementById('formularz')).render(createElement('div', null,
+      createElement(PoleTestowe, { id: 'dziesietne', etykieta: 'Dziesiętne', poczatek: 0.2, min: -0.3, max: 0.3, krok: 0.1 }),
+      createElement(PoleTestowe, { id: 'puste', etykieta: 'Od trzech', poczatek: '', min: 3, max: 9, krok: 2 }),
+      createElement(PoleTestowe, { id: 'wylaczone', etykieta: 'Wyłączone', poczatek: 4, disabled: true }),
+    ))
+  </script>
+</body>
+</html>

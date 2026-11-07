@@ -1,5 +1,5 @@
-import { pobierzIdBleduPola } from './identyfikatoryPol'
-import { ZnacznikBleduPola } from './PolaSzczegolow'
+import { pobierzIdBleduPola, pobierzIdPola } from './identyfikatoryPol'
+import { KontrolkaLiczbowa, ZnacznikBleduPola } from './PolaSzczegolow'
 import { useBladPola } from './stanBledowPol'
 
 type WlasciwosciPolaMinutWczesniejszegoPrzyjazdu = {
@@ -8,15 +8,16 @@ type WlasciwosciPolaMinutWczesniejszegoPrzyjazdu = {
 }
 
 const pole = 'dodatkoweWymogi.minutyWczesniej'
+const idKontrolki = pobierzIdPola(pole)
 
 export default function PoleMinutWczesniejszegoPrzyjazdu({ wartosc, ustawWartosc }: WlasciwosciPolaMinutWczesniejszegoPrzyjazdu) {
   const blad = useBladPola(pole)
 
   return (
-    <label className="szczegoly-pole-minut">
-      <span className="szczegoly-pole__etykieta">Ile minut:<ZnacznikBleduPola blad={blad} /></span>
-      <input aria-describedby={blad ? pobierzIdBleduPola(pole) : undefined} aria-invalid={Boolean(blad)} min={0} step={1} type="number" value={wartosc} onChange={(zdarzenie) => ustawWartosc(Number(zdarzenie.target.value))} />
+    <div className="szczegoly-pole-minut">
+      <label className="szczegoly-pole__etykieta" htmlFor={idKontrolki}>Ile minut:<ZnacznikBleduPola blad={blad} /></label>
+      <KontrolkaLiczbowa aria-describedby={blad ? pobierzIdBleduPola(pole) : undefined} aria-invalid={Boolean(blad)} etykieta="Minuty wcześniejszego przyjazdu" id={idKontrolki} min={0} wartosc={wartosc} ustawWartosc={ustawWartosc} />
       {blad && <span className="szczegoly-pole__blad" id={pobierzIdBleduPola(pole)}>{blad}</span>}
-    </label>
+    </div>
   )
 }

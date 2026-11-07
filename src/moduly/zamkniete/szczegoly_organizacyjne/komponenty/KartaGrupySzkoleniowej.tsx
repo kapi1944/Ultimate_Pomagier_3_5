@@ -16,7 +16,7 @@ import type {
   TrenerKartoteki,
   TrybCeny,
 } from '../typy'
-import { PoleLiczbowe, PoleTekstowe, PoleWyboru, ZnacznikBleduPola } from './PolaSzczegolow'
+import { PoleLiczbowe, PoleSegmentowe, PoleTekstowe, PoleWyboru, ZnacznikBleduPola } from './PolaSzczegolow'
 import { pobierzIdBleduPola, pobierzIdPola } from './identyfikatoryPol'
 import { useBladPola } from './stanBledowPol'
 import { pobierzEtykieteGrupy, ustawFormeGrupy, ustawRodzajGodzinGrupy } from '../logikaGrupSzkoleniowych'
@@ -445,14 +445,14 @@ function ZawartoscKartyGrupy({
               wartosc={grupa.dataDo}
               ustawWartosc={(wartosc) => aktualizujGrupe(grupa.id, (obecna) => ({ ...obecna, dataDo: wartosc }), `grupy.${indeks}.dataDo`)}
             />
-            <PoleWyboru
+            <PoleSegmentowe
               etykieta="Forma szkolenia"
               idGrupy={grupa.id}
               opcje={opcjeFormy}
               pole={`grupy.${indeks}.formaSzkolenia`}
               statusyPol={statusyPol}
               wartosc={grupa.formaSzkolenia}
-              ustawWartosc={(wartosc) => ustawForme(wartosc as FormaSzkolenia)}
+              ustawWartosc={ustawForme}
             />
             <div
               className={`szczegoly-pole ${statusyPol[`grupy.${indeks}.miejsce`] ? klasyStatusowPol[statusyPol[`grupy.${indeks}.miejsce`]!] : ''} ${
@@ -548,25 +548,25 @@ function ZawartoscKartyGrupy({
               </>
             )}
             <PoleCeny grupa={grupa} indeks={indeks} statusyPol={statusyPol} aktualizujGrupe={aktualizujGrupe} />
-            <PoleWyboru
+            <PoleSegmentowe
               etykieta="Oświadczenie VAT"
               idGrupy={grupa.id}
               opcje={opcjeVat}
               pole={`grupy.${indeks}.vat`}
               statusyPol={statusyPol}
               wartosc={grupa.vat}
-              ustawWartosc={(wartosc) => aktualizujGrupe(grupa.id, (obecna) => ({ ...obecna, vat: wartosc as OswiadczenieVat }), `grupy.${indeks}.vat`)}
+              ustawWartosc={(wartosc) => aktualizujGrupe(grupa.id, (obecna) => ({ ...obecna, vat: wartosc }), `grupy.${indeks}.vat`)}
             />
             <div className="szczegoly-karta-grupy__naliczanie-ceny">
               <div className="szczegoly-karta-grupy__stos-pol">
-                <PoleWyboru
+                <PoleSegmentowe
                   etykieta="Sposób naliczania ceny"
                   idGrupy={grupa.id}
                   opcje={opcjeTrybuCeny}
                   pole={`grupy.${indeks}.trybCeny`}
                   statusyPol={statusyPol}
                   wartosc={grupa.trybCeny}
-                  ustawWartosc={(wartosc) => aktualizujGrupe(grupa.id, (obecna) => ({ ...obecna, trybCeny: wartosc as TrybCeny }), `grupy.${indeks}.trybCeny`)}
+                  ustawWartosc={(wartosc) => aktualizujGrupe(grupa.id, (obecna) => ({ ...obecna, trybCeny: wartosc }), `grupy.${indeks}.trybCeny`)}
                 />
                 <PolePrzelacznika
                   disabled
@@ -608,6 +608,7 @@ function ZawartoscKartyGrupy({
               {bladTrenerow && <span className="szczegoly-pole__blad" id={pobierzIdBleduPola(poleTrenerow)}>{bladTrenerow}</span>}
             </label>
             <PoleLiczbowe
+              dopuszczajZero
               etykieta="Liczba uczestników"
               idGrupy={grupa.id}
               min={1}
