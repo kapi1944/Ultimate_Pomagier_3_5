@@ -12,6 +12,192 @@ function uruchomPrzegladarke() {
   return chromium.launch({ executablePath: sciezkaChrome, channel: sciezkaChrome ? undefined : 'chrome', headless: true })
 }
 
+test('UX-2: telefon, dotyk, przewijanie, fokus, klawiatura i zachowanie danych grupy', { timeout: 90000 }, async () => {
+  const przegladarka = await uruchomPrzegladarke()
+  try {
+    const strona = await przegladarka.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce' })
+    strona.setDefaultTimeout(10000)
+    const bledy = []
+    strona.on('pageerror', (blad) => bledy.push(blad.message))
+    await strona.goto(adres)
+    await strona.getByRole('button', { name: 'Otwórz demonstrację Architekta', exact: true }).tap()
+    await strona.goto(`${adres}/szkolenia-zamkniete/szczegoly-organizacyjne/nowe`)
+    const otworz = strona.getByRole('button', { name: 'Kontrola jakości', exact: true })
+    const okno = strona.getByRole('dialog', { name: 'Panel kontroli jakosci' })
+    const panel = strona.locator('.szczegoly-panel-jakosci')
+    const zamknij = panel.getByRole('button', { name: 'Schowaj panel', exact: true })
+    const uczestnicy = strona.getByRole('spinbutton', { name: 'Liczba uczestników', exact: true })
+    const cena = strona.locator('input[id$="cenaNetto"]')
+    await uczestnicy.fill('17')
+    await cena.fill('1234.56')
+    await cena.press('Tab')
+    const danePrzed = await strona.locator('.szczegoly-karta-grupy input, .szczegoly-karta-grupy select, .szczegoly-karta-grupy textarea').evaluateAll((pola) => pola.map((pole) => [pole.id, pole.value]))
+    const szerokoscPrzed = (await strona.locator('.szczegoly-obszar-roboczy').boundingBox()).width
+    await otworz.tap()
+    await okno.waitFor()
+    assert.equal(await okno.getAttribute('aria-modal'), 'true')
+    assert.equal(await zamknij.evaluate((element) => element === document.activeElement), true)
+    assert.equal((await strona.locator('.szczegoly-obszar-roboczy').boundingBox()).width, szerokoscPrzed)
+    assert.equal(await uczestnicy.evaluate((element) => { element.focus(); return element === document.activeElement }), false)
+    assert.equal(await strona.locator('.uklad-aplikacji__obszar-roboczy').evaluate((element) => getComputedStyle(element).overflowY), 'hidden')
+
+    const rozwin = panel.getByRole('button', { name: 'Rozwiń wszystkie', exact: true })
+    await rozwin.tap()
+    await panel.evaluate((element) => { element.scrollTop = element.scrollHeight })
+    assert.ok(await panel.evaluate((element) => element.scrollTop > 0 && element.scrollHeight > element.clientHeight))
+    const granice = await zamknij.boundingBox()
+    assert.ok(granice.y >= 0 && granice.y + granice.height <= 844 && granice.height >= 44 && granice.width >= 44)
+    await zamknij.tap()
+    await okno.waitFor({ state: 'hidden' })
+    assert.equal(await otworz.evaluate((element) => element === document.activeElement), true)
+    assert.deepEqual(await strona.locator('.szczegoly-karta-grupy input, .szczegoly-karta-grupy select, .szczegoly-karta-grupy textarea').evaluateAll((pola) => pola.map((pole) => [pole.id, pole.value])), danePrzed)
+
+    await otworz.press('Enter')
+    await okno.waitFor()
+    const ostatni = panel.locator('button:visible').last()
+    await zamknij.press('Shift+Tab')
+    assert.equal(await ostatni.evaluate((element) => element === document.activeElement), true)
+    await ostatni.press('Tab')
+    assert.equal(await zamknij.evaluate((element) => element === document.activeElement), true)
+    await zamknij.press('Tab')
+    assert.equal(await panel.getByRole('button', { name: 'Zwiń', exact: true }).evaluate((element) => element === document.activeElement), true)
+    await strona.keyboard.press('Escape')
+    await okno.waitFor({ state: 'hidden' })
+    assert.equal(await otworz.evaluate((element) => element === document.activeElement), true)
+    await otworz.press('Space')
+    await okno.waitFor()
+    await panel.getByRole('button', { name: 'Zwiń wszystkie', exact: true }).press('Space')
+    assert.equal(await panel.getByRole('button', { name: 'Rozwiń wszystkie', exact: true }).count(), 1)
+    await panel.getByRole('button', { name: 'Rozwiń wszystkie', exact: true }).press('Enter')
+    assert.equal(await panel.getByRole('button', { name: 'Zwiń wszystkie', exact: true }).count(), 1)
+    await zamknij.press('Escape')
+
+    // Zwinieta grupa musi zostać otwarta przez istniejącą nawigację do pola.
+    await strona.getByRole('button', { name: 'Zwiń grupę', exact: true }).tap()
+    await otworz.tap()
+    await panel.locator('#checklista-bledy-grupySzkoleniowe').getByRole('button', { name: 'Grupa 1: wpisz datę od', exact: true }).tap()
+    await okno.waitFor({ state: 'hidden' })
+    const termin = strona.locator('input[id$="dataOd"]').first()
+    await strona.waitForFunction(() => document.activeElement?.id.endsWith('dataOd'))
+    assert.equal(await termin.getAttribute('aria-invalid'), 'true')
+    assert.ok(await termin.evaluate((element) => {
+      const pole = element.getBoundingClientRect()
+      const pasek = document.querySelector('.szczegoly-sticky').getBoundingClientRect()
+      return pole.top >= pasek.bottom && pole.bottom <= window.innerHeight && document.elementFromPoint(pole.left + pole.width / 2, pole.top + pole.height / 2) === element
+    }))
+    await termin.fill('2026-12-01')
+    assert.equal(await uczestnicy.inputValue(), '17')
+    assert.equal(await cena.inputValue(), '1234,56')
+    await otworz.tap()
+    await strona.evaluate(async () => (await import('/src/aplikacja/ustawienia/skalaInterfejsu.ts')).zastosujSkaleInterfejsu(130))
+    const powiekszony = await panel.boundingBox()
+    assert.ok(powiekszony.x >= 0 && powiekszony.x + powiekszony.width <= 391 && powiekszony.height <= 845)
+    assert.ok((await zamknij.boundingBox()).height >= 44)
+    await zamknij.tap()
+    await strona.evaluate(async () => (await import('/src/aplikacja/ustawienia/skalaInterfejsu.ts')).zastosujSkaleInterfejsu(100))
+    await otworz.tap()
+    await strona.setViewportSize({ width: 844, height: 390 })
+    await okno.waitFor()
+    const poObrocie = await zamknij.boundingBox()
+    assert.ok(poObrocie.y >= 0 && poObrocie.y + poObrocie.height <= 390)
+    await zamknij.tap()
+    assert.deepEqual(bledy, [])
+  } finally { await przegladarka.close() }
+})
+
+test('UX-2: dostępne miejsce, menu, skale, zmiana trybu i niezależne kolumny', { timeout: 180000 }, async () => {
+  const przegladarka = await uruchomPrzegladarke()
+  try {
+    const strona = await przegladarka.newPage({ viewport: { width: 390, height: 960 }, reducedMotion: 'reduce' })
+    strona.setDefaultTimeout(10000)
+    await strona.goto(adres)
+    await strona.getByRole('button', { name: 'Otwórz demonstrację Architekta', exact: true }).click()
+    await strona.goto(`${adres}/szkolenia-zamkniete/szczegoly-organizacyjne/nowe`)
+    await strona.locator('input[id$="tytulSzkolenia"]').fill('Długa zawartość formularza — '.repeat(15))
+    await strona.locator('textarea[id$="programSzkolenia"]').fill('Długa treść programu szkolenia\n'.repeat(100))
+    const otworz = strona.getByRole('button', { name: 'Kontrola jakości', exact: true })
+    const panel = strona.locator('.szczegoly-panel-jakosci')
+    const zamknij = panel.getByRole('button', { name: 'Schowaj panel', exact: true })
+    mkdirSync('tmp/ux-2', { recursive: true })
+    for (const szerokosc of [390, 430, 768, 1000, 1440, 1920, 390]) {
+      await strona.setViewportSize({ width: szerokosc, height: 960 })
+      for (const skala of [75, 85, 100]) {
+        await strona.evaluate(async (wartosc) => (await import('/src/aplikacja/ustawienia/skalaInterfejsu.ts')).zastosujSkaleInterfejsu(wartosc), skala)
+        // Otwarte, przypięte menu ogranicza rzeczywisty obszar pracy.
+        const otworzMenu = strona.getByRole('button', { name: 'Otwórz menu', exact: true })
+        if (await otworzMenu.isVisible()) await otworzMenu.click()
+        const przypnijMenu = strona.getByRole('button', { name: 'Przypnij Menu', exact: false })
+        if (await przypnijMenu.isVisible()) await przypnijMenu.click()
+        const przeslonaMenu = strona.locator('.menu-boczne__przeslona')
+        if (await przeslonaMenu.isVisible()) await przeslonaMenu.click({ position: { x: szerokosc - 5, y: 5 } })
+        await strona.locator('.menu-boczne').evaluate((element) => Promise.all(element.getAnimations().map((animacja) => animacja.finished)))
+        await strona.mouse.move(200, 0)
+        await strona.waitForFunction(() => {
+          const obszar = document.querySelector('.szczegoly-organizacyjne')
+          return obszar.classList.contains('szczegoly-organizacyjne--panel-mobilny') === (obszar.clientWidth < 1120)
+        })
+        if (await zamknij.isVisible()) await zamknij.click()
+        const przed = (await strona.locator('.szczegoly-obszar-roboczy').boundingBox()).width
+        const przepelnieniePrzed = await strona.evaluate(() => document.documentElement.scrollWidth)
+        await otworz.click()
+        await strona.waitForFunction(() => document.querySelector('.szczegoly-okno-jakosci').open)
+        const mobilny = await strona.locator('.szczegoly-organizacyjne').evaluate((element) => element.classList.contains('szczegoly-organizacyjne--panel-mobilny'))
+        const opis = `${szerokosc}px / ${skala}% / ${mobilny ? 'drawer' : 'boczny'}`
+        const granice = await panel.boundingBox()
+        assert.ok(granice.x >= -1 && granice.x + granice.width <= szerokosc + 1, opis)
+        const szerokoscPo = await strona.evaluate(() => document.documentElement.scrollWidth)
+        assert.ok(szerokoscPo <= szerokosc + 1, `${opis}: przed=${przepelnieniePrzed}, po=${szerokoscPo}`)
+        assert.ok(await panel.evaluate((element) => element.scrollWidth <= element.clientWidth), opis)
+        const pakietMiesciKontrolki = await strona.locator('#pakiet-podstawowy .szczegoly-wiersz-wymogu').evaluateAll((kafelki) => kafelki.every((kafelek) => {
+          const checkbox = kafelek.querySelector('input[type="checkbox"]')
+          const etykieta = checkbox.closest('label').getBoundingClientRect()
+          const przelacznik = kafelek.querySelector('[role="switch"]').getBoundingClientRect()
+          return checkbox.offsetWidth === 18 && kafelek.scrollWidth <= kafelek.clientWidth
+            && Math.abs(etykieta.top + etykieta.height / 2 - przelacznik.top - przelacznik.height / 2) < 1 && etykieta.right < przelacznik.left
+        }))
+        assert.ok(pakietMiesciKontrolki, opis)
+        if (mobilny) {
+          assert.ok(Math.abs(granice.height - 960) < 2, opis)
+          assert.equal((await strona.locator('.szczegoly-obszar-roboczy').boundingBox()).width, przed, opis)
+          assert.ok((await zamknij.boundingBox()).height >= 43.9, opis)
+        } else {
+          const obszar = await strona.locator('.szczegoly-obszar-roboczy').boundingBox()
+          assert.ok(obszar.x + obszar.width <= granice.x + 1, opis)
+          const kolumny = await strona.locator('.szczegoly-uklad-sekcji').evaluate((siatka) => {
+            const [lewa, prawa] = siatka.children
+            const bazowa = prawa.children[1].getBoundingClientRect().top - siatka.getBoundingClientRect().top
+            const sekcja = lewa.children[0]
+            const styl = sekcja.style.minHeight
+            sekcja.style.minHeight = `${sekcja.offsetHeight + 200}px`
+            const poZmianie = prawa.children[1].getBoundingClientRect().top - siatka.getBoundingClientRect().top
+            sekcja.style.minHeight = styl
+            return { bazowa, poZmianie }
+          })
+          assert.equal(kolumny.poZmianie, kolumny.bazowa, opis)
+        }
+        const rozwin = panel.getByRole('button', { name: 'Rozwiń wszystkie', exact: true })
+        if (await rozwin.isVisible()) await rozwin.click()
+        await strona.screenshot({ path: `tmp/ux-2/panel-${szerokosc}-${skala}.png` })
+        await zamknij.click()
+        assert.ok(await strona.evaluate((szerokoscPrzed) => document.documentElement.scrollWidth <= szerokoscPrzed, przepelnieniePrzed), opis)
+      }
+    }
+    // Zmiana orientacji i trybu przy otwartym panelu nie może zostawić blokady modala.
+    await otworz.click()
+    for (const szerokosc of [1920, 390, 1440, 390]) {
+      await strona.setViewportSize({ width: szerokosc, height: 960 })
+      await strona.waitForFunction(() => {
+        const obszar = document.querySelector('.szczegoly-organizacyjne')
+        const okno = document.querySelector('.szczegoly-okno-jakosci')
+        return okno.open && okno.matches(':modal') === (obszar.clientWidth < 1120)
+      })
+      assert.equal(await zamknij.isVisible(), true)
+    }
+    await zamknij.click()
+    assert.equal(await strona.locator('dialog:modal').count(), 0)
+  } finally { await przegladarka.close() }
+})
+
 test('kontrolka liczbowa zachowuje kroki dziesiętne, granice i edycję z klawiatury', { timeout: 60000 }, async () => {
   const przegladarka = await uruchomPrzegladarke()
   try {
@@ -423,13 +609,16 @@ test('segmenty grup mieszczą się przy 1440 i 390 px oraz trzech skalach', { ti
 test('pakiet podstawowy mieści kontrolki w jednym rzędzie i zachowuje zapisane wybory', { timeout: 60000 }, async () => {
   const przegladarka = await uruchomPrzegladarke()
   try {
-    const strona = await przegladarka.newPage({ viewport: { width: 1440, height: 1000 } })
+    const strona = await przegladarka.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' })
     await strona.goto(adres)
     await strona.getByRole('button', { name: 'Otwórz demonstrację Architekta', exact: true }).click()
     await strona.goto(`${adres}/szkolenia-zamkniete/szczegoly-organizacyjne/nowe`)
     const kafelki = strona.locator('#pakiet-podstawowy .szczegoly-wiersz-wymogu')
     await kafelki.first().waitFor()
     assert.equal(await kafelki.count(), 5)
+    // Mierzymy pełny formularz; macierz UX-2 osobno sprawdza geometrię z otwartym panelem.
+    const schowajPanel = strona.getByRole('button', { name: 'Schowaj panel', exact: true })
+    if (await schowajPanel.isVisible()) await schowajPanel.click()
 
     for (const szerokosc of [1440, 390]) {
       await strona.setViewportSize({ width: szerokosc, height: 1000 })
@@ -467,7 +656,6 @@ test('pakiet podstawowy mieści kontrolki w jednym rzędzie i zachowuje zapisane
     }
 
     await strona.setViewportSize({ width: 1440, height: 1000 })
-    const schowajPanel = strona.getByRole('button', { name: 'Schowaj panel', exact: true })
     if (await schowajPanel.isVisible()) await schowajPanel.click()
     const pierwszyKafelek = kafelki.first()
     const checkbox = pierwszyKafelek.getByRole('checkbox', { name: 'Wzór klienta' })

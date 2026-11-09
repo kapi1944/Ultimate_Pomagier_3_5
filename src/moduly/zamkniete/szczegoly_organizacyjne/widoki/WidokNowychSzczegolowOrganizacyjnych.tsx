@@ -1,6 +1,7 @@
 import { KontekstZatwierdzania } from '../komponenty/zatwierdzaniePol'
 import { RegulacjaSzerokosci } from '../../../../wspolne/komponenty/RegulacjaSzerokosci'
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent, type ReactNode } from 'react'
+import { zdarzenieZmianySkaliInterfejsu } from '../../../../aplikacja/ustawienia/skalaInterfejsu'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent, type ReactNode } from 'react'
 import { pobierzLokalizacjeZMagazynu } from '../../../../kartoteki/lokalizacje/magazynLokalizacji'
 import type { Dokument } from '../../../../wspolne/dokumenty/modelDokumentu'
 import { utworzDokumentZeSzczegolow } from '../../../../wspolne/integracje/szczegolyDoDokumentow'
@@ -15,6 +16,7 @@ import { pobierzIdKompletnychSekcji } from '../komponenty/logikaPaskaStickySzcze
 import { PoleCheckbox, PoleLiczbowe, PoleTekstowe, PoleTekstoweWielowierszowe, PoleWyboru, ZnacznikBleduPola } from '../komponenty/PolaSzczegolow'
 import PrzelacznikTakNie from '../komponenty/PrzelacznikTakNie'
 import { pobierzIdBleduPola } from '../komponenty/identyfikatoryPol'
+import { przejdzDoPolaFormularza } from '../komponenty/nawigacjaDoPola'
 import { useBladPola } from '../komponenty/stanBledowPol'
 import SekcjaFormularza from '../komponenty/SekcjaFormularza'
 import { useGeneratorSzczegolow } from '../hooki/useGeneratorSzczegolow'
@@ -320,6 +322,88 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
   const [czyWysuwaniePaneluJakosciWlaczone, ustawCzyWysuwaniePaneluJakosciWlaczone] = useState(pobierzPoczatkoweWysuwaniePaneluJakosci)
   const czyPanelJakosciOdpiety = !czyPanelJakosciPrzypiety
   const przyciskJakosci = useRef<HTMLButtonElement>(null)
+  const obszarSzczegolow = useRef<HTMLElement>(null)
+  const oknoJakosci = useRef<HTMLDialogElement>(null)
+  const [czyMobilnyPanelJakosci, ustawCzyMobilnyPanelJakosci] = useState<boolean | null>(null)
+  const oczekujacePoleJakosci = useRef<Parameters<typeof przejdzDoPolaFormularza> | null>(null)
+  const czyPrzeniescFokusDoPaneluJakosci = useRef(false)
+
+  useLayoutEffect(() => {
+    const obszar = obszarSzczegolow.current
+    if (!obszar) return
+    let czyPierwszyPomiar = true
+    function zmierzDostepneMiejsce() {
+      if (!obszar) return
+      // Szerokość w jednostkach layoutu uwzględnia menu oraz skalę CSS i WebView.
+      const czyMobilny = obszar.clientWidth < 1120
+      ustawCzyMobilnyPanelJakosci(czyMobilny)
+      if (czyPierwszyPomiar && czyMobilny) ustawCzyPanelJakosciOtwarty(false)
+      czyPierwszyPomiar = false
+    }
+    zmierzDostepneMiejsce()
+    const obserwator = new ResizeObserver(zmierzDostepneMiejsce)
+    obserwator.observe(obszar)
+    return () => obserwator.disconnect()
+  }, [])
+
+  useLayoutEffect(() => {
+    if (!czyMobilnyPanelJakosci) return
+    const okno = oknoJakosci.current
+    const widocznyObszar = window.visualViewport
+    function zmierzWidocznyObszar() {
+      if (!okno) return
+      const skala = Number(getComputedStyle(document.documentElement).zoom) || 1
+      okno.style.setProperty('--szerokosc-drawera', `${(widocznyObszar?.width ?? window.innerWidth) / skala}px`)
+      okno.style.setProperty('--wysokosc-drawera', `${(widocznyObszar?.height ?? window.innerHeight) / skala}px`)
+      okno.style.setProperty('--lewa-drawera', `${(widocznyObszar?.offsetLeft ?? 0) / skala}px`)
+      okno.style.setProperty('--gora-drawera', `${(widocznyObszar?.offsetTop ?? 0) / skala}px`)
+    }
+    zmierzWidocznyObszar()
+    widocznyObszar?.addEventListener('resize', zmierzWidocznyObszar)
+    widocznyObszar?.addEventListener('scroll', zmierzWidocznyObszar)
+    window.addEventListener('resize', zmierzWidocznyObszar)
+    window.addEventListener(zdarzenieZmianySkaliInterfejsu, zmierzWidocznyObszar)
+    return () => {
+      widocznyObszar?.removeEventListener('resize', zmierzWidocznyObszar)
+      widocznyObszar?.removeEventListener('scroll', zmierzWidocznyObszar)
+      window.removeEventListener('resize', zmierzWidocznyObszar)
+      window.removeEventListener(zdarzenieZmianySkaliInterfejsu, zmierzWidocznyObszar)
+    }
+  }, [czyMobilnyPanelJakosci])
+
+  useLayoutEffect(() => {
+    const okno = oknoJakosci.current
+    if (!okno || czyMobilnyPanelJakosci === null) return
+    const czyFokusWPanelu = okno.contains(document.activeElement)
+    if (okno.open) okno.close()
+    if (czyPanelJakosciOtwarty) {
+      if (czyMobilnyPanelJakosci) okno.showModal()
+      // Niemodalny panel boczny nie przejmuje fokusu przy starcie ani po najechaniu.
+      else okno.setAttribute('open', '')
+      if (czyMobilnyPanelJakosci || czyPrzeniescFokusDoPaneluJakosci.current || czyFokusWPanelu) {
+        okno.querySelector<HTMLButtonElement>('.szczegoly-panel-jakosci__naglowek button')?.focus({ preventScroll: true })
+      }
+    }
+    czyPrzeniescFokusDoPaneluJakosci.current = false
+    // Zamknięcie natywnego modala usuwa blokadę fokusu przed istniejącą nawigacją RAF.
+    if (oczekujacePoleJakosci.current) {
+      przejdzDoPolaFormularza(...oczekujacePoleJakosci.current)
+      oczekujacePoleJakosci.current = null
+    }
+  }, [czyMobilnyPanelJakosci, czyPanelJakosciOtwarty])
+
+  function zamknijPanelJakosci() {
+    ustawCzyPanelJakosciOtwarty(false)
+    if (!czyMobilnyPanelJakosci) ustawCzyPanelJakosciPrzypiety(false)
+    przyciskJakosci.current?.focus({ preventScroll: true })
+  }
+
+  function przejdzDoProblemuJakosci(...pole: Parameters<typeof przejdzDoPolaFormularza>) {
+    if (czyMobilnyPanelJakosci) {
+      oczekujacePoleJakosci.current = pole
+      ustawCzyPanelJakosciOtwarty(false)
+    } else przejdzDoPolaFormularza(...pole)
+  }
 
   useEffect(() => {
     try {
@@ -353,13 +437,13 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
   }
 
   function otworzPanelJakosciZKrawedzi() {
-    if (czyWysuwaniePaneluJakosciWlaczone) {
+    if (!czyMobilnyPanelJakosci && czyWysuwaniePaneluJakosciWlaczone) {
       otworzPanelJakosci()
     }
   }
 
   function schowajPanelJakosciJesliOdpiety() {
-    if (czyPanelJakosciOdpiety && !document.getElementById(idPaneluJakosci)?.contains(document.activeElement)) {
+    if (!czyMobilnyPanelJakosci && czyPanelJakosciOdpiety && !document.getElementById(idPaneluJakosci)?.contains(document.activeElement)) {
       ustawCzyPanelJakosciOtwarty(false)
     }
   }
@@ -378,10 +462,23 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
   }
 
   function obsluzKlawiszPaneluJakosci(zdarzenie: KeyboardEvent<HTMLElement>) {
-    if (zdarzenie.key === 'Escape' && czyPanelJakosciOdpiety) {
+    if (zdarzenie.key === 'Escape') {
+      zdarzenie.preventDefault()
       zdarzenie.stopPropagation()
-      ustawCzyPanelJakosciOtwarty(false)
-      przyciskJakosci.current?.focus()
+      zamknijPanelJakosci()
+    }
+    if (czyMobilnyPanelJakosci && zdarzenie.key === 'Tab') {
+      const elementy = Array.from(zdarzenie.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled), [tabindex="0"]'))
+        .filter((element) => element.getClientRects().length > 0)
+      const pierwszy = elementy[0]
+      const ostatni = elementy.at(-1)
+      if (zdarzenie.shiftKey && document.activeElement === pierwszy) {
+        zdarzenie.preventDefault()
+        ostatni?.focus()
+      } else if (!zdarzenie.shiftKey && document.activeElement === ostatni) {
+        zdarzenie.preventDefault()
+        pierwszy?.focus()
+      }
     }
   }
 
@@ -574,7 +671,8 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
 
   return (
     <section
-      className={`widok szczegoly-organizacyjne${czyPanelJakosciPrzypiety ? ' szczegoly-organizacyjne--panel-przypiety' : ''}${czyPanelJakosciOtwarty ? ' szczegoly-organizacyjne--panel-otwarty' : ''}`}
+      ref={obszarSzczegolow}
+      className={`widok szczegoly-organizacyjne${czyPanelJakosciPrzypiety ? ' szczegoly-organizacyjne--panel-przypiety' : ''}${czyPanelJakosciOtwarty ? ' szczegoly-organizacyjne--panel-otwarty' : ''}${czyMobilnyPanelJakosci ? ' szczegoly-organizacyjne--panel-mobilny' : ''}`}
     >
       <KontekstZatwierdzania.Provider value={generator.czyTylkoPodglad ? null : { grupy: generator.grupy, zmien: generator.przelaczZatwierdzeniePola }}>
       <DostawcaBledowPol bledyPol={generator.bledyPol}>
@@ -588,8 +686,9 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
             <>
               <button ref={przyciskJakosci} aria-controls={idPaneluJakosci} aria-expanded={czyPanelJakosciOtwarty} type="button" onClick={() => {
                 generator.sprawdzJakosc()
+                czyPrzeniescFokusDoPaneluJakosci.current = true
                 ustawCzyPanelJakosciOtwarty(true)
-                requestAnimationFrame(() => document.getElementById(idPaneluJakosci)?.querySelector<HTMLButtonElement>('button')?.focus())
+                if (czyPanelJakosciOtwarty) oknoJakosci.current?.querySelector<HTMLButtonElement>('.szczegoly-panel-jakosci__naglowek button')?.focus()
               }}>Kontrola jakości</button>
               {generator.daneFormularza.status === 'NIEPEŁNE' && (
                 <button disabled={generator.czyTylkoPodglad} type="button" onClick={generator.zapiszWersje}>
@@ -1133,13 +1232,20 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
       </div>
 
       <div className="szczegoly-panel-jakosci__strefa-aktywacji" onMouseEnter={otworzPanelJakosciZKrawedzi} aria-hidden="true" />
+      <dialog
+        ref={oknoJakosci}
+        id={idPaneluJakosci}
+        className="szczegoly-okno-jakosci"
+        role={czyMobilnyPanelJakosci ? 'dialog' : 'complementary'}
+        aria-modal={czyMobilnyPanelJakosci && czyPanelJakosciOtwarty ? true : undefined}
+        aria-label="Panel kontroli jakosci"
+        onCancel={(zdarzenie) => { zdarzenie.preventDefault(); zamknijPanelJakosci() }}
+        onKeyDown={obsluzKlawiszPaneluJakosci}
+      >
       <aside
         inert={!czyPanelJakosciOtwarty}
-        aria-label="Panel kontroli jakosci"
+        role="presentation"
         className={`szczegoly-panel-jakosci${czyPanelJakosciOtwarty ? ' szczegoly-panel-jakosci--otwarty' : ''}${czyPanelJakosciPrzypiety ? ' szczegoly-panel-jakosci--przypiety' : ''}`}
-        id={idPaneluJakosci}
-        onKeyDown={obsluzKlawiszPaneluJakosci}
-        onMouseEnter={otworzPanelJakosci}
         onMouseLeave={(zdarzenie) => {
           if (!zdarzenie.currentTarget.closest('[data-regulacja-szerokosci]')) schowajPanelJakosciJesliOdpiety()
         }}
@@ -1147,10 +1253,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
         <RegulacjaSzerokosci panel=".szczegoly-panel-jakosci" obszar=".szczegoly-organizacyjne" zmienna="--szerokosc-panelu-jakosci" strona="lewa" minimum={280} maksimum={600} kluczZapisu="ultimatePomagier.panelJakosci.szerokosc" />
         <div className="szczegoly-panel-jakosci__naglowek">
           <h2>Kontrola jakości</h2>
-          <button type="button" onClick={() => {
-            ustawTrybAutoukrywaniaPaneluJakosci(true)
-            przyciskJakosci.current?.focus()
-          }}>Schowaj panel</button>
+          <button type="button" onClick={zamknijPanelJakosci}>Schowaj panel</button>
         </div>
         <div className="szczegoly-panel-jakosci__sterowanie">
           <button aria-label={czyWysuwaniePaneluJakosciWlaczone ? 'Wylacz automatyczne wysuwanie panelu jakosci' : 'Wlacz automatyczne wysuwanie panelu jakosci'} className="szczegoly-panel-jakosci__przycisk" onClick={przelaczWysuwaniePaneluJakosci} title={czyWysuwaniePaneluJakosciWlaczone ? 'Wylacz wysuwanie' : 'Wlacz wysuwanie'} type="button">
@@ -1166,9 +1269,11 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
           ostatniAutosave={generator.ostatniAutosave}
           polaNiepewne={generator.polaNiepewne}
           problemy={generator.problemyWalidacji}
+          przejdzDoPola={przejdzDoProblemuJakosci}
           zaakceptujPolaNiepewne={generator.zaakceptujWszystkiePolaNiepewne}
         />
       </aside>
+      </dialog>
       </DostawcaBledowPol>
       </KontekstZatwierdzania.Provider>
     </section>
