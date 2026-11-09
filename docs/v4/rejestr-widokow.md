@@ -147,8 +147,9 @@ Właściciel pliku obejmuje wszystkie warunki renderowania, stany pusty/błąd/�
 | `src/moduly/dokumenty/generatory/ankiety/WidokAnkiet.tsx` | V4-12 | — | — | 2 |
 | `src/moduly/dokumenty/generatory/checklisty_paczek/CelEtykietyPaczki.tsx` | V4-15 | — | — | 0 |
 | `src/moduly/dokumenty/generatory/checklisty_paczek/PanelEtykietPaczek.tsx` | V4-15 | — | — | 2 |
+| `src/moduly/dokumenty/generatory/checklisty_paczek/PodgladWydrukuPaczki.tsx` | V4-15 | — | — | 0 |
 | `src/moduly/dokumenty/generatory/checklisty_paczek/WeryfikacjaZdjeciaPaczki.tsx` | V4-15 | — | — | 0 |
-| `src/moduly/dokumenty/generatory/checklisty_paczek/WidokChecklistPaczek.tsx` | V4-15 | — | — | 7 |
+| `src/moduly/dokumenty/generatory/checklisty_paczek/WidokChecklistPaczek.tsx` | V4-15 | — | — | 8 |
 | `src/moduly/dokumenty/generatory/dyplomy/WidokDyplomow.tsx` | V4-13 | — | — | 4 |
 | `src/moduly/dokumenty/generatory/karta_na_drzwi/RendererKartyNaDrzwi.tsx` | V4-14 | — | — | 0 |
 | `src/moduly/dokumenty/generatory/karta_na_drzwi/WidokKartNaDrzwi.tsx` | V4-14 | — | — | 3 |

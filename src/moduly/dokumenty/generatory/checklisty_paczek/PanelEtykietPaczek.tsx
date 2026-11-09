@@ -4,6 +4,8 @@ import { oznaczSemantykePdf, zmierzScenePdf } from '../../../../wspolne/dokument
 import { zakodujAdresEtykiety } from './kodQrEtykiety'
 import { celeEtykiety, czyWymiaryEtykietyPoprawne, domyslneWymiaryEtykiety, pobierzEtykietyPaczek, type CelEtykiety, type EtykietaPaczki, type TrybEtykiety, type WymiaryEtykiety } from './modelEtykietyPaczki'
 import type { DaneChecklistyPaczki } from './modelChecklistyPaczki'
+import PodgladWydrukuPaczki from './PodgladWydrukuPaczki'
+import { PanelGeneratoraDokumentu, UkladFormularzaIPodgladu } from '../../wspolne/UkladGeneratoraDokumentu'
 import { pobierzZrodloEtykiety, zarejestrujEksportEtykiet, type DokumentChecklistyPaczki } from './rejestrChecklistPaczek'
 import './panelEtykietPaczek.css'
 
@@ -115,9 +117,9 @@ export default function PanelEtykietPaczek({ dokument, moznaZapisywac, zapisz, o
   const stronaQr = useCallback((obecna: EtykietaPaczki) => moznaTestowacQr && czyProbaQr && obecna.czyPowiazana
     && Object.values(obecna.adresy).every((adres) => new TextEncoder().encode(new URL(adres, window.location.origin).href).length <= 134), [czyProbaQr, moznaTestowacQr])
   // Scena i podgląd korzystają z tego samego drzewa oraz tych samych wymiarów.
-  const podglad = useMemo(() => czyPoprawnyFormat && etykiety.map((obecna) => <div key={obecna.paczkaId}>
+  const podglad = useMemo(() => czyPoprawnyFormat && etykiety.map((obecna) => <div key={obecna.paczkaId} data-wybrana={obecna.paczkaId === etykieta.paczkaId} aria-hidden={obecna.paczkaId !== etykieta.paczkaId}>
     {oznaczSemantykePdf(<Etykieta etykieta={obecna} wymiary={wymiary} tryb={tryb} logo={logo} czyQr={stronaQr(obecna)} />)}
-  </div>), [czyPoprawnyFormat, etykiety, wymiary, tryb, logo, stronaQr])
+  </div>), [czyPoprawnyFormat, etykiety, etykieta.paczkaId, wymiary, tryb, logo, stronaQr])
   function nieMiesciSie(strona: HTMLElement) {
     const stopka = strona.querySelector('footer')?.getBoundingClientRect()
     const granice = strona.getBoundingClientRect()
@@ -165,9 +167,10 @@ export default function PanelEtykietPaczek({ dokument, moznaZapisywac, zapisz, o
   }
 
   const czyMoznaEksportowac = moznaZapisywac && !czyEksport && czyPoprawnyFormat && (!etykieta.logo || Boolean(logo))
-  return <section className="checklista-paczki__karta" aria-label="Etykiety paczek">
-    <h2>Etykiety paczek</h2>
-    <fieldset disabled={czyEksport}>
+  return <section aria-label="Etykiety paczek">
+    <UkladFormularzaIPodgladu className="checklista-paczki__obszar-pracy etykiety-paczek__obszar">
+    <PanelGeneratoraDokumentu wariant="edycja">
+    <fieldset className="etykiety-paczek__konfiguracja" disabled={czyEksport}>
       <legend>Format i druk</legend>
       <label><span id={idPol + '-paczka'}>Paczka</span><select aria-labelledby={idPol + '-paczka'} value={etykieta.paczkaId} onChange={(zdarzenie) => ustawPaczke(zdarzenie.target.value)}>
         {etykiety.map((obecna) => <option key={obecna.paczkaId} value={obecna.paczkaId}>{`${obecna.numer}/${obecna.razem} · ${obecna.nazwaPaczki}`}</option>)}
@@ -186,14 +189,16 @@ export default function PanelEtykietPaczek({ dokument, moznaZapisywac, zapisz, o
       <p>Drukuj PDF w skali 100%. Margines etykiety to 4 mm. Bezpośredni druk termiczny wymaga potwierdzenia drukarki i sterownika.</p>
       {etykieta.czyPowiazana ? <nav className="etykieta-paczki__linki" aria-label="Cele etykiety">{listaCelow.map(([cel, nazwa]) =>
         <a key={cel} href={etykieta.adresy[cel]}>{nazwa}</a>)}</nav> : <p>Powiąż checklistę z istniejącym szkoleniem i grupą, aby udostępnić cele etykiety.</p>}
+    </fieldset>
+    <div className="etykiety-paczek__eksport" role="group" aria-label="Eksport etykiet">
       <button type="button" disabled={!czyMoznaEksportowac || przepelnione.includes(etykieta.paczkaId)} onClick={() => void eksportuj([etykieta])}>Pobierz PDF etykiety</button>
       <button type="button" disabled={!czyMoznaEksportowac || przepelnione.length > 0} onClick={() => void eksportuj(etykiety)}>Pobierz PDF wszystkich etykiet</button>
-    </fieldset>
+    </div>
     {!czyPoprawnyFormat && <p role="alert">Ustaw szerokość 88–220 mm i wysokość 80–320 mm.</p>}
     {przepelnione.length > 0 && czyPoprawnyFormat && <p role="alert">Wybierz wyższy format dla paczek: {etykiety.filter((obecna) => przepelnione.includes(obecna.paczkaId)).map((obecna) => obecna.nazwaPaczki).join(', ')}.</p>}
     {czyProbaQr && etykieta.czyPowiazana && !stronaQr(etykieta) && <p role="alert">Adres przekracza pojemność kodu QR etykiety.</p>}
     {(blad || (tryb === 'termiczny' && termiczneLogo.blad)) && <p role="alert">{blad || termiczneLogo.blad}</p>}
-    <details key={etykieta.paczkaId}>
+    <details className="etykiety-paczek__korekta" key={etykieta.paczkaId} open>
       <summary>Korekta treści do wydruku</summary>
       <fieldset disabled={!moznaZapisywac || czyEksport}><legend>Zmiany tylko na etykiecie</legend>
         <label>Kod szkolenia<input defaultValue={etykieta.kod} onBlur={(zdarzenie) => {
@@ -202,16 +207,19 @@ export default function PanelEtykietPaczek({ dokument, moznaZapisywac, zapisz, o
         <label><span id={idPol + '-uwagi'}>Uwagi etykiety</span><textarea aria-labelledby={idPol + '-uwagi'} defaultValue={etykieta.uwagi} onBlur={(zdarzenie) => {
           if (zdarzenie.target.value !== etykieta.uwagi) zapiszKorekte({ uwagi: zdarzenie.target.value.trim() })
         }} /></label>
-        {etykieta.pozycje.map((pozycja) => <div key={pozycja.id}>
-          <label>Nazwa materiału<input defaultValue={pozycja.nazwa} onBlur={(zdarzenie) => {
+        <div className="etykiety-paczek__tabela"><table aria-label="Korekta materiałów na etykiecie">
+        <thead><tr><th scope="col">Materiał</th><th scope="col">Ilość</th></tr></thead><tbody>
+        {etykieta.pozycje.map((pozycja) => <tr key={pozycja.id}>
+          <td><input aria-label={`Nazwa materiału na etykiecie: ${pozycja.nazwa}`} defaultValue={pozycja.nazwa} onBlur={(zdarzenie) => {
             const nazwa = zdarzenie.target.value.trim()
             if (nazwa && nazwa !== pozycja.nazwa) zapiszKorekte({ pozycje: { ...korekta?.pozycje, [pozycja.id]: { ...korekta?.pozycje?.[pozycja.id], nazwa } } })
-          }} /></label>
-          <label>Ilość na etykiecie<input type="number" min="0" step="1" defaultValue={pozycja.ilosc} onBlur={(zdarzenie) => {
+          }} /></td>
+          <td><input aria-label={`Ilość na etykiecie: ${pozycja.nazwa}`} type="number" min="0" step="1" defaultValue={pozycja.ilosc} onBlur={(zdarzenie) => {
             const ilosc = zdarzenie.target.valueAsNumber
             if (Number.isSafeInteger(ilosc) && ilosc >= 0 && ilosc !== pozycja.ilosc) zapiszKorekte({ pozycje: { ...korekta?.pozycje, [pozycja.id]: { ...korekta?.pozycje?.[pozycja.id], ilosc } } })
-          }} /></label>
-        </div>)}
+          }} /></td>
+        </tr>)}
+        </tbody></table></div>
         {korekta && <button type="button" onClick={() => {
           const pozostale = { ...dokument.daneDokumentu.korektyEtykiet }
           delete pozostale[etykieta.paczkaId]
@@ -231,6 +239,12 @@ export default function PanelEtykietPaczek({ dokument, moznaZapisywac, zapisz, o
       }}>Potwierdź fizyczny wydruk v{ostatniEksport.wersja}</button>}
       <ul>{etykieta.wydruki.map((wpis) => <li key={wpis.id}>{wpis.data} · {wpis.wydrukEtykiety?.czyPotwierdzony ? 'wydruk' : 'PDF'} · v{wpis.wydrukEtykiety?.wersja} · {wpis.wydrukEtykiety?.format} · {wpis.wydrukEtykiety?.tryb}{wpis.wydrukEtykiety?.czyProbaQr ? ' · test QR' : ''}</li>)}</ul>
     </details>
-    <div ref={obszar} className="etykiety-paczek__podglad" aria-label="Podgląd etykiet w wymiarach wydruku">{podglad}</div>
+    </PanelGeneratoraDokumentu>
+    <PanelGeneratoraDokumentu wariant="podglad">
+      <PodgladWydrukuPaczki tytul="Podgląd etykiety" szerokoscMm={wymiary.szerokosc} wysokoscMm={wymiary.wysokosc}>
+        <div ref={obszar} className="etykiety-paczek__podglad" aria-label="Podgląd etykiet w wymiarach wydruku">{podglad}</div>
+      </PodgladWydrukuPaczki>
+    </PanelGeneratoraDokumentu>
+    </UkladFormularzaIPodgladu>
   </section>
 }

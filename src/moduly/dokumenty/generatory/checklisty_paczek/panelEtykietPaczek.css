@@ -1,9 +1,20 @@
 .etykiety-paczek__podglad {
-  display: grid;
-  gap: 1rem;
-  overflow: auto;
-  padding: 0.5rem;
+  position: relative;
 }
+
+/* Pozostałe strony pozostają mierzalne dla istniejącego eksportu zbiorczego. */
+.etykiety-paczek__podglad > [data-wybrana='false'] { position: absolute; left: -100000px; top: 0; }
+.etykiety-paczek__konfiguracja > :is(p, nav, label:has(input[type='checkbox'])) { grid-column: 1 / -1; }
+.etykiety-paczek__konfiguracja label:has(input[type='checkbox']) { display: flex; align-items: center; }
+.etykiety-paczek__konfiguracja p { margin: 0; }
+.etykiety-paczek__eksport { display: flex; flex-wrap: wrap; gap: 8px; margin-block: 12px; }
+.etykiety-paczek__korekta > summary { cursor: pointer; padding-block: 8px; font-weight: 700; }
+.checklista-paczki .etykiety-paczek__korekta fieldset { grid-template-columns: minmax(0, 1fr); padding: 8px; }
+.etykiety-paczek__tabela table { width: 100%; table-layout: fixed; border-collapse: collapse; }
+.etykiety-paczek__tabela th { text-align: left; }
+.etykiety-paczek__tabela th:last-child { width: 80px; }
+.etykiety-paczek__tabela :is(td, th) { padding: 4px; border-bottom: 1px solid var(--checklista-obramowanie); }
+.etykiety-paczek__tabela input { min-height: 34px; padding: 4px 6px; }
 
 .etykieta-paczki {
   box-sizing: border-box;

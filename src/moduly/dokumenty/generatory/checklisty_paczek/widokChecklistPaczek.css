@@ -323,3 +323,93 @@
   .checklista-paczki__szczegoly-pozycji[open] { grid-column: 1 / -1; }
   .checklista-paczki__pola-szczegolow { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* Lokalny układ roboczy checklist i etykiet. */
+.checklista-paczki__naglowek-pracy { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.checklista-paczki__naglowek-pracy > div:first-child { flex: 1 1 60%; min-width: 0; }
+.checklista-paczki__naglowek-pracy h1 { margin-bottom: 4px; }
+.checklista-paczki__naglowek-pracy p { margin-bottom: 0; overflow-wrap: anywhere; }
+.checklista-paczki__naglowek-pracy .checklista-paczki__tryby { flex-basis: 100%; margin-block: 4px 10px; }
+.checklista-paczki__obszar-pracy { grid-template-columns: minmax(650px, 1.2fr) minmax(320px, .8fr); gap: 12px; }
+.checklista-paczki__obszar-pracy > .generator-dokumentu__panel { padding: 12px; }
+.checklista-paczki__obszar-pracy > .generator-dokumentu__panel--podglad { position: sticky; top: 12px; }
+.checklista-paczki__obszar-pracy .checklista-paczki__karta { margin-block: 0 12px; padding: 12px; }
+.checklista-paczki__formularz-danych { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px; }
+.checklista-paczki__formularz-danych > :is(h2, p, details, button) { grid-column: 1 / -1; }
+.checklista-paczki__ustawienia-paczki { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; align-items: end; gap: 8px; padding: 8px; }
+.checklista-paczki__logistyka { margin: 8px; }
+.checklista-paczki__logistyka > summary { cursor: pointer; padding-block: 6px; }
+.checklista-paczki__dodawanie { padding: 8px; align-items: end; }
+.checklista-paczki__dodawanie > label { flex: 1; }
+.checklista-paczki__paczka > summary { min-height: 0; padding: 10px; }
+.checklista-paczki__kategoria-edycji { position: relative; margin: 8px; }
+.checklista-paczki__kategoria-edycji > details > summary { cursor: pointer; padding: 10px 100px 10px 8px; font-weight: 700; background: var(--ui-panel); }
+.checklista-paczki__dodaj-w-kategorii { position: absolute; top: 4px; right: 4px; }
+.checklista-paczki__dodaj-w-kategorii button { min-height: 30px; padding: 3px 8px; }
+.checklista-paczki__przewijanie-tabeli { overflow-x: auto; padding-bottom: 2px; }
+.checklista-paczki__tabela-materialow { border-collapse: collapse; table-layout: fixed; width: 100%; min-width: 620px; }
+.checklista-paczki__tabela-materialow th { text-align: left; padding: 6px 4px; font-weight: 600; }
+.checklista-paczki__tabela-materialow th:nth-child(1) { width: 30px; }
+.checklista-paczki__tabela-materialow th:nth-child(3) { width: 100px; }
+.checklista-paczki__tabela-materialow th:nth-child(4) { width: 88px; }
+.checklista-paczki__tabela-materialow th:nth-child(5) { width: 106px; }
+.checklista-paczki__tabela-materialow th:nth-child(6) { width: 116px; }
+.checklista-paczki__tabela-materialow td { padding: 4px; border-top: 1px solid var(--checklista-obramowanie); vertical-align: middle; }
+.checklista-paczki__material :is(input, button) { min-height: 34px; padding: 4px 6px; }
+.checklista-paczki__material input { min-width: 0; }
+.checklista-paczki__material[data-gotowa='true'] { background: color-mix(in srgb, var(--ui-success) 7%, var(--ui-powierzchnia)); }
+.checklista-paczki__uchwyt { cursor: grab; width: 28px; }
+.checklista-paczki__status-materialu { width: 100%; white-space: normal; }
+.checklista-paczki__status-materialu:disabled { opacity: 1; background: transparent; border-color: transparent; }
+.checklista-paczki__akcje-materialu { white-space: nowrap; }
+.checklista-paczki__menu-materialu { display: inline-block; position: relative; margin-left: 4px; }
+.checklista-paczki__menu-akcje { position: absolute; right: 0; top: 100%; z-index: 3; display: grid; gap: 4px; width: 160px; padding: 6px; border: 1px solid var(--checklista-obramowanie); border-radius: 7px; background: var(--ui-panel); box-shadow: 0 8px 20px rgba(0, 0, 0, .12); }
+.checklista-paczki__menu-akcje button { text-align: left; }
+.checklista-paczki__sygnal { display: block; color: var(--ui-warning); white-space: normal; }
+.checklista-paczki .checklista-paczki__sygnal { min-height: 0; padding: 2px; background: transparent; border: 0; text-align: left; }
+.checklista-paczki__tylko-czytnik { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.checklista-paczki__postep-naglowek { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px; }
+.checklista-paczki__postep-naglowek :is(h3, p) { margin: 0; }
+.checklista-paczki__kompletowanie progress { margin-block: 6px; }
+.checklista-paczki__kompletowanie > .checklista-paczki__wybor-paczki { margin-top: 0; }
+.checklista-paczki__kategoria-kompletowania { margin-block: 8px; }
+.checklista-paczki__kategoria-kompletowania > summary { min-height: 0; padding: 8px; }
+.checklista-paczki__pozycja-kompletowania { grid-template-columns: minmax(110px, 1fr) 90px 150px 140px; align-items: center; gap: 8px; padding: 8px; }
+.checklista-paczki__naglowek-kompletowania { display: grid; grid-template-columns: minmax(110px, 1fr) 90px 150px 140px; gap: 8px; padding: 6px 8px; }
+.checklista-paczki__pozycja-kompletowania h4, .checklista-paczki__pozycja-kompletowania p { margin: 0; }
+.checklista-paczki__wymagane-kompletowanie { display: grid; gap: 4px; text-align: center; }
+.checklista-paczki__liczenie { align-items: end; gap: 4px; }
+.checklista-paczki__liczenie button { min-width: 30px; min-height: 34px; padding: 4px; }
+.checklista-paczki__liczenie input { min-height: 34px; padding: 4px; }
+.checklista-paczki__potwierdzenie-pozycji { grid-column: auto; display: grid; gap: 4px; }
+.checklista-paczki__potwierdzenie-pozycji button { min-height: 32px; padding: 4px; }
+.paczki-podglad { min-width: 0; }
+.paczki-podglad__pasek { display: grid; gap: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--checklista-obramowanie); }
+.paczki-podglad__pasek h2 { margin: 0; font-size: 1.1rem; }
+.paczki-podglad__pasek > div { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.paczki-podglad__pasek button { min-height: 32px; padding: 4px 6px; }
+.paczki-podglad__pasek button[aria-pressed='true'] { border-color: var(--ui-akcent); }
+.paczki-podglad__przewijanie { height: min(68vh, 850px); min-height: 300px; overflow: auto; padding: 8px; background: var(--ui-panel); }
+.paczki-podglad__przewijanie:focus-visible, .checklista-paczki summary:focus-visible { outline: 2px solid var(--ui-akcent); outline-offset: -2px; }
+.paczki-podglad__strona { margin-inline: auto; }
+.paczki-podglad .checklista-paczki__wydruk { width: 210mm; max-width: none; }
+@container (max-width: 1100px) {
+  .checklista-paczki__obszar-pracy { grid-template-columns: minmax(0, 1fr); }
+  .checklista-paczki__obszar-pracy > .generator-dokumentu__panel--podglad { position: static; }
+}
+@container (max-width: 680px) {
+  .checklista-paczki__naglowek-kompletowania { display: none; }
+  .checklista-paczki__wymagane-kompletowanie > span { position: static; width: auto; height: auto; margin: 0; clip-path: none; overflow: visible; }
+  .checklista-paczki__ustawienia-paczki, .checklista-paczki__formularz-danych { grid-template-columns: minmax(0, 1fr); }
+  .checklista-paczki__pozycja-kompletowania { grid-template-columns: minmax(0, 1fr) 140px; }
+  .checklista-paczki__wymagane-kompletowanie { grid-column: 1; grid-row: 2; text-align: left; }
+  .checklista-paczki__liczenie { grid-column: 2; grid-row: 1; }
+  .checklista-paczki__potwierdzenie-pozycji { grid-column: 2; grid-row: 2; }
+  .checklista-paczki__obszar-pracy > .generator-dokumentu__panel { padding: 6px; }
+  .checklista-paczki__obszar-pracy .checklista-paczki__karta { padding: 6px; }
+  .checklista-paczki__pola-szczegolow { grid-template-columns: minmax(0, 1fr); }
+}
+@media print {
+  .paczki-podglad__strona { zoom: 1 !important; }
+  .paczki-podglad__przewijanie { overflow: visible; height: auto; padding: 0; }
+}

@@ -7,13 +7,130 @@ import { PDFDocument } from 'pdf-lib'
 // Playwright może pochodzić z lokalnego środowiska testowego lub pakietu Codex.
 const wymagaj = createRequire(import.meta.url)
 const { chromium } = wymagaj(process.env.POMAGIER_PLAYWRIGHT || 'playwright')
+const opcjePrzegladarki = process.env.POMAGIER_CHROME ? { executablePath: process.env.POMAGIER_CHROME } : { channel: 'chrome' }
 const adres = process.env.POMAGIER_ADRES || 'http://localhost:5173'
 const zdjecieTestowe = { name: 'paczka.png', mimeType: 'image/png', buffer: Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEklEQVR4nGOUWBDAwMDAxAAGAAxSAQw3k/N7AAAAAElFTkSuQmCC', 'base64',
 ) }
 
+test('ergonomia checklist: tabela, klawiatura, przeciąganie, korekty i macierz rozmiarów', { timeout: 180000 }, async () => {
+  const przegladarka = await chromium.launch({ ...opcjePrzegladarki, headless: true })
+  try {
+    const strona = await przegladarka.newPage({ viewport: { width: 1440, height: 900 } })
+    const bledy = []
+    strona.on('pageerror', (blad) => bledy.push(blad.message))
+    await strona.goto(adres + '/dokumenty/checklisty-paczek')
+    await strona.getByRole('button', { name: 'Otwórz demonstrację Architekta', exact: true }).click()
+    await strona.getByLabel('Tytuł szkolenia', { exact: true }).fill('Zarządzanie projektami — warsztaty')
+    await strona.getByLabel('Liczba uczestników', { exact: true }).fill('6')
+    await strona.getByRole('button', { name: 'Zapisz jako roboczą', exact: true }).click()
+    const sciezka = strona.url()
+    const tabela = strona.getByRole('table', { name: 'Materiały: Materiały', exact: true })
+    const pierwsza = tabela.getByRole('textbox').first()
+    await pierwsza.fill('')
+    await pierwsza.pressSequentially('Prezentacje do szkolenia')
+    assert.equal(await pierwsza.inputValue(), 'Prezentacje do szkolenia')
+    assert.equal(await pierwsza.evaluate((pole) => document.activeElement === pole), true)
+    const ilosc = tabela.getByLabel('Ilość wymagana: Prezentacje do szkolenia', { exact: true })
+    await ilosc.fill('8')
+    await ilosc.fill('')
+    assert.equal(await ilosc.inputValue(), '')
+    assert.equal(await ilosc.getAttribute('placeholder'), '6')
+    const szczegoly = tabela.getByRole('button', { name: 'Szczegóły: Prezentacje do szkolenia', exact: true })
+    assert.equal(await szczegoly.getAttribute('aria-expanded'), 'false')
+    await szczegoly.press('Space')
+    await tabela.getByLabel('Notatki wewnętrzne', { exact: true }).first().fill('Zachowaj szczegóły podczas edycji')
+    assert.equal(await szczegoly.getAttribute('aria-expanded'), 'true')
+    await szczegoly.press('Enter')
+    const uchwyt = tabela.getByRole('button', { name: 'Zmień kolejność: Prezentacje do szkolenia', exact: true })
+    await uchwyt.focus()
+    await uchwyt.press('Alt+ArrowDown')
+    assert.equal(await tabela.getByRole('textbox').nth(1).inputValue(), 'Prezentacje do szkolenia')
+    assert.equal(await uchwyt.evaluate((pole) => document.activeElement === pole), true)
+    await uchwyt.dragTo(tabela.getByRole('button', { name: 'Zmień kolejność: Materiały dodatkowe', exact: true }))
+    assert.equal(await tabela.getByRole('textbox').nth(2).inputValue(), 'Prezentacje do szkolenia')
+    await strona.getByRole('button', { name: 'Dodaj materiał: Teczki', exact: true }).click()
+    await strona.getByLabel('Nowa pozycja w kategorii Teczki', { exact: true }).fill('Dodatkowa teczka')
+    await strona.getByLabel('Nowa pozycja w kategorii Teczki', { exact: true }).press('Enter')
+    const teczki = strona.getByRole('table', { name: 'Materiały: Teczki', exact: true })
+    assert.equal(await teczki.getByRole('textbox').count(), 2)
+    await teczki.getByRole('button', { name: 'Akcje: Dodatkowa teczka', exact: true }).click()
+    await teczki.getByRole('button', { name: 'Usuń: Dodatkowa teczka', exact: true }).click()
+    assert.equal(await teczki.getByRole('textbox').count(), 1)
+    await strona.getByRole('button', { name: 'Zapisz jako roboczą', exact: true }).click()
+    await strona.reload()
+    assert.equal(strona.url(), sciezka)
+    assert.equal(await tabela.getByRole('textbox').nth(2).inputValue(), 'Prezentacje do szkolenia')
+    await strona.getByRole('button', { name: 'Etykiety paczek', exact: true }).click()
+    const korekta = strona.getByRole('table', { name: 'Korekta materiałów na etykiecie', exact: true })
+    const nazwaEtykiety = korekta.getByRole('textbox').first()
+    const nazwaZrodla = await nazwaEtykiety.inputValue()
+    await nazwaEtykiety.fill('Treść tylko na etykiecie')
+    await nazwaEtykiety.press('Tab')
+    await korekta.getByRole('spinbutton').first().fill('9')
+    await korekta.getByRole('spinbutton').first().press('Tab')
+    await strona.getByRole('button', { name: 'Edycja checklisty', exact: true }).click()
+    assert.equal(await strona.getByRole('textbox', { name: 'Materiał lub element', exact: true }).first().inputValue(), nazwaZrodla)
+    await strona.getByRole('button', { name: 'Etykiety paczek', exact: true }).click()
+    assert.equal(await korekta.getByRole('textbox').first().inputValue(), 'Treść tylko na etykiecie')
+    assert.equal(await korekta.getByRole('spinbutton').first().inputValue(), '9')
+    await strona.getByRole('button', { name: 'Cała strona', exact: true }).click()
+    await strona.getByRole('button', { name: 'Powiększ: Podgląd etykiety', exact: true }).click()
+    await strona.getByRole('button', { name: 'Pomniejsz: Podgląd etykiety', exact: true }).click()
+
+    const wyniki = []
+    await mkdir('tmp/checklisty-ux', { recursive: true })
+    for (const [szerokosc, wysokosc] of [[1920,1080], [1440,900], [1366,768], [1280,720], [1024,768], [768,1024], [390,844]]) {
+      await strona.setViewportSize({ width: szerokosc, height: wysokosc })
+      for (const skala of [75,85,100,125,150]) {
+        await strona.evaluate(async (skala) => {
+          const { zastosujSkaleInterfejsu } = await import('/src/aplikacja/ustawienia/skalaInterfejsu.ts')
+          await zastosujSkaleInterfejsu(Math.min(skala, 125))
+          // Aplikacja ogranicza skalę do 130%; 150% sprawdzamy jako symulację CSS zoom.
+          if (skala === 150) {
+            document.documentElement.style.setProperty('--ui-skala-przegladarki', '1.5')
+            document.documentElement.style.setProperty('--ui-skala-interfejsu', '1.5')
+          }
+        }, skala)
+        for (const [etap, przycisk] of [['edycja', 'Edycja checklisty'], ['kompletowanie', 'Kompletowanie paczki'], ['etykiety', 'Etykiety paczek']]) {
+          await strona.getByRole('button', { name: przycisk, exact: true }).click()
+          await strona.locator('.checklista-paczki > header').evaluate((element) => element.scrollIntoView({ block: 'start' }))
+          await strona.getByRole('button', { name: etap === 'etykiety' ? 'Cała strona' : 'Do szerokości', exact: true }).click()
+          await strona.waitForTimeout(80)
+          const geometria = await strona.locator('.checklista-paczki').evaluate((element) => ({
+            szerokosc: element.clientWidth, przewijanie: element.scrollWidth,
+            szerokoscStrony: document.documentElement.clientWidth, przewijanieStrony: document.documentElement.scrollWidth,
+          }))
+          assert.ok(geometria.przewijanie <= geometria.szerokosc + 2, `${etap}: ${szerokosc}px, ${skala}% — przepełnienie modułu ${JSON.stringify(geometria)}`)
+          if (geometria.przewijanieStrony > geometria.szerokoscStrony + 2) {
+            geometria.przewijanieSamejPowloki = await strona.locator('.checklista-paczki').evaluate((element) => {
+              const poprzedni = element.style.display
+              element.style.display = 'none'
+              const szerokosc = document.documentElement.scrollWidth
+              element.style.display = poprzedni
+              return szerokosc
+            })
+            assert.ok(geometria.przewijanieStrony <= geometria.przewijanieSamejPowloki + 2, `${etap}: moduł poszerza całą stronę ${JSON.stringify(geometria)}`)
+          }
+          const etykieta = strona.locator('[data-wybrana="true"] [data-etykieta]')
+          if (etap === 'etykiety') {
+            const proporcje = await etykieta.evaluate((element) => { const granice = element.getBoundingClientRect(); return granice.width / granice.height })
+            assert.ok(Math.abs(proporcje - 2 / 3) < .005)
+          }
+          const zrzut = `tmp/checklisty-ux/${szerokosc}-${skala}-${etap}.png`
+          await strona.screenshot({ path: zrzut })
+          wyniki.push({ szerokosc, wysokosc, skala, etap, ...geometria, zrzut })
+        }
+      }
+    }
+    await writeFile('tmp/checklisty-ux/wyniki.json', JSON.stringify(wyniki, null, 2))
+    assert.equal(wyniki.length, 105)
+    assert.deepEqual(bledy, [])
+  } finally { await przegladarka.close() }
+})
+
 test('etykiety: format PDF, trzy paczki, trzy cele, logowanie i ponowny druk', { timeout: 120000 }, async () => {
-  const przegladarka = await chromium.launch({ channel: 'chrome', headless: true })
+  const przegladarka = await chromium.launch({ ...opcjePrzegladarki, headless: true })
   try {
     const strona = await przegladarka.newPage({ acceptDownloads: true, viewport: { width: 1366, height: 950 } })
     strona.setDefaultTimeout(12000)
@@ -91,7 +208,7 @@ test('etykiety: format PDF, trzy paczki, trzy cele, logowanie i ponowny druk', {
     await panel.getByLabel('Szerokość (mm)', { exact: true }).fill('125')
     await panel.getByLabel('Wysokość (mm)', { exact: true }).fill('90')
     await pobierzPdf('Pobierz PDF etykiety', 125, 90, 1)
-    await panel.getByText('Korekta treści do wydruku', { exact: true }).click()
+    if (!await panel.locator('.etykiety-paczek__korekta').getAttribute('open').then((wartosc) => wartosc !== null)) await panel.getByText('Korekta treści do wydruku', { exact: true }).click()
     await panel.getByLabel('Kod szkolenia', { exact: true }).fill('POZ-311')
     await panel.getByLabel('Kod szkolenia', { exact: true }).press('Tab')
     await panel.getByRole('alert').filter({ hasText: 'Nieaktualna etykieta' }).waitFor()
@@ -146,7 +263,7 @@ test('etykiety: format PDF, trzy paczki, trzy cele, logowanie i ponowny druk', {
 })
 
 test('checklisty: bezpośrednie wejście przy quota zachowuje formularz, shell i istniejący dokument', { timeout: 30000 }, async () => {
-  const przegladarka = await chromium.launch({ channel: 'chrome', headless: true })
+  const przegladarka = await chromium.launch({ ...opcjePrzegladarki, headless: true })
   try {
     const kontekst = await przegladarka.newContext()
     const strona = await kontekst.newPage()
@@ -182,7 +299,7 @@ test('checklisty: bezpośrednie wejście przy quota zachowuje formularz, shell i
 })
 
 test('checklisty: routing, formularz, zapis, stare dane, eksport i izolacja awarii', { timeout: 180000 }, async () => {
-  const przegladarka = await chromium.launch({ channel: 'chrome', headless: true })
+  const przegladarka = await chromium.launch({ ...opcjePrzegladarki, headless: true })
   try {
     const kontekst = await przegladarka.newContext({ acceptDownloads: true, viewport: { width: 1440, height: 1000 } })
     const strona = await kontekst.newPage()
@@ -202,6 +319,7 @@ test('checklisty: routing, formularz, zapis, stare dane, eksport i izolacja awar
     await strona.getByLabel('Tytuł szkolenia', { exact: true }).fill('Test regresji checklisty')
     await strona.getByLabel('Liczba uczestników', { exact: true }).fill('12')
     await strona.getByLabel('Odbiorca', { exact: true }).fill('Odbiorca testowy')
+    await strona.getByText('Parametry logistyczne', { exact: true }).click()
     await strona.getByLabel('przewoznik', { exact: true }).fill('Kurier testowy')
     await strona.getByLabel('numerPrzesylki', { exact: true }).fill('TEST-123')
     await strona.getByLabel('Nowa pozycja', { exact: true }).fill('Pozycja testowa')
@@ -209,6 +327,7 @@ test('checklisty: routing, formularz, zapis, stare dane, eksport i izolacja awar
     const polaPozycji = strona.getByRole('textbox', { name: 'Materiał lub element', exact: true })
     await strona.locator('input[value="Pozycja testowa"]').fill('Pozycja po edycji')
     assert.equal(await polaPozycji.count(), 12)
+    await strona.getByRole('button', { name: 'Akcje: Pozycja po edycji', exact: true }).click()
     await strona.getByRole('button', { name: 'Usuń: Pozycja po edycji', exact: true }).click()
     assert.equal(await strona.getByRole('button', { name: 'Usuń: Pozycja po edycji', exact: true }).count(), 0)
     await strona.getByRole('button', { name: 'Zapisz jako roboczą', exact: true }).click()
@@ -324,7 +443,7 @@ test('checklisty: routing, formularz, zapis, stare dane, eksport i izolacja awar
 
 
 test('1.2.3: kompletowanie 30 egzemplarzy, dwie paczki, ponowienie zapisu, Pulpit i niezmieniony wydruk', { timeout: 120000 }, async () => {
-  const przegladarka = await chromium.launch({ channel: 'chrome', headless: true })
+  const przegladarka = await chromium.launch({ ...opcjePrzegladarki, headless: true })
   try {
     const strona = await przegladarka.newPage({ acceptDownloads: true, viewport: { width: 1440, height: 1000 } })
     const bledy = []
@@ -375,6 +494,7 @@ test('1.2.3: kompletowanie 30 egzemplarzy, dwie paczki, ponowienie zapisu, Pulpi
       assert.equal(await panel.getByRole('button', { name: 'Oznacz paczkę jako gotową', exact: true }).isDisabled(), true)
       if (wartosc !== '30') assert.match(await pozycja.innerText(), new RegExp(`Brakuje ${30 - Number(wartosc)} egz`))
     }
+    await pozycja.getByText('Szczegóły dyspozycji', { exact: true }).click()
     await pozycja.getByRole('button', { name: 'Potwierdź ilość: 30', exact: true }).click()
     assert.equal(await potwierdzenie.isEnabled(), true)
     await potwierdzenie.click()
@@ -532,7 +652,7 @@ test('1.2.3: kompletowanie 30 egzemplarzy, dwie paczki, ponowienie zapisu, Pulpi
 })
 
 test('checklisty: pisanie nie zapisuje rejestru co znak, podpowiedzi zachowują własne wartości', { timeout: 60000 }, async () => {
-  const przegladarka = await chromium.launch({ channel: 'chrome', headless: true })
+  const przegladarka = await chromium.launch({ ...opcjePrzegladarki, headless: true })
   try {
     const strona = await przegladarka.newPage()
     await strona.goto(adres + '/dokumenty/checklisty-paczek')

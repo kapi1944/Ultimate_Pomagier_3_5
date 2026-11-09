@@ -1,0 +1,93 @@
+{
+  "liczbaKontroli": 105,
+  "liczbaEtapow": 3,
+  "rozmiary": [
+    "2430x1080",
+    "2129x1080",
+    "1790x1080",
+    "1406x1080",
+    "1150x1080",
+    "1805x900",
+    "1579x900",
+    "1325x900",
+    "1037x900",
+    "845x900",
+    "1708x768",
+    "1494x768",
+    "1253x768",
+    "980x768",
+    "798x768",
+    "1595x720",
+    "1394x720",
+    "1168x720",
+    "912x720",
+    "741x720",
+    "1093x768",
+    "912x768",
+    "707x768",
+    "571x768",
+    "912x1024",
+    "792x1024",
+    "656x1024",
+    "502x1024",
+    "400x1024",
+    "488x844",
+    "427x844",
+    "358x844",
+    "288x844"
+  ],
+  "skale": [
+    75,
+    85,
+    100,
+    125,
+    150
+  ],
+  "uwagaSkala150": "Symulacja CSS zoom; natywny zakres aplikacji do 130%",
+  "przepelnieniaModulu": [],
+  "ograniczeniaPowloki": [
+    {
+      "skala": 125,
+      "etap": "edycja",
+      "szerokoscOkna": 390,
+      "szerokoscStrony": 400,
+      "samaPowloka": 400
+    },
+    {
+      "skala": 125,
+      "etap": "kompletowanie",
+      "szerokoscOkna": 390,
+      "szerokoscStrony": 400,
+      "samaPowloka": 400
+    },
+    {
+      "skala": 125,
+      "etap": "etykiety",
+      "szerokoscOkna": 390,
+      "szerokoscStrony": 400,
+      "samaPowloka": 400
+    },
+    {
+      "skala": 150,
+      "etap": "edycja",
+      "szerokoscOkna": 390,
+      "szerokoscStrony": 480,
+      "samaPowloka": 480
+    },
+    {
+      "skala": 150,
+      "etap": "kompletowanie",
+      "szerokoscOkna": 390,
+      "szerokoscStrony": 480,
+      "samaPowloka": 480
+    },
+    {
+      "skala": 150,
+      "etap": "etykiety",
+      "szerokoscOkna": 390,
+      "szerokoscStrony": 480,
+      "samaPowloka": 480
+    }
+  ],
+  "wynik": "PASS"
+}
