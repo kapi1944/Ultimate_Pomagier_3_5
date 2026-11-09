@@ -94,7 +94,12 @@ test('logo i szerokości paneli: przeciąganie, zapis, klawiatura i responsywno�
       await strona.setViewportSize({ width: szerokoscOkna, height: 768 })
       await strona.waitForTimeout(300)
       const obszar = await strona.locator('.szczegoly-obszar-roboczy').boundingBox()
-      assert.ok(obszar.x + obszar.width <= (await jakosc.boundingBox()).x + 1)
+      // UX-2: przy 900 px panel jest modalnym drawerem, a formularz zachowuje szerokość.
+      if (szerokoscOkna === 900) {
+        assert.equal(await strona.locator('.szczegoly-okno-jakosci').evaluate((element) => element.matches(':modal')), true)
+        await jakosc.getByRole('button', { name: 'Schowaj panel', exact: true }).click()
+        assert.equal((await strona.locator('.szczegoly-obszar-roboczy').boundingBox()).width, obszar.width)
+      } else assert.ok(obszar.x + obszar.width <= (await jakosc.boundingBox()).x + 1)
     }
   } finally {
     await przegladarka.close()
