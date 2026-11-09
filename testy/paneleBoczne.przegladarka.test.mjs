@@ -28,11 +28,15 @@ test('logo i szerokości paneli: przeciąganie, zapis, klawiatura i responsywno�
       await strona.mouse.move(prostokat.x + prostokat.width / 2 + roznica, prostokat.y + 60, { steps: 12 })
       await strona.mouse.up()
     }
+    const szerokoscPoczatkowaMenu = (await menu.boundingBox()).width
+    const skalaMenu = await strona.evaluate(() => Number(getComputedStyle(document.documentElement).getPropertyValue('--ui-skala-przegladarki')) || 1)
     await przeciagnij(menu, 80)
-    assert.ok(Math.abs((await menu.boundingBox()).width - 360) < 2)
-    assert.equal(await strona.evaluate(() => JSON.parse(localStorage.getItem('ultimatePomagier.ustawieniaAplikacji.v1')).nawigacja.szerokoscMenu), 360)
+    const szerokoscPoPrzeciagnieciuMenu = (await menu.boundingBox()).width
+    assert.ok(Math.abs(szerokoscPoPrzeciagnieciuMenu - szerokoscPoczatkowaMenu - 80) < 2)
+    const zapisanaSzerokoscMenu = Math.round(szerokoscPoPrzeciagnieciuMenu / skalaMenu)
+    assert.equal(await strona.evaluate(() => JSON.parse(localStorage.getItem('ultimatePomagier.ustawieniaAplikacji.v1')).nawigacja.szerokoscMenu), zapisanaSzerokoscMenu)
     await strona.reload()
-    assert.ok(Math.abs((await menu.boundingBox()).width - 360) < 2)
+    assert.ok(Math.abs((await menu.boundingBox()).width - szerokoscPoPrzeciagnieciuMenu) < 2)
     await strona.getByRole('button', { name: 'Ustawienia programu', exact: true }).click()
     const panel = strona.locator('.generator-panel-ustawien')
     await panel.getByTitle('Przypnij panel ustawień').click()
@@ -41,10 +45,10 @@ test('logo i szerokości paneli: przeciąganie, zapis, klawiatura i responsywno�
     await przeciagnij(panel, -60)
     assert.ok((await panel.boundingBox()).width > przed + 50)
     const zapisana = await strona.evaluate(() => localStorage.getItem('ultimatePomagier.panel.panel-ustawien-programu-szkolenia.szerokosc'))
-    assert.equal(Number(zapisana), Math.round(przed + 60))
+    assert.equal(Number(zapisana), Math.round((przed + 60) / skalaMenu))
     await strona.reload()
     await strona.waitForTimeout(300)
-    assert.ok(Math.abs((await panel.boundingBox()).width - Number(zapisana)) < 2)
+    assert.ok(Math.abs((await panel.boundingBox()).width - Number(zapisana) * skalaMenu) < 2)
 
     for (const rozmiar of [{ width: 1920, height: 1080 }, { width: 1366, height: 768 }, { width: 900, height: 768 }]) {
       await strona.setViewportSize(rozmiar)
@@ -64,7 +68,7 @@ test('logo i szerokości paneli: przeciąganie, zapis, klawiatura i responsywno�
     await menu.getByRole('separator').focus()
     await strona.keyboard.press('Home')
     await strona.waitForTimeout(300)
-    assert.ok(Math.abs((await menu.boundingBox()).width - 190) < 2)
+    assert.ok(Math.abs((await menu.boundingBox()).width - 190 * skalaMenu) < 2)
     await strona.getByRole('button', { name: 'Odepnij Menu', exact: false }).click()
     await strona.mouse.move(700, 100)
     await strona.locator('.generator-z-panelem__tresc').click({ position: { x: 10, y: 10 } })
@@ -85,7 +89,7 @@ test('logo i szerokości paneli: przeciąganie, zapis, klawiatura i responsywno�
     const zapisJakosci = await strona.evaluate(() => localStorage.getItem('ultimatePomagier.panelJakosci.szerokosc'))
     await strona.reload()
     await strona.waitForTimeout(300)
-    assert.ok(Math.abs((await jakosc.boundingBox()).width - Number(zapisJakosci)) < 2)
+    assert.ok(Math.abs((await jakosc.boundingBox()).width - Number(zapisJakosci) * skalaMenu) < 2)
     for (const szerokoscOkna of [1366, 900]) {
       await strona.setViewportSize({ width: szerokoscOkna, height: 768 })
       await strona.waitForTimeout(300)
