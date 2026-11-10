@@ -6,6 +6,42 @@ const wymagaj = createRequire(import.meta.url)
 const { chromium } = wymagaj(process.env.POMAGIER_PLAYWRIGHT || 'playwright')
 const adres = process.env.POMAGIER_ADRES || 'http://127.0.0.1:5173'
 
+test('menu: piksele ekranowe, granice i trwały zapis przy skalach 75–130%', { timeout: 90000 }, async () => {
+  const przegladarka = await chromium.launch({ channel: 'chrome', headless: true })
+  try {
+    const strona = await przegladarka.newPage({ viewport: { width: 1920, height: 1080 }, reducedMotion: 'reduce' })
+    await strona.goto(adres)
+    await strona.getByRole('button', { name: 'Otwórz demonstrację Architekta', exact: true }).click()
+    await strona.locator('.menu-boczne').hover()
+    await strona.getByRole('button', { name: 'Przypnij Menu', exact: false }).click()
+    const menu = strona.locator('.menu-boczne')
+    const uchwyt = menu.getByRole('separator')
+    for (const skala of [75, 85, 100, 130]) {
+      assert.equal(await strona.evaluate(async (wartosc) => {
+        const { pobierzUstawieniaAplikacji, zapiszUstawieniaAplikacji } = await import('/src/aplikacja/ustawienia/magazynUstawienAplikacji.ts')
+        const ustawienia = pobierzUstawieniaAplikacji()
+        return zapiszUstawieniaAplikacji({ ...ustawienia, wyglad: { ...ustawienia.wyglad, skalaInterfejsu: wartosc } })
+      }, skala), true)
+      await uchwyt.press('Home')
+      assert.ok(Math.abs((await menu.boundingBox()).width - 190 * skala / 100) < 2)
+      const prostokat = await uchwyt.boundingBox()
+      await strona.mouse.move(prostokat.x + prostokat.width / 2, prostokat.y + 60)
+      await strona.mouse.down()
+      await strona.mouse.move(prostokat.x + prostokat.width / 2 + 80, prostokat.y + 60, { steps: 12 })
+      await strona.mouse.up()
+      const oczekiwana = Math.round(190 + 80 / (skala / 100))
+      assert.equal(await strona.evaluate(() => JSON.parse(localStorage.getItem('ultimatePomagier.ustawieniaAplikacji.v1')).nawigacja.szerokoscMenu), oczekiwana)
+      assert.ok(Math.abs((await menu.boundingBox()).width - oczekiwana * skala / 100) < 2)
+      await strona.reload()
+      await strona.waitForFunction((wartosc) => Number(getComputedStyle(document.documentElement).zoom) === wartosc / 100, skala)
+      assert.ok(Math.abs((await menu.boundingBox()).width - oczekiwana * skala / 100) < 2)
+      await uchwyt.press('End')
+      assert.ok(Math.abs((await menu.boundingBox()).width - 420 * skala / 100) < 2)
+      assert.equal(await strona.evaluate(() => JSON.parse(localStorage.getItem('ultimatePomagier.ustawieniaAplikacji.v1')).nawigacja.szerokoscMenu), 420)
+    }
+  } finally { await przegladarka.close() }
+})
+
 test('logo i szerokości paneli: przeciąganie, zapis, klawiatura i responsywność', { timeout: 90000 }, async () => {
   const przegladarka = await chromium.launch({ channel: 'chrome', headless: true })
   try {
