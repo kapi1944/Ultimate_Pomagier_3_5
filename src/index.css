@@ -121,7 +121,10 @@ body {
 }
 
 @media screen {
-  body { min-height: calc(100vh / var(--ui-skala-przegladarki, 1)); }
+  body {
+    min-width: min(320px, calc(320px / var(--ui-skala-przegladarki, 1)));
+    min-height: calc(100vh / var(--ui-skala-przegladarki, 1));
+  }
 }
 
 button,

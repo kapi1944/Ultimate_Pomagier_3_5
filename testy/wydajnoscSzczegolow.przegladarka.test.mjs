@@ -119,9 +119,9 @@ test('UX-2: dostępne miejsce, menu, skale, zmiana trybu i niezależne kolumny',
     const panel = strona.locator('.szczegoly-panel-jakosci')
     const zamknij = panel.getByRole('button', { name: 'Schowaj panel', exact: true })
     mkdirSync('tmp/ux-2', { recursive: true })
-    for (const szerokosc of [390, 430, 768, 1000, 1440, 1920, 390]) {
+    for (const szerokosc of [390, 430, 768, 900, 1000, 1440, 1920, 390]) {
       await strona.setViewportSize({ width: szerokosc, height: 960 })
-      for (const skala of [75, 85, 100]) {
+      for (const skala of [75, 85, 100, 130]) {
         await strona.evaluate(async (wartosc) => (await import('/src/aplikacja/ustawienia/skalaInterfejsu.ts')).zastosujSkaleInterfejsu(wartosc), skala)
         // Otwarte, przypięte menu ogranicza rzeczywisty obszar pracy.
         const otworzMenu = strona.getByRole('button', { name: 'Otwórz menu', exact: true })
@@ -195,6 +195,32 @@ test('UX-2: dostępne miejsce, menu, skale, zmiana trybu i niezależne kolumny',
     }
     await zamknij.click()
     assert.equal(await strona.locator('dialog:modal').count(), 0)
+  } finally { await przegladarka.close() }
+})
+
+test('powłoka: minimalna szerokość uwzględnia skalę w generatorach i Szczegółach', { timeout: 90000 }, async () => {
+  const przegladarka = await uruchomPrzegladarke()
+  try {
+    const strona = await przegladarka.newPage({ viewport: { width: 390, height: 960 }, reducedMotion: 'reduce' })
+    await strona.goto(adres)
+    await strona.getByRole('button', { name: 'Otwórz demonstrację Architekta', exact: true }).click()
+    for (const sciezka of ['/dokumenty/programy-szkolen', '/dokumenty/checklisty-paczek', '/szkolenia-zamkniete/szczegoly-organizacyjne/nowe']) {
+      await strona.goto(adres + sciezka)
+      await strona.locator('main input').first().waitFor()
+      for (const szerokosc of [390, 430, 1440, 1920]) {
+        await strona.setViewportSize({ width: szerokosc, height: 960 })
+        for (const skala of [75, 85, 100, 130]) {
+          await strona.evaluate(async (wartosc) => (await import('/src/aplikacja/ustawienia/skalaInterfejsu.ts')).zastosujSkaleInterfejsu(wartosc), skala)
+          const wymiary = await strona.evaluate(() => ({ szerokosc: document.documentElement.scrollWidth, minimum: parseFloat(getComputedStyle(document.body).minWidth) }))
+          assert.ok(wymiary.szerokosc <= szerokosc + 1, `${sciezka}: ${szerokosc}px / ${skala}%`)
+          assert.ok(Math.abs(wymiary.minimum - Math.min(320, 320 / (skala / 100))) < 1)
+          assert.equal(await strona.locator('main input').first().isVisible(), true)
+        }
+      }
+      await strona.emulateMedia({ media: 'print' })
+      assert.equal(await strona.evaluate(() => getComputedStyle(document.body).minWidth), '320px')
+      await strona.emulateMedia({ media: 'screen' })
+    }
   } finally { await przegladarka.close() }
 })
 

@@ -1661,6 +1661,10 @@ button.szczegoly-checklista__naglowek:hover {
     column-gap: 0;
     transition: none;
   }
+  .szczegoly-organizacyjne--panel-mobilny .szczegoly-sticky {
+    max-height: calc(var(--ui-wysokosc-obszaru, 100dvh) / 2);
+    overflow-y: auto;
+  }
   .szczegoly-organizacyjne--panel-mobilny .szczegoly-panel-jakosci__strefa-aktywacji,
   .szczegoly-organizacyjne--panel-mobilny .szczegoly-panel-jakosci__sterowanie,
   .szczegoly-organizacyjne--panel-mobilny .regulacja-szerokosci {
