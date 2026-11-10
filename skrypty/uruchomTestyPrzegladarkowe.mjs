@@ -4,7 +4,7 @@ import { createServer } from 'vite'
 const serwery = []
 try {
   async function uruchomSerwer(tryb) {
-    const serwer = await createServer({ mode: tryb, server: { host: '127.0.0.1', port: tryb === 'development' ? 47831 : 5173, strictPort: true, open: false }, logLevel: 'error' })
+    const serwer = await createServer({ mode: tryb, server: { host: '127.0.0.1', port: tryb === 'development' ? 47831 : 5173, strictPort: false, open: false }, logLevel: 'error' })
     serwery.push(serwer)
     await serwer.listen()
     const adres = serwer.httpServer.address()

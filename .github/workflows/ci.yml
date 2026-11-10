@@ -24,7 +24,7 @@ jobs:
       - name: Testy
         run: npm test
       - name: Testy przeglądarkowe w zainstalowanym Chrome
-        run: npm run test:e2e -- --test-concurrency=1 testy/importMailaSzczegolow.przegladarka.test.mjs testy/wydajnoscSzczegolow.przegladarka.test.mjs testy/podgladSzczegolow.przegladarka.test.mjs testy/checklistyPaczek.przegladarka.test.mjs testy/backupMigracjiE4.przegladarka.test.mjs
+        run: npm run test:e2e -- --test-concurrency=1 testy/paneleBoczne.przegladarka.test.mjs testy/importMailaSzczegolow.przegladarka.test.mjs testy/wydajnoscSzczegolow.przegladarka.test.mjs testy/podgladSzczegolow.przegladarka.test.mjs testy/checklistyPaczek.przegladarka.test.mjs testy/backupMigracjiE4.przegladarka.test.mjs
       - name: Testy magazynu danych i bramy E4
         run: node --test testy/magazynWspolnychDanych.test.mjs testy/bramaHttps.test.mjs
       - name: Testy konfiguracji desktopowej
