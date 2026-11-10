@@ -10,6 +10,8 @@ test('kopia E4 zachowuje dane i zdjęcia, odrzuca zmiany i analizuje plik bez za
   const przegladarka = await chromium.launch({ channel: 'chrome', headless: true })
   try {
     const strona = await przegladarka.newPage()
+    await strona.addInitScript((wersja) => { globalThis.__INFORMACJE_O_WERSJI__ = { wersja } }, wymagaj('../package.json').version)
+    await strona.route(new URL('/', adres).href, (trasa) => trasa.fulfill({ contentType: 'text/html', body: '<!doctype html><html><head></head><body></body></html>' }))
     await strona.goto(adres)
     const wynik = await strona.evaluate(async () => {
       const { utworzBackupMigracjiE4, sprawdzBackupMigracjiE4 } = await import('/src/wspolne/dane/backupMigracjiE4.ts')
