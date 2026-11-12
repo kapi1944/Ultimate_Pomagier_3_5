@@ -1,35 +1,40 @@
-import type { ChangeEvent } from 'react'
+import { useState, type ChangeEvent } from 'react'
 import type { LokalizacjaMapy } from '../modele/zakupy'
-import { typyLokalizacji } from '../logika/mapaMagazynu'
+import { pobierzSciezkeLokalizacji, typyLokalizacji } from '../logika/mapaMagazynu'
+import SelektorLokalizacji from './SelektorLokalizacji'
 
-export default function EdytorLokalizacji({ lokalizacja, lokalizacje, zmien, wczytajZdjecie, czyWczytywanie }: {
+export default function EdytorLokalizacji({ lokalizacja, lokalizacje, zmien, wczytajZdjecie, czyWczytywanie, ustawNiezapisanePola }: {
   lokalizacja: LokalizacjaMapy
   lokalizacje: LokalizacjaMapy[]
-  zmien: (lokalizacja: LokalizacjaMapy) => void
+  zmien: (lokalizacja: LokalizacjaMapy) => boolean
+  ustawNiezapisanePola: (wartosc: boolean) => void
   wczytajZdjecie: (zdarzenie: ChangeEvent<HTMLInputElement>) => void
   czyWczytywanie: boolean
 }) {
-  const poziom = typyLokalizacji.findIndex(({ typ }) => typ === lokalizacja.typ)
+  const [pola, ustawPola] = useState({ kod: lokalizacja.kod, nazwa: lokalizacja.nazwa, typ: lokalizacja.typ, nadrzednaLokalizacjaId: lokalizacja.nadrzednaLokalizacjaId, kolejnosc: lokalizacja.kolejnosc, opis: lokalizacja.opis, czyAktywna: lokalizacja.czyAktywna })
+  function zmienPola(nowe: typeof pola) { ustawPola(nowe); ustawNiezapisanePola(true) }
   return <fieldset className="mapa-magazynu__formularz" disabled={czyWczytywanie}>
     <legend>Edycja lokalizacji</legend>
-    <label>Kod<input value={lokalizacja.kod} onChange={(zdarzenie) => zmien({ ...lokalizacja, kod: zdarzenie.target.value })} /></label>
-    <label>Nazwa<input value={lokalizacja.nazwa} onChange={(zdarzenie) => zmien({ ...lokalizacja, nazwa: zdarzenie.target.value })} /></label>
-    <label>Typ<select value={lokalizacja.typ} onChange={(zdarzenie) => {
-      const wybrany = typyLokalizacji.find(({ typ }) => typ === zdarzenie.target.value)
-      if (wybrany) zmien({ ...lokalizacja, typ: wybrany.typ, nadrzednaLokalizacjaId: wybrany.typ === 'OBIEKT' ? undefined : lokalizacja.nadrzednaLokalizacjaId })
-    }}>{typyLokalizacji.map(({ typ, etykieta }) => <option key={typ} value={typ}>{etykieta}</option>)}</select></label>
-    <label>Lokalizacja nadrzędna<select value={lokalizacja.nadrzednaLokalizacjaId ?? ''} disabled={poziom === 0} onChange={(zdarzenie) => zmien({ ...lokalizacja, nadrzednaLokalizacjaId: zdarzenie.target.value || undefined })}>
-      <option value="">Brak</option>
-      {lokalizacje.filter((obecna) => obecna.typ === typyLokalizacji[poziom - 1]?.typ && obecna.id !== lokalizacja.id).map((obecna) => <option key={obecna.id} value={obecna.id}>{obecna.kod} — {obecna.nazwa}</option>)}
-    </select></label>
-    <label>Opis<textarea value={lokalizacja.opis ?? ''} onChange={(zdarzenie) => zmien({ ...lokalizacja, opis: zdarzenie.target.value })} /></label>
-    <label><input type="checkbox" role="switch" checked={lokalizacja.czyAktywna} onChange={(zdarzenie) => zmien({ ...lokalizacja, czyAktywna: zdarzenie.target.checked })} /> Lokalizacja aktywna</label>
-    <div className="mapa-magazynu__wymiary">
-      {([{ klucz: 'x', etykieta: 'X (%)' }, { klucz: 'y', etykieta: 'Y (%)' }, { klucz: 'szerokosc', etykieta: 'Szerokość (%)' }, { klucz: 'wysokosc', etykieta: 'Wysokość (%)' }] as const).map(({ klucz, etykieta }) => <label key={klucz}>{etykieta}<input type="number" min={klucz === 'x' || klucz === 'y' ? 0 : 5} max={100} step="any" value={lokalizacja.polozenieNaMapie[klucz]} onChange={(zdarzenie) => {
+    <form onSubmit={(zdarzenie) => { zdarzenie.preventDefault(); if (zmien({ ...lokalizacja, ...pola })) ustawNiezapisanePola(false) }}>
+      <label>Kod<input required value={pola.kod} onChange={(zdarzenie) => zmienPola({ ...pola, kod: zdarzenie.target.value })} /></label>
+      <label>Nazwa<input required value={pola.nazwa} onChange={(zdarzenie) => zmienPola({ ...pola, nazwa: zdarzenie.target.value })} /></label>
+      <label>Typ<select value={pola.typ} onChange={(zdarzenie) => {
+        const wybrany = typyLokalizacji.find(({ typ }) => typ === zdarzenie.target.value)
+        if (wybrany) zmienPola({ ...pola, typ: wybrany.typ })
+      }}>{typyLokalizacji.map(({ typ, etykieta }) => <option key={typ} value={typ}>{etykieta}</option>)}</select></label>
+      <SelektorLokalizacji etykieta="Lokalizacja nadrzędna" lokalizacje={lokalizacje.filter((obecna) => !pobierzSciezkeLokalizacji(lokalizacje, obecna.id).includes(lokalizacja.id))} wartosc={pola.nadrzednaLokalizacjaId ?? ''} wybierz={(id) => zmienPola({ ...pola, nadrzednaLokalizacjaId: id || undefined })} />
+      <label>Kolejność<input required type="number" min={0} step={1} value={pola.kolejnosc} onChange={(zdarzenie) => zmienPola({ ...pola, kolejnosc: zdarzenie.target.valueAsNumber })} /></label>
+      <label>Opis<textarea value={pola.opis ?? ''} onChange={(zdarzenie) => zmienPola({ ...pola, opis: zdarzenie.target.value })} /></label>
+      <label><input type="checkbox" role="switch" checked={pola.czyAktywna} onChange={(zdarzenie) => zmienPola({ ...pola, czyAktywna: zdarzenie.target.checked })} /> Lokalizacja aktywna</label>
+      <button type="submit">Zastosuj edycję lokalizacji</button>
+    </form>
+    <label><input type="checkbox" role="switch" checked={Boolean(lokalizacja.polozenieNaMapie)} onChange={(zdarzenie) => zmien({ ...lokalizacja, polozenieNaMapie: zdarzenie.target.checked ? { x: 5, y: 5, szerokosc: 25, wysokosc: 20 } : undefined })} /> Pokaż na mapie</label>
+    {lokalizacja.polozenieNaMapie && <div className="mapa-magazynu__wymiary">
+      {([{ klucz: 'x', etykieta: 'X (%)' }, { klucz: 'y', etykieta: 'Y (%)' }, { klucz: 'szerokosc', etykieta: 'Szerokość (%)' }, { klucz: 'wysokosc', etykieta: 'Wysokość (%)' }] as const).map(({ klucz, etykieta }) => <label key={klucz}>{etykieta}<input type="number" min={klucz === 'x' || klucz === 'y' ? 0 : 5} max={100} step="any" value={lokalizacja.polozenieNaMapie![klucz]} onChange={(zdarzenie) => {
         const liczba = zdarzenie.target.valueAsNumber
-        if (Number.isFinite(liczba)) zmien({ ...lokalizacja, polozenieNaMapie: { ...lokalizacja.polozenieNaMapie, [klucz]: liczba } })
+        if (Number.isFinite(liczba) && lokalizacja.polozenieNaMapie) zmien({ ...lokalizacja, polozenieNaMapie: { ...lokalizacja.polozenieNaMapie, [klucz]: liczba } })
       }} /></label>)}
-    </div>
+    </div>}
     <label>Zdjęcie referencyjne (PNG, JPEG lub WebP do 512 KB)<input type="file" accept="image/png,image/jpeg,image/webp" onChange={wczytajZdjecie} /></label>
     {lokalizacja.zdjecie && <button type="button" onClick={() => zmien({ ...lokalizacja, zdjecie: undefined })}>Usuń zdjęcie</button>}
   </fieldset>

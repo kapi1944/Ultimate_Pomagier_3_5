@@ -27,3 +27,24 @@
 .mapa-magazynu input:focus-visible, .mapa-magazynu select:focus-visible, .mapa-magazynu textarea:focus-visible { outline: 2px solid var(--ui-tekst); outline-offset: 2px; }
 @media (max-width: 1000px) { .mapa-magazynu__uklad { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 600px) { .mapa-magazynu__wyszukiwanie { grid-template-columns: minmax(0, 1fr); } }
+.mapa-magazynu__uklad { grid-template-columns: minmax(190px, .8fr) minmax(0, 2fr) minmax(260px, 1fr); }
+.mapa-magazynu__drzewo { min-width: 0; padding: 10px; border: 1px solid var(--ui-obramowanie); border-radius: 6px; overflow: auto; max-height: 75vh; }
+.mapa-magazynu__drzewo ul { list-style: none; padding-left: 12px; margin: 4px 0; }
+.mapa-magazynu__drzewo > ul { padding-left: 0; }
+.mapa-magazynu__wezel { display: flex; align-items: start; gap: 3px; margin: 5px 0; }
+.mapa-magazynu__wezel button { min-width: 0; padding: 5px; text-align: left; overflow-wrap: anywhere; }
+.mapa-magazynu__wezel small { display: block; font-size: .75rem; }
+.mapa-magazynu__wezel [aria-current="location"] { outline: 2px solid var(--ui-tekst); outline-offset: 1px; }
+.mapa-magazynu__obszar { min-width: 0; overflow: hidden; }
+.mapa-magazynu__przewijanie { overflow: auto; max-height: 75vh; }
+.mapa-magazynu__plan--siatka { background-image: linear-gradient(to right, var(--ui-obramowanie) 1px, transparent 1px), linear-gradient(to bottom, var(--ui-obramowanie) 1px, transparent 1px); background-size: 5% 5%; }
+.mapa-magazynu__selektor, .mapa-magazynu__formularz form { display: grid; gap: 10px; min-width: 0; }
+.mapa-magazynu__formularz { padding: 12px; }
+@media (max-width: 1250px) {
+  .mapa-magazynu__uklad { grid-template-columns: minmax(190px, .8fr) minmax(0, 2fr); }
+  .mapa-magazynu__szczegoly { grid-column: 1 / -1; }
+}
+@media (max-width: 850px) {
+  .mapa-magazynu__uklad { grid-template-columns: minmax(0, 1fr); }
+  .mapa-magazynu__drzewo { max-height: 50vh; }
+}

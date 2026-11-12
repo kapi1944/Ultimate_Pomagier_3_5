@@ -6,6 +6,7 @@ import { czyGodzinaWOsi, normalizujOsCzasu, pozycjaGodzinyNaOsi, type ZakresDnia
 import { zmienWykonanieRutyny } from './uslugi/rutynyPulpitu'
 import type { useRutynyPulpitu } from './useRutynyPulpitu'
 import type { BlokPracy } from './logika/harmonogramPracy'
+import { pobierzStylBlokuPracy, pobierzStylRutyny } from './koloryBlokowPracy'
 
 export default function RutynyNaOsi({ daneRutyn, data, uzytkownikId, zakresDniaPracy, blokiDnia, szerokoscOsi, otworz }: {
   daneRutyn: ReturnType<typeof useRutynyPulpitu>; data: string; uzytkownikId: string; zakresDniaPracy: ZakresDniaPracy; blokiDnia: BlokPracy[]; szerokoscOsi: number; otworz: (id: string) => void
@@ -35,7 +36,7 @@ export default function RutynyNaOsi({ daneRutyn, data, uzytkownikId, zakresDniaP
   })
   function kontrolki(wpis: WystapienieRutyny, kompaktowa = false) {
     const blok = blokiDnia.find((blok) => blok.id === wpis.blokPracyId)
-    return <div className={'pulpit-rutyna__kontrolki' + (wpis.wykonane ? ' pulpit-rutyna__kontrolki--wykonane' : '')}>
+    return <div style={pobierzStylRutyny(wpis, blokiDnia)} className={'pulpit-rutyna__kontrolki' + (wpis.wykonane ? ' pulpit-rutyna__kontrolki--wykonane' : '')}>
       <input type="checkbox" aria-label={'Rutyna ' + (wpis.godzina ?? '') + ': ' + wpis.tytul} checked={wpis.wykonane} disabled={data > dataWarszawska(new Date()) || (uzytkownikId !== zalogowanyUzytkownik?.id && !czyJestAdministratorem(zalogowanyUzytkownik))} onChange={(zdarzenie) => {
         try { zmienWykonanieRutyny(wpis, zdarzenie.target.checked, zalogowanyUzytkownik); daneRutyn.odswiez(); ustawBlad('') }
         catch (wyjatek) { ustawBlad(wyjatek instanceof Error ? wyjatek.message : 'Nie udało się zmienić rutyny.') }
@@ -47,8 +48,8 @@ export default function RutynyNaOsi({ daneRutyn, data, uzytkownikId, zakresDniaP
     {(blad || daneRutyn.blad) && <p role="alert">{blad || daneRutyn.blad}</p>}
     {grupy.length > 0 && <div className="pulpit-rutyny-blokowe">
       {grupy.map(({ blok, rutyny, lewo, szerokosc, waski, miesciLicznik }) => <div key={blok.id} className="pulpit-rutyna__przedzial" style={{ marginLeft: lewo + '%', width: szerokosc + '%' }} aria-label={blok.nazwa + ' (' + blok.poczatek + '–' + blok.koniec + ')'}>
-        {waski && !miesciLicznik && <span className="pulpit-rutyna__skrot" aria-hidden="true" />}
-        {waski && miesciLicznik && <button type="button" className="pulpit-rutyna__licznik" aria-label={blok.nazwa + ': pokaż rutyny (' + rutyny.length + ')'} aria-controls={identyfikatorList + blok.id} onClick={() => {
+        {waski && !miesciLicznik && <span style={pobierzStylBlokuPracy(blok, blokiDnia)} className="pulpit-rutyna__skrot" aria-hidden="true" />}
+        {waski && miesciLicznik && <button type="button" style={pobierzStylBlokuPracy(blok, blokiDnia)} className="pulpit-rutyna__licznik" aria-label={blok.nazwa + ': pokaż rutyny (' + rutyny.length + ')'} aria-controls={identyfikatorList + blok.id} onClick={() => {
           const lista = document.getElementById(identyfikatorList + blok.id)
           if (lista instanceof HTMLDetailsElement) {
             lista.open = true

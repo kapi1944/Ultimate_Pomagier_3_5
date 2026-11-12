@@ -6,6 +6,7 @@ import { eksportujUstawieniaAplikacji, importujUstawieniaAplikacji, kluczUstawie
 import { wystapieniaDnia, type Rutyna } from '../src/moduly/zamkniete/pulpit/logika/rutyny'
 import { pobierzRutyny, zapiszRutyne, zmienWykonanieRutyny } from '../src/moduly/zamkniete/pulpit/uslugi/rutynyPulpitu'
 import type { Uzytkownik } from '../src/kartoteki/uzytkownicy/typyUzytkownikow'
+import { pobierzStylBlokuPracy, pobierzStylRutyny } from '../src/moduly/zamkniete/pulpit/koloryBlokowPracy'
 
 const magazyn = new Map<string, string>()
 globalThis.localStorage = { getItem: (klucz: string) => magazyn.get(klucz) ?? null, setItem: (klucz: string, wartosc: string) => { magazyn.set(klucz, wartosc) }, removeItem: (klucz: string) => { magazyn.delete(klucz) }, clear: () => magazyn.clear(), key: () => null, length: 0 } as Storage
@@ -15,6 +16,32 @@ assert.deepEqual(domyslny.blokiPracy.map(({ nazwa, poczatek, koniec }) => [nazwa
   ['Rozruch', '07:45', '08:30'], ['Przygotowania', '08:30', '10:00'], ['Paczkowanie', '10:00', '13:00'], ['Multitasking', '13:00', '15:00'], ['Podsumowania', '15:00', '16:00'],
 ])
 assert.deepEqual(walidujHarmonogramPracy(domyslny), [])
+// Kolory wynikają z tych samych bloków dla kart, godzin, liczników i starszych ustawień.
+const blokiKolorow = structuredClone(domyslny.blokiPracy)
+const blokiPrzedKolorowaniem = structuredClone(blokiKolorow)
+assert.deepEqual(blokiKolorow.map((blok) => pobierzStylRutyny({ blokPracyId: blok.id }, blokiKolorow)?.['--pulpit-kolor-bloku']), ['#f97316', '#22c55e', '#ef4444', '#3b82f6', '#a855f7'])
+for (const blok of blokiKolorow) {
+  assert.deepEqual(pobierzStylRutyny({ godzina: blok.poczatek }, blokiKolorow), pobierzStylBlokuPracy(blok, blokiKolorow))
+  assert.deepEqual(pobierzStylRutyny({ blokPracyId: blok.id, godzina: blok.poczatek }, blokiKolorow), pobierzStylBlokuPracy(blok, blokiKolorow))
+}
+assert.equal(pobierzStylRutyny({ godzina: '08:30' }, blokiKolorow)?.['--pulpit-kolor-bloku'], blokiKolorow[1].kolor)
+for (const plan of [{}, { godzina: '05:00' }, { godzina: '16:00' }, { blokPracyId: 'niedostepny' }, { blokPracyId: 'niedostepny', godzina: '10:30' }, { blokPracyId: 'rozruch', godzina: '10:30' }]) {
+  assert.equal(pobierzStylRutyny(plan, blokiKolorow), undefined)
+}
+assert.equal(pobierzStylRutyny({ blokPracyId: 'rozruch' }, [{ ...blokiKolorow[0], wlaczony: false }]), undefined)
+assert.equal(pobierzStylRutyny({ godzina: '08:00' }, [blokiKolorow[0], { ...blokiKolorow[0], id: 'nakladajacy' }]), undefined)
+assert.equal(pobierzStylRutyny({ godzina: '08:00' }, []), undefined)
+const stareBloki = blokiKolorow.map((blok) => ({ ...blok, kolor: undefined }))
+assert.equal(pobierzStylRutyny({ blokPracyId: 'rozruch' }, stareBloki)?.['--pulpit-kolor-bloku'], 'var(--ui-akcent)')
+const wlasneBloki = stareBloki.slice(0, 3).map((blok, indeks) => ({ ...blok, id: 'wlasny-' + indeks }))
+for (const [indeks, blok] of wlasneBloki.entries()) {
+  assert.deepEqual(pobierzStylRutyny({ blokPracyId: blok.id }, wlasneBloki), pobierzStylBlokuPracy(blok, wlasneBloki))
+  assert.equal(pobierzStylBlokuPracy(blok, wlasneBloki)['--pulpit-tlo-bloku'], `color-mix(in srgb, var(--ui-${indeks === 1 ? 'info' : 'akcent'}) ${indeks === 2 ? 32 : 18}%, var(--ui-panel))`)
+}
+assert.deepEqual(blokiKolorow, blokiPrzedKolorowaniem)
+blokiKolorow[0].kolor = '#abcdef'
+assert.equal(pobierzStylRutyny({ blokPracyId: 'rozruch' }, blokiKolorow)?.['--pulpit-kolor-bloku'], '#abcdef')
+assert.equal(pobierzStylRutyny({ godzina: '08:00' }, blokiKolorow)?.['--pulpit-kolor-bloku'], '#abcdef')
 const [rozruch, przygotowania] = domyslny.blokiPracy
 const przesuniete = zmienGraniceBloku(domyslny.blokiPracy, rozruch, 'koniec', '08:15', true)
 assert.equal(przesuniete[1].poczatek, '08:15')

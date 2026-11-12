@@ -23,6 +23,7 @@ import type { Dokument } from '../../../wspolne/dokumenty/modelDokumentu'
 import { zdarzenieZmianyRejestruDokumentow } from '../../../wspolne/dokumenty/rejestrDokumentow'
 import WidokRutyn from './DailyRoutines'
 import RutynyNaOsi from './RutynyNaOsi'
+import { pobierzStylBlokuPracy } from './koloryBlokowPracy'
 import { useRutynyPulpitu } from './useRutynyPulpitu'
 import { dataWarszawska } from '../../../wspolne/czas/kalendarzPracy'
 import { generujZadaniaAutomatyczne } from './logika/zadaniaAutomatyczne'
@@ -993,11 +994,11 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
           </div>}
         </div>
         <div className="pulpit-os-czasu__pas-blokow">
-          {blokiDnia.filter((blok) => blok.koniec > osCzasu.poczatek && blok.poczatek < osCzasu.koniec).map((blok, indeks) => {
+          {blokiDnia.filter((blok) => blok.koniec > osCzasu.poczatek && blok.poczatek < osCzasu.koniec).map((blok) => {
             const poczatek = pozycjaGodzinyNaOsi(blok.poczatek, zakresDniaPracy)
             const koniec = pozycjaGodzinyNaOsi(blok.koniec, zakresDniaPracy)
             const opis = blok.nazwa + ': ' + blok.poczatek + '–' + blok.koniec
-            return <span key={blok.id} tabIndex={0} aria-label={opis} title={opis} className={'pulpit-blok-pracy pulpit-blok-pracy--' + indeks % 3} style={{ left: poczatek + '%', width: koniec - poczatek + '%', borderBottomColor: blok.kolor, background: blok.kolor ? `color-mix(in srgb, ${blok.kolor} 24%, var(--ui-panel))` : undefined }}><span>{blok.nazwa}</span></span>
+            return <span key={blok.id} tabIndex={0} aria-label={opis} title={opis} className="pulpit-blok-pracy" style={{ ...pobierzStylBlokuPracy(blok, blokiDnia), left: poczatek + '%', width: koniec - poczatek + '%' }}><span>{blok.nazwa}</span></span>
           })}
         </div>
         {oknoKuriera && oknoKuriera.koniec > osCzasu.poczatek && oknoKuriera.poczatek < osCzasu.koniec && <div className="pulpit-os-czasu__pas-zdarzen">

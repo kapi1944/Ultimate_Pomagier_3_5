@@ -41,7 +41,7 @@ export function wyliczStanyMagazynowe(dane: StanZakupow): WierszStanuMagazynoweg
     const stany = dane.stanyWLokalizacjach.filter(pasujeProdukt)
     const lokalizacje = [...new Set(stany.map((stan) => stan.lokalizacjaId))].map((id) => ({
       id,
-      nazwa: dane.lokalizacjeMagazynowe.find((lokalizacja) => lokalizacja.id === id)?.nazwa ?? 'Nieznana lokalizacja',
+      nazwa: dane.lokalizacjeMagazynowe.find((lokalizacja) => lokalizacja.id === id)?.pelnyKod ?? dane.lokalizacjeMagazynowe.find((lokalizacja) => lokalizacja.id === id)?.nazwa ?? 'Nieznana lokalizacja',
       ilosc: stany.filter((stan) => stan.lokalizacjaId === id).reduce((suma, stan) => suma + stan.ilosc, 0),
     }))
     const przeliczenia = dane.pozycjeInwentaryzacji.filter(pasujeProdukt).flatMap((pozycja) => {

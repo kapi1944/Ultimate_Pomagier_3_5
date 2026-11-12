@@ -156,17 +156,18 @@
 .pulpit-rutyny-godzinowe:not(:empty) { padding-block: 12px; }
 .pulpit-rutyna { position: relative; padding-top: 14px; }
 .pulpit-rutyna__punkt { position: absolute; top: 0; width: 10px; height: 10px; border: 2px solid var(--ui-info); border-radius: 50%; transform: translateX(-50%); }
-.pulpit-rutyna__kontrolki { display: flex; align-items: center; gap: 4px; width: 240px; max-width: 100%; box-sizing: border-box; padding: 2px 4px; border: 1px solid var(--ui-obramowanie); border-radius: var(--ui-promien-pola); background: var(--ui-info-tlo); }
-.pulpit .pulpit-rutyna__kontrolki button { flex: 1; min-width: 0; min-height: 32px; padding: 2px 4px; font-size: .8rem; text-align: left; }
+.pulpit-rutyna__kontrolki { display: flex; align-items: center; gap: 4px; width: 240px; max-width: 100%; box-sizing: border-box; padding: 2px 4px; border: 1px solid color-mix(in srgb, var(--pulpit-kolor-bloku, var(--ui-obramowanie)) 65%, var(--ui-panel)); border-radius: var(--ui-promien-pola); background: color-mix(in srgb, var(--pulpit-kolor-bloku, var(--ui-obramowanie)) var(--pulpit-nasycenie-rutyny, 32%), var(--ui-panel)); color: var(--ui-tekst); }
+.pulpit .pulpit-rutyna__kontrolki button { flex: 1; min-width: 0; min-height: 32px; padding: 2px 4px; font-size: .8rem; text-align: left; background: transparent; color: inherit; border-color: transparent; }
+.pulpit .pulpit-rutyna__kontrolki button:hover { background: transparent; border-color: var(--pulpit-kolor-bloku, var(--ui-obramowanie)); }
 .pulpit-rutyna__kontrolki button span { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .pulpit .pulpit-rutyna__kontrolki input[type="checkbox"] { flex: none; width: 24px; height: 24px; margin: 0; padding: 0; }
-.pulpit-rutyna__kontrolki--wykonane { background: var(--ui-panel); }
-.pulpit-rutyna__kontrolki--wykonane button span { color: var(--ui-tekst-drugi); text-decoration: line-through; }
+.pulpit-rutyna__kontrolki--wykonane { --pulpit-nasycenie-rutyny: 22%; }
+.pulpit-rutyna__kontrolki--wykonane button span { text-decoration: line-through; }
 .pulpit-rutyny-blokowe { display: grid; grid-template-columns: minmax(0, 1fr); margin-block: 8px; }
 .pulpit-rutyna__przedzial { grid-area: 1 / 1; align-self: start; display: grid; gap: 3px; grid-template-columns: minmax(0, 1fr); }
 .pulpit-rutyna__przedzial .pulpit-rutyna__kontrolki { width: 100%; }
-.pulpit .pulpit-rutyna__licznik { box-sizing: border-box; width: 100%; min-width: 0; min-height: 32px; padding: 0; border: 0; overflow: hidden; background: var(--ui-info-tlo); color: var(--ui-tekst); }
-.pulpit-rutyna__skrot { height: 32px; background: var(--ui-info); }
+.pulpit .pulpit-rutyna__licznik, .pulpit .pulpit-rutyna__licznik:hover { box-sizing: border-box; width: 100%; min-width: 0; min-height: 32px; padding: 0; border: 0; overflow: hidden; background: color-mix(in srgb, var(--pulpit-kolor-bloku, var(--ui-obramowanie)) 32%, var(--ui-panel)); color: var(--ui-tekst); }
+.pulpit-rutyna__skrot { height: 32px; background: var(--pulpit-kolor-bloku, var(--ui-obramowanie)); }
 .pulpit-rutyny-bez-godziny { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding-block: 8px; }
 
 .pulpit-deadline {
@@ -906,9 +907,7 @@ html[data-ui-pokaz-plomien-asap="false"] .pulpit-deadline__plomien {
 .pulpit-os-czasu__pas-blokow { height: 24px; margin-bottom: 8px; }
 .pulpit-os-czasu__pas-blokow:empty { display: none; }
 .pulpit-os-czasu__pas-zdarzen { height: 28px; margin-bottom: 8px; }
-.pulpit-blok-pracy { position: absolute; inset-block: 0; box-sizing: border-box; background: var(--pulpit-tlo-bloku); border-bottom: 3px solid transparent; color: var(--ui-tekst); font-size: .75rem; line-height: 21px; text-align: center; }
-.pulpit-blok-pracy--1 { background: color-mix(in srgb, var(--ui-info) 18%, var(--ui-panel)); }
-.pulpit-blok-pracy--2 { background: color-mix(in srgb, var(--ui-akcent) 32%, var(--ui-panel)); }
+.pulpit-blok-pracy { position: absolute; inset-block: 0; box-sizing: border-box; background: var(--pulpit-tlo-bloku); border-bottom: 3px solid var(--pulpit-kolor-bloku, transparent); color: var(--ui-tekst); font-size: .75rem; line-height: 21px; text-align: center; }
 .pulpit-blok-pracy > span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pulpit .pulpit-okno-kuriera { position: absolute; inset-block: 0; box-sizing: border-box; min-width: 0; min-height: 0; padding: 0; border: 0; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; background: var(--pulpit-tlo-kuriera); color: var(--ui-tekst); font-size: .8rem; transition: none; }
 .pulpit-okno-kuriera:focus-visible, .pulpit-blok-pracy:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: -2px; }

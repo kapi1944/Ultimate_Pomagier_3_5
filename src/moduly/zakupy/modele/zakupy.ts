@@ -121,6 +121,8 @@ export type LokalizacjaMagazynowa = {
   nadrzednaLokalizacjaId?: LokalizacjaMagazynowa['id']
   czyAktywna: boolean
   kod?: string
+  pelnyKod?: string
+  kolejnosc?: number
   typ?: TypLokalizacjiMagazynowej
   opis?: string
   zdjecie?: string
@@ -129,9 +131,12 @@ export type LokalizacjaMagazynowa = {
 
 export type LokalizacjaMapy = LokalizacjaMagazynowa & {
   kod: string
+  pelnyKod: string
+  kolejnosc: number
   typ: TypLokalizacjiMagazynowej
-  polozenieNaMapie: ProstokatMapy
 }
+
+export type DaneMagazynowe = Pick<StanZakupow, 'produkty' | 'wariantyProduktow' | 'egzemplarzeProduktow' | 'stanyWLokalizacjach' | 'ruchyMagazynowe' | 'inwentaryzacje' | 'pozycjeInwentaryzacji'>
 
 // Egzemplarz ma stabilną tożsamość przy przenoszeniu między lokalizacjami.
 export type EgzemplarzProduktu = OdwolanieDoProduktu & {

@@ -11,11 +11,11 @@ export type HarmonogramPracy = {
 export const dniHarmonogramu = ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota']
 export const domyslnyHarmonogramPracy: HarmonogramPracy = {
   blokiPracy: [
-    { id: 'rozruch', nazwa: 'Rozruch', poczatek: '07:45', koniec: '08:30', dni: [1, 2, 3, 4, 5], wlaczony: true },
-    { id: 'przygotowania', nazwa: 'Przygotowania', poczatek: '08:30', koniec: '10:00', dni: [1, 2, 3, 4, 5], wlaczony: true },
-    { id: 'paczkowanie', nazwa: 'Paczkowanie', poczatek: '10:00', koniec: '13:00', dni: [1, 2, 3, 4, 5], wlaczony: true },
-    { id: 'multitasking', nazwa: 'Multitasking', poczatek: '13:00', koniec: '15:00', dni: [1, 2, 3, 4, 5], wlaczony: true },
-    { id: 'podsumowania', nazwa: 'Podsumowania', poczatek: '15:00', koniec: '16:00', dni: [1, 2, 3, 4, 5], wlaczony: true },
+    { id: 'rozruch', nazwa: 'Rozruch', poczatek: '07:45', koniec: '08:30', dni: [1, 2, 3, 4, 5], wlaczony: true, kolor: '#f97316' },
+    { id: 'przygotowania', nazwa: 'Przygotowania', poczatek: '08:30', koniec: '10:00', dni: [1, 2, 3, 4, 5], wlaczony: true, kolor: '#22c55e' },
+    { id: 'paczkowanie', nazwa: 'Paczkowanie', poczatek: '10:00', koniec: '13:00', dni: [1, 2, 3, 4, 5], wlaczony: true, kolor: '#ef4444' },
+    { id: 'multitasking', nazwa: 'Multitasking', poczatek: '13:00', koniec: '15:00', dni: [1, 2, 3, 4, 5], wlaczony: true, kolor: '#3b82f6' },
+    { id: 'podsumowania', nazwa: 'Podsumowania', poczatek: '15:00', koniec: '16:00', dni: [1, 2, 3, 4, 5], wlaczony: true, kolor: '#a855f7' },
   ],
   kurier: {
     tydzien: { 0: null, 1: { poczatek: '13:30', koniec: '16:00' }, 2: { poczatek: '14:30', koniec: '16:00' }, 3: { poczatek: '14:30', koniec: '16:00' }, 4: { poczatek: '14:30', koniec: '16:00' }, 5: { poczatek: '13:30', koniec: '16:00' }, 6: null },

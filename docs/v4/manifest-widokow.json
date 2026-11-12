@@ -1026,9 +1026,41 @@
       "ukonczoneEtapy": [],
       "wspoldzieloneZ": []
     },
-    "src/moduly/zakupy/magazyn/EdytorLokalizacji.tsx": {
+    "src/moduly/zakupy/magazyn/DrzewoLokalizacji.tsx": {
       "zadanie": "V4-19",
       "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
+    },
+    "src/moduly/zakupy/magazyn/FormularzPrzypisania.tsx": {
+      "zadanie": "V4-19",
+      "powierzchnie": [
+        "details",
+        "form onSubmit={(zdarzenie) => { zdarzenie.preventDefault(); const id = dodajProdukt(nazwa, jednostka); if (id) { ustawProdukt(id); ustawWariant(''); ustawEgzemplarz(''); ustawNazwe('') } }}",
+        "form onSubmit={zatwierdz}"
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
+    },
+    "src/moduly/zakupy/magazyn/KreatorLokalizacji.tsx": {
+      "zadanie": "V4-19",
+      "powierzchnie": [
+        "form onSubmit={zatwierdz} className=\"mapa-magazynu__formularz\" aria-label=\"Kreator lokalizacji\""
+      ],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
+    },
+    "src/moduly/zakupy/magazyn/SelektorLokalizacji.tsx": {
+      "zadanie": "V4-19",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
+    },
+    "src/moduly/zakupy/magazyn/EdytorLokalizacji.tsx": {
+      "zadanie": "V4-19",
+      "powierzchnie": [
+        "form onSubmit={(zdarzenie) => { zdarzenie.preventDefault(); if (zmien({ ...lokalizacja, ...pola })) ustawNiezapisanePola(false) }}"
+      ],
       "ukonczoneEtapy": [],
       "wspoldzieloneZ": []
     },
@@ -1042,6 +1074,7 @@
       "zadanie": "V4-19",
       "powierzchnie": [
         "aside className=\"mapa-magazynu__szczegoly\" aria-label=\"Szczegóły lokalizacji\"",
+        "details",
         "window.confirm('Odrzucić niezapisane zmiany mapy i wczytać zapisany plan?')"
       ],
       "ukonczoneEtapy": [],

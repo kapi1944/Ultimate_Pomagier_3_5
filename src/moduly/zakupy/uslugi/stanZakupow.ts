@@ -5,9 +5,10 @@ import { pobierzLokalizacjeMagazynowe } from './magazynLokalizacji'
 // Projekcja tylko do odczytu. Pulpit pozostaje źródłem zapotrzebowań do jawnej migracji.
 export function pobierzStanZakupow(): StanZakupow {
   const { zapotrzebowaniaZakupowe } = pobierzStanPulpitu()
+  const magazyn = pobierzLokalizacjeMagazynowe()
   return {
     wersjaSchematu: 1,
-    produkty: [], wariantyProduktow: [], ofertyProduktow: [], snapshotyCen: [],
+    ...magazyn.daneMagazynowe, ofertyProduktow: [], snapshotyCen: [],
     zapotrzebowania: zapotrzebowaniaZakupowe.map(({ id, nazwa, status, utworzonePrzezId, utworzonoAt, uwagi }) => ({ id, nazwa, status, utworzonePrzezId, utworzonoAt, uwagi })),
     pozycjeZapotrzebowan: zapotrzebowaniaZakupowe.map((zapotrzebowanie) => ({
       id: `pulpit:${zapotrzebowanie.id}:pozycja`,
@@ -16,7 +17,6 @@ export function pobierzStanZakupow(): StanZakupow {
       ilosc: zapotrzebowanie.ilosc,
     })),
     listyZakupowe: [], pozycjeListZakupowych: [], zamowienia: [], pozycjeZamowien: [],
-    przesylki: [], pozycjePrzesylek: [], lokalizacjeMagazynowe: pobierzLokalizacjeMagazynowe().lokalizacje, egzemplarzeProduktow: [],
-    stanyWLokalizacjach: [], ruchyMagazynowe: [], inwentaryzacje: [], pozycjeInwentaryzacji: [],
+    przesylki: [], pozycjePrzesylek: [], lokalizacjeMagazynowe: magazyn.lokalizacje,
   }
 }

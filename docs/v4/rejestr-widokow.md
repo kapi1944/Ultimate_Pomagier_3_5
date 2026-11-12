@@ -178,9 +178,13 @@ Właściciel pliku obejmuje wszystkie warunki renderowania, stany pusty/błąd/�
 | `src/moduly/narzedzia/poprawiacz_prezentacji/analiza/PanelAnalizy.tsx` | V4-17 | — | — | 1 |
 | `src/moduly/otwarte/WidokSzkolenOtwartych.tsx` | V4-05 | — | V4-05 | 0 |
 | `src/moduly/zakupy/WidokZakupow.tsx` | V4-18 | — | — | 0 |
-| `src/moduly/zakupy/magazyn/EdytorLokalizacji.tsx` | V4-19 | — | — | 0 |
+| `src/moduly/zakupy/magazyn/DrzewoLokalizacji.tsx` | V4-19 | — | — | 0 |
+| `src/moduly/zakupy/magazyn/FormularzPrzypisania.tsx` | V4-19 | — | — | 3 |
+| `src/moduly/zakupy/magazyn/KreatorLokalizacji.tsx` | V4-19 | — | — | 1 |
+| `src/moduly/zakupy/magazyn/SelektorLokalizacji.tsx` | V4-19 | — | — | 0 |
+| `src/moduly/zakupy/magazyn/EdytorLokalizacji.tsx` | V4-19 | — | — | 1 |
 | `src/moduly/zakupy/magazyn/PlanMagazynu.tsx` | V4-19 | — | — | 0 |
-| `src/moduly/zakupy/magazyn/WidokMapyMagazynu.tsx` | V4-19 | — | — | 2 |
+| `src/moduly/zakupy/magazyn/WidokMapyMagazynu.tsx` | V4-19 | — | — | 3 |
 | `src/moduly/zakupy/magazyn/WidokStanowMagazynowych.tsx` | V4-19 | — | — | 1 |
 | `src/moduly/zamkniete/pulpit/DailyRoutines.tsx` | V4-04 | — | — | 5 |
 | `src/moduly/zamkniete/pulpit/DokumentyWysylki.tsx` | V4-04 | — | — | 1 |
