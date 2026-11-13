@@ -82,7 +82,7 @@ test('cofnięcia są określone centralnie przez macierz', () => {
 
 test('publikacja automatyczna zapisuje historię z aktorem i oznaczeniem automatycznym', () => {
   const rekord = opublikujTestowyRekord()
-  const wpis = pobierzHistorieSzczegolow().find((pozycja) => pozycja.zmianaStatusu?.na === 'OCZEKUJĄCE')
+  const wpis = pobierzHistorieSzczegolow(rekord.id).find((pozycja) => pozycja.zmianaStatusu?.na === 'OCZEKUJĄCE')
 
   assert.equal(rekord.status, 'OCZEKUJĄCE')
   assert.equal(wpis?.autorId, konto.id)
@@ -92,11 +92,11 @@ test('publikacja automatyczna zapisuje historię z aktorem i oznaczeniem automat
 
 test('ręczna zmiana bez aktora nie zapisuje anonimowej zmiany', () => {
   const rekord = opublikujTestowyRekord()
-  const liczbaWpisow = pobierzHistorieSzczegolow().length
+  const liczbaWpisow = pobierzHistorieSzczegolow(rekord.id).length
 
   assert.throws(() => ustawStatusOpublikowanychSzczegolow(rekord.id, 'ZAAKCEPTOWANE', undefined as unknown as { konto: KontoSzczegolow }), /wymaga wskazania aktora/)
   assert.equal(pobierzOpublikowaneSzczegoly()[0]?.status, 'OCZEKUJĄCE')
-  assert.equal(pobierzHistorieSzczegolow().length, liczbaWpisow)
+  assert.equal(pobierzHistorieSzczegolow(rekord.id).length, liczbaWpisow)
 })
 
 test('domyślny komentarz ani białe znaki nie są przyczyną niezrealizowania', () => {
@@ -118,7 +118,7 @@ test('rzeczywista przyczyna zmienia status i trafia do historii', () => {
   ustawStatusOpublikowanychSzczegolow(rekord.id, 'GOTOWE', { konto })
   ustawStatusOpublikowanychSzczegolow(rekord.id, 'NIEZREALIZOWANE', { konto, komentarz: 'Klient potwierdził anulowanie.', powod: 'Klient odwołał szkolenie.' })
 
-  const wpis = pobierzHistorieSzczegolow().find((pozycja) => pozycja.zmianaStatusu?.na === 'NIEZREALIZOWANE')
+  const wpis = pobierzHistorieSzczegolow(rekord.id).find((pozycja) => pozycja.zmianaStatusu?.na === 'NIEZREALIZOWANE')
   assert.equal(pobierzOpublikowaneSzczegoly()[0]?.status, 'NIEZREALIZOWANE')
   assert.equal(wpis?.powod, 'Klient odwołał szkolenie.')
   assert.equal(wpis?.komentarz, 'Klient potwierdził anulowanie.')
@@ -131,7 +131,7 @@ test('cofnięcie GOTOWE do ZAAKCEPTOWANE zapisuje akcję w historii', () => {
   ustawStatusOpublikowanychSzczegolow(rekord.id, 'GOTOWE', { konto })
   ustawStatusOpublikowanychSzczegolow(rekord.id, 'ZAAKCEPTOWANE', { konto, komentarz: 'Wymaga ponownej weryfikacji.' })
 
-  const wpis = pobierzHistorieSzczegolow().find((pozycja) => pozycja.zmianaStatusu?.z === 'GOTOWE' && pozycja.zmianaStatusu.na === 'ZAAKCEPTOWANE')
+  const wpis = pobierzHistorieSzczegolow(rekord.id).find((pozycja) => pozycja.zmianaStatusu?.z === 'GOTOWE' && pozycja.zmianaStatusu.na === 'ZAAKCEPTOWANE')
   assert.equal(pobierzOpublikowaneSzczegoly()[0]?.status, 'ZAAKCEPTOWANE')
   assert.equal(wpis?.akcjaStatusu, 'cofniecie')
 })
@@ -191,7 +191,7 @@ test('publikacja aktualizacji zachowuje dokumentId, zwiększa wersję i nie twor
   aktualizacja.dane.tytulSzkolenia = 'Test workflow po aktualizacji'
 
   const druga = opublikujWersjeRobocza(aktualizacja)
-  const historie = pobierzHistorieSzczegolow().filter((wpis) => wpis.dokumentId === pierwsza.id && wpis.numerWersji)
+  const historie = pobierzHistorieSzczegolow(pierwsza.id).filter((wpis) => wpis.numerWersji)
 
   assert.equal(pierwsza.numerWersji, 1)
   assert.equal(aktualizacja.dokumentId, pierwsza.id)

@@ -1,6 +1,6 @@
 import { DOMParser as ParserWezlowEdytora } from '@tiptap/pm/model'
 import type { EditorView as WidokEdytora } from '@tiptap/pm/view'
-import { normalizujWierszWejsciowy, czyStylOznaczeniaPoprawny, liczbaRzymska, rozpoznajOznaczenieProgramu, type UstawienieWierszaProgramu } from '../oznaczeniaProgramu'
+import { kategorieWciecProgramu, normalizujWciecieProgramu, normalizujWierszWejsciowy, czyStylOznaczeniaPoprawny, liczbaRzymska, rozpoznajOznaczenieProgramu, type UstawienieWierszaProgramu } from '../oznaczeniaProgramu'
 const dozwoloneTagi = new Set(['div', 'p', 'br', 'strong', 'b', 'em', 'i', 'u', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'hr'])
 const tagiList = new Set(['ul', 'ol'])
 const znacznikiFormatowaniaLinii = ['**', '++', '*']
@@ -43,7 +43,7 @@ function oczyscWezelHtml(wezel: ChildNode, dokument: Document): ChildNode | Docu
 
   const nazwaDocelowa = nazwa === 'div' && !wezel.querySelector('div,p,ul,ol') ? 'p' : nazwa === 'b' ? 'strong' : nazwa === 'i' ? 'em' : nazwa === 'h1' ? 'h2' : nazwa
   const element = dokument.createElement(nazwaDocelowa)
-  for (const atrybut of ['start', 'type', 'data-oznaczenie', 'data-styl-oznaczenia', 'data-poziom']) {
+  for (const atrybut of ['start', 'type', 'data-oznaczenie', 'data-styl-oznaczenia', 'data-poziom', 'data-wciecie-mm', 'data-kategoria-wciecia']) {
     const wartosc = wezel.getAttribute(atrybut)
     if (wartosc !== null && (atrybut !== 'data-styl-oznaczenia' || czyStylOznaczeniaPoprawny(wartosc))) element.setAttribute(atrybut, wartosc)
   }
@@ -205,7 +205,9 @@ export function konwertujHtmlNaWierszeProgramu(html: string) {
       if (!tresc) return
       const oznaczenie = rozpoznajOznaczenieProgramu(rozpakujPelneFormatowanieLinii(tresc).tresc)
       wiersze.push(`${'\t'.repeat(Math.max(0, Math.min(8, wciecie)))}${indeks === 0 && prefiks && !oznaczenie && !czyWierszStrukturalny(tresc) ? `${prefiks} ` : ''}${tresc}`)
-      ustawienia.push({ styl, poziom: element?.hasAttribute('data-poziom') ? wciecie : undefined })
+      const wciecieMm = normalizujWciecieProgramu(Number(element?.getAttribute('data-wciecie-mm') ?? undefined))
+      const kategoriaWciecia = element?.getAttribute('data-kategoria-wciecia') ?? undefined
+      ustawienia.push({ styl, ...(wciecieMm !== undefined ? { wciecieMm } : {}), ...(kategoriaWciecia && kategorieWciecProgramu.includes(kategoriaWciecia) ? { kategoriaWciecia } : {}), poziom: element?.hasAttribute('data-poziom') ? wciecie : undefined })
     })
   }
   function dodajWezel(wezel: ChildNode, poziom = 0) {
@@ -219,6 +221,9 @@ export function konwertujHtmlNaWierszeProgramu(html: string) {
         const typ = wezel.getAttribute('type')
         const liczba = poczatek + indeks
         const prefiks = element.getAttribute('data-oznaczenie') ?? (nazwa === 'ol' ? typ === 'a' ? `${String.fromCharCode(96 + liczba)})` : typ === 'I' ? `${liczbaRzymska(liczba)}.` : `${liczba}.` : '-')
+        if (!element.hasAttribute('data-oznaczenie') && !element.hasAttribute('data-kategoria-wciecia')) {
+          element.setAttribute('data-kategoria-wciecia', nazwa === 'ul' ? 'punktory' : String(Math.min(4, poziom + 1)))
+        }
         dodajTekst(pobierzTekstBezListZagniezdzonych(element), element, poziom, prefiks)
         Array.from(element.children).filter((lista) => tagiList.has(lista.tagName.toLowerCase())).forEach((lista) => dodajWezel(lista, poziom + 1))
       })
@@ -243,7 +248,11 @@ export function konwertujHtmlNaWierszeProgramu(html: string) {
     wezel.childNodes.forEach((dziecko) => dodajWezel(dziecko, poziom))
   }
   dokument.body.firstElementChild?.childNodes.forEach((wezel) => dodajWezel(wezel))
-  return { tekst: wiersze.join('\n').replace(/^\n+|\n+$/g, ''), ustawienia }
+  const pierwszyWiersz = wiersze.findIndex(Boolean)
+  const ostatniWiersz = wiersze.findLastIndex(Boolean)
+  return pierwszyWiersz < 0
+    ? { tekst: '', ustawienia: [] }
+    : { tekst: wiersze.slice(pierwszyWiersz, ostatniWiersz + 1).join('\n'), ustawienia: ustawienia.slice(pierwszyWiersz, ostatniWiersz + 1) }
 }
 
 export function konwertujHtmlNaTekstProgramu(html: string) {
@@ -273,7 +282,7 @@ export function konwertujTekstProgramuNaHtml(tekst: string, ustawienia: Ustawien
   }
   tekst.split(/\r?\n/).forEach((wiersz, indeksWiersza) => {
     const ustawienie = ustawienia[indeksWiersza]
-    const atrybuty = `${ustawienie?.styl ? ` data-styl-oznaczenia="${zabezpieczHtml(ustawienie.styl)}"` : ''}${ustawienie?.poziom !== undefined ? ` data-poziom="${ustawienie.poziom}"` : ''}`
+    const atrybuty = `${ustawienie?.wciecieMm !== undefined ? ` data-wciecie-mm="${ustawienie.wciecieMm}"` : ''}${ustawienie?.kategoriaWciecia && kategorieWciecProgramu.includes(ustawienie.kategoriaWciecia) ? ` data-kategoria-wciecia="${ustawienie.kategoriaWciecia}"` : ''}${ustawienie?.styl ? ` data-styl-oznaczenia="${zabezpieczHtml(ustawienie.styl)}"` : ''}${ustawienie?.poziom !== undefined ? ` data-poziom="${ustawienie.poziom}"` : ''}`
     const tresc = normalizujWierszProgramu(wiersz)
     if (!tresc) { zamknijDo(0); return }
     const pozycja = rozpoznajOznaczenieProgramu(tresc)

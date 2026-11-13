@@ -6,7 +6,7 @@ import {
   czyKontoMozeWidziecKopie,
   pobierzAktywneKontoSzczegolow,
 } from '../uzytkownicySzczegolow'
-import { duplikujKopieRobocza, pobierzOpublikowaneSzczegoly, pobierzAktualnaWersjeRobocza, pobierzKopieRobocze, ustawAktualnaWersjeRobocza, usunKopieRobocza } from '../uslugi/magazynWersjiRoboczych'
+import { duplikujKopieRobocza, pobierzOpublikowaneSzczegoly, pobierzAktualnaWersjeRobocza, pobierzKopieRobocze, usunKopieRobocza } from '../uslugi/magazynWersjiRoboczych'
 import { Komunikat, Przycisk, PustyStan } from '../../../../wspolne/komponenty/ElementyInterfejsu'
 import IkonaMenu from '../../../../aplikacja/menu/IkonaMenu'
 import { KartaRejestruSzczegolow } from '../komponenty/KartaRejestruSzczegolow'
@@ -14,9 +14,10 @@ import './rejestrySzczegolowV4.css'
 
 type WlasciwosciWidokuKopii = {
   otworzNoweSzczegoly: () => void
+  otworzKopieRobocza: (przygotujKopie: () => WersjaRoboczaGeneratora | null) => void
 }
 
-export default function WidokKopiiRoboczychSzczegolowOrganizacyjnych({ otworzNoweSzczegoly }: WlasciwosciWidokuKopii) {
+export default function WidokKopiiRoboczychSzczegolowOrganizacyjnych({ otworzNoweSzczegoly, otworzKopieRobocza }: WlasciwosciWidokuKopii) {
   const konto = useMemo(() => pobierzAktywneKontoSzczegolow(), [])
   const [kopie, ustawKopie] = useState(() => pobierzKopieRobocze())
   const [podgladKopiiId, ustawPodgladKopiiId] = useState<string | null>(null)
@@ -43,8 +44,7 @@ export default function WidokKopiiRoboczychSzczegolowOrganizacyjnych({ otworzNow
       return
     }
 
-    ustawAktualnaWersjeRobocza(kopia)
-    otworzNoweSzczegoly()
+    otworzKopieRobocza(() => kopia)
   }
 
   return (

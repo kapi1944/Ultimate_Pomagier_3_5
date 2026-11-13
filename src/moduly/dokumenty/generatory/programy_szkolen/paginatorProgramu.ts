@@ -122,7 +122,7 @@ function utworzWirtualnyModulDlaPunktow(bloki: BlokDokumentu[]): ModulPaginacjiP
   return utworzModulPaginacji(blok)
 }
 
-export function utworzModelPaginacjiProgramuDlaTekstuSurowego(tekst: string): ModelPaginacjiProgramu {
+export function utworzModelPaginacjiProgramuDlaTekstuSurowego(tekst: string, wcieciaWierszy?: (number | undefined)[]): ModelPaginacjiProgramu {
   if (!tekst.trim()) {
     return { dni: [] }
   }
@@ -130,6 +130,7 @@ export function utworzModelPaginacjiProgramuDlaTekstuSurowego(tekst: string): Mo
   const bloki = tekst.split('\n').map((wiersz, indeks) => ({
     id: `wiersz-surowego-programu-${indeks + 1}`,
     typ: 'Punkt' as const,
+    dane: { wciecieMm: wcieciaWierszy?.[indeks] ?? null },
     tresc: wiersz || '\u00a0',
     dzieci: [],
     metadane: { poziom: 0 },

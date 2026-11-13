@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import type { OpublikowaneSzczegolyOrganizacyjne } from '../typy'
+import type { OpublikowaneSzczegolyOrganizacyjne, WersjaRoboczaGeneratora } from '../typy'
 import { AkcjeRekordu } from '../../../../wspolne/komponenty/AkcjeRekordu'
 import {
   czyKontoMozeCofnacStatus,
@@ -24,19 +24,19 @@ import './rejestrySzczegolowV4.css'
 
 type WlasciwosciWidokuListy = {
   otworzNoweSzczegoly: () => void
+  otworzKopieRobocza: (przygotujKopie: () => WersjaRoboczaGeneratora | null) => void
 }
 
 function czyStatusOczekujacy(status: string) {
   return status === 'OCZEKUJ' + String.fromCharCode(0x0104) + 'CE'
 }
-export default function WidokListySzczegolowOrganizacyjnych({ otworzNoweSzczegoly }: WlasciwosciWidokuListy) {
+export default function WidokListySzczegolowOrganizacyjnych({ otworzNoweSzczegoly, otworzKopieRobocza }: WlasciwosciWidokuListy) {
   const konto = useMemo(() => pobierzAktywneKontoSzczegolow(), [])
   const [rekordy, ustawRekordy] = useState(() => pobierzOpublikowaneSzczegoly())
   const [podgladRekorduId, ustawPodgladRekorduId] = useState<string | null>(null)
 
   function duplikujRekord(rekord: OpublikowaneSzczegolyOrganizacyjne) {
-    duplikujOpublikowaneSzczegoly(rekord, konto)
-    otworzNoweSzczegoly()
+    otworzKopieRobocza(() => duplikujOpublikowaneSzczegoly(rekord, konto))
   }
 
   function usunRekord(rekord: OpublikowaneSzczegolyOrganizacyjne) {
@@ -58,8 +58,7 @@ export default function WidokListySzczegolowOrganizacyjnych({ otworzNoweSzczegol
     }
 
     const czyBezGrup = !czyKontoArchitekta(konto) && rekord.opiekunId !== konto.id
-    utworzKopieRoboczaZOpublikowanychSzczegolow(rekord, konto, czyBezGrup)
-    otworzNoweSzczegoly()
+    otworzKopieRobocza(() => utworzKopieRoboczaZOpublikowanychSzczegolow(rekord, konto, czyBezGrup))
   }
 
   function oznaczJakoGotowe(rekord: OpublikowaneSzczegolyOrganizacyjne) {

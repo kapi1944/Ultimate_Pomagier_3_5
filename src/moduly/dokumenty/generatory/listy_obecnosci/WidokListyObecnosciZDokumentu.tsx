@@ -69,7 +69,7 @@ function EdytorListyObecnosci({ dokumentId }: { dokumentId: string }) {
   const stanDokumentu = useStanDokumentu({ dane: stanFormularza, czyAutosaveAktywny: false })
 
   function zapiszDokument() {
-    if (!dokument) return
+    if (!dokument) return false
 
     stanDokumentu.rozpocznijZapis()
     const danePrzedEdycja = utworzDaneListyObecnosciZIntegracji(dokument.daneDokumentu.daneZrodlowe, dokument.daneDokumentu.korektyReczne)
@@ -96,15 +96,16 @@ function EdytorListyObecnosci({ dokumentId }: { dokumentId: string }) {
     if (!zaktualizowany) {
       stanDokumentu.oznaczBladZapisu()
       ustawKomunikat('Nie udało się zapisać Listy obecności.')
-      return
+      return false
     }
 
     ustawDokument(zaktualizowany)
     stanDokumentu.oznaczJakoZapisany(stanFormularza)
     ustawKomunikat('Zapisano ręczne korekty dokumentu.')
+    return true
   }
 
-  useOchronaNiezapisanegoDokumentu(stanDokumentu.czyNiezapisaneZmiany, zapiszDokument)
+  useOchronaNiezapisanegoDokumentu(stanDokumentu.czyNiezapisaneZmiany, zapiszDokument, { czyTrwaZapis: () => stanDokumentu.stanZapisu === 'zapisywanie' })
 
   if (!dokument) return <section className="widok"><p>Nie odnaleziono Listy obecności.</p></section>
 

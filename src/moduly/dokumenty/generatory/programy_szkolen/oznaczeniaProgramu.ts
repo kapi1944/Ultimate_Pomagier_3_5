@@ -7,7 +7,23 @@ export const styleOznaczenProgramu = [
 ] as const
 
 export type OznaczenieProgramu = { zapis: string; wartosc?: number; rodzaj: 'arabskie' | 'rzymskie' | 'literowe' | 'punktor' }
-export type UstawienieWierszaProgramu = { styl?: string; poziom?: number }
+export type UstawienieWierszaProgramu = { styl?: string; poziom?: number; wciecieMm?: number; kategoriaWciecia?: string }
+
+export const kategorieWciecProgramu = ['1', '2', '3', '4', 'punktory']
+export const maksymalneWciecieProgramuMm = 50
+
+export function normalizujWciecieProgramu(wartosc: unknown) {
+  return typeof wartosc === 'number' && Number.isFinite(wartosc)
+    ? Math.min(maksymalneWciecieProgramuMm, Math.max(0, wartosc))
+    : undefined
+}
+
+export function rozpoznajKategorieWcieciaProgramu(tekst: string, glebokoscListy?: number) {
+  const oznaczenie = rozpoznajOznaczenieProgramu(tekst)?.oznaczenie
+  if (oznaczenie?.rodzaj === 'punktor') return 'punktory'
+  if (glebokoscListy !== undefined) return String(Math.min(4, glebokoscListy + 1))
+  if (oznaczenie?.rodzaj === 'arabskie') return String(Math.min(4, oznaczenie.zapis.replace(/[.)]$/, '').split('.').length))
+}
 
 export function normalizujWierszWejsciowy(wiersz: string): string {
   const wzorzecBrzegu = /^[\s\uFEFF\u200B-\u200F\u2060\u00AD\u202A-\u202E\u2066-\u2069]+|[\s\uFEFF\u200B-\u200F\u2060\u00AD\u202A-\u202E\u2066-\u2069]+$/gu
@@ -51,13 +67,14 @@ export function liczbaRzymska(liczba: number): string {
 }
 
 export function rozpoznajOznaczenieProgramu(tekst: string): { oznaczenie: OznaczenieProgramu; tresc: string } | null {
-  const dopasowanie = tekst.match(/^(\s*)(\d+[.)]|[IVXLCDMivxlcdm]+[.)]|[a-zA-Z][.)]|[•◦▪·*–—-])\s+(.+)$/)
+  if (/^\s*(?:\d{1,2}\.(?:00|[0-5]\d)(?:\s*(?:[-–—]|godz\b)|\s*$)|\d{1,2}\.\d{1,2}\.\d{4}\b|\d+(?:\.\d+)*[.)]?\s+(?:min(?:ut\w*)?|godz\w*|h|s|zł|kg|%)(?=\s|[.,;:]|$))/iu.test(tekst)) return null
+  const dopasowanie = tekst.match(/^(\s*)(\d+(?:\.\d+)+(?:[.)])?|\d+[.)]|[IVXLCDMivxlcdm]+[.)]|[a-zA-Z][.)]|[•◦▪·*–—-])\s+(.+)$/)
   if (!dopasowanie) return null
   const zapis = dopasowanie[2]
   const rdzen = zapis.slice(0, -1)
   let rodzaj: OznaczenieProgramu['rodzaj'] = 'punktor'
   let wartosc: number | undefined
-  if (/^\d/.test(zapis)) { rodzaj = 'arabskie'; wartosc = Number(rdzen) }
+  if (/^\d/.test(zapis)) { rodzaj = 'arabskie'; wartosc = zapis.replace(/[.)]$/, '').includes('.') ? undefined : Number(rdzen) }
   else if (/^[IVXLCDM]+$/.test(rdzen) || (rdzen.length > 1 && /^[ivxlcdm]+$/.test(rdzen))) {
     const wartosci: Record<string, number> = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 }
     const cyfry = [...rdzen.toUpperCase()].map((cyfra) => wartosci[cyfra])

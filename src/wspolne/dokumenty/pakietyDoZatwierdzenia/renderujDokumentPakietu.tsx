@@ -60,7 +60,7 @@ async function przygotujRenderer(dokument: Dokument<unknown, unknown>, konfigura
       const checklista = pobierzChecklistePaczki(dokument.id)?.daneDokumentu
       if (!checklista) throw new Error('Nie można odczytać checklisty po ID.')
       if (!czyMoznaEksportowacCheckliste(checklista)) throw new Error('Checklista jest zarchiwizowana.')
-      return { zawartosc: <div className="checklista-paczki"><Druk obszar={{ current: null }} dane={checklista} zasoby={zasoby} blokId={null} tryb={false} ustawBlok={() => undefined} zmienBlok={() => undefined} /></div>, ustawienia: {} }
+      return { zawartosc: <div className="checklista-paczki"><Druk obszar={{ current: null }} dane={checklista} zasoby={zasoby} blokId={null} tryb={false} ustawBlok={() => undefined} zmienBlok={() => undefined} /></div>, ustawienia: { plynnyUklad: true, marginesMm: 9 } }
     }
     default: throw new Error('Brak adaptera eksportu tego typu dokumentu.')
   }

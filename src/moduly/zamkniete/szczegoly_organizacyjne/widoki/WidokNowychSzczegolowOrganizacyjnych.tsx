@@ -299,8 +299,13 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
   const [podgladyWzorowKlienta, ustawPodgladyWzorowKlienta] = useState<Record<string, PodgladWzoruKlienta>>({})
   const [porownywanaWersjaId, ustawPorownywanaWersjaId] = useState<string | null>(null)
   const [czyHistoriaRozwinieta, ustawCzyHistoriaRozwinieta] = useState(false)
+  const [czyKontrolaJakosciUruchomiona, ustawCzyKontrolaJakosciUruchomiona] = useState(false)
   const liczbaProblemowBlokujacych = generator.problemyWalidacji.filter((problem) => problem.czyBlokuje).length
-  const statusFormularza = `${generator.daneFormularza.status} | ${generator.czyFormularzKompletny ? 'Kompletny' : `Niepełny (${liczbaProblemowBlokujacych})`}`
+  const stanZapisu = generator.aktywnaKopiaId
+    ? generator.czyNiezapisaneZmiany ? 'Zmieniony — niezapisane zmiany' : 'Wersja robocza — zapisano'
+    : generator.czyNiezapisaneZmiany ? 'Zmieniony — niezapisane zmiany' : 'Nowy formularz — niezapisany'
+  const stanKompletnosci = generator.czyFormularzKompletny ? 'Kompletny' : `Niekompletny (${liczbaProblemowBlokujacych})`
+  const statusFormularza = !generator.aktywnaKopiaId && !generator.czyNiezapisaneZmiany ? stanZapisu : `${stanZapisu} | ${stanKompletnosci}`
   const kompletneSekcjeNawigacji = useMemo(() => pobierzIdKompletnychSekcji(generator.modelSekcyjny), [generator.modelSekcyjny])
   const miejscowosciDoPodpowiedzi = useMemo(
     () => [...new Set(pobierzLokalizacjeZMagazynu().map((lokalizacja) => lokalizacja.nazwa))].sort((pierwsza, druga) => pierwsza.localeCompare(druga, 'pl')),
@@ -686,15 +691,14 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
             <>
               <button ref={przyciskJakosci} aria-controls={idPaneluJakosci} aria-expanded={czyPanelJakosciOtwarty} type="button" onClick={() => {
                 generator.sprawdzJakosc()
+                ustawCzyKontrolaJakosciUruchomiona(true)
                 czyPrzeniescFokusDoPaneluJakosci.current = true
                 ustawCzyPanelJakosciOtwarty(true)
                 if (czyPanelJakosciOtwarty) oknoJakosci.current?.querySelector<HTMLButtonElement>('.szczegoly-panel-jakosci__naglowek button')?.focus()
               }}>Kontrola jakości</button>
-              {generator.daneFormularza.status === 'NIEPEŁNE' && (
-                <button disabled={generator.czyTylkoPodglad} type="button" onClick={generator.zapiszWersje}>
-                  Zapisz wersję roboczą
-                </button>
-              )}
+              <button disabled={generator.czyTylkoPodglad} type="button" onClick={generator.zapiszWersje}>
+                Zapisz wersję roboczą
+              </button>
               {generator.daneFormularza.status === 'PEŁNE' && (
                 <button className="szczegoly-akcja-glowna" disabled={!generator.czyFormularzKompletny || generator.czyTylkoPodglad} type="button" onClick={generator.opublikujSzczegoly}>
                   Opublikuj
@@ -1160,7 +1164,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
 
         <SekcjaFormularza id="historia-wersji" tytul="Historia wersji i zdarzeń">
           <div className="szczegoly-historia">
-            {generator.historiaSzczegolow.length === 0 && <p>Brak zapisanych wersji i zdarzeń.</p>}
+            {generator.historiaSzczegolow.length === 0 && <p>{generator.aktywnaKopiaId ? 'Brak zapisanych wersji i zdarzeń.' : 'Brak historii — formularz nie został jeszcze zapisany'}</p>}
             <div className="szczegoly-historia__lista" id="lista-historii-wersji">
             {widoczneWpisyHistorii.map((wpis) => (
               <article className="szczegoly-historia__wpis" key={wpis.id}>
@@ -1219,13 +1223,13 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
               Nowy formularz
             </button>
           </div>
-          <div className="szczegoly-kopie">
+          {generator.aktywnaKopiaId && <div className="szczegoly-kopie">
             {generator.kopieRobocze.map((kopia) => (
               <button key={kopia.id} type="button" onClick={() => generator.wczytajWersje(kopia)}>
                 {kopia.nazwa}
               </button>
             ))}
-          </div>
+          </div>}
         </SekcjaFormularza>
         </div>
       </div>
@@ -1263,7 +1267,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
             {czyPanelJakosciPrzypiety ? 'Odepnij panel' : 'Przypnij panel'}
           </button>
         </div>
-        <PanelWykrytychProblemow
+        {(generator.aktywnaKopiaId || generator.czyNiezapisaneZmiany || czyKontrolaJakosciUruchomiona) ? <PanelWykrytychProblemow
           komunikatySystemowe={[generator.komunikat]}
           modelSekcyjny={generator.modelSekcyjny}
           ostatniAutosave={generator.ostatniAutosave}
@@ -1271,7 +1275,7 @@ export default function WidokNowychSzczegolowOrganizacyjnych({ otworzDokument }:
           problemy={generator.problemyWalidacji}
           przejdzDoPola={przejdzDoProblemuJakosci}
           zaakceptujPolaNiepewne={generator.zaakceptujWszystkiePolaNiepewne}
-        />
+        /> : <p className="szczegoly-panel-jakosci__pusty">Kontrola jakości pokaże braki po rozpoczęciu pracy nad formularzem.</p>}
       </aside>
       </dialog>
       </DostawcaBledowPol>

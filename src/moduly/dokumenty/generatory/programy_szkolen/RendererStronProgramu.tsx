@@ -42,6 +42,7 @@ type WlasciwosciRendereraStronProgramu = WlasciwosciWygladuTrescProgramu & {
   czyAkcentowacNazweOrganizatoraWStopce: boolean
   czyNieDzielicPunktowGlownych?: boolean
   czyFormatowanieSkryptowe: boolean
+  wcieciaWierszy?: (number | undefined)[]
   tekstSurowy: string
   kontekstSwobodnychBlokow: KontekstSwobodnychBlokow
   trybRenderowania: TrybRenderowaniaDokumentu
@@ -308,6 +309,7 @@ export default function RendererStronProgramu({
   czyAkcentowacNazweOrganizatoraWStopce,
   czyNieDzielicPunktowGlownych = false,
   czyFormatowanieSkryptowe,
+  wcieciaWierszy,
   tekstSurowy,
   kontekstSwobodnychBlokow,
   trybRenderowania,
@@ -318,8 +320,8 @@ export default function RendererStronProgramu({
   ...wyglad
 }: WlasciwosciRendereraStronProgramu) {
   const model = useMemo(
-    () => czyFormatowanieSkryptowe ? utworzModelPaginacjiProgramu(dokument, tekstSurowy) : utworzModelPaginacjiProgramuDlaTekstuSurowego(tekstSurowy),
-    [czyFormatowanieSkryptowe, dokument, tekstSurowy],
+    () => czyFormatowanieSkryptowe ? utworzModelPaginacjiProgramu(dokument, tekstSurowy) : utworzModelPaginacjiProgramuDlaTekstuSurowego(tekstSurowy, wcieciaWierszy),
+    [czyFormatowanieSkryptowe, dokument, tekstSurowy, wcieciaWierszy],
   )
   const elementy = pobierzElementyIdentyfikacjiProgramu(preset, nadpisania)
   const wymiaryStrony = pobierzWymiaryStronyProgramu()
@@ -332,7 +334,7 @@ export default function RendererStronProgramu({
     '--program-odstep-poziomy': `${geometriaStronyProgramu.odstepPoziomyMm}mm`,
     '--program-wysokosc-stopki': `${geometriaStronyProgramu.wysokoscStopkiMm}mm`,
   } as CSSProperties
-  const kluczUkladu = JSON.stringify({ dokument: dokument.struktura, tekstSurowy, czyFormatowanieSkryptowe, czyNieDzielicPunktowGlownych, preset, profilFirmy, tytul, elementy, czyJustowac, logotypUzytkownika, szerokoscLogotypu, gruboscObramowaniaTytulu, trybRenderowania, wyglad })
+  const kluczUkladu = JSON.stringify({ dokument: dokument.struktura, tekstSurowy, wcieciaWierszy, czyFormatowanieSkryptowe, czyNieDzielicPunktowGlownych, preset, profilFirmy, tytul, elementy, czyJustowac, logotypUzytkownika, szerokoscLogotypu, gruboscObramowaniaTytulu, trybRenderowania, wyglad })
   const { obszarPomiarowyRef, wynik, czyPomiaryGotowe } = usePaginacjaProgramu(model, kluczUkladu, czyNieDzielicPunktowGlownych)
   const wlasciwosciStrony = {
     preset,

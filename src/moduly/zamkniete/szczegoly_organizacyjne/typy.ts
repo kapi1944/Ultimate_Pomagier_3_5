@@ -268,6 +268,7 @@ export type ModelSekcyjnySzczegolow = Record<KluczSekcjiSzczegolow, WynikSekcjiS
 
 export type AutosaveSzczegolow = {
   id: string
+  identyfikatorInstancji?: string
   dataZapisu: string
   dane: DaneFormularza
   grupy: GrupaSzkoleniowa[]

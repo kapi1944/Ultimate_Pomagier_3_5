@@ -2,11 +2,13 @@ import { EditorContent, useEditor } from '@tiptap/react'
 import Placeholder from '@tiptap/extension-placeholder'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
+import { closeHistory } from '@tiptap/pm/history'
 import { useEffect, useState } from 'react'
 import { konwertujHtmlNaTekstProgramu, konwertujHtmlNaWierszeProgramu, obsluzWklejenieProgramu, oczyscHtmlProgramu } from './konwersjaProgramuWysiwyg'
 import { RozszerzenieOznaczenProgramu, pobierzPozycjeOznaczenEdytora } from './rozszerzenieOznaczenProgramu'
-import { rozpoznajOznaczenieProgramu, styleOznaczenProgramu } from '../oznaczeniaProgramu'
+import { kategorieWciecProgramu, maksymalneWciecieProgramuMm, normalizujWciecieProgramu, rozpoznajOznaczenieProgramu, styleOznaczenProgramu } from '../oznaczeniaProgramu'
 
+const pusteWciecia: Record<string, number> = {}
 const pusteStylePoziomow: string[] = []
 const domyslneStyleEdytora = ['arabskie.', '◦', '▪']
 
@@ -14,6 +16,8 @@ type WlasciwosciEdytoraProgramuWysiwyg = {
   domyslneStylePoziomow?: string[]
   stylePoziomow?: string[]
   onZmianaStyluPoziomu?: (poziom: number, styl: string) => void
+  wcieciaPresetu?: Record<string, number>
+  onZapiszWcieciePresetu?: (kategoria: string, wartosc: number) => void
   wartoscHtml: string
   onZmianaHtml: (html: string) => void
   onZmianaTekstuProgramu: (tekst: string) => void
@@ -21,12 +25,17 @@ type WlasciwosciEdytoraProgramuWysiwyg = {
 
 export function EdytorProgramuWysiwyg({
   wartoscHtml,
+  wcieciaPresetu = pusteWciecia,
+  onZapiszWcieciePresetu,
   stylePoziomow = pusteStylePoziomow,
   domyslneStylePoziomow = domyslneStyleEdytora,
   onZmianaStyluPoziomu,
   onZmianaHtml,
   onZmianaTekstuProgramu,
 }: WlasciwosciEdytoraProgramuWysiwyg) {
+  const [kategoriaWciecia, ustawKategorieWciecia] = useState('2')
+  const [zakresWciecia, ustawZakresWciecia] = useState('program')
+  const [wpisaneWciecie, ustawWpisaneWciecie] = useState<string | null>(null)
   const [zakres, ustawZakres] = useState('pozycja')
   const [wybor, ustawWybor] = useState({ poziom: 0, styl: 'oryginalne' })
   const edytor = useEditor({
@@ -78,11 +87,12 @@ export function EdytorProgramuWysiwyg({
     if (!edytor) return
     const rozszerzenie = edytor.extensionManager.extensions.find((element) => element.name === 'oznaczeniaProgramu')
     if (rozszerzenie) {
+      rozszerzenie.options.wcieciaPresetu = wcieciaPresetu
       rozszerzenie.options.stylePoziomow = stylePoziomow
       rozszerzenie.options.domyslneStyle = domyslneStylePoziomow
     }
     edytor.view.dispatch(edytor.state.tr)
-  }, [edytor, stylePoziomow, domyslneStylePoziomow])
+  }, [edytor, stylePoziomow, domyslneStylePoziomow, wcieciaPresetu])
 
   function zmienOznaczenie(styl: string) {
     if (!edytor) return
@@ -110,6 +120,35 @@ export function EdytorProgramuWysiwyg({
     }
     const typ = edytor.isActive('listItem') ? 'listItem' : edytor.isActive('heading') ? 'heading' : 'paragraph'
     edytor.chain().focus().updateAttributes(typ, { poziomProgramu: poziom, ...(pozycja?.oryginalne ? { oznaczenieOryginalne: pozycja.oryginalne } : {}) }).run()
+  }
+
+  const zaznaczenie = edytor?.state.selection
+  const pasujace = edytor ? pobierzPozycjeOznaczenEdytora(edytor.state.doc).filter((pozycja) =>
+    pozycja.kategoriaWciecia === kategoriaWciecia &&
+    (zakresWciecia === 'program' || (zaznaczenie && !zaznaczenie.empty &&
+      zaznaczenie.from < pozycja.koniecTresci - 1 && zaznaczenie.to > pozycja.pozycja + 1)),
+  ) : []
+  const domyslneWciecie = wcieciaPresetu[kategoriaWciecia] ?? 0
+  const wartosciWciec = new Set(pasujace.map((pozycja) => pozycja.wciecieMm ?? domyslneWciecie))
+  const wspolneWciecie = wartosciWciec.size <= 1 ? wartosciWciec.values().next().value ?? domyslneWciecie : undefined
+
+  function zmienWciecie(oblicz: (wartosc: number) => number | null) {
+    if (!edytor) return
+    const transakcja = closeHistory(edytor.state.tr)
+    for (const pozycja of pasujace) {
+      const wezel = transakcja.doc.nodeAt(pozycja.pozycja)
+      if (!wezel) continue
+      const wartosc = oblicz(pozycja.wciecieMm ?? domyslneWciecie)
+      const wciecieMm = normalizujWciecieProgramu(wartosc) ?? null
+      if (wezel.attrs.wciecieMm === wciecieMm || (wartosc !== null && wciecieMm === (pozycja.wciecieMm ?? domyslneWciecie))) continue
+      transakcja.setNodeMarkup(pozycja.pozycja, undefined, { ...wezel.attrs, wciecieMm })
+    }
+    if (transakcja.docChanged) {
+      edytor.view.dispatch(transakcja)
+      edytor.view.dispatch(closeHistory(edytor.state.tr))
+    }
+    ustawWpisaneWciecie(null)
+    edytor.commands.focus()
   }
 
   const czyAktywny = (nazwa: string, opcje?: Record<string, unknown>) => Boolean(edytor?.isActive(nazwa, opcje))
@@ -205,6 +244,31 @@ export function EdytorProgramuWysiwyg({
           Wyczyść formatowanie
         </button>
       </div>
+      <fieldset className="program-szkolen__formatowanie-zbiorcze">
+        <legend>Formatowanie zbiorcze</legend>
+        <div className="program-szkolen__pasek-edytora">
+          <label>Poziom <select value={kategoriaWciecia} onChange={(zdarzenie) => { ustawKategorieWciecia(zdarzenie.target.value); ustawWpisaneWciecie(null) }}>
+            {kategorieWciecProgramu.map((kategoria) => <option key={kategoria} value={kategoria}>{kategoria === 'punktory' ? 'Listy punktowane' : `Poziom ${kategoria}`}</option>)}
+          </select></label>
+          <label>Zakres <select value={zakresWciecia} onChange={(zdarzenie) => { ustawZakresWciecia(zdarzenie.target.value); ustawWpisaneWciecie(null) }}>
+            <option value="program">Cały program</option><option value="zaznaczenie">Zaznaczony fragment</option>
+          </select></label>
+          <button type="button" className="program-szkolen__przycisk" disabled={!pasujace.length} aria-label="Zmniejsz wcięcie o 5 mm" onClick={() => zmienWciecie((wartosc) => wartosc - 5)}>←</button>
+          <div className="program-szkolen__pasek-edytora">
+            <label>Wcięcie (mm) <input type="number" min={0} max={maksymalneWciecieProgramuMm} step="any" disabled={!pasujace.length} placeholder="Różne" value={wpisaneWciecie ?? wspolneWciecie ?? ''} onChange={(zdarzenie) => ustawWpisaneWciecie(zdarzenie.target.value)} onKeyDown={(zdarzenie) => {
+              if (zdarzenie.key !== 'Enter' || !wpisaneWciecie?.trim()) return
+              zdarzenie.preventDefault()
+              zmienWciecie(() => Number(wpisaneWciecie))
+            }} /></label>
+            <button type="button" className="program-szkolen__przycisk" disabled={!pasujace.length || !wpisaneWciecie?.trim()} onClick={() => zmienWciecie(() => Number(wpisaneWciecie))}>Zastosuj</button>
+          </div>
+          <button type="button" className="program-szkolen__przycisk" disabled={!pasujace.length} aria-label="Zwiększ wcięcie o 5 mm" onClick={() => zmienWciecie((wartosc) => wartosc + 5)}>→</button>
+          <button type="button" className="program-szkolen__przycisk" disabled={!pasujace.length} onClick={() => zmienWciecie(() => null)}>Przywróć wcięcie presetu</button>
+          {onZapiszWcieciePresetu && <button type="button" className="program-szkolen__przycisk" disabled={zakresWciecia !== 'program' || !pasujace.length || wspolneWciecie === undefined} onClick={() => {
+            if (wspolneWciecie !== undefined) onZapiszWcieciePresetu(kategoriaWciecia, wspolneWciecie)
+          }}>Zapisz w presecie</button>}
+        </div>
+      </fieldset>
       <EditorContent className="program-szkolen__obszar-edytora" editor={edytor} />
     </div>
   )

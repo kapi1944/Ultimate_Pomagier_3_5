@@ -159,10 +159,10 @@
 .checklista-paczki__finalizacja { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .checklista-paczki__finalizacja h2, .checklista-paczki__finalizacja p { width: 100%; }
 
-.checklista-paczki__wydruk { width: min(100%, 210mm); box-sizing: border-box; margin: 0 auto; padding: 10mm 9mm; background: #fff; color: #111; font-family: Arial, sans-serif; font-size: 9.5px; line-height: 1.25; }
+.checklista-paczki__wydruk { width: min(100%, 210mm); box-sizing: border-box; margin: 0 auto; padding: 10mm 9mm; background: #fff; color: #111; font-family: Arial, sans-serif; font-size: 10.5pt; line-height: 1.25; }
 .checklista-paczki .checklista-paczki__wydruk, .checklista-paczki .checklista-paczki__wydruk * { color: #111; }
 .checklista-paczki__wydruk h2, .checklista-paczki__wydruk h3, .checklista-paczki__wydruk p { margin: 0; }
-.checklista-paczki__wydruk table { width: 100%; margin-top: 7px; table-layout: fixed; border-collapse: collapse; font-size: 8.5px; }
+.checklista-paczki__wydruk table { width: 100%; margin-top: 7px; table-layout: fixed; border-collapse: collapse; font-size: 9.5pt; }
 .checklista-paczki__wydruk th, .checklista-paczki__wydruk td { min-height: 18px; padding: 3px 4px; border: 1px solid #111; vertical-align: middle; text-align: left; overflow-wrap: anywhere; }
 .checklista-paczki__wydruk-tabela-danych th { width: 19%; background: #f2f2f2; }
 .checklista-paczki__wydruk-tabela-danych td:nth-child(2) { width: 43%; }
@@ -182,8 +182,8 @@
 .checklista-paczki__wydruk-tabela--inne th, .checklista-paczki__wydruk-tabela--inne td { background: #fff3e5; }
 .checklista-paczki__wydruk-tabela--niestandardowa th, .checklista-paczki__wydruk-tabela--niestandardowa td { background: #f7f7f7; }
 .checklista-paczki__wydruk table { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-.checklista-paczki__wydruk tbody, .checklista-paczki__wydruk tr { break-inside: avoid; }
-.checklista-paczki__wydruk-tabela-materialow { break-after: avoid; }
+.checklista-paczki__wydruk tr, .checklista-paczki__wydruk-tabela-wysylki { break-inside: avoid; }
+.checklista-paczki__wydruk-uwagi { white-space: pre-wrap; }
 .checklista-paczki__wydruk-pozycja-podrzedna { padding-left: 12px !important; }
 .checklista-paczki__wydruk-pozycja-podrzedna::before { content: '- '; }
 .checklista-paczki__wydruk-pozycja-kursywa { font-style: italic; }
@@ -212,8 +212,6 @@
   .checklista-paczki__akcje-glowne, .checklista-paczki__akcje-glowne button { width: 100%; }
   .checklista-paczki__wiersz, .checklista-paczki__kolumna-status, .checklista-paczki fieldset { grid-template-columns: 1fr; }
   .checklista-paczki__kolumna-status { grid-column: auto; }
-  .checklista-paczki__wydruk { padding: 7mm; font-size: 8px; }
-  .checklista-paczki__wydruk h2 { font-size: 12px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -221,13 +219,10 @@
 }
 
 @media print {
-  @page { size: A4 portrait; margin: 9mm; }
-  body * { visibility: hidden; }
-  #wydruk-checklisty, #wydruk-checklisty * { visibility: visible; }
-  #wydruk-checklisty { position: absolute; inset: 0; width: 100%; margin: 0; padding: 0; }
-  #wydruk-checklisty { font-size: 9.5px; }
-  #wydruk-checklisty table { break-inside: avoid; }
-  #wydruk-checklisty th, #wydruk-checklisty td { min-height: 18px; }
+  html:has(#wydruk-checklisty[data-cel-druku-dokumentu]), body:has(#wydruk-checklisty[data-cel-druku-dokumentu]) { overflow: visible !important; height: auto; color-scheme: light; }
+  [data-przodek-druku-dokumentu]:has(#wydruk-checklisty[data-cel-druku-dokumentu]) { background: #fff !important; }
+  #wydruk-checklisty[data-cel-druku-dokumentu] thead { display: table-header-group; }
+  .paczki-podglad__strona:has(#wydruk-checklisty[data-cel-druku-dokumentu]) { zoom: 1 !important; }
 }
 
 .checklista-paczki__paczka { margin-top: 14px; border: 1px solid var(--checklista-obramowanie); border-radius: 8px; background: color-mix(in srgb, var(--ui-pole) 42%, transparent); }
@@ -243,7 +238,7 @@
 .checklista-paczki__szczegoly-pozycji > summary { min-height: 38px; padding: 8px; cursor: pointer; }
 .checklista-paczki__szczegoly-pozycji[open] { grid-column: 1 / -1; }
 .checklista-paczki__szczegoly-pozycji label { margin-top: 8px; }
-.checklista-paczki__wydruk-paczka { break-before: auto; break-inside: avoid; margin-top: 6mm; }
+.checklista-paczki__wydruk-paczka { margin-top: 4mm; }
 .checklista-paczki__wydruk-paczka h2 { break-after: avoid; margin: 0 0 3mm; }
 
 @container (max-width: 700px) {
@@ -267,6 +262,7 @@
 .checklista-paczki__porownanie-ilosci { display: inline-flex; align-items: baseline; gap: .6em; white-space: nowrap; }
 .checklista-paczki__porownanie-ilosci strong { font-size: 1.2em; }
 .checklista-paczki__porownanie-ilosci small { font-size: .8em; font-weight: 400; }
+.checklista-paczki__wydruk .checklista-paczki__porownanie-ilosci small { font-size: 9pt; }
 .checklista-paczki__wydruk-tabela-danych th,
 .checklista-paczki__wydruk-tabela-szczegolow th,
 .checklista-paczki__wydruk-tabela-logotypow th,
@@ -330,7 +326,7 @@
 .checklista-paczki__naglowek-pracy h1 { margin-bottom: 4px; }
 .checklista-paczki__naglowek-pracy p { margin-bottom: 0; overflow-wrap: anywhere; }
 .checklista-paczki__naglowek-pracy .checklista-paczki__tryby { flex-basis: 100%; margin-block: 4px 10px; }
-.checklista-paczki__obszar-pracy { grid-template-columns: minmax(650px, 1.2fr) minmax(320px, .8fr); gap: 12px; }
+.checklista-paczki__obszar-pracy { grid-template-columns: minmax(650px, 1fr) minmax(320px, 1fr); gap: 12px; }
 .checklista-paczki__obszar-pracy > .generator-dokumentu__panel { padding: 12px; }
 .checklista-paczki__obszar-pracy > .generator-dokumentu__panel--podglad { position: sticky; top: 12px; }
 .checklista-paczki__obszar-pracy .checklista-paczki__karta { margin-block: 0 12px; padding: 12px; }
@@ -342,21 +338,57 @@
 .checklista-paczki__dodawanie { padding: 8px; align-items: end; }
 .checklista-paczki__dodawanie > label { flex: 1; }
 .checklista-paczki__paczka > summary { min-height: 0; padding: 10px; }
-.checklista-paczki__kategoria-edycji { position: relative; margin: 8px; }
+.checklista-paczki__kategoria-edycji { position: relative; margin: 8px; overflow: visible; }
 .checklista-paczki__kategoria-edycji > details > summary { cursor: pointer; padding: 10px 100px 10px 8px; font-weight: 700; background: var(--ui-panel); }
 .checklista-paczki__dodaj-w-kategorii { position: absolute; top: 4px; right: 4px; }
 .checklista-paczki__dodaj-w-kategorii button { min-height: 30px; padding: 3px 8px; }
-.checklista-paczki__przewijanie-tabeli { overflow-x: auto; padding-bottom: 2px; }
-.checklista-paczki__tabela-materialow { border-collapse: collapse; table-layout: fixed; width: 100%; min-width: 620px; }
-.checklista-paczki__tabela-materialow th { text-align: left; padding: 6px 4px; font-weight: 600; }
-.checklista-paczki__tabela-materialow th:nth-child(1) { width: 30px; }
-.checklista-paczki__tabela-materialow th:nth-child(3) { width: 100px; }
-.checklista-paczki__tabela-materialow th:nth-child(4) { width: 88px; }
-.checklista-paczki__tabela-materialow th:nth-child(5) { width: 106px; }
-.checklista-paczki__tabela-materialow th:nth-child(6) { width: 116px; }
+.checklista-paczki__kontener-tabeli { container-type: inline-size; padding: 0 4px 2px; }
+.checklista-paczki__tabela-materialow { border-collapse: collapse; table-layout: fixed; width: 100%; max-width: 600px; font-size: 13px; }
+.checklista-paczki__tabela-materialow th { box-sizing: border-box; text-align: left; padding: 6px 4px; font-weight: 600; }
+.checklista-paczki__tabela-materialow th:nth-child(1) { width: 36px; }
+.checklista-paczki__tabela-materialow th:nth-child(3) { width: 70px; }
+.checklista-paczki__tabela-materialow th:nth-child(4) { width: 60px; }
+.checklista-paczki__tabela-materialow th:nth-child(5) { width: 100px; }
+.checklista-paczki__tabela-materialow th:nth-child(6) { width: 110px; }
 .checklista-paczki__tabela-materialow td { padding: 4px; border-top: 1px solid var(--checklista-obramowanie); vertical-align: middle; }
-.checklista-paczki__material :is(input, button) { min-height: 34px; padding: 4px 6px; }
+.checklista-paczki__material :is(input, button) { min-height: 34px; padding: 4px 6px; font-size: 13px; }
 .checklista-paczki__material input { min-width: 0; }
+.checklista-paczki__material input[type='number'] { padding-inline: 4px; }
+.checklista-paczki__material td:nth-child(2) input { font-size: 15px; }
+.checklista-paczki__material td:nth-child(2) { overflow-wrap: anywhere; }
+
+@container (max-width: 545px) {
+  .checklista-paczki__tabela-materialow, .checklista-paczki__tabela-materialow tbody,
+  .checklista-paczki__tabela-materialow tr:not([hidden]), .checklista-paczki__tabela-materialow td { display: block; }
+  .checklista-paczki__tabela-materialow thead,
+  .checklista-paczki__tabela-materialow thead tr,
+  .checklista-paczki__tabela-materialow thead th {
+    position: absolute;
+    inset: 0 auto auto 0;
+    clip-path: inset(50%);
+    width: 1px !important;
+    height: 1px;
+    padding: 0;
+  }
+  .checklista-paczki__tabela-materialow tr.checklista-paczki__material {
+    display: grid;
+    grid-template-columns: 32px repeat(2, minmax(0, 1fr));
+    border-top: 1px solid var(--checklista-obramowanie);
+  }
+  .checklista-paczki__material td { min-width: 0; border: 0; }
+  .checklista-paczki__material td:nth-child(2) { grid-column: 2 / -1; }
+  .checklista-paczki__material td:nth-child(3) { grid-column: 2; }
+  .checklista-paczki__material td:nth-child(3)::before,
+  .checklista-paczki__material td:nth-child(4)::before { display: block; overflow-wrap: anywhere; }
+  .checklista-paczki__material td:nth-child(3)::before { content: 'Wymagane'; }
+  .checklista-paczki__material td:nth-child(4)::before { content: 'Przygotowane'; }
+  .checklista-paczki__material td:nth-child(5) { grid-column: 2; }
+  .checklista-paczki__material td:nth-child(6) { justify-self: end; }
+}
+
+@container (max-width: 330px) {
+  .checklista-paczki__material td:nth-child(6) { grid-column: 2 / -1; }
+}
 .checklista-paczki__material[data-gotowa='true'] { background: color-mix(in srgb, var(--ui-success) 7%, var(--ui-powierzchnia)); }
 .checklista-paczki__uchwyt { cursor: grab; width: 28px; }
 .checklista-paczki__status-materialu { width: 100%; white-space: normal; }
@@ -408,8 +440,4 @@
   .checklista-paczki__obszar-pracy > .generator-dokumentu__panel { padding: 6px; }
   .checklista-paczki__obszar-pracy .checklista-paczki__karta { padding: 6px; }
   .checklista-paczki__pola-szczegolow { grid-template-columns: minmax(0, 1fr); }
-}
-@media print {
-  .paczki-podglad__strona { zoom: 1 !important; }
-  .paczki-podglad__przewijanie { overflow: visible; height: auto; padding: 0; }
 }

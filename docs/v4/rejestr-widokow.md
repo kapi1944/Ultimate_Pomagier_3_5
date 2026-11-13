@@ -119,9 +119,10 @@ Właściciel pliku obejmuje wszystkie warunki renderowania, stany pusty/błąd/�
 | `src/App.tsx` | V4-02 | — | — | 0 |
 | `src/aplikacja/desktop/PanelAktualizacji.tsx` | V4-22 | V4-02 | — | 2 |
 | `src/aplikacja/layout/NaglowekAplikacji.tsx` | V4-02 | — | V4-02 | 1 |
-| `src/aplikacja/layout/UkladAplikacji.tsx` | V4-02 | V4-03, V4-04, V4-05, V4-06, V4-07, V4-08, V4-09, V4-10, V4-11, V4-12, V4-13, V4-14, V4-15, V4-16, V4-17, V4-18, V4-19, V4-20, V4-21, V4-22, V4-23 | V4-02, V4-05 | 7 |
+| `src/aplikacja/layout/UkladAplikacji.tsx` | V4-02 | V4-03, V4-04, V4-05, V4-06, V4-07, V4-08, V4-09, V4-10, V4-11, V4-12, V4-13, V4-14, V4-15, V4-16, V4-17, V4-18, V4-19, V4-20, V4-21, V4-22, V4-23 | V4-02, V4-05 | 8 |
 | `src/aplikacja/logowanie/KontekstUzytkownika.tsx` | V4-02 | — | — | 1 |
-| `src/aplikacja/logowanie/PanelLogowania.tsx` | V4-03 | — | V4-02, V4-03 | 7 |
+| `src/aplikacja/logowanie/EkranInicjalizacji.tsx` | V4-03 | — | — | 0 |
+| `src/aplikacja/logowanie/PanelLogowania.tsx` | V4-03 | — | V4-02, V4-03 | 9 |
 | `src/aplikacja/menu/IkonaMenu.tsx` | V4-02 | V4-04, V4-05, V4-06, V4-07, V4-08, V4-09, V4-10, V4-11, V4-12, V4-13, V4-14, V4-15, V4-16, V4-17, V4-18, V4-19, V4-20, V4-21, V4-22, V4-23 | — | 0 |
 | `src/aplikacja/menu/MenuBoczne.tsx` | V4-02 | V4-05 | V4-02, V4-05 | 1 |
 | `src/aplikacja/ustawienia/UstawieniaHarmonogramu.tsx` | V4-22 | V4-04 | — | 0 |
@@ -149,7 +150,7 @@ Właściciel pliku obejmuje wszystkie warunki renderowania, stany pusty/błąd/�
 | `src/moduly/dokumenty/generatory/checklisty_paczek/PanelEtykietPaczek.tsx` | V4-15 | — | — | 2 |
 | `src/moduly/dokumenty/generatory/checklisty_paczek/PodgladWydrukuPaczki.tsx` | V4-15 | — | — | 0 |
 | `src/moduly/dokumenty/generatory/checklisty_paczek/WeryfikacjaZdjeciaPaczki.tsx` | V4-15 | — | — | 0 |
-| `src/moduly/dokumenty/generatory/checklisty_paczek/WidokChecklistPaczek.tsx` | V4-15 | — | — | 8 |
+| `src/moduly/dokumenty/generatory/checklisty_paczek/WidokChecklistPaczek.tsx` | V4-15 | — | — | 9 |
 | `src/moduly/dokumenty/generatory/dyplomy/WidokDyplomow.tsx` | V4-13 | — | — | 4 |
 | `src/moduly/dokumenty/generatory/karta_na_drzwi/RendererKartyNaDrzwi.tsx` | V4-14 | — | — | 0 |
 | `src/moduly/dokumenty/generatory/karta_na_drzwi/WidokKartNaDrzwi.tsx` | V4-14 | — | — | 3 |
@@ -203,7 +204,7 @@ Właściciel pliku obejmuje wszystkie warunki renderowania, stany pusty/błąd/�
 | `src/moduly/zamkniete/szczegoly_organizacyjne/komponenty/SekcjaFormularza.tsx` | V4-07 | — | — | 0 |
 | `src/moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokKopiiRoboczychSzczegolowOrganizacyjnych.tsx` | V4-06 | — | V4-06 | 0 |
 | `src/moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokListySzczegolowOrganizacyjnych.tsx` | V4-06 | — | V4-06 | 3 |
-| `src/moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokNowychSzczegolowOrganizacyjnych.tsx` | V4-07 | — | — | 13 |
+| `src/moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokNowychSzczegolowOrganizacyjnych.tsx` | V4-07 | — | — | 14 |
 | `src/moduly/zamkniete/szkolenia/WidokSzkolenZamknietych.tsx` | V4-05 | — | V4-05 | 0 |
 | `src/moduly/zamkniete/szkolenia/generator_szczegolow/WidokGeneratoraSzczegolow.tsx` | V4-07 | — | — | 0 |
 | `src/wspolne/dokumenty/AkcjeEksportuPdf.tsx` | V4-09 | V4-10, V4-11, V4-12, V4-13, V4-14, V4-15 | — | 1 |

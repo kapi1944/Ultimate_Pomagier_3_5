@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { ustawObslugeNiezapisanegoDokumentu } from './strzeznikNiezapisanegoDokumentu'
 
 export type StanZapisuDokumentu = 'zapisano' | 'zapisywanie' | 'niezapisane' | 'blad'
@@ -32,6 +32,7 @@ export function useStanDokumentu<Dane>({
   const zapiszAutomatycznieRef = useRef(zapiszAutomatycznie)
   const [odciskZapisany, ustawOdciskZapisany] = useState(odciskAktualny)
   const [stanZapisu, ustawStanZapisu] = useState<StanZapisuDokumentu>('zapisano')
+  const trwajacyZapis = useRef<Promise<boolean> | null>(null)
   const czyNiezapisaneZmiany = czyStanDokumentuZmieniony(odciskAktualny, odciskZapisany)
   const skutecznyStanZapisu: StanZapisuDokumentu = czyNiezapisaneZmiany && stanZapisu === 'zapisano'
     ? 'niezapisane'
@@ -53,6 +54,7 @@ export function useStanDokumentu<Dane>({
   const rozpocznijZapis = useCallback(() => ustawStanZapisu('zapisywanie'), [])
 
   const zapiszTeraz = useCallback(async () => {
+    if (trwajacyZapis.current) return trwajacyZapis.current
     const adapterZapisu = zapiszAutomatycznieRef.current
 
     if (!adapterZapisu) {
@@ -63,14 +65,22 @@ export function useStanDokumentu<Dane>({
     const odciskZapisywanychDanych = serializuj(zapisywaneDane)
     rozpocznijZapis()
 
+    const operacja = (async () => {
+      try {
+        await adapterZapisu(zapisywaneDane)
+        ustawOdciskZapisany(odciskZapisywanychDanych)
+        ustawStanZapisu(odciskAktualnyRef.current === odciskZapisywanychDanych ? 'zapisano' : 'niezapisane')
+        return true
+      } catch {
+        oznaczBladZapisu()
+        return false
+      }
+    })()
+    trwajacyZapis.current = operacja
     try {
-      await adapterZapisu(zapisywaneDane)
-      ustawOdciskZapisany(odciskZapisywanychDanych)
-      ustawStanZapisu(odciskAktualnyRef.current === odciskZapisywanychDanych ? 'zapisano' : 'niezapisane')
-      return true
-    } catch {
-      oznaczBladZapisu()
-      return false
+      return await operacja
+    } finally {
+      if (trwajacyZapis.current === operacja) trwajacyZapis.current = null
     }
   }, [oznaczBladZapisu, rozpocznijZapis, serializuj])
 
@@ -100,19 +110,39 @@ export function useStanDokumentu<Dane>({
   }
 }
 
-export function useOchronaNiezapisanegoDokumentu(czyNiezapisaneZmiany: boolean, zapiszPrzedWyjsciem: () => void | boolean) {
+type OpcjeOchronyNiezapisanychZmian = {
+  identyfikatorInstancji?: string
+  etykieta?: string
+  czyTrwaZapis?: () => boolean
+  odrzucZmiany?: () => void
+}
+
+export function useOchronaNiezapisanegoDokumentu(
+  czyNiezapisaneZmiany: boolean,
+  zapiszPrzedWyjsciem: () => boolean | void | Promise<boolean | void>,
+  opcje: OpcjeOchronyNiezapisanychZmian = {},
+) {
+  const identyfikatorHooka = useId()
   const czyNiezapisaneZmianyRef = useRef(czyNiezapisaneZmiany)
   const zapiszPrzedWyjsciemRef = useRef(zapiszPrzedWyjsciem)
+  const czyTrwaZapisRef = useRef(opcje.czyTrwaZapis ?? (() => false))
+  const odrzucZmianyRef = useRef(opcje.odrzucZmiany ?? (() => {}))
 
   useEffect(() => {
     czyNiezapisaneZmianyRef.current = czyNiezapisaneZmiany
     zapiszPrzedWyjsciemRef.current = zapiszPrzedWyjsciem
-  }, [czyNiezapisaneZmiany, zapiszPrzedWyjsciem])
+    czyTrwaZapisRef.current = opcje.czyTrwaZapis ?? (() => false)
+    odrzucZmianyRef.current = opcje.odrzucZmiany ?? (() => {})
+  }, [czyNiezapisaneZmiany, zapiszPrzedWyjsciem, opcje.czyTrwaZapis, opcje.odrzucZmiany])
 
   useEffect(() => ustawObslugeNiezapisanegoDokumentu({
+    identyfikatorInstancji: opcje.identyfikatorInstancji ?? identyfikatorHooka,
+    etykieta: opcje.etykieta,
     czySaNiezapisaneZmiany: () => czyNiezapisaneZmianyRef.current,
     zapiszPrzedWyjsciem: () => zapiszPrzedWyjsciemRef.current(),
-  }), [])
+    czyTrwaZapis: () => czyTrwaZapisRef.current(),
+    odrzucZmiany: () => odrzucZmianyRef.current(),
+  }), [identyfikatorHooka, opcje.etykieta, opcje.identyfikatorInstancji])
 
   useEffect(() => {
     function ostrzezPrzedOdswiezeniem(zdarzenie: BeforeUnloadEvent) {

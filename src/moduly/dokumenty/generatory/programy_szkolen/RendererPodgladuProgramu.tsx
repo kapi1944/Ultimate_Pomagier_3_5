@@ -107,7 +107,7 @@ export function RendererGrupyPunktowProgramu({
       <div className="program-kartka-a4__surowy" {...atrybutyPomiaruListy}>
         {grupyPunktow.map((grupa) => (
           <div key={grupa.id} aria-hidden={grupa.wycinek && grupa.wycinek.przesuniecie > 0 ? true : undefined} style={grupa.wycinek ? { height: grupa.wycinek.wysokosc, overflow: 'hidden' } : undefined}>
-            <div className="program-kartka-a4__wiersz-surowy" style={grupa.wycinek ? { transform: `translateY(-${grupa.wycinek.przesuniecie}px)` } : undefined} {...atrybutyPomiaru?.(grupa)}>
+            <div className="program-kartka-a4__wiersz-surowy" style={{ marginLeft: `${grupa.bloki[0]?.dane?.wciecieMm ?? 0}mm`, transform: grupa.wycinek ? `translateY(-${grupa.wycinek.przesuniecie}px)` : undefined }} {...atrybutyPomiaru?.(grupa)}>
               {renderujMarkdownInline(grupa.bloki.map((blok) => blok.tresc ?? '').join(' '))}
             </div>
           </div>
@@ -131,7 +131,7 @@ export function RendererGrupyPunktowProgramu({
                   }`}
                   key={blok.id}
                   data-pomiar-bloku={atrybutyPomiaru ? blok.id : undefined}
-                  style={{ marginLeft: `${Math.min(poziom, 8) * 22}px`, fontWeight: pobierzGruboscTekstuPozycjiListyProgramu(poziom, czyPogrubiacNaglowkiListyProgramu) }}
+                  style={{ marginLeft: `calc(${Math.min(poziom, 8) * 22}px + ${blok.dane?.wciecieMm ?? 0}mm)`, fontWeight: pobierzGruboscTekstuPozycjiListyProgramu(poziom, czyPogrubiacNaglowkiListyProgramu) }}
                 >
                   <span className="program-kartka-a4__marker">{pobierzMarker(blok, liczniki, stylListy, stylePoziomowListy)}</span>
                   <span>
@@ -184,7 +184,7 @@ export function RendererFragmentuModuluProgramu({
       {...atrybutyPomiaru}
     >
       {czyPokazacTytul && modul.blok.tresc && (
-        <h3 className={`program-kartka-a4__modul-tytul${separacjaModulow === 'linia' ? ' program-kartka-a4__modul-tytul--linia' : ''}`}>
+        <h3 style={{ marginLeft: modul.blok.dane?.wciecieMm ? `${modul.blok.dane.wciecieMm}mm` : undefined }} className={`program-kartka-a4__modul-tytul${separacjaModulow === 'linia' ? ' program-kartka-a4__modul-tytul--linia' : ''}`}>
           {typeof modul.blok.dane?.oznaczenieWyswietlane === 'string' && modul.blok.dane.oznaczenieWyswietlane ? `${modul.blok.dane.oznaczenieWyswietlane} ` : ''}{renderujMarkdownInline(modul.blok.tresc)}
         </h3>
       )}

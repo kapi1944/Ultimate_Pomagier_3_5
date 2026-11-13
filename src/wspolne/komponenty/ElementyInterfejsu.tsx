@@ -42,9 +42,9 @@ export function Komunikat({ status = 'info', children }: { status?: StatusInterf
   return <div className="ui-komunikat" data-status={status} role={status === 'error' ? 'alert' : 'status'}>{children}</div>
 }
 
-type WlasciwosciDialogu = { otwarty: boolean; zamknij: () => void; tytul: string; children: ReactNode }
+type WlasciwosciDialogu = { otwarty: boolean; zamknij: () => void; tytul: string; children: ReactNode; opisId?: string }
 
-export function OknoDialogowe({ otwarty, zamknij, tytul, children, wariant = 'dialog', etykietaZamkniecia = 'Zamknij', klasa = '', zamknijPoKliknieciuTla = false }: WlasciwosciDialogu & { wariant?: 'dialog' | 'panel'; etykietaZamkniecia?: string; klasa?: string; zamknijPoKliknieciuTla?: boolean }) {
+export function OknoDialogowe({ otwarty, zamknij, tytul, children, wariant = 'dialog', etykietaZamkniecia = 'Zamknij', klasa = '', zamknijPoKliknieciuTla = false, opisId }: WlasciwosciDialogu & { wariant?: 'dialog' | 'panel'; etykietaZamkniecia?: string; klasa?: string; zamknijPoKliknieciuTla?: boolean }) {
   const panel = useRef<HTMLDialogElement>(null)
   const nacisnietoTlo = useRef(false)
   const identyfikator = useId()
@@ -66,7 +66,7 @@ export function OknoDialogowe({ otwarty, zamknij, tytul, children, wariant = 'di
       if (!nacisnietoTlo.current || zdarzenie.target !== zdarzenie.currentTarget) return
       const obszar = zdarzenie.currentTarget.getBoundingClientRect()
       if (zdarzenie.clientX < obszar.left || zdarzenie.clientX >= obszar.right || zdarzenie.clientY < obszar.top || zdarzenie.clientY >= obszar.bottom) zamknij()
-    }} aria-labelledby={identyfikator} onCancel={(zdarzenie) => { zdarzenie.preventDefault(); zamknij() }}><h2 id={identyfikator}>{tytul}</h2><Przycisk onClick={zamknij} autoFocus>{etykietaZamkniecia}</Przycisk>{children}</dialog>
+    }} aria-labelledby={identyfikator} aria-describedby={opisId} onCancel={(zdarzenie) => { zdarzenie.preventDefault(); zamknij() }}><h2 id={identyfikator}>{tytul}</h2><Przycisk onClick={zamknij} autoFocus>{etykietaZamkniecia}</Przycisk>{children}</dialog>
 }
 
 export function PanelWysuwany(wlasciwosci: WlasciwosciDialogu) {

@@ -285,16 +285,20 @@ function odciskTresci(dane: DaneChecklistyPaczki) {
   return JSON.stringify({ ...dane, identyfikator: undefined, historia: undefined, wersjeWydruku: undefined, zalaczniki: undefined, prosbyOWeryfikacje: undefined, korektyEtykiet: undefined })
 }
 
-export function zarejestrujWydrukChecklisty(id: string, uzytkownikId: string | null) {
+export function zarejestrujWydrukChecklisty(id: string, uzytkownikId: string | null, rodzaj: 'wydruk' | 'pdf' = 'wydruk') {
   const dokument = pobierzChecklistePaczki(id)
   if (!dokument || !czyMoznaEksportowacCheckliste(dokument.daneDokumentu)) return null
-  const statusChecklisty = dokument.daneDokumentu.statusChecklisty === 'KOPIA_ROBOCZA' || dokument.daneDokumentu.statusChecklisty === 'GOTOWA_DO_WYDRUKU' ? 'WYDRUKOWANA' : dokument.daneDokumentu.statusChecklisty
-  const odcisk = odciskTresci({ ...dokument.daneDokumentu, statusChecklisty })
+  const statusPoWydruku = dokument.daneDokumentu.statusChecklisty === 'KOPIA_ROBOCZA' || dokument.daneDokumentu.statusChecklisty === 'GOTOWA_DO_WYDRUKU' ? 'WYDRUKOWANA' : dokument.daneDokumentu.statusChecklisty
+  const statusChecklisty = rodzaj === 'wydruk' ? statusPoWydruku : dokument.daneDokumentu.statusChecklisty
+  const odcisk = odciskTresci({ ...dokument.daneDokumentu, statusChecklisty: statusPoWydruku })
   const ostatnia = dokument.daneDokumentu.wersjeWydruku.at(-1)
   const wersja = ostatnia?.odciskTresci === odcisk ? ostatnia.wersja : (ostatnia?.wersja ?? 0) + 1
   const identyfikator = utworzIdentyfikatorDokumentu('CHECKLISTA_PACZKI', dokument.daneDokumentu.numerDzienny, wersja, new Date(dokument.utworzono))
   const wersjeWydruku = ostatnia?.odciskTresci === odcisk ? dokument.daneDokumentu.wersjeWydruku : [...dokument.daneDokumentu.wersjeWydruku, { wersja, identyfikator, odciskTresci: odcisk, utworzono: new Date().toISOString(), autorId: uzytkownikId }]
-  const dane = dodajWpisHistorii({ ...dokument.daneDokumentu, identyfikator, statusChecklisty, wersjeWydruku }, ostatnia?.odciskTresci === odcisk ? 'WYDRUK' : 'NOWA_WERSJA', uzytkownikId, ostatnia?.odciskTresci === odcisk ? 'Ponownie wydrukowano istniejącą wersję.' : `Utworzono wersję wydruku v${String(wersja).padStart(2, '0')}.`)
+  const czyTaSamaWersja = ostatnia?.odciskTresci === odcisk
+  const opis = rodzaj === 'pdf' ? `Utworzono PDF w wersji v${String(wersja).padStart(2, '0')}.`
+    : czyTaSamaWersja ? 'Ponownie wydrukowano istniejącą wersję.' : `Utworzono wersję wydruku v${String(wersja).padStart(2, '0')}.`
+  const dane = dodajWpisHistorii({ ...dokument.daneDokumentu, identyfikator, statusChecklisty, wersjeWydruku }, czyTaSamaWersja ? (rodzaj === 'pdf' ? 'EDYCJA' : 'WYDRUK') : 'NOWA_WERSJA', uzytkownikId, opis)
   return repozytoriumWspolnychDokumentow.aktualizuj(id, { daneDokumentu: dane, status: pobierzStatusWspolny(statusChecklisty), opublikowano: statusChecklisty === 'WYDRUKOWANA' ? (dokument.opublikowano ?? new Date().toISOString()) : dokument.opublikowano }) as DokumentChecklistyPaczki | null
 }
 

@@ -3,10 +3,10 @@ import type { Node as WezelEdytora } from '@tiptap/pm/model'
 import { Plugin } from '@tiptap/pm/state'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
 import { parsujTekstProgramu } from '../ParserTekstu'
-import { czyStylOznaczeniaPoprawny, rozpoznajOznaczenieProgramu, wyznaczOznaczeniaProgramu, wyznaczPoziomyProgramu, formatujOznaczenieProgramu } from '../oznaczeniaProgramu'
+import { kategorieWciecProgramu, normalizujWciecieProgramu, rozpoznajKategorieWcieciaProgramu, czyStylOznaczeniaPoprawny, rozpoznajOznaczenieProgramu, wyznaczOznaczeniaProgramu, wyznaczPoziomyProgramu, formatujOznaczenieProgramu } from '../oznaczeniaProgramu'
 
 export function pobierzPozycjeOznaczenEdytora(dokument: WezelEdytora) {
-  const pozycje: { pozycja: number; rozmiar: number; poziom: number; jawnyPoziom?: number; tresc: string; oryginalne?: string; wartosc?: number; styl?: string; domyslnyStyl?: string; czyNaglowek?: boolean }[] = []
+  const pozycje: { pozycja: number; rozmiar: number; koniecTresci: number; kategoriaWciecia?: string; wciecieMm?: number; poziom: number; jawnyPoziom?: number; tresc: string; oryginalne?: string; wartosc?: number; styl?: string; domyslnyStyl?: string; czyNaglowek?: boolean }[] = []
   dokument.descendants((wezel, pozycja, rodzic) => {
     if (/^Dzie(?:ń|n)\s+(?:\d+|[ivxlcdm]+)/i.test(wezel.textContent)) return
     if (!['listItem', 'paragraph', 'heading'].includes(wezel.type.name) || rodzic?.type.name === 'listItem' || !wezel.textContent.trim()) return
@@ -21,7 +21,13 @@ export function pobierzPozycjeOznaczenEdytora(dokument: WezelEdytora) {
     }
     const tekst = wezel.type.name === 'listItem' ? wezel.firstChild?.textContent ?? '' : wezel.textContent
     const tresc = oryginalne ? `${oryginalne} ${tekst}` : tekst
-    pozycje.push({ pozycja, rozmiar: wezel.nodeSize, poziom: Math.max(0, poziom), jawnyPoziom: wezel.attrs.poziomProgramu ?? undefined, tresc, oryginalne,
+    const kategoriaWciecia = wezel.attrs.kategoriaWciecia ?? (wezel.type.name === 'listItem' && sciezka.parent.type.name === 'bulletList' ? 'punktory' : rozpoznajKategorieWcieciaProgramu(
+      wezel.attrs.oznaczenieOryginalne ? tresc : tekst,
+      wezel.type.name === 'listItem' && !wezel.attrs.oznaczenieOryginalne && sciezka.parent.type.name === 'orderedList' ? Math.max(0, poziom) : undefined,
+    ))
+    pozycje.push({ pozycja, rozmiar: wezel.nodeSize,
+      koniecTresci: pozycja + (wezel.type.name === 'listItem' ? (wezel.firstChild?.nodeSize ?? 0) + 1 : wezel.nodeSize),
+      kategoriaWciecia, wciecieMm: wezel.attrs.wciecieMm ?? undefined, poziom: Math.max(0, poziom), jawnyPoziom: wezel.attrs.poziomProgramu ?? undefined, tresc, oryginalne,
       wartosc: rozpoznajOznaczenieProgramu(tresc)?.oznaczenie.wartosc,
       styl: wezel.attrs.stylOznaczenia ?? undefined,
       czyNaglowek: wezel.type.name === 'heading' })
@@ -39,13 +45,15 @@ export function pobierzPozycjeOznaczenEdytora(dokument: WezelEdytora) {
   return pozycje.map((pozycja, indeks) => ({ ...pozycja, poziom: poziomy[indeks] }))
 }
 
-export const RozszerzenieOznaczenProgramu = Extension.create<{ stylePoziomow: string[]; domyslneStyle: string[] }>({
+export const RozszerzenieOznaczenProgramu = Extension.create<{ stylePoziomow: string[]; domyslneStyle: string[]; wcieciaPresetu: Record<string, number> }>({
   name: 'oznaczeniaProgramu',
-  addOptions() { return { stylePoziomow: [], domyslneStyle: ['arabskie.', '◦', '▪'] } },
+  addOptions() { return { stylePoziomow: [], wcieciaPresetu: {}, domyslneStyle: ['arabskie.', '◦', '▪'] } },
   addGlobalAttributes() {
     return [{ types: ['listItem', 'paragraph', 'heading'], attributes: {
       oznaczenieOryginalne: { default: null, keepOnSplit: false, parseHTML: (element) => element.getAttribute('data-oznaczenie'), renderHTML: (atrybuty) => atrybuty.oznaczenieOryginalne ? { 'data-oznaczenie': atrybuty.oznaczenieOryginalne } : {} },
       stylOznaczenia: { default: null, keepOnSplit: false, parseHTML: (element) => czyStylOznaczeniaPoprawny(element.getAttribute('data-styl-oznaczenia')) ? element.getAttribute('data-styl-oznaczenia') : null, renderHTML: (atrybuty) => atrybuty.stylOznaczenia ? { 'data-styl-oznaczenia': atrybuty.stylOznaczenia } : {} },
+      wciecieMm: { default: null, keepOnSplit: false, parseHTML: (element) => normalizujWciecieProgramu(Number(element.getAttribute('data-wciecie-mm') ?? undefined)) ?? null, renderHTML: (atrybuty) => atrybuty.wciecieMm !== null ? { 'data-wciecie-mm': atrybuty.wciecieMm } : {} },
+      kategoriaWciecia: { default: null, keepOnSplit: false, parseHTML: (element) => kategorieWciecProgramu.find((kategoria) => kategoria === element.getAttribute('data-kategoria-wciecia')) ?? null, renderHTML: (atrybuty) => atrybuty.kategoriaWciecia ? { 'data-kategoria-wciecia': atrybuty.kategoriaWciecia } : {} },
       poziomProgramu: { default: null, parseHTML: (element) => element.hasAttribute('data-poziom') ? Number(element.getAttribute('data-poziom')) : null, renderHTML: (atrybuty) => atrybuty.poziomProgramu !== null ? { 'data-poziom': atrybuty.poziomProgramu } : {} },
     } }, { types: ['orderedList'], attributes: { typNumeracji: { default: '1', parseHTML: (element) => element.getAttribute('type') ?? '1', renderHTML: (atrybuty) => ({ type: atrybuty.typNumeracji }) } } }]
   },
@@ -56,10 +64,21 @@ export const RozszerzenieOznaczenProgramu = Extension.create<{ stylePoziomow: st
       const oznaczenia = wyznaczOznaczeniaProgramu(pozycje.map((pozycja) => ({ ...pozycja,
         domyslnyStyl: pozycja.czyNaglowek && !pozycja.oryginalne && !pozycja.styl && opcje.stylePoziomow[pozycja.poziom] === 'oryginalne' ? 'brak' : pozycja.domyslnyStyl,
       })), opcje.stylePoziomow, opcje.domyslneStyle)
-      return DecorationSet.create(stan.doc, pozycje.map((pozycja, indeks) => Decoration.node(pozycja.pozycja, pozycja.pozycja + pozycja.rozmiar, {
-        'data-wyswietlane-oznaczenie': oznaczenia[indeks],
-        style: `margin-left: ${Math.max(0, pozycja.poziom - (pozycje.slice(0, indeks).filter((rodzic) => rodzic.pozycja < pozycja.pozycja && rodzic.pozycja + rodzic.rozmiar > pozycja.pozycja).at(-1)?.poziom ?? 0)) * 22}px`,
-      })))
+      const przodkowie: typeof pozycje = []
+      return DecorationSet.create(stan.doc, pozycje.map((pozycja, indeks) => {
+        let rodzic = przodkowie.at(-1)
+        while (rodzic && rodzic.pozycja + rodzic.rozmiar <= pozycja.pozycja) {
+          przodkowie.pop()
+          rodzic = przodkowie.at(-1)
+        }
+        const baza = Math.max(0, pozycja.poziom - (rodzic?.poziom ?? 0)) * 22
+        przodkowie.push(pozycja)
+        const wciecie = pozycja.wciecieMm ?? opcje.wcieciaPresetu[pozycja.kategoriaWciecia ?? ''] ?? 0
+        return Decoration.node(pozycja.pozycja, pozycja.pozycja + pozycja.rozmiar, {
+        'data-wyswietlane-oznaczenie': !pozycja.oryginalne && rozpoznajOznaczenieProgramu(pozycja.tresc) ? '' : oznaczenia[indeks],
+        style: `margin-left: calc(${baza}px + min(${wciecie}mm, 25cqw)); --program-wciecie-zbiorcze: min(${wciecie}mm, 25cqw)`,
+        })
+      }))
     } } })]
   },
 })

@@ -8,6 +8,7 @@ export type UstawieniaEksportuPdf = {
   format?: 'a4' | 'a5' | 'a6'
   orientacja?: 'pionowa' | 'pozioma'
   marginesMm?: number
+  plynnyUklad?: boolean
 }
 
 export function czyMoznaRozpoczacEksport(czyGenerowanie: boolean) {
@@ -58,21 +59,25 @@ export async function renderujPdfDokumentu(ustawienia: UstawieniaEksportuPdf) {
   return renderujRasterPdfLegacy(ustawienia)
 }
 
-export async function pobierzPdfDokumentu(ustawienia: UstawieniaEksportuPdf) {
+export async function pobierzPdfDokumentu(ustawienia: UstawieniaEksportuPdf, przedPobraniem?: () => void) {
   const pdf = await renderujPdfDokumentu(ustawienia)
+  przedPobraniem?.()
   pdf.save(utworzNazwePlikuPdf(ustawienia.nazwaPliku))
 }
 
-export async function drukujDokument(obszar?: HTMLElement, orientacja: 'pionowa' | 'pozioma' = 'pionowa', format: 'a4' | 'a5' | 'a6' = 'a4') {
+export async function drukujDokument(obszar?: HTMLElement, orientacja: 'pionowa' | 'pozioma' = 'pionowa', format: 'a4' | 'a5' | 'a6' = 'a4', plynnyUklad = false) {
   if (!obszar) { window.print(); return }
-  const strony = pobierzStronyDokumentu(obszar)
+  const strony = plynnyUklad ? [obszar] : pobierzStronyDokumentu(obszar)
   if (!strony.length) throw new Error('Nie znaleziono stron dokumentu do druku.')
   await document.fonts?.ready
   await Promise.all(strony.flatMap((strona) => Array.from(strona.querySelectorAll('img')).map((obraz) => obraz.decode())))
   const przodkowie: HTMLElement[] = []
   for (let element = obszar.parentElement; element; element = element.parentElement) przodkowie.push(element)
   const stylStrony = document.createElement('style')
-  stylStrony.textContent = `@page dokument-generatora { size: ${format.toUpperCase()} ${orientacja === 'pozioma' ? 'landscape' : 'portrait'}; margin: 0; }`
+  const rozmiar = `${format.toUpperCase()} ${orientacja === 'pozioma' ? 'landscape' : 'portrait'}`
+  stylStrony.textContent = plynnyUklad
+    ? `@page { size: ${rozmiar}; margin: 9mm; background: white; }`
+    : `@page dokument-generatora { size: ${rozmiar}; margin: 0; }`
   document.head.append(stylStrony)
   obszar.setAttribute('data-cel-druku-dokumentu', '')
   przodkowie.forEach((element) => element.setAttribute('data-przodek-druku-dokumentu', ''))

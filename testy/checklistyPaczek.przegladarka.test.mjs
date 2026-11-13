@@ -3,6 +3,7 @@ import { createRequire } from 'node:module'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import test from 'node:test'
 import { PDFDocument } from 'pdf-lib'
+import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs'
 
 // Playwright może pochodzić z lokalnego środowiska testowego lub pakietu Codex.
 const wymagaj = createRequire(import.meta.url)
@@ -78,6 +79,13 @@ test('ergonomia checklist: tabela, klawiatura, przeciąganie, korekty i macierz 
     await strona.getByRole('button', { name: 'Powiększ: Podgląd etykiety', exact: true }).click()
     await strona.getByRole('button', { name: 'Pomniejsz: Podgląd etykiety', exact: true }).click()
 
+    await strona.getByRole('button', { name: 'Edycja checklisty', exact: true }).click()
+    const dlugaNazwa = 'Materiały szkoleniowe — '.repeat(8).trim()
+    const poleNazwy = tabela.getByRole('textbox').nth(2)
+    await poleNazwy.fill(dlugaNazwa)
+    await poleNazwy.press('End')
+    assert.equal(await poleNazwy.inputValue(), dlugaNazwa)
+    assert.equal(await poleNazwy.evaluate((pole) => pole.selectionStart), dlugaNazwa.length)
     const wyniki = []
     await mkdir('tmp/checklisty-ux', { recursive: true })
     for (const [szerokosc, wysokosc] of [[1920,1080], [1440,900], [1366,768], [1280,720], [1024,768], [768,1024], [390,844]]) {
@@ -102,6 +110,27 @@ test('ergonomia checklist: tabela, klawiatura, przeciąganie, korekty i macierz 
             szerokoscStrony: document.documentElement.clientWidth, przewijanieStrony: document.documentElement.scrollWidth,
           }))
           assert.ok(geometria.przewijanie <= geometria.szerokosc + 2, `${etap}: ${szerokosc}px, ${skala}% — przepełnienie modułu ${JSON.stringify(geometria)}`)
+          if (etap === 'edycja') {
+            geometria.tabele = await strona.locator('.checklista-paczki__kontener-tabeli').evaluateAll((kontenery) => kontenery.map((kontener) => {
+              const tabela = kontener.querySelector('table')
+              const wiersz = tabela.querySelector('.checklista-paczki__material')
+              const granice = kontener.getBoundingClientRect()
+              return {
+                przewijanie: kontener.scrollWidth - kontener.clientWidth,
+                kolumny: tabela.querySelectorAll('th').length,
+                uklad: wiersz ? getComputedStyle(wiersz).display : null,
+                nazwa: tabela.querySelector('th:nth-child(2)').offsetWidth,
+                mieszczaSie: [...(wiersz?.cells ?? [])].every((komorka) => komorka.getBoundingClientRect().right <= granice.right + 1),
+              }
+            }))
+            for (const pomiar of geometria.tabele) {
+              const kontekst = `${szerokosc}px, ${skala}% — ${JSON.stringify(pomiar)}`
+              assert.ok(pomiar.przewijanie <= 1 && pomiar.mieszczaSie, kontekst)
+              assert.equal(pomiar.kolumny, 6, kontekst)
+              if (pomiar.uklad === 'table-row') assert.ok(pomiar.nazwa >= 200 && pomiar.nazwa <= 280, kontekst)
+              if (szerokosc >= 1280 && skala === 100 && pomiar.uklad) assert.equal(pomiar.uklad, 'table-row', kontekst)
+            }
+          }
           if (geometria.przewijanieStrony > geometria.szerokoscStrony + 2) {
             geometria.przewijanieSamejPowloki = await strona.locator('.checklista-paczki').evaluate((element) => {
               const poprzedni = element.style.display
@@ -690,5 +719,130 @@ test('checklisty: pisanie nie zapisuje rejestru co znak, podpowiedzi zachowują 
     assert.equal(await trenerzy.inputValue(), 'Własny Trener,' + trener)
     assert.equal(await strona.getByLabel('Miasto', { exact: true }).inputValue(), 'Dowolne miasto odbiorcy')
     assert.match(await strona.locator('#wydruk-checklisty').innerText(), /Własny Trener/)
+  } finally { await przegladarka.close() }
+})
+
+test('checklista A4: bezpośredni druk, anulowanie, wersje i niezależny PDF', { timeout: 120000 }, async () => {
+  const przegladarka = await chromium.launch({ ...opcjePrzegladarki, headless: true })
+  try {
+    const strona = await przegladarka.newPage({ acceptDownloads: true, viewport: { width: 1440, height: 900 } })
+    await strona.addInitScript(() => {
+      window.liczbaDrukow = 0
+      window.print = () => {
+        if (window.bladDruku) throw new Error('Testowy błąd drukowania')
+        window.liczbaDrukow++
+      }
+      window.potwierdzeniaDruku = 0
+      window.confirm = () => { window.potwierdzeniaDruku++; return window.potwierdzonoDruk === true }
+      window.addEventListener('afterprint', (zdarzenie) => {
+        if (window.tworzenieProbkiPdf) zdarzenie.stopImmediatePropagation()
+      }, true)
+    })
+    let pobrania = 0
+    strona.on('download', () => pobrania++)
+    await strona.goto(adres + '/dokumenty/checklisty-paczek')
+    await strona.getByRole('button', { name: 'Otwórz demonstrację Architekta', exact: true }).click()
+    await strona.getByLabel('Tytuł szkolenia', { exact: true }).fill('Test wydruku A4')
+    await strona.getByLabel('Liczba uczestników', { exact: true }).fill('6')
+    await strona.getByRole('button', { name: 'Zapisz jako roboczą', exact: true }).click()
+    const drukuj = strona.getByRole('button', { name: 'Drukuj', exact: true })
+    const podglad = strona.locator('#wydruk-checklisty')
+    const stan = () => strona.evaluate(() => localStorage.getItem('ultimatePomagier.rejestrDokumentow.v1'))
+    const odczytajPdf = async (bajty) => {
+      const dokument = await PDFDocument.load(bajty)
+      for (const kartka of dokument.getPages()) {
+        assert.ok(Math.abs(kartka.getWidth() - 595.28) < 2 && Math.abs(kartka.getHeight() - 841.89) < 2)
+      }
+      return dokument.getPageCount()
+    }
+    const drukujDoPdf = async (numer, nazwa) => {
+      await drukuj.click()
+      await strona.waitForFunction((wartosc) => window.liczbaDrukow === wartosc, numer)
+      assert.equal(await drukuj.isDisabled(), true)
+      await strona.emulateMedia({ media: 'print' })
+      assert.equal(await podglad.getAttribute('data-cel-druku-dokumentu'), '')
+      assert.equal(await strona.getByText('Edycja checklisty', { exact: true }).isVisible(), false)
+      assert.deepEqual(await podglad.evaluate((element) => [
+        getComputedStyle(element).fontSize,
+        getComputedStyle(element.querySelector('table')).fontSize,
+      ]), ['14px', '12.6667px'])
+      await strona.evaluate(() => { window.tworzenieProbkiPdf = true })
+      const bajty = await strona.pdf({ preferCSSPageSize: true, printBackground: true })
+      await strona.evaluate(() => { window.tworzenieProbkiPdf = false })
+      await mkdir('tmp/checklisty-ux', { recursive: true })
+      await writeFile('tmp/checklisty-ux/' + nazwa + '.pdf', bajty)
+      await strona.emulateMedia({ media: 'screen' })
+      const liczbaStron = await odczytajPdf(bajty)
+      const odczyt = getDocument({ data: new Uint8Array(bajty) })
+      const dokument = await odczyt.promise
+      const strony = []
+      try {
+        for (let numer = 1; numer <= liczbaStron; numer++) {
+          const kartka = await dokument.getPage(numer)
+          const { items: tekst } = await kartka.getTextContent()
+          assert.ok(tekst.some((element) => element.str?.trim()), `Pusta strona ${numer}`)
+          strony.push(tekst)
+        }
+      } finally { await odczyt.destroy() }
+      const pola = strony.flat()
+      const tytul = pola.find((element) => element.str === 'Test wydruku A4')
+      assert.ok(Math.abs(tytul.transform[3] - 9.5) < 0.1)
+      assert.ok(pola.find((element) => element.str === 'Nazwa szkolenia:').transform[4] >= 9 * 72 / 25.4 - 1)
+      assert.ok(!pola.some((element) => /Pobierz PDF|Edycja checklisty|Kompletowanie paczki/.test(element.str)))
+      return strony.map((tekst) => tekst.map((element) => element.str).join(' '))
+    }
+    const zamknijDruk = async (potwierdz) => {
+      await strona.evaluate((potwierdzenie) => {
+        window.potwierdzonoDruk = potwierdzenie
+        window.dispatchEvent(new Event('afterprint'))
+      }, potwierdz)
+      await strona.waitForFunction(() => window.potwierdzeniaDruku === window.liczbaDrukow && !document.querySelector('[data-cel-druku-dokumentu]'))
+      assert.equal(await drukuj.isEnabled(), true)
+    }
+
+    const stanPrzed = await stan()
+    assert.ok(stanPrzed)
+    await strona.evaluate(() => { window.bladDruku = true })
+    await drukuj.click()
+    await strona.getByRole('alert').filter({ hasText: 'Testowy błąd drukowania' }).waitFor()
+    assert.equal(await podglad.getAttribute('data-cel-druku-dokumentu'), null)
+    assert.equal(await stan(), stanPrzed)
+    await strona.evaluate(() => { window.bladDruku = false })
+    assert.equal((await drukujDoPdf(1, 'druk-jednej-paczki')).length, 1)
+    await zamknijDruk(false)
+    assert.equal(await stan(), stanPrzed)
+    assert.equal(pobrania, 0)
+
+    await strona.getByLabel('Nowa paczka', { exact: true }).fill('Druga paczka')
+    await strona.getByRole('button', { name: 'Dodaj paczkę', exact: true }).click()
+    assert.equal(await podglad.getByRole('heading', { name: 'Druga paczka' }).count(), 1)
+    const dwiePaczki = await drukujDoPdf(2, 'druk-dwoch-paczek')
+    assert.match(dwiePaczki.join(' '), /Druga paczka/)
+    await zamknijDruk(false)
+
+    const paczka = strona.locator('.checklista-paczki__paczka').first()
+    for (let numer = 1; numer <= 24; numer++) {
+      await paczka.getByLabel('Nowa pozycja', { exact: true }).fill('Materiał dodatkowy ' + numer)
+      await paczka.getByRole('button', { name: 'Dodaj pozycję', exact: true }).click()
+    }
+    await paczka.getByRole('button', { name: 'Szczegóły: Materiał dodatkowy 24', exact: true }).click()
+    await paczka.getByLabel('Uwagi drukowane', { exact: true }).filter({ visible: true }).fill('Długa uwaga do materiału. '.repeat(30) + 'Koniec uwag.')
+    const dlugaChecklista = await drukujDoPdf(3, 'druk-dlugiej-checklisty')
+    assert.ok(dlugaChecklista.length > 1)
+    assert.match(dlugaChecklista[0], /Materiał dodatkowy 1\b/)
+    assert.match(dlugaChecklista.join(' '), /Materiał dodatkowy 24\b.*Koniec uwag\./)
+    await zamknijDruk(true)
+    assert.match(await strona.locator('.checklista-paczki__status-checklisty').innerText(), /WYDRUKOWANA/)
+    assert.equal(pobrania, 0)
+
+    const pobieranie = strona.waitForEvent('download')
+    await strona.getByRole('button', { name: 'Pobierz PDF', exact: true }).click()
+    const bajty = await readFile(await (await pobieranie).path())
+    assert.ok(await odczytajPdf(bajty) > 1)
+    await writeFile('tmp/checklisty-ux/pobrana-dluga-checklista.pdf', bajty)
+    await strona.getByText('Załączniki i historia', { exact: true }).click()
+    assert.equal(await strona.getByText(/^Wydruk v1:/).count(), 1)
+    assert.equal(await strona.getByText(/Wydruk v2:/).count(), 0)
+    assert.equal(await strona.getByText(/Utworzono PDF w wersji v01/).count(), 1)
   } finally { await przegladarka.close() }
 })

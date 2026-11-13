@@ -5,6 +5,7 @@ import { poczatkoweDaneFormularza } from '../src/moduly/zamkniete/szczegoly_orga
 import {
   pobierzAktualnaWersjeRobocza,
   pobierzAutosaveSzczegolow,
+  pobierzIdInstancjiSzczegolow,
   pobierzKopieRobocze,
   rozpocznijNoweSzczegolyOrganizacyjne,
   usunAutosaveSzczegolow,
@@ -106,7 +107,7 @@ test('wczytana kopia robocza zachowuje zapisane wartości zamiast nowych domyśl
   assert.equal(wczytana.dane.dodatkoweWymogi.minutyWczesniej, 45)
 })
 
-test('nowe Szczegóły zaczynają od pustego formularza i pozostawiają autosave do jawnej decyzji', () => {
+test('nowe Szczegóły zaczynają od pustego formularza i nie pokazują autosave poprzedniej instancji', () => {
   magazyn.clear()
   const dane = structuredClone(poczatkoweDaneFormularza) as DaneFormularza
   dane.tytulSzkolenia = 'Dane z poprzedniej sesji'
@@ -134,15 +135,18 @@ test('nowe Szczegóły zaczynają od pustego formularza i pozostawiają autosave
     statusyPol: {},
     aktywnaKopiaId: wersja.id,
   })
+  const poprzedniaInstancjaId = pobierzIdInstancjiSzczegolow()
 
-  rozpocznijNoweSzczegolyOrganizacyjne()
+  const nowaInstancjaId = rozpocznijNoweSzczegolyOrganizacyjne()
 
   assert.equal(pobierzAktualnaWersjeRobocza(), null)
-  assert.equal(pobierzAutosaveSzczegolow()?.dane.tytulSzkolenia, 'Dane z poprzedniej sesji')
+  assert.notEqual(nowaInstancjaId, poprzedniaInstancjaId)
+  assert.equal(pobierzAutosaveSzczegolow(nowaInstancjaId), null)
+  assert.equal(pobierzAutosaveSzczegolow(poprzedniaInstancjaId)?.dane.tytulSzkolenia, 'Dane z poprzedniej sesji')
   assert.equal(poczatkoweDaneFormularza.tytulSzkolenia, '')
 
-  usunAutosaveSzczegolow()
-  assert.equal(pobierzAutosaveSzczegolow(), null)
+  usunAutosaveSzczegolow(poprzedniaInstancjaId)
+  assert.equal(pobierzAutosaveSzczegolow(poprzedniaInstancjaId), null)
 })
 
 test('banner kopii roboczej ma trwałe, jawne akcje przywrócenia i odrzucenia', () => {
@@ -155,7 +159,7 @@ test('banner kopii roboczej ma trwałe, jawne akcje przywrócenia i odrzucenia',
   assert.match(widok, /onClick=\{generator\.odrzucAutosave\}/)
   assert.doesNotMatch(widok, /toast/i)
   assert.match(hook, /czyPominacNastepnyAutosave = useRef\(true\)/)
-  assert.match(hook, /function odrzucAutosave\(\)[\s\S]*czyPominacNastepnyAutosave\.current = true[\s\S]*usunAutosaveSzczegolow\(\)/)
+  assert.match(hook, /function odrzucAutosave\(\)[\s\S]*czyPominacNastepnyAutosave\.current = true[\s\S]*usunAutosaveSzczegolow\(identyfikatorInstancji\)/)
 })
 
 for (const czyStarszyRekord of [false, true]) {

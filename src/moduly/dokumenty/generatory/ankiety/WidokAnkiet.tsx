@@ -100,7 +100,7 @@ export default function WidokAnkiet() {
   }, [idDokumentu, zalogowanyUzytkownik?.id])
   const stanDokumentu = useStanDokumentu({ dane, zapiszAutomatycznie: zapiszDane })
   useEffect(() => { localStorage.setItem(kluczSzkicu, serializujDaneAnkiety(dane)) }, [dane])
-  useOchronaNiezapisanegoDokumentu(stanDokumentu.czyNiezapisaneZmiany, () => { void stanDokumentu.zapiszTeraz() })
+  useOchronaNiezapisanegoDokumentu(stanDokumentu.czyNiezapisaneZmiany, () => stanDokumentu.zapiszTeraz(), { czyTrwaZapis: () => stanDokumentu.stanZapisu === 'zapisywanie' })
 
   function zastosujDaneSzkolenia(noweSzczegolyId: string, noweGrupaId?: string) {
     ustawSzczegolyId(noweSzczegolyId)

@@ -1,10 +1,10 @@
 .panel-logowania { display: grid; min-height: 100dvh; place-items: center; padding: clamp(12px, 4vw, 48px); background: var(--ui-tlo-gradient, var(--ui-tlo)); color: var(--ui-tekst); }
 .panel-logowania__formularz { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); width: min(1080px, 100%); min-width: 0; gap: clamp(20px, 4vw, 48px); border: 1px solid var(--ui-obramowanie); border-radius: var(--ui-promien-karty); padding: clamp(16px, 3vw, 36px); background: var(--ui-panel); box-shadow: var(--ui-cien); }
-.panel-logowania__formularz header { display: grid; align-content: start; gap: 24px; min-width: 0; }
-.panel-logowania__formularz h1 { margin: 0; font-size: clamp(1.5rem, 3vw, 2.5rem); line-height: 1.15; overflow-wrap: anywhere; }
+.panel-logowania__formularz header { display: grid; align-content: start; gap: 20px; min-width: 0; }
+.panel-logowania__formularz h1 { margin: 0; font-size: clamp(1.1rem, 2vw, 1.55rem); line-height: 1.2; letter-spacing: -.025em; white-space: nowrap; }
 .panel-logowania__formularz p { margin: 0; line-height: 1.6; }
 .panel-logowania__formularz header > p { color: var(--ui-tekst-drugi); }
-.panel-logowania__logo { display: block; width: min(100%, 240px); height: auto; }
+.panel-logowania__logo { display: block; width: min(100%, 360px); height: auto; }
 .panel-logowania__wybor { display: grid; align-content: start; gap: 16px; min-width: 0; }
 .panel-logowania fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 .panel-logowania legend { font-size: var(--ui-tekst-naglowek); font-weight: 700; padding: 0 0 12px; }
@@ -21,8 +21,31 @@
 .panel-logowania__profil span { color: var(--ui-tekst-drugi); font-size: .875rem; }
 .panel-logowania .panel-logowania__zaloguj { width: 100%; background: var(--ui-akcent); color: var(--ui-tekst-na-akcencie); font-weight: 700; }
 .panel-logowania .panel-logowania__zaloguj:hover:not(:disabled) { background: var(--ui-akcent); box-shadow: 0 0 0 2px var(--ui-akcent); }
-@media (max-width: 760px) { .panel-logowania__formularz { grid-template-columns: minmax(0, 1fr); } .panel-logowania__formularz header { gap: 16px; } .panel-logowania__logo { width: 180px; } }
+@media (max-width: 760px) { .panel-logowania__formularz { grid-template-columns: minmax(0, 1fr); } .panel-logowania__formularz header { gap: 16px; } .panel-logowania__logo { width: min(100%, 320px); } }
 @media (max-width: 440px) { .panel-logowania__konta { grid-template-columns: minmax(0, 1fr); } }
 .panel-logowania__wybor > label { display: grid; gap: 8px; }
 .panel-logowania__wybor input:not([type="checkbox"]) { width: 100%; min-width: 0; padding: 12px; border: 1px solid var(--ui-obramowanie); border-radius: var(--ui-promien-pola); background: var(--ui-pole); color: var(--ui-tekst); font: inherit; }
 .panel-logowania__wybor input:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
+.panel-logowania__pole-hasla { position: relative; display: block; min-width: 0; }
+.panel-logowania__pole-hasla input { padding-right: 48px !important; }
+.panel-logowania__przelacz-haslo { position: absolute; top: 50%; right: 5px; display: grid; width: 38px; height: 38px; place-items: center; transform: translateY(-50%); border: 0; border-radius: var(--ui-promien-pola); background: transparent; color: var(--ui-tekst-drugi); cursor: pointer; }
+.panel-logowania__przelacz-haslo:hover { color: var(--ui-tekst); background: var(--ui-akcent-mocny); }
+.panel-logowania__przelacz-haslo:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 1px; }
+.panel-logowania__przelacz-haslo svg { width: 21px; height: 21px; }
+.ekran-inicjalizacji { position: fixed; inset: 0; z-index: 1000; display: grid; align-content: center; justify-items: center; gap: 20px; overflow: hidden; padding: 32px 24px 100px; background: radial-gradient(ellipse at 50% 42%, #123b2c 0%, #09291f 52%, #061b15 100%); color: #f8f5ec; text-align: center; }
+.ekran-inicjalizacji__logo { display: block; width: min( min(680px, 72vw), 75dvh); max-height: 38dvh; object-fit: contain; filter: drop-shadow(0 16px 34px #0008); animation: ekran-inicjalizacji__pojawienie 700ms ease-out both; }
+.ekran-inicjalizacji h1 { margin: 0; font-size: clamp(1.2rem, 2.5vw, 1.8rem); letter-spacing: -.025em; }
+.ekran-inicjalizacji__etap { min-height: 1.5em; margin: 0; color: #e7d7ad; }
+.ekran-inicjalizacji__animacja { display: flex; align-items: center; gap: 9px; height: 18px; }
+.ekran-inicjalizacji__animacja span { width: 8px; height: 8px; border-radius: 50%; background: #dfbd70; box-shadow: 0 0 14px #dfbd7080; animation: ekran-inicjalizacji__puls 1.2s ease-in-out infinite; }
+.ekran-inicjalizacji__animacja span:nth-child(2) { animation-delay: 160ms; }
+.ekran-inicjalizacji__animacja span:nth-child(3) { animation-delay: 320ms; }
+.ekran-inicjalizacji__postep { position: absolute; right: max(24px, env(safe-area-inset-right)); bottom: max(28px, env(safe-area-inset-bottom)); left: max(24px, env(safe-area-inset-left)); width: min(620px, calc(100% - 48px)); margin-inline: auto; text-align: left; }
+.ekran-inicjalizacji__opis { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 10px; color: #f8f5ec; font-size: .9rem; }
+.ekran-inicjalizacji__tor { height: 7px; overflow: hidden; border-radius: 99px; background: #ffffff24; }
+.ekran-inicjalizacji__tor > span { display: block; width: 38%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #b38a3f, #f1d58e); box-shadow: 0 0 18px #edcd7780; animation: ekran-inicjalizacji__przesuwanie 1.8s ease-in-out infinite; }
+@keyframes ekran-inicjalizacji__puls { 0%, 60%, 100% { opacity: .45; transform: scale(.8); } 30% { opacity: 1; transform: scale(1.15); } }
+@keyframes ekran-inicjalizacji__pojawienie { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes ekran-inicjalizacji__przesuwanie { from { transform: translateX(-110%); } to { transform: translateX(270%); } }
+@media (prefers-reduced-motion: reduce) { .ekran-inicjalizacji__animacja span, .ekran-inicjalizacji__logo, .ekran-inicjalizacji__tor > span { animation: none; } .ekran-inicjalizacji__tor > span { width: 100%; } }
+@media (max-width: 440px) { .panel-logowania__formularz h1 { font-size: clamp(1rem, 5vw, 1.25rem); } }

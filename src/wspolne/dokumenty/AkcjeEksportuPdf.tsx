@@ -27,9 +27,12 @@ type WlasciwosciAkcjiEksportuPdf = {
   pobierzBladEksportu?: () => string | null
   przygotujEksport?: () => void | Promise<void>
   zakonczEksport?: () => void
+  plynnyUklad?: boolean
+  przedPobraniemPdf?: () => void
+  poZamknieciuDruku?: () => void
 }
 
-export default function AkcjeEksportuPdf({ dokumentId, odciskFormularza, silnikPdf = 'raster_legacy', obszarDokumentu, nazwaPliku, daneNazwyEksportu, czyMoznaEksportowac = () => true, className, classNamePrzycisku = 'akcje-eksportu-pdf__przycisk', etykietaPrzyciskuPdf = 'Pobierz PDF', pokazPrzyciskDruku = true, orientacja = 'pionowa', format = 'a4', etykietaPrzyciskuDruku = 'Drukuj', pobierzBladEksportu, przygotujEksport, zakonczEksport }: WlasciwosciAkcjiEksportuPdf) {
+export default function AkcjeEksportuPdf({ dokumentId, odciskFormularza, silnikPdf = 'raster_legacy', obszarDokumentu, nazwaPliku, daneNazwyEksportu, czyMoznaEksportowac = () => true, className, classNamePrzycisku = 'akcje-eksportu-pdf__przycisk', etykietaPrzyciskuPdf = 'Pobierz PDF', pokazPrzyciskDruku = true, orientacja = 'pionowa', format = 'a4', etykietaPrzyciskuDruku = 'Drukuj', pobierzBladEksportu, przygotujEksport, zakonczEksport, plynnyUklad, przedPobraniemPdf, poZamknieciuDruku }: WlasciwosciAkcjiEksportuPdf) {
   const [przejscie] = useState(() => pobierzPrzejscieDoWydruku(dokumentId))
   const [odciskPrzyOtwarciu] = useState(odciskFormularza)
   const zlecenie = przejscie && przejscie.dokumentId === dokumentId ? przejscie.operacja : null
@@ -68,7 +71,7 @@ export default function AkcjeEksportuPdf({ dokumentId, odciskFormularza, silnikP
     try {
       await wykonajEksportPoPrzygotowaniu({
         przygotuj: przygotujEksport,
-        wykonaj: () => pobierzPdfDokumentu({ silnikPdf, obszarDokumentu: obszarDokumentu.current!, nazwaPliku: nazwaDoEksportu, format, orientacja }),
+        wykonaj: () => pobierzPdfDokumentu({ silnikPdf, obszarDokumentu: obszarDokumentu.current!, nazwaPliku: nazwaDoEksportu, format, orientacja, plynnyUklad, marginesMm: plynnyUklad ? 9 : undefined }, przedPobraniemPdf),
         zakoncz: zakonczEksport,
       })
     } catch {
@@ -92,8 +95,9 @@ export default function AkcjeEksportuPdf({ dokumentId, odciskFormularza, silnikP
       await wykonajEksportPoPrzygotowaniu({ przygotuj: przygotujEksport, wykonaj: () => {
         const obszar = obszarDokumentu.current
         if (!obszar) throw new Error('Nie znaleziono podglądu dokumentu do druku.')
-        return obszar.querySelector('.program-strony') ? drukujProgram(obszar) : drukujDokument(obszar, orientacja, format)
+        return obszar.querySelector('.program-strony') ? drukujProgram(obszar) : drukujDokument(obszar, orientacja, format, plynnyUklad)
       }, zakoncz: zakonczEksport })
+      poZamknieciuDruku?.()
     } catch (blad) {
       ustawBlad(blad instanceof Error ? blad.message : 'Nie udało się przygotować dokumentu do druku.')
     } finally {

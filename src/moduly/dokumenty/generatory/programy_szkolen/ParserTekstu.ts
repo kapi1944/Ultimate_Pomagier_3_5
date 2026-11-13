@@ -1,4 +1,4 @@
-import { normalizujWierszWejsciowy, rozpoznajOznaczenieProgramu, wyznaczPoziomyProgramu, type OznaczenieProgramu, type UstawienieWierszaProgramu } from './oznaczeniaProgramu.ts'
+import { rozpoznajKategorieWcieciaProgramu, normalizujWierszWejsciowy, rozpoznajOznaczenieProgramu, wyznaczPoziomyProgramu, type OznaczenieProgramu, type UstawienieWierszaProgramu } from './oznaczeniaProgramu.ts'
 import type { BlokDokumentu, DokumentBlokowy, ProblemDokumentu } from '../../../../wspolne/dokumenty/modelBlokowy'
 import { utworzModelStronyProgramu } from './geometriaStronyProgramu.ts'
 
@@ -109,7 +109,7 @@ function utworzBlok(
     id,
     typ,
     tresc: oznaczenie && (typ === 'Punkt' || typ === 'Podpunkt') ? tresc : rozpoznajOznaczenieProgramu(tresc ?? '')?.tresc ?? tresc,
-    dane: { oznaczenieOryginalne: oznaczenie?.zapis ?? rozpoznajOznaczenieProgramu(tresc ?? '')?.oznaczenie.zapis ?? null, wartoscOznaczenia: oznaczenie?.wartosc ?? null, stylOznaczenia: ustawienie?.styl ?? null, czyPoziomJawny: ustawienie?.poziom !== undefined },
+    dane: { wciecieMm: ustawienie?.wciecieMm ?? null, kategoriaWciecia: ustawienie?.kategoriaWciecia ?? (oznaczenie ? rozpoznajKategorieWcieciaProgramu(`${oznaczenie.zapis} Pozycja`) : undefined) ?? null, oznaczenieOryginalne: oznaczenie?.zapis ?? rozpoznajOznaczenieProgramu(tresc ?? '')?.oznaczenie.zapis ?? null, wartoscOznaczenia: oznaczenie?.wartosc ?? null, stylOznaczenia: ustawienie?.styl ?? null, czyPoziomJawny: ustawienie?.poziom !== undefined },
     dzieci,
     metadane: {
       zrodlo: 'parser',
@@ -641,7 +641,7 @@ export function parsujTekstProgramu(tresc: string, opcje: { czyScalacKontynuacje
     }
 
     const oznaczenieWiersza = rozpoznajOznaczenieProgramu(wiersz.tresc)
-    if (oznaczenieWiersza && ((opcje.ustawieniaWierszy?.[wiersz.indeks]?.poziom ?? wiersz.poziom) > 0 || oznaczenieWiersza.oznaczenie.rodzaj === 'literowe' || (/^[ivxlcdm]/.test(oznaczenieWiersza.oznaczenie.zapis)))) {
+    if (oznaczenieWiersza && ((opcje.ustawieniaWierszy?.[wiersz.indeks]?.poziom ?? wiersz.poziom) > 0 || /^\d+\.\d/.test(oznaczenieWiersza.oznaczenie.zapis) || oznaczenieWiersza.oznaczenie.rodzaj === 'literowe' || (/^[ivxlcdm]/.test(oznaczenieWiersza.oznaczenie.zapis)))) {
       dodajPodpunkt(oznaczenieWiersza.tresc, wiersz.poziom)
       continue
     }

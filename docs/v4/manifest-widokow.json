@@ -488,8 +488,9 @@
     "src/aplikacja/layout/UkladAplikacji.tsx": {
       "zadanie": "V4-02",
       "powierzchnie": [
-        "OknoDialogowe otwarty zamknij={() => { ustawWidokDoPotwierdzenia(null); ustawCzyWylogowanieDoPotwierdzenia(false) }} tytul=\"Niezapisane zmiany\" etykietaZamkniecia=\"Wróć do edycji\"",
+        "OknoDialogowe otwarty zamknij={anulujZmianeWidoku} tytul=\"Masz niezapisane zmiany\" etykietaZamkniecia=\"ANULUJ\" klasa=\"uklad-aplikacji__dialog-zmian\" opisId=\"uklad-aplikacji__opis-zmian\"",
         "OknoDialogowe otwarty={czyEdytujeDock} zamknij={() => ustawCzyEdytujeDock(false)} tytul=\"Skróty docka\"",
+        "WidokAplikacji widok={aktywnyWidok} zmienZakladkeKartotek={zmienZakladkeKartotek} ustawAktywnyWidok={ustawWidok} wersjaProgramu={wersjaProgramu} wersjaFormularzaSzczegolow={wersjaFormularzaSzczegolow} otworzDokument={otworzDokument} uzytkownikIdProfilu={uzytkownikIdProfilu} wybierzProfil={otworzProfil} otworzRekordPulpitu={() => ustawWidok('zamkniete_szczegoly_organizacyjne_lista')} otworzDokumentyPulpitu={() => ustawWidok('dokumenty_wszystkie')} otworzPaczkePulpitu={() => ustawWidok('checklisty_paczek')}",
         "WidokKartotek key=\"kartoteki_klienci\" aktywnaZakladkaPoczatkowa=\"klienci\" poZmianieZakladki={zmienZakladkeKartotek}",
         "WidokKartotek key=\"kartoteki_lokalizacje\" aktywnaZakladkaPoczatkowa=\"lokalizacje\" poZmianieZakladki={zmienZakladkeKartotek}",
         "WidokKartotek key=\"kartoteki_szablony_dokumentow\" aktywnaZakladkaPoczatkowa=\"szablony_dokumentow\" poZmianieZakladki={zmienZakladkeKartotek}",
@@ -532,16 +533,24 @@
       "ukonczoneEtapy": [],
       "wspoldzieloneZ": []
     },
+    "src/aplikacja/logowanie/EkranInicjalizacji.tsx": {
+      "zadanie": "V4-03",
+      "powierzchnie": [],
+      "ukonczoneEtapy": [],
+      "wspoldzieloneZ": []
+    },
     "src/aplikacja/logowanie/PanelLogowania.tsx": {
       "zadanie": "V4-03",
       "powierzchnie": [
         "OknoDialogowe otwarty={czyWersjeOtwarte} zamknij={() => ustawCzyWersjeOtwarte(false)} tytul=\"Aktualizacje i wersje\"",
         "Przycisk className=\"panel-logowania__zaloguj\" type=\"submit\" disabled={czyTrwaLogowanie}",
+        "button className=\"panel-logowania__przelacz-haslo\" type=\"button\" aria-label={pokazHaslo ? 'Ukryj hasło' : 'Pokaż hasło'} aria-controls={etap === 'haslo' || etap === 'konfiguracja' ? 'pole-hasla-logowania powtorz-haslo-logowania' : 'pole-hasla-logowania'} aria-pressed={pokazHaslo} onMouseDown={(zdarzenie) => zdarzenie.preventDefault()} onClick={() => { ustawPokazHaslo(!pokazHaslo); poleHasla.current?.focus() }}",
         "details",
         "div className=\"panel-logowania__wybor\"",
         "form className=\"panel-logowania__formularz\" onSubmit={obsluzLogowanie}",
-        "img alt=\"Ultimate Pomagier\" className=\"panel-logowania__logo\" src=\"/logo-ultimate-pomagier.png\"",
-        "main className=\"panel-logowania\""
+        "img alt=\"Ultimate Pomagier\" className=\"panel-logowania__logo\" src=\"/logo-ultimate-pomagier-tabliczka.png\"",
+        "main className=\"panel-logowania\"",
+        "span className=\"panel-logowania__pole-hasla\""
       ],
       "ukonczoneEtapy": [
         "V4-02",
@@ -773,7 +782,8 @@
         "details className=\"checklista-paczki__logistyka\"",
         "details className=\"checklista-paczki__paczka\" id={'paczka-' + paczka.id} key={paczka.id} open",
         "details className=\"checklista-paczki__zrodlo-dyspozycji\"",
-        "details open"
+        "details open",
+        "window.confirm('Czy checklista została fizycznie wydrukowana?')"
       ],
       "ukonczoneEtapy": [],
       "wspoldzieloneZ": []
@@ -865,7 +875,7 @@
         "div className=\"program-szkolen__komunikat\" role=\"dialog\" aria-label=\"Podgląd importu programu\"",
         "header className=\"program-panel-roboczy program-szkolen__naglowek\"",
         "section className=\"program-panel-roboczy program-szkolen__komunikat\" role=\"dialog\" aria-modal=\"true\" aria-label=\"Odzyskiwanie niezapisanego draftu\"",
-        "window.confirm('Dokument ma b\\u0142\\u0119dy krytyczne. Czy jako Architekt wymuszasz eksport PDF?')"
+        "window.confirm('Dokument ma b\\u0142\\u0119dy krytyczne. Czy jako Architekt wymuszasz eksport ' + format + '?')"
       ],
       "ukonczoneEtapy": [],
       "wspoldzieloneZ": []
@@ -1231,19 +1241,35 @@
     "src/moduly/zamkniete/szczegoly_organizacyjne/widoki/WidokNowychSzczegolowOrganizacyjnych.tsx": {
       "zadanie": "V4-07",
       "powierzchnie": [
-        "PasekStickySzczegolow kompletneSekcje={kompletneSekcjeNawigacji} sekcje={sekcjeNawigacji} status={statusFormularza} tytul=\"Nowe szczegóły organizacyjne\" akcje={ <> <button ref={przyciskJakosci} aria-controls={idPaneluJakosci} aria-expanded={czyPanelJakosciOtwarty} type=\"button\" onClick={() => { generator.sprawdzJakosc() czyPrzeniescFokusDoPaneluJakosci.current = true ustawCzyPanelJakosciOtwarty(true) if (czyPanelJakosciOtwarty) oknoJakosci.current?.querySelector<HTMLButtonElement>('.szczegoly-panel-jakosci__naglowek button')?.focus() }}>Kontrola jakości</button> {generator.daneFormularza.status === 'NIEPEŁNE' && ( <button disabled={generator.czyTylkoPodglad} type=\"button\" onClick={generator.zapiszWersje}> Zapisz wersję roboczą </button> )} {generator.daneFormularza.status === 'PEŁNE' && ( <button className=\"szczegoly-akcja-glowna\" disabled={!generator.czyFormularzKompletny || generator.czyTylkoPodglad} type=\"button\" onClick={generator.opublikujSzczegoly}> Opublikuj </button> )} {(generator.daneFormularza.status === 'OCZEKUJĄCE' || generator.daneFormularza.status === 'ZAAKCEPTOWANE') && ( <button disabled={generator.czyTylkoPodglad} type=\"button\" onClick={generator.zapiszWersje}> Utwórz aktualizację </button> )} {generator.daneFormularza.status === 'GOTOWE' && ( <button disabled={generator.czyTylkoPodglad} type=\"button\" onClick={generator.zapiszWersje}> Zapisz zmianę workflow </button> )} </> }",
+
+        "PasekStickySzczegolow kompletneSekcje={kompletneSekcjeNawigacji} sekcje={sekcjeNawigacji} status={statusFormularza} tytul=\"Nowe szczegóły organizacyjne\" akcje={ <> <button ref={przyciskJakosci} aria-controls={idPaneluJakosci} aria-expanded={czyPanelJakosciOtwarty} type=\"button\" onClick={() => { generator.sprawdzJakosc() ustawCzyKontrolaJakosciUruchomiona(true) czyPrzeniescFokusDoPaneluJakosci.current = true ustawCzyPanelJakosciOtwarty(true) if (czyPanelJakosciOtwarty) oknoJakosci.current?.querySelector<HTMLButtonElement>('.szczegoly-panel-jakosci__naglowek button')?.focus() }}>Kontrola jakości</button> <button disabled={generator.czyTylkoPodglad} type=\"button\" onClick={generator.zapiszWersje}> Zapisz wersję roboczą </button> {generator.daneFormularza.status === 'PEŁNE' && ( <button className=\"szczegoly-akcja-glowna\" disabled={!generator.czyFormularzKompletny || generator.czyTylkoPodglad} type=\"button\" onClick={generator.opublikujSzczegoly}> Opublikuj </button> )} {(generator.daneFormularza.status === 'OCZEKUJĄCE' || generator.daneFormularza.status === 'ZAAKCEPTOWANE') && ( <button disabled={generator.czyTylkoPodglad} type=\"button\" onClick={generator.zapiszWersje}> Utwórz aktualizację </button> )} {generator.daneFormularza.status === 'GOTOWE' && ( <button disabled={generator.czyTylkoPodglad} type=\"button\" onClick={generator.zapiszWersje}> Zapisz zmianę workflow </button> )} </> }",
+
         "RegulacjaSzerokosci panel=\".szczegoly-panel-jakosci\" obszar=\".szczegoly-organizacyjne\" zmienna=\"--szerokosc-panelu-jakosci\" strona=\"lewa\" minimum={280} maksimum={600} kluczZapisu=\"ultimatePomagier.panelJakosci.szerokosc\"",
+
         "aside inert={!czyPanelJakosciOtwarty} role=\"presentation\" className={`szczegoly-panel-jakosci${czyPanelJakosciOtwarty ? ' szczegoly-panel-jakosci--otwarty' : ''}${czyPanelJakosciPrzypiety ? ' szczegoly-panel-jakosci--przypiety' : ''}`} onMouseLeave={(zdarzenie) => { if (!zdarzenie.currentTarget.closest('[data-regulacja-szerokosci]')) schowajPanelJakosciJesliOdpiety() }}",
+
         "button aria-label={czyPanelJakosciPrzypiety ? 'Odepnij panel kontroli jakosci' : 'Przypnij panel kontroli jakosci'} className=\"szczegoly-panel-jakosci__przycisk\" onClick={przelaczPrzypieciePaneluJakosci} title={czyPanelJakosciPrzypiety ? 'Odepnij panel' : 'Przypnij panel'} type=\"button\"",
+
         "button aria-label={czyWysuwaniePaneluJakosciWlaczone ? 'Wylacz automatyczne wysuwanie panelu jakosci' : 'Wlacz automatyczne wysuwanie panelu jakosci'} className=\"szczegoly-panel-jakosci__przycisk\" onClick={przelaczWysuwaniePaneluJakosci} title={czyWysuwaniePaneluJakosciWlaczone ? 'Wylacz wysuwanie' : 'Wlacz wysuwanie'} type=\"button\"",
-        "button ref={przyciskJakosci} aria-controls={idPaneluJakosci} aria-expanded={czyPanelJakosciOtwarty} type=\"button\" onClick={() => { generator.sprawdzJakosc() czyPrzeniescFokusDoPaneluJakosci.current = true ustawCzyPanelJakosciOtwarty(true) if (czyPanelJakosciOtwarty) oknoJakosci.current?.querySelector<HTMLButtonElement>('.szczegoly-panel-jakosci__naglowek button')?.focus() }}",
+
+        "button ref={przyciskJakosci} aria-controls={idPaneluJakosci} aria-expanded={czyPanelJakosciOtwarty} type=\"button\" onClick={() => { generator.sprawdzJakosc() ustawCzyKontrolaJakosciUruchomiona(true) czyPrzeniescFokusDoPaneluJakosci.current = true ustawCzyPanelJakosciOtwarty(true) if (czyPanelJakosciOtwarty) oknoJakosci.current?.querySelector<HTMLButtonElement>('.szczegoly-panel-jakosci__naglowek button')?.focus() }}",
+
         "details",
+
         "dialog ref={oknoJakosci} id={idPaneluJakosci} className=\"szczegoly-okno-jakosci\" role={czyMobilnyPanelJakosci ? 'dialog' : 'complementary'} aria-modal={czyMobilnyPanelJakosci && czyPanelJakosciOtwarty ? true : undefined} aria-label=\"Panel kontroli jakosci\" onCancel={(zdarzenie) => { zdarzenie.preventDefault(); zamknijPanelJakosci() }} onKeyDown={obsluzKlawiszPaneluJakosci}",
+
         "div className=\"szczegoly-panel-jakosci__naglowek\"",
+
         "div className=\"szczegoly-panel-jakosci__sterowanie\"",
+
         "div className=\"szczegoly-panel-jakosci__strefa-aktywacji\" onMouseEnter={otworzPanelJakosciZKrawedzi} aria-hidden=\"true\"",
+
+        "p className=\"szczegoly-panel-jakosci__pusty\"",
+
         "section ref={obszarSzczegolow} className={`widok szczegoly-organizacyjne${czyPanelJakosciPrzypiety ? ' szczegoly-organizacyjne--panel-przypiety' : ''}${czyPanelJakosciOtwarty ? ' szczegoly-organizacyjne--panel-otwarty' : ''}${czyMobilnyPanelJakosci ? ' szczegoly-organizacyjne--panel-mobilny' : ''}`}",
+
         "window.confirm('Wyczyścić formularz i aktualną kopię roboczą?')"
+
       ],
       "ukonczoneEtapy": [],
       "wspoldzieloneZ": []
@@ -1374,7 +1400,7 @@
       "zadanie": "V4-22",
       "powierzchnie": [
         "OknoDialogowe {...wlasciwosci} wariant=\"panel\" etykietaZamkniecia=\"Zamknij panel\"",
-        "dialog ref={panel} className={[(wariant === 'panel' ? 'ui-panel' : 'ui-dialog'), klasa].filter(Boolean).join(' ')} onPointerDown={(zdarzenie) => { nacisnietoTlo.current = zamknijPoKliknieciuTla && zdarzenie.target === zdarzenie.currentTarget }} onClick={(zdarzenie) => { if (!nacisnietoTlo.current || zdarzenie.target !== zdarzenie.currentTarget) return const obszar = zdarzenie.currentTarget.getBoundingClientRect() if (zdarzenie.clientX < obszar.left || zdarzenie.clientX >= obszar.right || zdarzenie.clientY < obszar.top || zdarzenie.clientY >= obszar.bottom) zamknij() }} aria-labelledby={identyfikator} onCancel={(zdarzenie) => { zdarzenie.preventDefault(); zamknij() }}",
+        "dialog ref={panel} className={[(wariant === 'panel' ? 'ui-panel' : 'ui-dialog'), klasa].filter(Boolean).join(' ')} onPointerDown={(zdarzenie) => { nacisnietoTlo.current = zamknijPoKliknieciuTla && zdarzenie.target === zdarzenie.currentTarget }} onClick={(zdarzenie) => { if (!nacisnietoTlo.current || zdarzenie.target !== zdarzenie.currentTarget) return const obszar = zdarzenie.currentTarget.getBoundingClientRect() if (zdarzenie.clientX < obszar.left || zdarzenie.clientX >= obszar.right || zdarzenie.clientY < obszar.top || zdarzenie.clientY >= obszar.bottom) zamknij() }} aria-labelledby={identyfikator} aria-describedby={opisId} onCancel={(zdarzenie) => { zdarzenie.preventDefault(); zamknij() }}",
         "div className=\"ui-zakladki\"",
         "div role=\"tablist\" aria-label=\"Zakładki\"",
         "div role=\"tabpanel\" tabIndex={0} id={`${identyfikator}-panel`} aria-labelledby={`${identyfikator}-${pozycje.indexOf(aktywna)}`}"

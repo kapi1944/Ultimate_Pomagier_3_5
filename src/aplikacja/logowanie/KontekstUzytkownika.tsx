@@ -8,15 +8,21 @@ import { wrocDoLogowaniaDesktopowego } from './daneDesktop'
 
 export function DostawcaUzytkownika({ children }: { children: ReactNode }) {
   const [zalogowanyUzytkownik, ustawZalogowanegoUzytkownika] = useState(() => czyTrybDemonstracyjny ? pobierzZalogowanegoUzytkownika() : null)
-  const odswiezUzytkownika = useCallback(async () => {
+  const [inicjalizacja, ustawInicjalizacje] = useState(() => ({ aktywna: !czyTrybDemonstracyjny, etap: 'Przygotowywanie aplikacji' }))
+  const odswiezUzytkownika = useCallback(async (pokazEkranInicjalizacji = false) => {
     if (czyTrybDemonstracyjny) { ustawZalogowanegoUzytkownika(pobierzZalogowanegoUzytkownika()); return }
-    try { ustawZalogowanegoUzytkownika(await odswiezPotwierdzonaSesje()) }
-    catch { wyczyscPotwierdzonaSesje(); ustawZalogowanegoUzytkownika(null); await wrocDoLogowaniaDesktopowego(true) }
+    const raportujEtap = (etap: string) => { if (pokazEkranInicjalizacji) ustawInicjalizacje({ aktywna: true, etap }) }
+    try {
+      const uzytkownik = await odswiezPotwierdzonaSesje(raportujEtap)
+      if (pokazEkranInicjalizacji) ustawInicjalizacje({ aktywna: true, etap: 'Interfejs gotowy' })
+      ustawZalogowanegoUzytkownika(uzytkownik)
+    } catch (blad) { wyczyscPotwierdzonaSesje(); ustawZalogowanegoUzytkownika(null); await wrocDoLogowaniaDesktopowego(true); throw blad }
+    finally { if (pokazEkranInicjalizacji) ustawInicjalizacje({ aktywna: false, etap: '' }) }
   }, [])
   useEffect(() => {
     if (czyTrybDemonstracyjny) return
     let aktywny = true
-    void odswiezPotwierdzonaSesje().then((konto) => { if (aktywny) ustawZalogowanegoUzytkownika(konto) }).catch(() => { if (aktywny) { wyczyscPotwierdzonaSesje(); ustawZalogowanegoUzytkownika(null); void wrocDoLogowaniaDesktopowego(true) } })
+    void odswiezPotwierdzonaSesje((etap) => { if (aktywny) ustawInicjalizacje({ aktywna: true, etap }) }).then((konto) => { if (aktywny) { ustawInicjalizacje({ aktywna: true, etap: 'Interfejs gotowy' }); ustawZalogowanegoUzytkownika(konto) } }).catch(() => { if (aktywny) { wyczyscPotwierdzonaSesje(); ustawZalogowanegoUzytkownika(null); void wrocDoLogowaniaDesktopowego(true) } }).finally(() => { if (aktywny) ustawInicjalizacje({ aktywna: false, etap: '' }) })
     const licznik = window.setInterval(() => { void odswiezUzytkownika() }, 15000)
     const odswiez = () => { void odswiezUzytkownika() }
     window.addEventListener('focus', odswiez)
@@ -32,6 +38,6 @@ export function DostawcaUzytkownika({ children }: { children: ReactNode }) {
     if (czyTrybDemonstracyjny) { zakonczSesje(); ustawZalogowanegoUzytkownika(null); return }
     void zakonczPotwierdzonaSesje().then(() => ustawZalogowanegoUzytkownika(null)).catch(() => window.alert('Nie udało się unieważnić sesji. Spróbuj wylogować się ponownie.'))
   }, [])
-  const wartosc = { zalogowanyUzytkownik, aktywniUzytkownicy: pobierzAktywnychUzytkownikowWedlugRoli(), zaloguj, wyloguj, odswiezUzytkownika }
+  const wartosc = { zalogowanyUzytkownik, inicjalizacja, aktywniUzytkownicy: pobierzAktywnychUzytkownikowWedlugRoli(), zaloguj, wyloguj, odswiezUzytkownika }
   return <KontekstUzytkownika.Provider value={wartosc}>{children}</KontekstUzytkownika.Provider>
 }

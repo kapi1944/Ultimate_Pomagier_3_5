@@ -34,6 +34,7 @@ import {
   type TrybZastosowaniaImportuProgramu,
   type WynikImportuProgramu,
 } from './pipelineImportuProgramu'
+import { pobierzDocxProgramu } from './eksportDocxProgramu'
 import { importujDocxProgramu } from './adapterDocxProgramu'
 import { importujPdfProgramu } from './adapterPdfProgramu'
 import { pobierzTytulDokumentuProgramu } from './tytulDokumentuProgramu'
@@ -62,6 +63,7 @@ import {
   domyslnyProgramSzkolenia as domyslnyZapisProgramu,
   ID_LOGOTYPU_PROGRAMU,
   normalizujProgramSzkolenia as normalizujZapisProgramu,
+  pobierzWcieciaWierszyProgramu,
   pobierzHtmlProgramuSzkolenia,
   utworzDokumentProgramuSzkolenia,
   ustawZrodloLogotypuProgramu,
@@ -439,6 +441,12 @@ const styleProgramuSzkolenia = `
   outline: none;
 }
 
+.program-szkolen__formatowanie-zbiorcze { min-width: 0; }
+.program-szkolen__formatowanie-zbiorcze input { width: 5rem; }
+.program-szkolen__tiptap { overflow-wrap: anywhere; container-type: inline-size; }
+.program-szkolen__tiptap li[data-wyswietlane-oznaczenie] > :is(ul, ol) {
+  margin-left: calc(-1 * var(--program-wciecie-zbiorcze, 0px));
+}
 .program-szkolen__tiptap li[data-wyswietlane-oznaczenie] { list-style: none; }
 .program-szkolen__tiptap [data-wyswietlane-oznaczenie]::before { content: attr(data-wyswietlane-oznaczenie); margin-right: 0.4em; }
 .program-szkolen__tiptap [data-wyswietlane-oznaczenie=""]::before { margin-right: 0; }
@@ -700,7 +708,7 @@ const styleProgramuSzkolenia = `
 
 .program-kartka-a4__pozycja {
   display: grid;
-  grid-template-columns: 34px 1fr;
+  grid-template-columns: 34px minmax(0, 1fr);
   gap: 8px;
   color: #374151;
   font-size: 0.9rem;
@@ -1277,7 +1285,7 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
       ...aktualne,
       trescProgramu: tekst,
       ustawieniaWierszyProgramu: konwertujHtmlNaWierszeProgramu(html).ustawienia,
-      czyWynikParsowaniaZatwierdzony: false,
+      czyWynikParsowaniaZatwierdzony: aktualne.trescProgramu === tekst && aktualne.czyWynikParsowaniaZatwierdzony,
     }))
   }
 
@@ -1354,9 +1362,11 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
       ustawAutosaveDoDecyzji(null)
       oznaczJakoZapisany(daneProgramu)
       ustawKomunikat(tryb === 'utworz_nowa' ? 'Utworzono nową kopię roboczą.' : tryb === 'aktualizuj' ? 'Zaktualizowano kopię roboczą.' : 'Program zapisany jako kopia robocza.')
+      return true
     } catch {
       oznaczBladZapisu()
       ustawKomunikat('Nie udało się zapisać programu roboczo.')
+      return false
     }
   }, [aktywnaKopiaId, daneProgramu, liczbaModulow, liczbaDni, oznaczBladZapisu, oznaczJakoZapisany, rozpocznijZapis, ustawienia.profilFirmy, zalogowanyUzytkownikId])
 
@@ -1389,22 +1399,22 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
     window.history.back()
   }
 
-  function czyMoznaEksportowacProgram() {
-    const raport = przygotujRaportEksportuDokumentu(dokumentProgramu, 'PDF')
+  function czyMoznaEksportowacProgram(format: 'PDF' | 'DOCX' = 'PDF') {
+    const raport = przygotujRaportEksportuDokumentu(dokumentProgramu, format)
     if (!raport.czyDozwolony) {
       if (!czyArchitekt) {
         ustawKomunikat(`Eksport zablokowany: ${raport.problemy.filter((problem) => problem.czyBlokujeEksport).map((problem) => problem.komunikat).join(' ')}`)
         return false
       }
-      if (!window.confirm('Dokument ma b\u0142\u0119dy krytyczne. Czy jako Architekt wymuszasz eksport PDF?')) {
+      if (!window.confirm('Dokument ma b\u0142\u0119dy krytyczne. Czy jako Architekt wymuszasz eksport ' + format + '?')) {
         ustawKomunikat('Eksport przerwany.')
         return false
       }
-      zapiszLogWymuszeniaEksportu(przygotujRaportEksportuDokumentu(dokumentProgramu, 'PDF', true))
+      zapiszLogWymuszeniaEksportu(przygotujRaportEksportuDokumentu(dokumentProgramu, format, true))
       ustawKomunikat('Architekt wymusi\u0142 eksport mimo b\u0142\u0119d\u00f3w krytycznych. Zapisano wpis w logu lokalnym.')
       return true
     }
-    ustawKomunikat('Dokument jest gotowy do eksportu PDF lub druku.')
+    if (format === 'PDF') ustawKomunikat('Dokument jest gotowy do eksportu PDF lub druku.')
     return true
   }
 
@@ -1629,7 +1639,9 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
     window.open('https://drive.google.com', '_blank', 'noopener,noreferrer')
   }
 
-  useOchronaNiezapisanegoDokumentu(czyNiezapisaneZmiany, () => zapiszRoboczo(aktywnaKopiaId ? 'aktualizuj' : 'zapisz'))
+  useOchronaNiezapisanegoDokumentu(czyNiezapisaneZmiany, () => zapiszRoboczo(aktywnaKopiaId ? 'aktualizuj' : 'zapisz'), {
+    czyTrwaZapis: () => stanZapisu === 'zapisywanie',
+  })
 
   if (stanOdczytu === 'ladowanie') {
     return (
@@ -1667,13 +1679,18 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
             silnikPdf="raster_legacy"
             className="program-szkolen__akcje-eksportu"
             classNamePrzycisku="program-szkolen__przycisk"
-            czyMoznaEksportowac={czyMoznaEksportowacProgram}
+            czyMoznaEksportowac={() => czyMoznaEksportowacProgram()}
             daneNazwyEksportu={{ typDokumentu: 'PROGRAM_SZKOLENIA', organizator: profil.nazwa, tytulSzkolenia: tytulDokumentu, dataUtworzenia: new Date() }}
             nazwaPliku={utworzNazwePlikuDokumentu('PROGRAM_SZKOLENIA', tytulDokumentu)}
             obszarDokumentu={obszarPodgladuRef}
             przygotujEksport={przygotujFinalnyRenderer}
             zakonczEksport={zakonczFinalnyRenderer}
           />
+          <button type="button" className="program-szkolen__przycisk" onClick={() => {
+            if (!czyMoznaEksportowacProgram('DOCX')) return
+            pobierzDocxProgramu(dokumentProgramu, tytulDokumentu, utworzNazwePlikuDokumentu('PROGRAM_SZKOLENIA', tytulDokumentu), konfiguracjePresetowProgramu[presetWygladu].czyPokazywacDni,
+              ustawienia.formatowanieSkryptowe ? undefined : { tekst: trescProgramu, wciecia: pobierzWcieciaWierszyProgramu(daneProgramu) })
+          }}>Pobierz DOCX</button>
           {aktywnaKopiaId ? (
             <>
               <button className="program-szkolen__przycisk" onClick={() => zapiszRoboczo('aktualizuj')} type="button">
@@ -2165,6 +2182,14 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
               </div>
 
               <EdytorProgramuWysiwyg
+                wcieciaPresetu={ustawienia.wcieciaPresetow?.[presetWygladu]}
+                onZapiszWcieciePresetu={(kategoria, wartosc) => ustawDaneProgramu((aktualne) => ({
+                  ...aktualne,
+                  ustawienia: { ...aktualne.ustawienia, wcieciaPresetow: {
+                    ...aktualne.ustawienia.wcieciaPresetow,
+                    [presetWygladu]: { ...aktualne.ustawienia.wcieciaPresetow?.[presetWygladu], [kategoria]: wartosc },
+                  } },
+                }))}
                 stylePoziomow={ustawienia.oznaczeniaPoziomow}
                 domyslneStylePoziomow={domyslneStylePoziomow}
                 onZmianaStyluPoziomu={zmienOznaczeniePoziomu}
@@ -2178,6 +2203,7 @@ export function WidokProgramowSzkolen({ dokumentIdZTrasy = null }: WlasciwosciWi
 
         <section className="program-szkolen__podglad" ref={obszarPodgladuRef}>
           <RendererStronProgramu
+            wcieciaWierszy={ustawienia.formatowanieSkryptowe ? undefined : pobierzWcieciaWierszyProgramu(daneProgramu)}
             czyFormatowanieSkryptowe={ustawienia.formatowanieSkryptowe}
             czyJustowac={ustawienia.czyJustowac}
             czyNieDzielicPunktowGlownych={ustawienia.czyNieDzielicPunktowGlownych}
@@ -2239,6 +2265,7 @@ export function RendererProgramuDoPakietu({ zapis, zasobyObrazow }: { zapis: unk
   const gruboscObramowaniaTytulu = Number.isFinite(ustawienia.gruboscObramowaniaTytulu) ? Math.min(10, Math.max(0, ustawienia.gruboscObramowaniaTytulu)) : domyslneUstawienia.gruboscObramowaniaTytulu
   const trybRenderowania = 'finalny' as const
   return <section className="program-szkolen"><style>{styleProgramuSzkolenia}</style>          <RendererStronProgramu
+            wcieciaWierszy={ustawienia.formatowanieSkryptowe ? undefined : pobierzWcieciaWierszyProgramu(daneProgramu)}
             czyFormatowanieSkryptowe={ustawienia.formatowanieSkryptowe}
             czyJustowac={ustawienia.czyJustowac}
             czyNieDzielicPunktowGlownych={ustawienia.czyNieDzielicPunktowGlownych}

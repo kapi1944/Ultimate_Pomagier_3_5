@@ -1133,8 +1133,8 @@ export default function WidokDyplomow() {
   }, [])
   const stanDokumentu = useStanDokumentu({ dane, zapiszAutomatycznie: zapiszSzkicDyplomow })
   useOchronaNiezapisanegoDokumentu(stanDokumentu.czyNiezapisaneZmiany, () => {
-    void stanDokumentu.zapiszTeraz()
-  })
+    return stanDokumentu.zapiszTeraz()
+  }, { czyTrwaZapis: () => stanDokumentu.stanZapisu === 'zapisywanie' })
 
   function zmienPole<Nazwa extends keyof ZapisDyplomow>(nazwa: Nazwa, wartosc: ZapisDyplomow[Nazwa]) {
     ustawDane((aktualne) => ({

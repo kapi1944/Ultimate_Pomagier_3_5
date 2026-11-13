@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import { useKontekstUzytkownika } from '../../aplikacja/logowanie/useKontekstUzytkownika'
 import { zaktualizujUzytkownikaPrzezAdministratora, zaktualizujUzytkownikaPrzezArchitekta, zaktualizujWlasnyProfil, pobierzUzytkownikow, pobierzHistorieKont } from './magazynUzytkownikow'
 import { czyMozeEdytowacProfil, czyMozePrzegladacProfil, czyMozeZarzadzacUzytkownikami } from './uprawnienia'
@@ -12,17 +12,17 @@ import './widokProfiluUzytkownika.css'
 import PanelResetowaniaHasel from './PanelResetowaniaHasel'
 import PanelZmianyHasla from './PanelZmianyHasla'
 import { czyTrybDemonstracyjny } from '../../aplikacja/logowanie/uwierzytelnianie'
+import { useOchronaNiezapisanegoDokumentu } from '../../moduly/dokumenty/wspolne/useStanDokumentu'
 
 type WlasciwosciWidokuProfilu = {
   uzytkownikId?: string | null
   wybierzProfil: (uzytkownikId: string) => void
-  ustawCzyMaNiezapisaneZmiany: (czyMaNiezapisaneZmiany: boolean) => void
 }
 
 function Pole({ etykieta, children }: { etykieta: string; children: React.ReactNode }) { return <label className="profil-uzytkownika__pole"><span>{etykieta}</span>{children}</label> }
 function czyMoznaPokazacDaneAdministracyjne(zalogowany: Uzytkownik, przegladany: Uzytkownik) { return zalogowany.id === przegladany.id || zalogowany.rola === 'ADMINISTRATOR' || zalogowany.rola === 'ARCHITEKT' }
 
-export default function WidokProfiluUzytkownika({ uzytkownikId, wybierzProfil, ustawCzyMaNiezapisaneZmiany }: WlasciwosciWidokuProfilu) {
+export default function WidokProfiluUzytkownika({ uzytkownikId, wybierzProfil }: WlasciwosciWidokuProfilu) {
   const { zalogowanyUzytkownik, odswiezUzytkownika } = useKontekstUzytkownika()
   const uzytkownicy = pobierzUzytkownikow()
   const przegladany = uzytkownicy.find((uzytkownik) => uzytkownik.id === (uzytkownikId || zalogowanyUzytkownik?.id))
@@ -31,31 +31,53 @@ export default function WidokProfiluUzytkownika({ uzytkownikId, wybierzProfil, u
   const [komunikat, ustawKomunikat] = useState('')
   const [blad, ustawBlad] = useState('')
 
-  useEffect(() => {
-    function ostrzezPrzedOdswiezeniem(zdarzenie: BeforeUnloadEvent) { if (czyEdycja) { zdarzenie.preventDefault(); zdarzenie.returnValue = '' } }
-    window.addEventListener('beforeunload', ostrzezPrzedOdswiezeniem)
-    return () => window.removeEventListener('beforeunload', ostrzezPrzedOdswiezeniem)
-  }, [czyEdycja])
+  const czyNiezapisaneZmiany = Boolean(przegladany && czyEdycja && formularz
+    && JSON.stringify(formularz) !== JSON.stringify(mapujUzytkownikaNaFormularz(przegladany)))
+
+  function zapiszFormularz() {
+    if (!formularz || !przegladany || !zalogowanyUzytkownik) return false
+    const czyWlasciciel = zalogowanyUzytkownik.id === przegladany.id
+    const wynik = czyWlasciciel && !czyMozeZarzadzacUzytkownikami(zalogowanyUzytkownik)
+      ? zaktualizujWlasnyProfil(zalogowanyUzytkownik, przegladany.id, formularz)
+      : zalogowanyUzytkownik.rola === 'ARCHITEKT'
+        ? zaktualizujUzytkownikaPrzezArchitekta(zalogowanyUzytkownik, przegladany.id, formularz)
+        : zaktualizujUzytkownikaPrzezAdministratora(zalogowanyUzytkownik, przegladany.id, formularz)
+    if (!wynik.uzytkownik) {
+      ustawBlad(wynik.blad ?? 'Nie udało się zapisać profilu.')
+      return false
+    }
+    ustawCzyEdycja(false)
+    ustawFormularz(null)
+    ustawKomunikat('Profil został zapisany.')
+    ustawBlad('')
+    odswiezUzytkownika()
+    return true
+  }
+
+  function odrzucZmiany() {
+    ustawFormularz(null)
+    ustawCzyEdycja(false)
+    ustawBlad('')
+  }
+
+  useOchronaNiezapisanegoDokumentu(czyNiezapisaneZmiany, zapiszFormularz, {
+    identyfikatorInstancji: `profil:${uzytkownikId ?? zalogowanyUzytkownik?.id ?? 'niezalogowany'}`,
+    etykieta: 'Profil użytkownika',
+    odrzucZmiany,
+  })
 
   if (!zalogowanyUzytkownik || !przegladany || !czyMozePrzegladacProfil(zalogowanyUzytkownik, przegladany)) return <main className="widok profil-uzytkownika"><p>Nie masz uprawnień do wyświetlenia tego profilu.</p></main>
   const uzytkownikProfilu = przegladany
-  const uzytkownikZalogowany = zalogowanyUzytkownik
   const czyMozeEdytowac = czyTrybDemonstracyjny && czyMozeEdytowacProfil(zalogowanyUzytkownik, przegladany)
   const czyDaneAdministracyjne = czyMoznaPokazacDaneAdministracyjne(zalogowanyUzytkownik, przegladany)
   const dostepniUzytkownicy = uzytkownicy.filter((uzytkownik) => czyMozePrzegladacProfil(zalogowanyUzytkownik, uzytkownik))
   const aktualnyFormularz = formularz ?? mapujUzytkownikaNaFormularz(przegladany)
-  const czyWlasciciel = zalogowanyUzytkownik.id === przegladany.id
-
   function rozpocznijEdycje() { ustawFormularz(mapujUzytkownikaNaFormularz(uzytkownikProfilu)); ustawCzyEdycja(true); ustawKomunikat(''); ustawBlad('') }
-  function anuluj() { ustawFormularz(null); ustawCzyEdycja(false); ustawCzyMaNiezapisaneZmiany(false); ustawBlad('') }
-  function zmienPole<K extends keyof FormularzUzytkownika>(pole: K, wartosc: FormularzUzytkownika[K]) { ustawFormularz((poprzedni) => poprzedni ? { ...poprzedni, [pole]: wartosc } : poprzedni); ustawCzyMaNiezapisaneZmiany(true) }
+  function anuluj() { odrzucZmiany() }
+  function zmienPole<K extends keyof FormularzUzytkownika>(pole: K, wartosc: FormularzUzytkownika[K]) { ustawFormularz((poprzedni) => poprzedni ? { ...poprzedni, [pole]: wartosc } : poprzedni) }
   function zapisz(zdarzenie: FormEvent<HTMLFormElement>) {
     zdarzenie.preventDefault()
-    if (!formularz) return
-    const wynik = czyWlasciciel && !czyMozeZarzadzacUzytkownikami(uzytkownikZalogowany) ? zaktualizujWlasnyProfil(uzytkownikZalogowany, uzytkownikProfilu.id, formularz) : uzytkownikZalogowany.rola === 'ARCHITEKT' ? zaktualizujUzytkownikaPrzezArchitekta(uzytkownikZalogowany, uzytkownikProfilu.id, formularz) : zaktualizujUzytkownikaPrzezAdministratora(uzytkownikZalogowany, uzytkownikProfilu.id, formularz)
-    if (!wynik.uzytkownik) { ustawBlad(wynik.blad ?? 'Nie udało się zapisać profilu.'); return }
-    ustawCzyEdycja(false); ustawFormularz(null); ustawCzyMaNiezapisaneZmiany(false); ustawKomunikat('Profil został zapisany.'); ustawBlad('')
-    odswiezUzytkownika()
+    zapiszFormularz()
   }
 
   return <main className="widok profil-uzytkownika">

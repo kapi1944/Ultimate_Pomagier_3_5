@@ -159,13 +159,13 @@ test('serwis zapisuje tylko lokalizacje, odtwarza plan i udostępnia go wspólne
   }
 })
 
-test('nieudany zapis blokuje wyjście z mapy, a dotychczasowe zapisy void pozostają zgodne', () => {
+test('nieudany zapis blokuje wyjście z mapy, a dotychczasowe zapisy void pozostają zgodne', async () => {
   let wyrejestruj = ustawObslugeNiezapisanegoDokumentu({ czySaNiezapisaneZmiany: () => true, zapiszPrzedWyjsciem: () => false })
   assert.equal(czyDokumentMaNiezapisaneZmiany(), true)
-  assert.equal(zapiszDokumentPrzedWyjsciem(), false)
+  assert.equal(await zapiszDokumentPrzedWyjsciem(), false)
   wyrejestruj()
   wyrejestruj = ustawObslugeNiezapisanegoDokumentu({ czySaNiezapisaneZmiany: () => false, zapiszPrzedWyjsciem: () => {} })
-  assert.equal(zapiszDokumentPrzedWyjsciem(), true)
+  assert.equal(await zapiszDokumentPrzedWyjsciem(), true)
   wyrejestruj()
   assert.equal(czyDokumentMaNiezapisaneZmiany(), false)
 })

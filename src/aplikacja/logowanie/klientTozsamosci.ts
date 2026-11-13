@@ -26,15 +26,19 @@ function czyWpisHistorii(wpis: unknown): wpis is WpisHistoriiKonta {
   if (!wpis || typeof wpis !== 'object') return false
   return ['czas', 'wykonujacyId', 'uzytkownikId', 'operacja'].every((pole) => pole in wpis && typeof Reflect.get(wpis, pole) === 'string') && 'pola' in wpis && Array.isArray(wpis.pola) && wpis.pola.every((pole: unknown) => typeof pole === 'string') && 'wynik' in wpis && ['SUKCES', 'ODRZUCONO'].includes(String(wpis.wynik))
 }
-export async function odswiezPotwierdzonaSesje() {
+export async function odswiezPotwierdzonaSesje(raportujEtap?: (etap: string) => void) {
+  raportujEtap?.('Sprawdzanie potwierdzonej sesji')
   const tozsamosc = await wykonajOperacjeTozsamosci('sesja')
   if (!sprawdzStruktureUzytkownika(tozsamosc)) throw new Error('Nieprawidłowa tożsamość z usługi kont.')
   if (await otworzObszarKonta()) throw new Error('Otwieranie prywatnego obszaru konta.')
+  raportujEtap?.('Wczytywanie kartoteki użytkowników')
   const konta = await wykonajOperacjeTozsamosci('katalog')
   if (!Array.isArray(konta) || !konta.every(sprawdzStruktureUzytkownika)) throw new Error('Nieprawidłowa kartoteka z usługi kont.')
+  raportujEtap?.('Przygotowywanie uprawnień i historii')
   const daneHistorii = ['ARCHITEKT', 'ADMINISTRATOR'].includes(tozsamosc.rola) ? await wykonajOperacjeTozsamosci('historia') : []
   if (!Array.isArray(daneHistorii) || !daneHistorii.every(czyWpisHistorii)) throw new Error('Nieprawidłowy audyt z usługi kont.')
   ustawProjekcjeKont(konta, daneHistorii, tozsamosc)
+  raportujEtap?.('Przygotowywanie pulpitu')
   return tozsamosc
 }
 export function wyczyscPotwierdzonaSesje() { ustawProjekcjeKont([], [], null) }

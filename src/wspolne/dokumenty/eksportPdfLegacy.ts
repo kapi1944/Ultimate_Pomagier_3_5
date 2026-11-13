@@ -7,7 +7,7 @@ function przywrocSkaleKopii(kopia: Document) {
   kopia.documentElement.style.setProperty('--ui-skala-przegladarki', '1')
 }
 
-export async function renderujRasterPdfLegacy({ obszarDokumentu, orientacja = 'pionowa', format = 'a4', marginesMm = 12 }: UstawieniaEksportuPdf) {
+export async function renderujRasterPdfLegacy({ obszarDokumentu, orientacja = 'pionowa', format = 'a4', marginesMm = 12, plynnyUklad = false }: UstawieniaEksportuPdf) {
   await document.fonts?.ready
   await Promise.all(Array.from(obszarDokumentu.querySelectorAll('img')).map((obraz) => obraz.decode()))
   const stronyDokumentu = pobierzStronyDokumentu(obszarDokumentu)
@@ -40,16 +40,38 @@ export async function renderujRasterPdfLegacy({ obszarDokumentu, orientacja = 'p
     return pdf
   }
 
+  const graniceWierszy: number[] = []
+  const szerokoscDrukuMm = wymiaryStrony.szerokoscMm - marginesMm * 2
+  const skalaKanwy = 2
   const kanwa = await html2canvas(obszarDokumentu, {
     ...oknoEksportu,
     backgroundColor: '#ffffff',
-    scale: 2,
+    scale: skalaKanwy,
     useCORS: true,
-    onclone: przywrocSkaleKopii,
+    onclone: (kopia, obszarKopii) => {
+      przywrocSkaleKopii(kopia)
+      if (!plynnyUklad) return
+      for (let element = obszarKopii.parentElement; element; element = element.parentElement) element.style.zoom = '1'
+      obszarKopii.style.width = `${szerokoscDrukuMm}mm`
+      obszarKopii.style.padding = '0'
+      const poczatek = obszarKopii.getBoundingClientRect().top
+      for (const wiersz of obszarKopii.querySelectorAll('tbody tr')) {
+        graniceWierszy.push(Math.round((wiersz.getBoundingClientRect().bottom - poczatek) * skalaKanwy))
+      }
+    },
     ignoreElements: (element) => element.hasAttribute('data-pomin-w-eksporcie'),
   })
-  const szerokoscDrukuMm = wymiaryStrony.szerokoscMm - marginesMm * 2
   const strony = pobierzPodzialStronA4(kanwa.height, kanwa.width, marginesMm, orientacja, format)
+  if (plynnyUklad && strony.length > 1) {
+    const limitStrony = strony[0].wysokosc
+    strony.length = 0
+    for (let poczatek = 0; poczatek < kanwa.height;) {
+      const limit = Math.min(poczatek + limitStrony, kanwa.height)
+      const koniec = limit === kanwa.height ? limit : graniceWierszy.findLast((granica) => granica > poczatek && granica <= limit) ?? limit
+      strony.push({ poczatek, wysokosc: koniec - poczatek })
+      poczatek = koniec
+    }
+  }
 
   strony.forEach((strona, indeks) => {
     if (indeks > 0) pdf.addPage(format, wymiaryStrony.orientacjaJsPdf)

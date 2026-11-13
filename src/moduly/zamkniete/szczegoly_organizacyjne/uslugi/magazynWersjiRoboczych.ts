@@ -18,9 +18,50 @@ import { repozytoriumWspolnychDokumentow } from '../../../../wspolne/dokumenty/r
 import { zapiszDokumentRoboczyGeneratora } from '../../../../wspolne/dokumenty/zapisDokumentuGeneratora'
 import { czyMoznaUtworzycAktualizacje, walidujPrzejscieStatusuSzczegolow, type AkcjaStatusuSzczegolow } from '../workflowStatusow'
 const kluczAktualnejWersji = 'ultimatePomagier.szczegolyOrganizacyjne.aktualnaWersja'
+const kluczInstancjiFormularza = 'ultimatePomagier.szczegolyOrganizacyjne.instancjaFormularza'
 
 const kluczAutosave = 'ultimatePomagier.szczegolyOrganizacyjne.autosave'
+let identyfikatorInstancjiBezSesji: string | null = null
 export const wersjaEksportuSzczegolow = 'ultimate-pomagier-3.5-szczegoly-organizacyjne'
+
+function pobierzMagazynSesji(): Storage | null {
+  try {
+    return typeof sessionStorage === 'undefined' ? null : sessionStorage
+  } catch {
+    return null
+  }
+}
+
+function utworzIdInstancji() {
+  const losoweId = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2, 12)}`
+  return `szczegoly-${losoweId}`
+}
+
+export function pobierzIdInstancjiSzczegolow() {
+  const magazynSesji = pobierzMagazynSesji()
+  const zapisanyId = magazynSesji?.getItem(kluczInstancjiFormularza)
+  if (zapisanyId) return zapisanyId
+  if (!magazynSesji && identyfikatorInstancjiBezSesji) return identyfikatorInstancjiBezSesji
+
+  const id = utworzIdInstancji()
+  if (magazynSesji) magazynSesji.setItem(kluczInstancjiFormularza, id)
+  else identyfikatorInstancjiBezSesji = id
+  return id
+}
+
+export function ustawIdInstancjiSzczegolow(id: string) {
+  const magazynSesji = pobierzMagazynSesji()
+  if (magazynSesji) magazynSesji.setItem(kluczInstancjiFormularza, id)
+  else identyfikatorInstancjiBezSesji = id
+}
+
+export function utworzNowaInstancjeSzczegolow() {
+  const id = utworzIdInstancji()
+  ustawIdInstancjiSzczegolow(id)
+  return id
+}
 
 function bezpiecznieParsuj<Typ>(wartosc: string | null, fallback: Typ): Typ {
   if (!wartosc) {
@@ -118,7 +159,9 @@ function zarejestrujHistorie(wpis: WpisHistoriiSzczegolow) {
 }
 
 export function pobierzAktualnaWersjeRobocza() {
-  const wersja = bezpiecznieParsuj<WersjaRoboczaGeneratora | null>(localStorage.getItem(kluczAktualnejWersji), null)
+  const magazynSesji = pobierzMagazynSesji()
+  const wartosc = magazynSesji ? magazynSesji.getItem(kluczAktualnejWersji) : localStorage.getItem(kluczAktualnejWersji)
+  const wersja = bezpiecznieParsuj<WersjaRoboczaGeneratora | null>(wartosc, null)
   return wersja ? normalizujWersjeRobocza(wersja) : null
 }
 
@@ -136,27 +179,46 @@ export function pobierzOpublikowaneSzczegoly() {
     .map((dokument) => normalizujOpublikowaneSzczegoly(dokument.daneDokumentu as OpublikowaneSzczegolyOrganizacyjne))
 }
 
-export function pobierzAutosaveSzczegolow() {
-  return bezpiecznieParsuj<AutosaveSzczegolow | null>(localStorage.getItem(kluczAutosave), null)
+function pobierzKluczAutosave(identyfikatorInstancji: string) {
+  return `${kluczAutosave}.${encodeURIComponent(identyfikatorInstancji)}`
+}
+
+export function pobierzAutosaveSzczegolow(identyfikatorInstancji = pobierzIdInstancjiSzczegolow(), aktywnaKopiaId?: string | null) {
+  const autosaveInstancji = bezpiecznieParsuj<AutosaveSzczegolow | null>(localStorage.getItem(pobierzKluczAutosave(identyfikatorInstancji)), null)
+  if (autosaveInstancji) return autosaveInstancji
+
+  const staryAutosave = bezpiecznieParsuj<AutosaveSzczegolow | null>(localStorage.getItem(kluczAutosave), null)
+  if (staryAutosave?.identyfikatorInstancji === identyfikatorInstancji) return staryAutosave
+  if (aktywnaKopiaId && staryAutosave?.aktywnaKopiaId === aktywnaKopiaId) return { ...staryAutosave, identyfikatorInstancji }
+  return null
 }
 
 export function zapiszAutosaveSzczegolow(autosave: AutosaveSzczegolow) {
-  localStorage.setItem(kluczAutosave, JSON.stringify(autosave))
+  const identyfikatorInstancji = autosave.identyfikatorInstancji ?? pobierzIdInstancjiSzczegolow()
+  const zapis = { ...autosave, identyfikatorInstancji }
+  localStorage.setItem(pobierzKluczAutosave(identyfikatorInstancji), JSON.stringify(zapis))
+  // Zachowujemy stary klucz jako zgodny wstecznie wskaźnik ostatniego autosave.
+  localStorage.setItem(kluczAutosave, JSON.stringify(zapis))
 }
 
-export function usunAutosaveSzczegolow() {
-  localStorage.removeItem(kluczAutosave)
+export function usunAutosaveSzczegolow(identyfikatorInstancji = pobierzIdInstancjiSzczegolow()) {
+  localStorage.removeItem(pobierzKluczAutosave(identyfikatorInstancji))
+  const ostatniAutosave = bezpiecznieParsuj<AutosaveSzczegolow | null>(localStorage.getItem(kluczAutosave), null)
+  if (ostatniAutosave?.identyfikatorInstancji === identyfikatorInstancji) localStorage.removeItem(kluczAutosave)
 }
 
-export function pobierzHistorieSzczegolow() {
+export function pobierzHistorieSzczegolow(dokumentId: string | null) {
+  if (!dokumentId) return []
   return repozytoriumWspolnychDokumentow
     .pobierzHistorie()
-    .filter((wpis) => wpis.typ === 'historia_szczegolow' && Boolean(wpis.dane && typeof wpis.dane === 'object' && (wpis.dane as { generatorId?: unknown }).generatorId === 'szczegoly_organizacyjne'))
+    .filter((wpis) => wpis.dokumentId === dokumentId && wpis.typ === 'historia_szczegolow' && Boolean(wpis.dane && typeof wpis.dane === 'object' && (wpis.dane as { generatorId?: unknown }).generatorId === 'szczegoly_organizacyjne'))
     .map((wpis) => (wpis.dane as { wpis: WpisHistoriiSzczegolow }).wpis)
 }
 
 export function dodajWpisHistoriiSzczegolow(wpis: Omit<WpisHistoriiSzczegolow, 'id' | 'data'>) {
-  if (wpis.typ === 'wersja' && wpis.dokumentId && wpis.numerWersji && pobierzHistorieSzczegolow().some((pozycja) => pozycja.typ === 'wersja' && pozycja.dokumentId === wpis.dokumentId && pozycja.numerWersji === wpis.numerWersji)) {
+  if (!wpis.dokumentId || !repozytoriumWspolnychDokumentow.pobierzPoId(wpis.dokumentId)) return
+
+  if (wpis.typ === 'wersja' && wpis.dokumentId && wpis.numerWersji && pobierzHistorieSzczegolow(wpis.dokumentId).some((pozycja) => pozycja.typ === 'wersja' && pozycja.numerWersji === wpis.numerWersji)) {
     return
   }
 
@@ -188,12 +250,13 @@ export function zbudujWersjeRobocza(
   konto: KontoSzczegolow,
   metadane?: { id?: string | null; dokumentId?: string; zrodloOpublikowanegoId?: string; bazowaWersjaOpublikowana?: number },
 ): WersjaRoboczaGeneratora {
-  const historia = pobierzHistorieSzczegolow()
   const id = metadane?.id || `wersja-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  const dokumentId = metadane?.dokumentId || metadane?.zrodloOpublikowanegoId || id
+  const historia = pobierzHistorieSzczegolow(dokumentId)
 
   return {
     id,
-    dokumentId: metadane?.dokumentId || metadane?.zrodloOpublikowanegoId || id,
+    dokumentId,
     bazowaWersjaOpublikowana: metadane?.bazowaWersjaOpublikowana,
     wersja: wersjaEksportuSzczegolow,
     etykietaWersji: utworzEtykieteWersji(historia),
@@ -210,7 +273,9 @@ export function zbudujWersjeRobocza(
 }
 
 export function ustawAktualnaWersjeRobocza(wersja: WersjaRoboczaGeneratora) {
-  localStorage.setItem(kluczAktualnejWersji, JSON.stringify(wersja))
+  const zapis = JSON.stringify(wersja)
+  localStorage.setItem(kluczAktualnejWersji, zapis)
+  pobierzMagazynSesji()?.setItem(kluczAktualnejWersji, zapis)
 }
 
 export function zapiszWersjeRobocza(wersja: WersjaRoboczaGeneratora) {
@@ -256,10 +321,12 @@ export function usunKopieRobocza(id: string) {
 
 export function wyczyscAktualnaWersjeRobocza() {
   localStorage.removeItem(kluczAktualnejWersji)
+  pobierzMagazynSesji()?.removeItem(kluczAktualnejWersji)
 }
 
 export function rozpocznijNoweSzczegolyOrganizacyjne() {
   wyczyscAktualnaWersjeRobocza()
+  return utworzNowaInstancjeSzczegolow()
 }
 
 export function opublikujWersjeRobocza(wersja: WersjaRoboczaGeneratora) {
@@ -385,6 +452,7 @@ export function ustawStatusOpublikowanychSzczegolow(
     powod: opcje.powod?.trim() || undefined,
     akcjaStatusu: walidacjaPrzejscia.przejscie.akcja as AkcjaStatusuSzczegolow,
     automatyczne: false,
+    dokumentId: id,
     zmianaStatusu: { z: poprzedni.status, na: status },
   })
 
@@ -418,6 +486,7 @@ export function ustawStatusSzkoleniaOpublikowanychSzczegolow(
     autorId: konto.id,
     autorNazwa: konto.nazwa,
     komentarz,
+    dokumentId: id,
     zmianaStatusu: { z: poprzedni?.statusSzkolenia, na: statusSzkolenia },
     zdarzenieSpecjalne: statusSzkolenia === 'NIEZREALIZOWANE' ? 'Ustawiono szkolenie jako niezrealizowane.' : undefined,
   })
@@ -435,7 +504,7 @@ export function utworzKopieRoboczaZOpublikowanychSzczegolow(rekord: Opublikowane
     dokumentId: rekord.id,
     bazowaWersjaOpublikowana: rekord.numerWersji,
     wersja: wersjaEksportuSzczegolow,
-    etykietaWersji: utworzEtykieteWersji(pobierzHistorieSzczegolow()),
+    etykietaWersji: utworzEtykieteWersji(pobierzHistorieSzczegolow(rekord.id)),
     nazwa: `[Kopia robocza] Aktualizacja - ${rekord.dane.tytulSzkolenia || rekord.nazwa}`,
     dataZapisu: new Date().toISOString(),
     autorId: konto.id,

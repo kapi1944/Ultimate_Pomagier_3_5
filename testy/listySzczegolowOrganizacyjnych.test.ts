@@ -4,8 +4,12 @@ import test from 'node:test'
 import type { DaneFormularza, WersjaRoboczaGeneratora } from '../src/moduly/zamkniete/szczegoly_organizacyjne/typy.ts'
 import {
   opublikujWersjeRobocza,
+  pobierzAktualnaWersjeRobocza,
   pobierzKopieRobocze,
+  pobierzHistorieSzczegolow,
   pobierzOpublikowaneSzczegoly,
+  rozpocznijNoweSzczegolyOrganizacyjne,
+  dodajWpisHistoriiSzczegolow,
   usunKopieRobocza,
   zapiszWersjeRobocza,
 } from '../src/moduly/zamkniete/szczegoly_organizacyjne/uslugi/magazynWersjiRoboczych.ts'
@@ -86,6 +90,27 @@ test('migracja rozpoznaje starszą kopię szczegółów bez typu dokumentu', () 
   migrujStarszeDokumenty()
 
   assert.deepEqual(pobierzKopieRobocze().map((kopia) => kopia.id), ['stare-szczegoly'])
+})
+
+test('nowa instancja szczegółów ma pustą historię i nie usuwa wcześniejszych kopii', () => {
+  magazyn.clear()
+  const pierwsza = utworzWersje('szczegoly-oddzielne-1')
+  zapiszWersjeRobocza(pierwsza)
+  dodajWpisHistoriiSzczegolow({ typ: 'import', autorId: 'tester', autorNazwa: 'Tester', komentarz: 'Zdarzenie pierwszego formularza.', dokumentId: pierwsza.dokumentId })
+
+  const druga = utworzWersje('szczegoly-oddzielne-2')
+  zapiszWersjeRobocza(druga)
+  dodajWpisHistoriiSzczegolow({ typ: 'import', autorId: 'tester', autorNazwa: 'Tester', komentarz: 'Zdarzenie drugiego formularza.', dokumentId: druga.dokumentId })
+
+  assert.equal(pobierzHistorieSzczegolow(pierwsza.dokumentId).length, 2)
+  assert.equal(pobierzHistorieSzczegolow(druga.dokumentId).length, 2)
+
+  const nowaInstancjaId = rozpocznijNoweSzczegolyOrganizacyjne()
+  assert.notEqual(nowaInstancjaId, pierwsza.id)
+  assert.notEqual(nowaInstancjaId, druga.id)
+  assert.equal(pobierzAktualnaWersjeRobocza(), null)
+  assert.deepEqual(pobierzHistorieSzczegolow(nowaInstancjaId), [])
+  assert.deepEqual(pobierzKopieRobocze().map((kopia) => kopia.id).sort(), [pierwsza.id, druga.id])
 })
 
 test('widoki list szczegółów umieszczają zawartość w obszarze roboczym', () => {

@@ -6,6 +6,7 @@ import { pobierzTrenerowZKartoteki } from '../../../../kartoteki/trenerzyKartote
 import { pobierzKlientowZKartoteki } from '../../../../kartoteki/klienciKartoteki'
 import { pobierzUzytkownikow } from '../../../../kartoteki/uzytkownicy/magazynUzytkownikow'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useOchronaNiezapisanegoDokumentu } from '../../../dokumenty/wspolne/useStanDokumentu'
 import {
   pobierzLokalizacjeZMagazynu,
   znajdzLokalizacjeDlaMiejsca,
@@ -46,10 +47,12 @@ import {
   dodajWpisHistoriiSzczegolow,
   opublikujWersjeRobocza,
   pobierzAktualnaWersjeRobocza,
+  pobierzIdInstancjiSzczegolow,
   pobierzAutosaveSzczegolow,
   pobierzHistorieSzczegolow,
   pobierzKopieRobocze,
   ustawAktualnaWersjeRobocza,
+  rozpocznijNoweSzczegolyOrganizacyjne,
   usunAutosaveSzczegolow,
   wersjaEksportuSzczegolow,
   wyczyscAktualnaWersjeRobocza,
@@ -302,6 +305,7 @@ function pobierzStanPoczatkowy() {
       adresaci: normalizujAdresatow(wersja.adresaci),
       statusyPol: wersja.statusyPol ?? {},
       aktywnaKopiaId: wersja.id,
+      dokumentId: wersja.dokumentId,
       zrodloOpublikowanegoId: wersja.zrodloOpublikowanegoId,
     }
   }
@@ -312,6 +316,7 @@ function pobierzStanPoczatkowy() {
     adresaci: { ...poczatkowiAdresaci },
     statusyPol: {},
     aktywnaKopiaId: null,
+    dokumentId: null,
     zrodloOpublikowanegoId: undefined,
   }
 }
@@ -619,6 +624,7 @@ function zbierzProblemyModelu(model: ModelSekcyjnySzczegolow) {
 
 export function useGeneratorSzczegolow() {
   const aktywneKonto = useMemo(() => pobierzAktywneKontoSzczegolow(), [])
+  const [identyfikatorInstancji, ustawIdInstancji] = useState(pobierzIdInstancjiSzczegolow)
   const stanPoczatkowy = useMemo(() => pobierzStanPoczatkowy(), [])
   const [daneFormularza, ustawDaneFormularza] = useState<DaneFormularza>(stanPoczatkowy.dane)
   const [grupy, ustawGrupy] = useState<GrupaSzkoleniowa[]>(stanPoczatkowy.grupy)
@@ -630,16 +636,50 @@ export function useGeneratorSzczegolow() {
   const aktualneStatusyPol = useRef(statusyPol)
   useLayoutEffect(() => { aktualneStatusyPol.current = statusyPol }, [statusyPol])
   const [aktywnaKopiaId, ustawAktywnaKopiaId] = useState<string | null>(stanPoczatkowy.aktywnaKopiaId)
+  const [dokumentIdEdycji, ustawDokumentIdEdycji] = useState<string | null>(stanPoczatkowy.dokumentId)
   const [zrodloOpublikowanegoId, ustawZrodloOpublikowanegoId] = useState<string | undefined>(stanPoczatkowy.zrodloOpublikowanegoId)
+  const autosaveStartowy = useMemo(() => pobierzAutosaveSzczegolow(identyfikatorInstancji, stanPoczatkowy.aktywnaKopiaId), [identyfikatorInstancji, stanPoczatkowy])
   const [trescMaila, ustawTrescMaila] = useState('')
   const [rozpoznaneObszary, ustawRozpoznaneObszary] = useState<string[]>([])
-  const [komunikat, ustawKomunikat] = useState(() => (pobierzAutosaveSzczegolow() ? 'Znaleziono niezapisaną wersję roboczą.' : 'Generator gotowy.'))
+  const [komunikat, ustawKomunikat] = useState(() => (autosaveStartowy ? 'Znaleziono niezapisaną wersję roboczą.' : 'Generator gotowy.'))
   const [trenerzyKartoteki, ustawTrenerzyKartoteki] = useState<TrenerKartoteki[]>(pobierzTrenerowZKartoteki)
   const [kopieRobocze, ustawKopieRobocze] = useState(() => pobierzWidoczneKopieRobocze(aktywneKonto))
-  const [historiaSzczegolow, ustawHistorieSzczegolow] = useState(() => pobierzHistorieSzczegolow())
-  const [autosaveDoDecyzji, ustawAutosaveDoDecyzji] = useState<AutosaveSzczegolow | null>(() => pobierzAutosaveSzczegolow())
-  const [czyAutosaveAktywny, ustawCzyAutosaveAktywny] = useState(() => !pobierzAutosaveSzczegolow())
+  const [historiaSzczegolow, ustawHistorieSzczegolow] = useState(() => pobierzHistorieSzczegolow(stanPoczatkowy.aktywnaKopiaId ? stanPoczatkowy.dokumentId : null))
+  const [autosaveDoDecyzji, ustawAutosaveDoDecyzji] = useState<AutosaveSzczegolow | null>(() => autosaveStartowy)
+  const [czyAutosaveAktywny, ustawCzyAutosaveAktywny] = useState(() => !autosaveStartowy)
   const czyPominacNastepnyAutosave = useRef(true)
+  const trwajacyZapis = useRef(false)
+  const migawkaEdycji = { dane: daneFormularza, grupy, adresaci, statusyPol: zapisaneStatusyPol }
+  const [zapisanyStan, ustawZapisanyStan] = useState(() => klonuj(migawkaEdycji))
+  const odciskEdycji = JSON.stringify(migawkaEdycji)
+  const czyNiezapisaneZmiany = odciskEdycji !== JSON.stringify(zapisanyStan)
+  const idWpisuHistorii = dokumentIdEdycji ?? aktywnaKopiaId ?? identyfikatorInstancji
+  const ostatniAutosave = pobierzAutosaveSzczegolow(identyfikatorInstancji, aktywnaKopiaId)?.dataZapisu
+
+  function potwierdzZapisaneDane(dane: DaneFormularza, grupyDoZapisu: GrupaSzkoleniowa[], adresaciDoZapisu: DaneAdresatow, statusyDoZapisu: StatusyPolImportu) {
+    const migawka = { dane, grupy: grupyDoZapisu, adresaci: adresaciDoZapisu, statusyPol: statusyDoZapisu }
+    ustawZapisanyStan(klonuj(migawka))
+  }
+
+  function rozpocznijPustaInstancjeFormularza() {
+    const id = rozpocznijNoweSzczegolyOrganizacyjne()
+    if (typeof window !== 'undefined' && window.location.pathname === '/szkolenia-zamkniete/szczegoly-organizacyjne/nowe') {
+      const stanHistorii = window.history.state && typeof window.history.state === 'object' ? window.history.state : {}
+      window.history.replaceState({ ...stanHistorii, szczegolyInstancjiId: id, szczegolyKopiaId: null }, '', window.location.href)
+    }
+    return id
+  }
+
+  function odrzucBiezaceZmiany() {
+    const migawka = klonuj(zapisanyStan)
+    ustawDaneFormularza(migawka.dane)
+    ustawGrupy(migawka.grupy)
+    ustawAdresaci(migawka.adresaci)
+    ustawStatusyPol(migawka.statusyPol)
+    usunAutosaveSzczegolow(identyfikatorInstancji)
+    ustawAutosaveDoDecyzji(null)
+    ustawKomunikat('Odrzucono niezapisane zmiany.')
+  }
   const [indeksLokalizacji, ustawIndeksLokalizacji] = useState(() => zbudujIndeksLokalizacjiSzczegolow(pobierzLokalizacjeZMagazynu()))
   const problemyDanych = useMemo(() => zbudujProblemyWalidacjiDanych(daneFormularza), [daneFormularza])
   const walidujGrupe = useMemo(() => utworzWalidatorGrupy(indeksLokalizacji), [indeksLokalizacji])
@@ -662,7 +702,6 @@ export function useGeneratorSzczegolow() {
   const czyFormularzKompletny = useMemo(() => czySekcjeWymaganeKompletne(modelSekcyjny), [modelSekcyjny])
   const podgladSzczegolow = useMemo(() => utworzTekstSzczegolow(daneFormularza, grupy), [daneFormularza, grupy])
   const czyMoznaEdytowac = useMemo(() => czyKontoMozeEdytowacSzczegoly(aktywneKonto, daneFormularza.opiekunId, !aktywnaKopiaId && !zrodloOpublikowanegoId), [aktywneKonto, daneFormularza.opiekunId, aktywnaKopiaId, zrodloOpublikowanegoId])
-  const ostatniAutosave = pobierzAutosaveSzczegolow()?.dataZapisu
   const czyAdresaciAktualizacjiPoprawni = useMemo(() => {
     const lista = podzielAdresatow(adresaci.reczniAdresaci)
     return lista.length > 0 && lista.every(czyEmailPoprawny)
@@ -678,17 +717,22 @@ export function useGeneratorSzczegolow() {
       return
     }
 
-    zapiszAutosaveSzczegolow({
-      id: `autosave-${Date.now()}`,
-      dataZapisu: new Date().toISOString(),
-      dane: daneFormularza,
-      grupy,
-      adresaci,
-      statusyPol,
-      aktywnaKopiaId,
-      zrodloOpublikowanegoId,
-    })
-  }, [czyAutosaveAktywny, daneFormularza, grupy, adresaci, statusyPol, aktywnaKopiaId, zrodloOpublikowanegoId])
+    try {
+      zapiszAutosaveSzczegolow({
+        id: `autosave-${Date.now()}`,
+        identyfikatorInstancji,
+        dataZapisu: new Date().toISOString(),
+        dane: daneFormularza,
+        grupy,
+        adresaci,
+        statusyPol,
+        aktywnaKopiaId,
+        zrodloOpublikowanegoId,
+      })
+    } catch {
+      queueMicrotask(() => ustawKomunikat('Nie udało się zapisać kopii odzyskiwania. Wprowadzone zmiany nadal są w formularzu.'))
+    }
+  }, [czyAutosaveAktywny, daneFormularza, grupy, adresaci, statusyPol, aktywnaKopiaId, zrodloOpublikowanegoId, identyfikatorInstancji])
 
   const oznaczPoleRecznie = useCallback(function oznaczPoleRecznie(pole: string) {
     ustawStatusyPol((obecne) => {
@@ -870,37 +914,64 @@ export function useGeneratorSzczegolow() {
       autorId: aktywneKonto.id,
       autorNazwa: aktywneKonto.nazwa,
       komentarz: `Zaimportowano dane z maila. Pola niepewne: ${wynik.polaNiepewne.length || 0}.`,
+      dokumentId: idWpisuHistorii,
     })
-    ustawHistorieSzczegolow(pobierzHistorieSzczegolow())
+    ustawHistorieSzczegolow(pobierzHistorieSzczegolow(idWpisuHistorii))
+  }
+
+  function zapiszWersjeZOpcja(czyZapisPrzedWyjsciem: boolean): boolean {
+    if (!czyMoznaEdytowac) {
+      ustawKomunikat('Ten formularz jest dostępny tylko do podglądu dla bieżącego konta.')
+      return false
+    }
+    if (trwajacyZapis.current) return false
+
+    trwajacyZapis.current = true
+    try {
+      const kontrola = sprawdzJakosc()
+      if (!czyZapisPrzedWyjsciem && kontrola.problemy.some((problem) => problem.komunikat === 'Odmiana nazwy tej lokalizacji nie została jeszcze potwierdzona.')) {
+        ustawKomunikat('Potwierdź odmianę lokalizacji przed zapisaniem formularza.')
+        return false
+      }
+      if (!czyNiezapisaneZmiany && aktywnaKopiaId && daneFormularza.status === (kontrola.czyKompletny ? 'PEŁNE' : 'NIEPEŁNE')) return true
+      const daneDoZapisu: DaneFormularza = {
+        ...daneFormularza,
+        status: kontrola.czyKompletny ? 'PEŁNE' : 'NIEPEŁNE',
+      }
+      const daneZapisane = normalizujDane(daneDoZapisu)
+      const wersja = zbudujWersjeRobocza(daneZapisane, grupy, adresaci, statusyPol, aktywneKonto, {
+        id: aktywnaKopiaId ?? identyfikatorInstancji,
+        dokumentId: dokumentIdEdycji ?? zrodloOpublikowanegoId ?? aktywnaKopiaId ?? identyfikatorInstancji,
+        zrodloOpublikowanegoId,
+      })
+      czyPominacNastepnyAutosave.current = true
+      zapiszWersjeRobocza(wersja)
+      if (typeof window !== 'undefined' && window.location.pathname === '/szkolenia-zamkniete/szczegoly-organizacyjne/nowe') {
+        const stanTrasy = window.history.state && typeof window.history.state === 'object' ? window.history.state : {}
+        window.history.replaceState({ ...stanTrasy, szczegolyInstancjiId: identyfikatorInstancji, szczegolyKopiaId: wersja.id }, '', window.location.href)
+      }
+      ustawDaneFormularza(daneZapisane)
+      ustawAktywnaKopiaId(wersja.id)
+      ustawDokumentIdEdycji(wersja.dokumentId)
+      potwierdzZapisaneDane(daneZapisane, grupy, adresaci, statusyPol)
+      ustawKopieRobocze(pobierzWidoczneKopieRobocze(aktywneKonto))
+      ustawHistorieSzczegolow(pobierzHistorieSzczegolow(wersja.dokumentId))
+      ustawKomunikat(`Zapisano wersję roboczą ${wersja.etykietaWersji}.`)
+      return true
+    } catch {
+      ustawKomunikat('Nie udało się zapisać wersji roboczej. Wprowadzone dane pozostały w formularzu.')
+      return false
+    } finally {
+      trwajacyZapis.current = false
+    }
   }
 
   function zapiszWersje() {
-    if (!czyMoznaEdytowac) {
-      ustawKomunikat('Ten formularz jest dostępny tylko do podglądu dla bieżącego konta.')
-      return
-    }
+    return zapiszWersjeZOpcja(false)
+  }
 
-    const kontrola = sprawdzJakosc()
-    if (kontrola.problemy.some((problem) => problem.komunikat === 'Odmiana nazwy tej lokalizacji nie została jeszcze potwierdzona.')) {
-      ustawKomunikat('Potwierdź odmianę lokalizacji przed zapisaniem formularza.')
-      return
-    }
-
-    const daneDoZapisu: DaneFormularza = {
-      ...daneFormularza,
-      status: kontrola.czyKompletny ? 'PEŁNE' : 'NIEPEŁNE',
-    }
-    const wersja = zbudujWersjeRobocza(daneDoZapisu, grupy, adresaci, statusyPol, aktywneKonto, {
-      id: aktywnaKopiaId,
-      zrodloOpublikowanegoId,
-    })
-    czyPominacNastepnyAutosave.current = true
-    zapiszWersjeRobocza(wersja)
-    ustawDaneFormularza(normalizujDane(daneDoZapisu))
-    ustawAktywnaKopiaId(wersja.id)
-    ustawKopieRobocze(pobierzWidoczneKopieRobocze(aktywneKonto))
-    ustawHistorieSzczegolow(pobierzHistorieSzczegolow())
-    ustawKomunikat(`Zapisano wersję roboczą ${wersja.etykietaWersji}.`)
+  function zapiszWersjePrzedWyjsciem() {
+    return zapiszWersjeZOpcja(true)
   }
 
   function wczytajWersje(wersja: WersjaRoboczaGeneratora) {
@@ -909,8 +980,11 @@ export function useGeneratorSzczegolow() {
     ustawAdresaci(normalizujAdresatow(wersja.adresaci))
     ustawStatusyPol(wersja.statusyPol ?? {})
     ustawAktywnaKopiaId(wersja.id)
+    ustawDokumentIdEdycji(wersja.dokumentId)
     ustawZrodloOpublikowanegoId(wersja.zrodloOpublikowanegoId)
     ustawAktualnaWersjeRobocza(wersja)
+    potwierdzZapisaneDane(normalizujDane(wersja.dane), wersja.grupy.length ? wersja.grupy.map(normalizujGrupe) : [normalizujGrupe()], normalizujAdresatow(wersja.adresaci), wersja.statusyPol ?? {})
+    ustawHistorieSzczegolow(pobierzHistorieSzczegolow(wersja.dokumentId))
     ustawKomunikat('Wczytano kopię roboczą.')
   }
 
@@ -925,14 +999,18 @@ export function useGeneratorSzczegolow() {
     ustawGrupy([normalizujGrupe()])
     ustawAdresaci({ ...poczatkowiAdresaci })
     ustawStatusyPol({})
+    ustawIdInstancji(rozpocznijPustaInstancjeFormularza())
     ustawAktywnaKopiaId(null)
+    ustawDokumentIdEdycji(null)
     ustawZrodloOpublikowanegoId(undefined)
     ustawRozpoznaneObszary([])
     ustawTrescMaila('')
     wyczyscAktualnaWersjeRobocza()
-    usunAutosaveSzczegolow()
+    usunAutosaveSzczegolow(identyfikatorInstancji)
     ustawAutosaveDoDecyzji(null)
     ustawCzyAutosaveAktywny(true)
+    potwierdzZapisaneDane(normalizujDane(), [normalizujGrupe()], { ...poczatkowiAdresaci }, {})
+    ustawHistorieSzczegolow([])
     ustawKomunikat('Wyczyszczono formularz i aktualny szkic.')
   }
 
@@ -959,7 +1037,8 @@ export function useGeneratorSzczegolow() {
     }
 
     const wersja = zbudujWersjeRobocza(daneFormularza, grupy, adresaci, statusyPol, aktywneKonto, {
-      id: aktywnaKopiaId,
+      id: aktywnaKopiaId ?? identyfikatorInstancji,
+      dokumentId: dokumentIdEdycji ?? zrodloOpublikowanegoId ?? aktywnaKopiaId ?? identyfikatorInstancji,
       zrodloOpublikowanegoId,
     })
     const blob = new Blob([JSON.stringify(wersja, null, 2)], { type: 'application/json;charset=utf-8' })
@@ -1000,22 +1079,30 @@ export function useGeneratorSzczegolow() {
       status: 'PEŁNE',
     }
     const wersja = zbudujWersjeRobocza(daneDoPublikacji, grupy, adresaci, statusyPol, aktywneKonto, {
-      id: aktywnaKopiaId,
+      id: aktywnaKopiaId ?? identyfikatorInstancji,
+      dokumentId: dokumentIdEdycji ?? zrodloOpublikowanegoId ?? aktywnaKopiaId ?? identyfikatorInstancji,
       zrodloOpublikowanegoId,
     })
 
     czyPominacNastepnyAutosave.current = true
     opublikujWersjeRobocza(wersja)
-    ustawDaneFormularza(normalizujDane())
-    ustawGrupy([normalizujGrupe()])
-    ustawAdresaci({ ...poczatkowiAdresaci })
+    const noweDane = normalizujDane()
+    const nowaGrupa = [normalizujGrupe()]
+    const nowiAdresaci = { ...poczatkowiAdresaci }
+    ustawDaneFormularza(noweDane)
+    ustawGrupy(nowaGrupa)
+    ustawAdresaci(nowiAdresaci)
     ustawStatusyPol({})
+    ustawIdInstancji(rozpocznijPustaInstancjeFormularza())
     ustawAktywnaKopiaId(null)
+    ustawDokumentIdEdycji(null)
     ustawZrodloOpublikowanegoId(undefined)
     ustawRozpoznaneObszary([])
     ustawTrescMaila('')
     ustawKopieRobocze(pobierzWidoczneKopieRobocze(aktywneKonto))
-    ustawHistorieSzczegolow(pobierzHistorieSzczegolow())
+    ustawHistorieSzczegolow([])
+    potwierdzZapisaneDane(noweDane, nowaGrupa, nowiAdresaci, {})
+    usunAutosaveSzczegolow(identyfikatorInstancji)
     ustawKomunikat('Opublikowano szczegóły organizacyjne ze statusem OCZEKUJĄCE.')
   }
 
@@ -1055,7 +1142,8 @@ export function useGeneratorSzczegolow() {
     const grupyDoZapisu = autosaveDoDecyzji.grupy.length ? autosaveDoDecyzji.grupy.map(normalizujGrupe) : [normalizujGrupe()]
     const adresaciDoZapisu = normalizujAdresatow(autosaveDoDecyzji.adresaci)
     const wersja = zbudujWersjeRobocza(dane, grupyDoZapisu, adresaciDoZapisu, autosaveDoDecyzji.statusyPol, aktywneKonto, {
-      id: autosaveDoDecyzji.aktywnaKopiaId,
+      id: autosaveDoDecyzji.aktywnaKopiaId ?? identyfikatorInstancji,
+      dokumentId: autosaveDoDecyzji.zrodloOpublikowanegoId ?? autosaveDoDecyzji.aktywnaKopiaId ?? identyfikatorInstancji,
       zrodloOpublikowanegoId: autosaveDoDecyzji.zrodloOpublikowanegoId,
     })
 
@@ -1066,9 +1154,11 @@ export function useGeneratorSzczegolow() {
     ustawAdresaci(adresaciDoZapisu)
     ustawStatusyPol(autosaveDoDecyzji.statusyPol)
     ustawAktywnaKopiaId(wersja.id)
+    ustawDokumentIdEdycji(wersja.dokumentId)
     ustawZrodloOpublikowanegoId(autosaveDoDecyzji.zrodloOpublikowanegoId)
+    potwierdzZapisaneDane(dane, grupyDoZapisu, adresaciDoZapisu, autosaveDoDecyzji.statusyPol)
     ustawKopieRobocze(pobierzWidoczneKopieRobocze(aktywneKonto))
-    ustawHistorieSzczegolow(pobierzHistorieSzczegolow())
+    ustawHistorieSzczegolow(pobierzHistorieSzczegolow(wersja.dokumentId))
     ustawAutosaveDoDecyzji(null)
     ustawCzyAutosaveAktywny(true)
     ustawKomunikat('Przywrócono niezapisaną wersję roboczą.')
@@ -1076,7 +1166,7 @@ export function useGeneratorSzczegolow() {
 
   function odrzucAutosave() {
     czyPominacNastepnyAutosave.current = true
-    usunAutosaveSzczegolow()
+    usunAutosaveSzczegolow(identyfikatorInstancji)
     ustawAutosaveDoDecyzji(null)
     ustawCzyAutosaveAktywny(true)
     ustawKomunikat('Odrzucono niezapisaną wersję roboczą.')
@@ -1099,10 +1189,18 @@ export function useGeneratorSzczegolow() {
       autorId: aktywneKonto.id,
       autorNazwa: aktywneKonto.nazwa,
       komentarz: `Zaakceptowano pola niepewne po imporcie: ${polaNiepewne.join(', ')}.`,
+      dokumentId: idWpisuHistorii,
     })
-    ustawHistorieSzczegolow(pobierzHistorieSzczegolow())
+    ustawHistorieSzczegolow(pobierzHistorieSzczegolow(idWpisuHistorii))
     ustawKomunikat('Zaakceptowano wszystkie pola niepewne po imporcie.')
   }
+
+  useOchronaNiezapisanegoDokumentu(czyNiezapisaneZmiany, zapiszWersjePrzedWyjsciem, {
+    identyfikatorInstancji,
+    etykieta: 'Szczegóły organizacyjne',
+    czyTrwaZapis: () => trwajacyZapis.current,
+    odrzucZmiany: odrzucBiezaceZmiany,
+  })
 
   return {
     daneFormularza,
@@ -1124,6 +1222,9 @@ export function useGeneratorSzczegolow() {
     trenerzyKartoteki,
     kopieRobocze,
     aktywnaKopiaId,
+    dokumentIdEdycji,
+    czyNiezapisaneZmiany,
+    identyfikatorInstancji,
     zrodloOpublikowanegoId,
     historiaSzczegolow,
     autosaveDoDecyzji,
