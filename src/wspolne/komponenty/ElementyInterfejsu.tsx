@@ -44,8 +44,9 @@ export function Komunikat({ status = 'info', children }: { status?: StatusInterf
 
 type WlasciwosciDialogu = { otwarty: boolean; zamknij: () => void; tytul: string; children: ReactNode }
 
-export function OknoDialogowe({ otwarty, zamknij, tytul, children, wariant = 'dialog', etykietaZamkniecia = 'Zamknij' }: WlasciwosciDialogu & { wariant?: 'dialog' | 'panel'; etykietaZamkniecia?: string }) {
+export function OknoDialogowe({ otwarty, zamknij, tytul, children, wariant = 'dialog', etykietaZamkniecia = 'Zamknij', klasa = '', zamknijPoKliknieciuTla = false }: WlasciwosciDialogu & { wariant?: 'dialog' | 'panel'; etykietaZamkniecia?: string; klasa?: string; zamknijPoKliknieciuTla?: boolean }) {
   const panel = useRef<HTMLDialogElement>(null)
+  const nacisnietoTlo = useRef(false)
   const identyfikator = useId()
   useEffect(() => {
     const element = panel.current
@@ -54,10 +55,18 @@ export function OknoDialogowe({ otwarty, zamknij, tytul, children, wariant = 'di
     if (!otwarty && element?.open) element.close()
     return () => {
       if (element?.open) element.close()
-      if (otwarty && poprzedniFokus instanceof HTMLElement) poprzedniFokus.focus()
+      if (otwarty && poprzedniFokus instanceof HTMLElement) poprzedniFokus.focus({ preventScroll: true })
     }
   }, [otwarty])
-  return <dialog ref={panel} className={wariant === 'panel' ? 'ui-panel' : 'ui-dialog'} aria-labelledby={identyfikator} onCancel={(zdarzenie) => { zdarzenie.preventDefault(); zamknij() }}><h2 id={identyfikator}>{tytul}</h2><Przycisk onClick={zamknij} autoFocus>{etykietaZamkniecia}</Przycisk>{children}</dialog>
+  return <dialog ref={panel} className={[(wariant === 'panel' ? 'ui-panel' : 'ui-dialog'), klasa].filter(Boolean).join(' ')}
+    onPointerDown={(zdarzenie) => {
+      nacisnietoTlo.current = zamknijPoKliknieciuTla && zdarzenie.target === zdarzenie.currentTarget
+    }}
+    onClick={(zdarzenie) => {
+      if (!nacisnietoTlo.current || zdarzenie.target !== zdarzenie.currentTarget) return
+      const obszar = zdarzenie.currentTarget.getBoundingClientRect()
+      if (zdarzenie.clientX < obszar.left || zdarzenie.clientX >= obszar.right || zdarzenie.clientY < obszar.top || zdarzenie.clientY >= obszar.bottom) zamknij()
+    }} aria-labelledby={identyfikator} onCancel={(zdarzenie) => { zdarzenie.preventDefault(); zamknij() }}><h2 id={identyfikator}>{tytul}</h2><Przycisk onClick={zamknij} autoFocus>{etykietaZamkniecia}</Przycisk>{children}</dialog>
 }
 
 export function PanelWysuwany(wlasciwosci: WlasciwosciDialogu) {

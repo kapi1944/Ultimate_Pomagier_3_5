@@ -1374,7 +1374,7 @@
       "zadanie": "V4-22",
       "powierzchnie": [
         "OknoDialogowe {...wlasciwosci} wariant=\"panel\" etykietaZamkniecia=\"Zamknij panel\"",
-        "dialog ref={panel} className={wariant === 'panel' ? 'ui-panel' : 'ui-dialog'} aria-labelledby={identyfikator} onCancel={(zdarzenie) => { zdarzenie.preventDefault(); zamknij() }}",
+        "dialog ref={panel} className={[(wariant === 'panel' ? 'ui-panel' : 'ui-dialog'), klasa].filter(Boolean).join(' ')} onPointerDown={(zdarzenie) => { nacisnietoTlo.current = zamknijPoKliknieciuTla && zdarzenie.target === zdarzenie.currentTarget }} onClick={(zdarzenie) => { if (!nacisnietoTlo.current || zdarzenie.target !== zdarzenie.currentTarget) return const obszar = zdarzenie.currentTarget.getBoundingClientRect() if (zdarzenie.clientX < obszar.left || zdarzenie.clientX >= obszar.right || zdarzenie.clientY < obszar.top || zdarzenie.clientY >= obszar.bottom) zamknij() }} aria-labelledby={identyfikator} onCancel={(zdarzenie) => { zdarzenie.preventDefault(); zamknij() }}",
         "div className=\"ui-zakladki\"",
         "div role=\"tablist\" aria-label=\"Zakładki\"",
         "div role=\"tabpanel\" tabIndex={0} id={`${identyfikator}-panel`} aria-labelledby={`${identyfikator}-${pozycje.indexOf(aktywna)}`}"
@@ -1554,8 +1554,16 @@
     "src/moduly/zamkniete/pulpit/RutynyNaOsi.tsx": {
       "zadanie": "V4-04",
       "powierzchnie": [
+        "OdznakaStatusu status={wpisModalu.wykonane ? 'success' : 'info'}",
+        "OknoDialogowe otwarty={Boolean(wpisModalu && rutynaModalu)} zamknij={() => ustawWybranaRutyneId(null)} tytul={rutynaModalu?.tytul ?? 'Szczegóły rutyny'} klasa=\"pulpit-dialog-rutyny\" zamknijPoKliknieciuTla",
+        "Przycisk disabled={!moznaWykonac} onClick={() => wykonaj(wpisModalu, !wpisModalu.wykonane)}",
+        "button type=\"button\" title={wpis.tytul} aria-label={'Szczegóły rutyny: ' + wpis.tytul} aria-haspopup=\"dialog\" onClick={(zdarzenie) => { zdarzenie.currentTarget.focus({ preventScroll: true }) ustawBlad('') ustawWybranaRutyneId(wpis.rutynaId) }}",
+        "details",
         "details className=\"pulpit-poza-osia pulpit-rutyny-poza-osia\"",
-        "details key={blok.id} id={identyfikatorList + blok.id} className=\"pulpit-poza-osia\""
+        "details key={blok.id} id={identyfikatorList + blok.id} className=\"pulpit-poza-osia\"",
+        "div className=\"pulpit-dialog-rutyny__akcje\"",
+        "strong className=\"pulpit-dialog-rutyny__blok\" style={{ borderInlineStartColor: blokModalu.kolor }}",
+        "time dateTime={wpisModalu.okres}"
       ],
       "ukonczoneEtapy": [],
       "wspoldzieloneZ": []
@@ -1564,7 +1572,9 @@
       "zadanie": "V4-04",
       "powierzchnie": [],
       "ukonczoneEtapy": [],
-      "wspoldzieloneZ": ["V4-22"]
+      "wspoldzieloneZ": [
+        "V4-22"
+      ]
     },
     "src/wspolne/import/ImporterDanychSzkoleniaZMaila.tsx": {
       "zadanie": "V4-09",

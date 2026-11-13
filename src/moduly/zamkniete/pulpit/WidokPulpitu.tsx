@@ -524,7 +524,6 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
   const [szerokoscOsi, ustawSzerokoscOsi] = useState(900)
   const liniaOsiRef = useRef<HTMLDivElement>(null)
   const przyciskOsiRef = useRef<HTMLButtonElement>(null)
-  const [wybranaRutynaId, ustawWybranaRutyneId] = useState<string | null>(null)
   const [teraz, ustawTeraz] = useState(() => new Date())
   const [data, ustawDate] = useState(() => dataWarszawska(new Date()))
   const [filtr, ustawFiltr] = useState<FiltrPulpitu>('WSZYSTKIE')
@@ -1019,7 +1018,7 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
           <span className="pulpit-os-czasu__etykieta-pracy" style={{ left: graniceDniaPracy.koniec + '%', transform: graniceDniaPracy.koniec > 85 ? 'translateX(-100%)' : undefined, top: 34 }}>Koniec pracy {zakresDniaPracy.koniec}</span></> : <span className="pulpit-os-czasu__etykieta-pracy" style={{ left: 0, transform: 'none' }}>Dzień wolny</span>}
         </div>
         <div className="pulpit-os-czasu__zadania">{zadaniaNaOsi.map((zadanie) => <MarkerDeadline key={zadanie.id} aktualnyUzytkownikId={zalogowanyUzytkownik?.id} otworz={() => otworzZadanie(zadanie)} zakresDniaPracy={zakresDniaPracy} uzytkownicy={uzytkownicy} zadanie={zadanie} />)}</div>
-        <RutynyNaOsi blokiDnia={blokiDnia} szerokoscOsi={szerokoscOsi} daneRutyn={daneRutyn} data={data} uzytkownikId={wybranyUzytkownikId} zakresDniaPracy={zakresDniaPracy} otworz={(id) => { ustawWybranaRutyneId(id); window.setTimeout(() => document.getElementById('podsumowanie-rutyn')?.scrollIntoView({ block: 'start' }), 0) }} />
+        <RutynyNaOsi blokiDnia={blokiDnia} szerokoscOsi={szerokoscOsi} daneRutyn={daneRutyn} data={data} uzytkownikId={wybranyUzytkownikId} zakresDniaPracy={zakresDniaPracy} />
       </div></div>
       {oknoKuriera && oknoKuriera.koniec > osCzasu.poczatek && oknoKuriera.poczatek < osCzasu.koniec && pokazOpisKuriera && <p className="pulpit-okno-kuriera__podpowiedz">{opisKuriera}</p>}
       {zadaniaPozaOsia.length > 0 && <details className="pulpit-poza-osia"><summary>Zadania poza zakresem osi ({zadaniaPozaOsia.length})</summary><ul>{zadaniaPozaOsia.map((zadanie) => { const godzina = pobierzGodzineMarkeraZadania(zadanie, zakresDniaPracy)!; return <li key={zadanie.id}><Przycisk type="button" onClick={() => otworzZadanie(zadanie)}>{godzina < osCzasu.poczatek ? 'Przed' : 'Po'} zakresem · {godzina} · {zadanie.tytul}</Przycisk></li> })}</ul></details>}
@@ -1061,7 +1060,7 @@ export default function WidokPulpitu({ otworzRekordZrodlowy, otworzDokumenty, ot
       {zadaniaWykonane.length > 0 && <details className="pulpit-wykonane"><summary>Wykonane ({zadaniaWykonane.length})</summary>{zadaniaWykonane.map((zadanie) => <KartaZadania key={zadanie.id} nazwaSzkolenia={pobierzNazweSzkolenia(szkoleniaDostepne, zadanie.powiazaneSzkolenieId)} zadanie={zadanie} teraz={teraz} zakresDniaPracy={zakresDniaPracy} uzytkownicy={uzytkownicy} aktualnyUzytkownikId={zalogowanyUzytkownik?.id} otworz={() => otworzZadanie(zadanie)} />)}</details>}
     </section>}
 
-    <WidokRutyn daneRutyn={daneRutyn} wybranaRutynaId={wybranaRutynaId} zamknijSzczegoly={() => ustawWybranaRutyneId(null)} otworzMonitor={() => { ustawFiltr('PACZKI'); window.setTimeout(() => document.querySelector('.monitor-wysylek')?.scrollIntoView({ block: 'start' }), 0) }} />
+    <WidokRutyn daneRutyn={daneRutyn} otworzMonitor={() => { ustawFiltr('PACZKI'); window.setTimeout(() => document.querySelector('.monitor-wysylek')?.scrollIntoView({ block: 'start' }), 0) }} />
 
     <section aria-label="Podsumowanie" className="pulpit-kafelki">
       {widoczneKafelki.doZrobienia && (

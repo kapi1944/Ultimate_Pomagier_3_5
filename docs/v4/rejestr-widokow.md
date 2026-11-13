@@ -184,7 +184,7 @@ Właściciel pliku obejmuje wszystkie warunki renderowania, stany pusty/błąd/�
 | `src/moduly/zakupy/magazyn/WidokStanowMagazynowych.tsx` | V4-19 | — | — | 1 |
 | `src/moduly/zamkniete/pulpit/DailyRoutines.tsx` | V4-04 | — | — | 5 |
 | `src/moduly/zamkniete/pulpit/DokumentyWysylki.tsx` | V4-04 | — | — | 1 |
-| `src/moduly/zamkniete/pulpit/RutynyNaOsi.tsx` | V4-04 | — | — | 2 |
+| `src/moduly/zamkniete/pulpit/RutynyNaOsi.tsx` | V4-04 | — | — | 10 |
 | `src/moduly/zamkniete/pulpit/PolaOsiCzasu.tsx` | V4-04 | V4-22 | — | 0 |
 | `src/moduly/zamkniete/pulpit/FormularzZakupu.tsx` | V4-04 | — | V4-04 | 2 |
 | `src/moduly/zamkniete/pulpit/MonitorWysylek.tsx` | V4-04 | — | — | 1 |
