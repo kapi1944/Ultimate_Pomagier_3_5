@@ -14,7 +14,7 @@ try {
   const adresDemo = await uruchomSerwer('demonstracyjny')
   const adresProdukcyjny = await uruchomSerwer('development')
   const pliki = process.argv.slice(2)
-  const proces = spawn(process.execPath, ['--test', ...(pliki.length ? pliki : ['testy/importMailaSzczegolow.przegladarka.test.mjs'])], {
+  const proces = spawn(process.execPath, ['--test', ...(pliki.length ? pliki : ['testy/importMailaSzczegolow.przegladarka.test.mjs', 'testy/ochronaSzczegolow.przegladarka.test.mjs'])], {
     stdio: 'inherit',
     env: { ...process.env, POMAGIER_ADRES: adresDemo, POMAGIER_ADRES_PRODUKCYJNY: adresProdukcyjny },
   })

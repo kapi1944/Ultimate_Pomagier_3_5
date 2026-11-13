@@ -24,6 +24,90 @@ function uruchomPrzegladarke() {
   return chromium.launch({ executablePath: sciezkaChrome, channel: sciezkaChrome ? undefined : 'chrome', headless: true })
 }
 
+test('w Strict Mode dwa formularze zachowują ochronę, a zamknięcie Tauri czeka na oba zapisy', { timeout: 60000 }, async () => {
+  const przegladarka = await uruchomPrzegladarke()
+  try {
+    const strona = await przegladarka.newPage()
+    await strona.goto(adres)
+    await strona.evaluate(async () => {
+      const { mockIPC, mockWindows } = await import('/node_modules/@tauri-apps/api/mocks.js')
+      const { zamontujFormularze } = await import('/testy/formularzeStraznika.przegladarka.mjs')
+      const zdarzenieZamkniecia = 'tauri://close-requested'
+      const nasluchy = new Set()
+      const operacje = []
+      mockWindows('main')
+      mockIPC((polecenie, dane) => {
+        if (polecenie === 'plugin:event|listen' && dane.event === zdarzenieZamkniecia) {
+          nasluchy.add(dane.handler)
+          return dane.handler
+        }
+        if (polecenie === 'plugin:event|unlisten' && dane.event === zdarzenieZamkniecia) nasluchy.delete(dane.eventId)
+        if (polecenie === 'plugin:window|destroy') operacje.push('zamknij')
+      })
+      window.isTauri = true
+      const element = document.body.appendChild(document.createElement('aside'))
+      const formularze = zamontujFormularze(element)
+      let zakonczA
+      let czyBladB = true
+      function renderuj(daneA, daneB) {
+        formularze.renderuj({
+          ...(daneA !== null && { A: { dane: daneA, zapisz: (dane) => { operacje.push(dane); return new Promise((rozwiaz) => { zakonczA = () => { renderuj('', daneB); rozwiaz(true) } }) }, odrzuc: () => operacje.push('porzuć A') } }),
+          ...(daneB !== null && { B: { dane: daneB, zapisz: (dane) => { operacje.push(dane); return !czyBladB }, odrzuc: () => operacje.push('porzuć B') } }),
+        })
+      }
+      window.probaStraznika = {
+        operacje, renderuj, odmontuj: formularze.odmontuj,
+        zakonczA: () => zakonczA(),
+        pozwolZapisacB: () => { czyBladB = false },
+        liczbaNasluchow: () => nasluchy.size,
+        wyslijZamkniecie: () => nasluchy.forEach((id) => window.__TAURI_INTERNALS__.runCallback(id, { event: zdarzenieZamkniecia, id })),
+        czyBlokujeOdswiezenie: () => !window.dispatchEvent(new Event('beforeunload', { cancelable: true })),
+      }
+      renderuj('Zmiana A', 'Zmiana B')
+    })
+    await strona.getByRole('button', { name: 'Otwórz demonstrację Architekta', exact: true }).click()
+    await strona.waitForFunction(() => window.probaStraznika.liczbaNasluchow() === 1)
+    await strona.getByText('Zmiana B', { exact: true }).waitFor()
+    assert.equal(await strona.evaluate(() => window.probaStraznika.czyBlokujeOdswiezenie()), true)
+
+    await strona.evaluate(() => window.probaStraznika.renderuj('Najnowsza zmiana A', null))
+    await strona.getByText('Najnowsza zmiana A', { exact: true }).waitFor()
+    assert.equal(await strona.evaluate(() => window.probaStraznika.czyBlokujeOdswiezenie()), true)
+    await strona.evaluate(() => window.probaStraznika.wyslijZamkniecie())
+    const dialog = strona.getByRole('dialog', { name: 'Masz niezapisane zmiany' })
+    await dialog.getByRole('button', { name: 'ANULUJ', exact: true }).click()
+    assert.deepEqual(await strona.evaluate(() => window.probaStraznika.operacje), [])
+    assert.equal(await strona.getByText('Najnowsza zmiana A', { exact: true }).count(), 1)
+
+    await strona.evaluate(() => window.probaStraznika.renderuj('Najnowsza zmiana A', 'Ponowna zmiana B'))
+    await strona.getByText('Ponowna zmiana B', { exact: true }).waitFor()
+    await strona.evaluate(() => window.probaStraznika.wyslijZamkniecie())
+    const zapisz = dialog.getByRole('button', { name: 'ZAPISZ I PRZEJDŹ', exact: true })
+    await zapisz.click()
+    await strona.evaluate(() => {
+      window.probaStraznika.wyslijZamkniecie()
+      window.probaStraznika.wyslijZamkniecie()
+      document.querySelector('button[title="DOKUMENTY / Wszystkie dokumenty"]').click()
+    })
+    await strona.keyboard.press('Escape')
+    assert.equal(await dialog.isVisible(), true)
+    assert.deepEqual(await strona.evaluate(() => window.probaStraznika.operacje), ['Najnowsza zmiana A'])
+    await strona.evaluate(() => window.probaStraznika.zakonczA())
+    await dialog.getByRole('alert').waitFor()
+    assert.equal(await strona.getByText('Ponowna zmiana B', { exact: true }).count(), 1)
+    assert.deepEqual(await strona.evaluate(() => window.probaStraznika.operacje), ['Najnowsza zmiana A', 'Ponowna zmiana B'])
+    await strona.evaluate(() => window.probaStraznika.pozwolZapisacB())
+    await zapisz.click()
+    await dialog.waitFor({ state: 'hidden' })
+    assert.deepEqual(await strona.evaluate(() => window.probaStraznika.operacje), ['Najnowsza zmiana A', 'Ponowna zmiana B', 'Ponowna zmiana B', 'zamknij'])
+    assert.equal(strona.url(), `${adres}/`)
+    await strona.evaluate(() => window.probaStraznika.odmontuj())
+    assert.equal(await strona.evaluate(() => window.probaStraznika.czyBlokujeOdswiezenie()), false)
+  } finally {
+    await przegladarka.close()
+  }
+})
+
 test('nowy formularz izoluje historię, anuluje nawigację, zapisuje szkic i odrzuca tylko bieżące zmiany', { timeout: 90000 }, async () => {
   const przegladarka = await uruchomPrzegladarke()
   try {

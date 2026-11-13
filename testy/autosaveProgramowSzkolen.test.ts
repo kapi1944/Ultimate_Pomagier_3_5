@@ -123,7 +123,6 @@ test('sześć generatorów korzysta ze wspólnego stanu i statusu zapisu', () =>
 
   assert.match(wspolnyHook, /opoznienieAutosave/)
   assert.match(wspolnyHook, /window\.setTimeout/)
-  assert.match(wspolnyHook, /beforeunload/)
   for (const zrodlo of [programy, dyplomy, listy, checklisty, ankiety, karty]) assert.match(zrodlo, /useStanDokumentu/)
   for (const zrodlo of [programy, dyplomy, listy, checklisty, ankiety, karty]) assert.match(zrodlo, /StatusZapisuDokumentu/)
   assert.match(aplikacja, /czyDokumentMaNiezapisaneZmiany/)

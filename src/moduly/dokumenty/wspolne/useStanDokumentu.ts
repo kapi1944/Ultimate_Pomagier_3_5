@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { ustawObslugeNiezapisanegoDokumentu } from './strzeznikNiezapisanegoDokumentu'
 
 export type StanZapisuDokumentu = 'zapisano' | 'zapisywanie' | 'niezapisane' | 'blad'
@@ -38,7 +38,7 @@ export function useStanDokumentu<Dane>({
     ? 'niezapisane'
     : !czyNiezapisaneZmiany && stanZapisu === 'niezapisane' ? 'zapisano' : stanZapisu
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     odciskAktualnyRef.current = odciskAktualny
     daneRef.current = dane
     zapiszAutomatycznieRef.current = zapiszAutomatycznie
@@ -70,7 +70,7 @@ export function useStanDokumentu<Dane>({
         await adapterZapisu(zapisywaneDane)
         ustawOdciskZapisany(odciskZapisywanychDanych)
         ustawStanZapisu(odciskAktualnyRef.current === odciskZapisywanychDanych ? 'zapisano' : 'niezapisane')
-        return true
+        return odciskAktualnyRef.current === odciskZapisywanychDanych
       } catch {
         oznaczBladZapisu()
         return false
@@ -128,14 +128,14 @@ export function useOchronaNiezapisanegoDokumentu(
   const czyTrwaZapisRef = useRef(opcje.czyTrwaZapis ?? (() => false))
   const odrzucZmianyRef = useRef(opcje.odrzucZmiany ?? (() => {}))
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     czyNiezapisaneZmianyRef.current = czyNiezapisaneZmiany
     zapiszPrzedWyjsciemRef.current = zapiszPrzedWyjsciem
     czyTrwaZapisRef.current = opcje.czyTrwaZapis ?? (() => false)
     odrzucZmianyRef.current = opcje.odrzucZmiany ?? (() => {})
   }, [czyNiezapisaneZmiany, zapiszPrzedWyjsciem, opcje.czyTrwaZapis, opcje.odrzucZmiany])
 
-  useEffect(() => ustawObslugeNiezapisanegoDokumentu({
+  useLayoutEffect(() => ustawObslugeNiezapisanegoDokumentu({
     identyfikatorInstancji: opcje.identyfikatorInstancji ?? identyfikatorHooka,
     etykieta: opcje.etykieta,
     czySaNiezapisaneZmiany: () => czyNiezapisaneZmianyRef.current,
@@ -143,18 +143,4 @@ export function useOchronaNiezapisanegoDokumentu(
     czyTrwaZapis: () => czyTrwaZapisRef.current(),
     odrzucZmiany: () => odrzucZmianyRef.current(),
   }), [identyfikatorHooka, opcje.etykieta, opcje.identyfikatorInstancji])
-
-  useEffect(() => {
-    function ostrzezPrzedOdswiezeniem(zdarzenie: BeforeUnloadEvent) {
-      if (!czyNiezapisaneZmiany) {
-        return
-      }
-
-      zdarzenie.preventDefault()
-      zdarzenie.returnValue = ''
-    }
-
-    window.addEventListener('beforeunload', ostrzezPrzedOdswiezeniem)
-    return () => window.removeEventListener('beforeunload', ostrzezPrzedOdswiezeniem)
-  }, [czyNiezapisaneZmiany])
 }

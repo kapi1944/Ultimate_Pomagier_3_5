@@ -9,38 +9,72 @@ export type ObslugaNiezapisanegoDokumentu = {
   odrzucZmiany?: () => void
 }
 
-let aktywnaObsluga: ObslugaNiezapisanegoDokumentu | null = null
+const aktywneObslugi = new Map<symbol, ObslugaNiezapisanegoDokumentu>()
+let czyTrwaZapisPrzedWyjsciem = false
+let oknoZOchrona: Window | null = null
+
+function ostrzezPrzedOdswiezeniem(zdarzenie: BeforeUnloadEvent) {
+  if (!czyDokumentMaNiezapisaneZmiany() && !czyTrwaZapisDokumentu()) return
+  zdarzenie.preventDefault()
+  zdarzenie.returnValue = ''
+}
 
 export function ustawObslugeNiezapisanegoDokumentu(nowaObsluga: ObslugaNiezapisanegoDokumentu) {
-  aktywnaObsluga = nowaObsluga
+  const identyfikatorRejestracji = Symbol(nowaObsluga.identyfikatorInstancji)
+  aktywneObslugi.set(identyfikatorRejestracji, nowaObsluga)
+  if (!oknoZOchrona && typeof window !== 'undefined') {
+    oknoZOchrona = window
+    oknoZOchrona.addEventListener('beforeunload', ostrzezPrzedOdswiezeniem)
+  }
 
   return () => {
-    if (aktywnaObsluga === nowaObsluga) {
-      aktywnaObsluga = null
+    if (aktywneObslugi.delete(identyfikatorRejestracji) && aktywneObslugi.size === 0) {
+      oknoZOchrona?.removeEventListener('beforeunload', ostrzezPrzedOdswiezeniem)
+      oknoZOchrona = null
     }
   }
 }
 
 export function czyDokumentMaNiezapisaneZmiany() {
-  return aktywnaObsluga?.czySaNiezapisaneZmiany() ?? false
+  for (const obsluga of aktywneObslugi.values()) {
+    if (obsluga.czySaNiezapisaneZmiany()) return true
+  }
+  return false
 }
 
-export function pobierzObslugeNiezapisanegoDokumentu() {
-  return aktywnaObsluga
+export function czyTrwaZapisDokumentu() {
+  if (czyTrwaZapisPrzedWyjsciem) return true
+  for (const obsluga of aktywneObslugi.values()) {
+    if (obsluga.czyTrwaZapis?.()) return true
+  }
+  return false
 }
 
 export async function zapiszDokumentPrzedWyjsciem() {
-  if (!aktywnaObsluga || !aktywnaObsluga.czySaNiezapisaneZmiany()) return true
-  if (aktywnaObsluga.czyTrwaZapis?.()) return false
-
+  if (czyTrwaZapisDokumentu()) return false
+  czyTrwaZapisPrzedWyjsciem = true
   try {
-    const wynik = await aktywnaObsluga.zapiszPrzedWyjsciem()
-    return wynik !== false
+    const zapisane = new Set<symbol>()
+    for (const identyfikator of [...aktywneObslugi.keys()]) {
+      const obsluga = aktywneObslugi.get(identyfikator)
+      if (!obsluga?.czySaNiezapisaneZmiany()) continue
+      if (obsluga.czyTrwaZapis?.() || await obsluga.zapiszPrzedWyjsciem() === false) return false
+      zapisane.add(identyfikator)
+    }
+    // Nowa lub wcześniej czysta rejestracja mogła zmienić się podczas oczekiwania na zapis.
+    for (const [identyfikator, obsluga] of aktywneObslugi) {
+      if (!zapisane.has(identyfikator) && (obsluga.czySaNiezapisaneZmiany() || obsluga.czyTrwaZapis?.())) return false
+    }
+    return true
   } catch {
     return false
+  } finally {
+    czyTrwaZapisPrzedWyjsciem = false
   }
 }
 
 export function odrzucZmianyDokumentu() {
-  aktywnaObsluga?.odrzucZmiany?.()
+  for (const [identyfikator, obsluga] of [...aktywneObslugi]) {
+    if (aktywneObslugi.has(identyfikator) && obsluga.czySaNiezapisaneZmiany()) obsluga.odrzucZmiany?.()
+  }
 }

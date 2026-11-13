@@ -35,7 +35,7 @@ import {
   wyczyscAktywnaKopieProgramu,
   ustawAktywnaKopieProgramu,
 } from '../../moduly/dokumenty/generatory/programy_szkolen/magazynKopiiRoboczychProgramu'
-import { czyDokumentMaNiezapisaneZmiany, odrzucZmianyDokumentu, pobierzObslugeNiezapisanegoDokumentu, zapiszDokumentPrzedWyjsciem } from '../../moduly/dokumenty/wspolne/strzeznikNiezapisanegoDokumentu'
+import { czyDokumentMaNiezapisaneZmiany, czyTrwaZapisDokumentu, odrzucZmianyDokumentu, zapiszDokumentPrzedWyjsciem } from '../../moduly/dokumenty/wspolne/strzeznikNiezapisanegoDokumentu'
 import WidokReplikatoraDokumentow from '../../moduly/dokumenty/replikator_dokumentow/WidokReplikatoraDokumentow'
 import WidokSzkolenOtwartych from '../../moduly/otwarte/WidokSzkolenOtwartych'
 import WidokPulpitu from '../../moduly/zamkniete/pulpit/WidokPulpitu'
@@ -408,13 +408,21 @@ export default function UkladAplikacji() {
   const [stanMenu, ustawStanMenu] = useState({ czyPrzypiete: false, czyOtwarte: false })
   const [wersjaProgramu, ustawWersjeProgramu] = useState(0)
   const [wersjaFormularzaSzczegolow, ustawWersjeFormularzaSzczegolow] = useState(pobierzPoczatkowaWersjeFormularzaSzczegolow)
-  const [nawigacjaPoDecyzji, ustawNawigacjePoDecyzji] = useState<(() => void | Promise<void>) | null>(null)
-  const [czyZapisywaniePrzedNawigacja, ustawCzyZapisywaniePrzedNawigacja] = useState(false)
+  const [czyOczekujeNaDecyzje, ustawCzyOczekujeNaDecyzje] = useState(false)
+  const [czyWykonywanieDecyzji, ustawCzyWykonywanieDecyzji] = useState(false)
   const [bladZapisuPrzedNawigacja, ustawBladZapisuPrzedNawigacja] = useState('')
+  const oczekujacaNawigacja = useRef<(() => void | Promise<void>) | null>(null)
+  const czyTrwaDecyzja = useRef(false)
   const ostatniaSciezkaWidoku = useRef(window.location.pathname)
   const ostatniStanHistorii = useRef(window.history.state)
   const pominNastepneZdarzeniePopstate = useRef(false)
-  const czyZamkniecieJednorazowoZatwierdzone = useRef(false)
+
+  const poprosODecyzjePrzedNawigacja = useCallback((nawiguj: () => void | Promise<void>) => {
+    if (oczekujacaNawigacja.current || czyTrwaDecyzja.current) return
+    oczekujacaNawigacja.current = nawiguj
+    ustawBladZapisuPrzedNawigacja('')
+    ustawCzyOczekujeNaDecyzje(true)
+  }, [])
 
   useEffect(() => {
     function zastosujZapisaneUstawienia() {
@@ -468,6 +476,7 @@ export default function UkladAplikacji() {
   }
 
   function ustawWidok(widok: WidokNawigacji, opcje: OpcjeZmianyWidoku = {}) {
+    if (oczekujacaNawigacja.current || czyTrwaDecyzja.current) return
     const czyToNowyProgram = widok === 'programy_szkolen' && !opcje.zachowajKopieProgramu
     const czyToNoweSzczegoly = widok === 'zamkniete_szczegoly_organizacyjne_nowe' && !opcje.zachowajKopieSzczegolow
     const obecnyProfilId = uzytkownikIdProfilu ?? zalogowanyUzytkownik?.id ?? null
@@ -475,50 +484,49 @@ export default function UkladAplikacji() {
     const czyZmianaProfilu = widok === 'profil_uzytkownika' && obecnyProfilId !== docelowyProfilId
     const czyZmianaWymagaPotwierdzenia = widok !== aktywnyWidok || czyToNowyProgram || czyToNoweSzczegoly || czyZmianaProfilu
 
-    if (!opcje.pomijajOstrzezenie && czyZmianaWymagaPotwierdzenia && czyDokumentMaNiezapisaneZmiany()) {
-      ustawBladZapisuPrzedNawigacja('')
-      ustawNawigacjePoDecyzji(() => () => wykonajZmianeWidoku(widok, opcje))
+    if (!opcje.pomijajOstrzezenie && czyZmianaWymagaPotwierdzenia && (czyDokumentMaNiezapisaneZmiany() || czyTrwaZapisDokumentu())) {
+      poprosODecyzjePrzedNawigacja(() => wykonajZmianeWidoku(widok, opcje))
       return
     }
 
     wykonajZmianeWidoku(widok, opcje)
   }
 
-  async function zapiszIPrzejdz() {
-    const nawiguj = nawigacjaPoDecyzji
-    if (!nawiguj || czyZapisywaniePrzedNawigacja) return
-    ustawCzyZapisywaniePrzedNawigacja(true)
-    ustawBladZapisuPrzedNawigacja('')
-    const zapisano = await zapiszDokumentPrzedWyjsciem()
-    ustawCzyZapisywaniePrzedNawigacja(false)
-    if (!zapisano) {
-      ustawBladZapisuPrzedNawigacja('Nie udało się zapisać wersji roboczej. Dane pozostały w formularzu; ponów zapis albo anuluj przejście.')
+  async function wykonajDecyzjePrzedNawigacja(decyzja: 'zapisz' | 'porzuc') {
+    const nawiguj = oczekujacaNawigacja.current
+    if (!nawiguj || czyTrwaDecyzja.current) return
+    if (czyTrwaZapisDokumentu()) {
+      ustawBladZapisuPrzedNawigacja('Trwa zapis. Poczekaj na jego zakończenie i ponów próbę.')
       return
     }
-    try {
-      await nawiguj()
-      ustawNawigacjePoDecyzji(null)
-    } catch {
-      ustawBladZapisuPrzedNawigacja('Zmiany zapisano, ale nie udało się zamknąć okna. Możesz ponowić próbę albo anulować.')
-    }
-  }
-
-  async function porzucIZmienWidok() {
-    if (czyZapisywaniePrzedNawigacja) return
-    const nawiguj = nawigacjaPoDecyzji
-    odrzucZmianyDokumentu()
+    czyTrwaDecyzja.current = true
+    ustawCzyWykonywanieDecyzji(true)
     ustawBladZapisuPrzedNawigacja('')
     try {
-      await nawiguj?.()
-      ustawNawigacjePoDecyzji(null)
+      if (decyzja === 'zapisz') {
+        const zapisano = await zapiszDokumentPrzedWyjsciem()
+        if (!zapisano) {
+          ustawBladZapisuPrzedNawigacja('Nie udało się zapisać wersji roboczej. Dane pozostały w formularzu; ponów zapis albo anuluj przejście.')
+          return
+        }
+      } else {
+        odrzucZmianyDokumentu()
+      }
+      await nawiguj()
+      oczekujacaNawigacja.current = null
+      ustawCzyOczekujeNaDecyzje(false)
     } catch {
-      ustawBladZapisuPrzedNawigacja('Bieżące zmiany odrzucono, ale nie udało się zamknąć okna. Możesz ponowić próbę albo anulować.')
+      ustawBladZapisuPrzedNawigacja('Nie udało się zakończyć przejścia. Możesz ponowić próbę albo anulować.')
+    } finally {
+      czyTrwaDecyzja.current = false
+      ustawCzyWykonywanieDecyzji(false)
     }
   }
 
   function anulujZmianeWidoku() {
-    if (czyZapisywaniePrzedNawigacja) return
-    ustawNawigacjePoDecyzji(null)
+    if (czyTrwaDecyzja.current) return
+    oczekujacaNawigacja.current = null
+    ustawCzyOczekujeNaDecyzje(false)
     ustawBladZapisuPrzedNawigacja('')
   }
 
@@ -529,12 +537,13 @@ export default function UkladAplikacji() {
   const zglosStanMenu = useCallback((stan: { czyPrzypiete: boolean; czyOtwarte: boolean }) => { ustawStanMenu((poprzedni) => poprzedni.czyPrzypiete === stan.czyPrzypiete && poprzedni.czyOtwarte === stan.czyOtwarte ? poprzedni : stan) }, [])
   function otworzProfil(uzytkownikId?: string) { ustawWidok('profil_uzytkownika', { uzytkownikId }) }
   function obsluzWylogowanie() {
-    if (czyDokumentMaNiezapisaneZmiany()) {
-      ustawBladZapisuPrzedNawigacja('')
-      ustawNawigacjePoDecyzji(() => () => wyloguj())
+    if (oczekujacaNawigacja.current || czyTrwaDecyzja.current) return
+    if (czyDokumentMaNiezapisaneZmiany() || czyTrwaZapisDokumentu()) {
+      poprosODecyzjePrzedNawigacja(() => wyloguj())
       return
     }
-    wyloguj()
+    czyTrwaDecyzja.current = true
+    void Promise.resolve().then(wyloguj).finally(() => { czyTrwaDecyzja.current = false })
   }
 
   function wykonajOtwarcieDokumentu(dokument: Dokument<unknown, unknown>) {
@@ -620,9 +629,9 @@ export default function UkladAplikacji() {
   }
 
   function otworzDokument(dokument: Dokument<unknown, unknown>) {
-    if (czyDokumentMaNiezapisaneZmiany()) {
-      ustawBladZapisuPrzedNawigacja('')
-      ustawNawigacjePoDecyzji(() => () => wykonajOtwarcieDokumentu(dokument))
+    if (oczekujacaNawigacja.current || czyTrwaDecyzja.current) return
+    if (czyDokumentMaNiezapisaneZmiany() || czyTrwaZapisDokumentu()) {
+      poprosODecyzjePrzedNawigacja(() => wykonajOtwarcieDokumentu(dokument))
       return
     }
     wykonajOtwarcieDokumentu(dokument)
@@ -667,7 +676,7 @@ export default function UkladAplikacji() {
       return nowyStanTrasy
     }
 
-    function obsluzPowrotPrzegladarki() {
+    function obsluzPowrotPrzegladarki(zdarzenie: PopStateEvent) {
       if (pominNastepneZdarzeniePopstate.current) {
         pominNastepneZdarzeniePopstate.current = false
         return
@@ -686,7 +695,8 @@ export default function UkladAplikacji() {
       const czyZmianaInstancjiSzczegolow = poprawnyWidok === 'zamkniete_szczegoly_organizacyjne_nowe'
         && (typeof stanHistorii.szczegolyInstancjiId !== 'string' || stanHistorii.szczegolyInstancjiId !== pobierzIdInstancjiSzczegolow())
       const czyZmianaTrasy = poprawnyWidok !== aktywnyWidok || sciezkaDocelowa !== ostatniaSciezkaWidoku.current || czyZmianaInstancjiSzczegolow
-      if (czyZmianaTrasy && czyDokumentMaNiezapisaneZmiany()) {
+      if (czyZmianaTrasy && (oczekujacaNawigacja.current || czyTrwaDecyzja.current || czyDokumentMaNiezapisaneZmiany() || czyTrwaZapisDokumentu())) {
+        zdarzenie.stopImmediatePropagation()
         const sciezkaBiezacegoWidoku = ostatniaSciezkaWidoku.current
         const stanBiezacegoWidoku: Record<string, unknown> = {
           ...(ostatniStanHistorii.current && typeof ostatniStanHistorii.current === 'object' ? ostatniStanHistorii.current : {}),
@@ -700,18 +710,15 @@ export default function UkladAplikacji() {
         }
         ostatniStanHistorii.current = stanBiezacegoWidoku
         window.history.pushState(stanBiezacegoWidoku, '', sciezkaBiezacegoWidoku)
-        if (czyDokumentMaNiezapisaneZmiany()) {
-          ustawBladZapisuPrzedNawigacja('')
-          ustawNawigacjePoDecyzji(() => () => {
-            window.history.pushState(stanHistorii, '', sciezkaDocelowa)
-            const zastosowanyStan = zastosujStanTrasySzczegolow(stanHistorii, sciezkaDocelowa)
-            ostatniStanHistorii.current = zastosowanyStan
-            ostatniaSciezkaWidoku.current = sciezkaDocelowa
-            if (poprawnyWidok === 'zamkniete_szczegoly_organizacyjne_nowe') ustawWersjeFormularzaSzczegolow((obecna) => obecna + 1)
-            if (poprawnyWidok === 'profil_uzytkownika') ustawUzytkownikIdProfilu(pobierzIdProfiluZeSciezki())
-            ustawAktywnyWidok(poprawnyWidok)
-          })
-        }
+        poprosODecyzjePrzedNawigacja(() => {
+          window.history.pushState(stanHistorii, '', sciezkaDocelowa)
+          const zastosowanyStan = zastosujStanTrasySzczegolow(stanHistorii, sciezkaDocelowa)
+          ostatniStanHistorii.current = zastosowanyStan
+          ostatniaSciezkaWidoku.current = sciezkaDocelowa
+          if (poprawnyWidok === 'zamkniete_szczegoly_organizacyjne_nowe') ustawWersjeFormularzaSzczegolow((obecna) => obecna + 1)
+          if (poprawnyWidok === 'profil_uzytkownika') ustawUzytkownikIdProfilu(pobierzIdProfiluZeSciezki())
+          ustawAktywnyWidok(poprawnyWidok)
+        })
         return
       }
 
@@ -723,50 +730,56 @@ export default function UkladAplikacji() {
       ustawAktywnyWidok(poprawnyWidok)
     }
 
-    window.addEventListener('popstate', obsluzPowrotPrzegladarki)
+    window.addEventListener('popstate', obsluzPowrotPrzegladarki, true)
 
-    return () => window.removeEventListener('popstate', obsluzPowrotPrzegladarki)
-  }, [aktywnyWidok])
+    return () => window.removeEventListener('popstate', obsluzPowrotPrzegladarki, true)
+  }, [aktywnyWidok, poprosODecyzjePrzedNawigacja])
 
   useEffect(() => {
     if (!isTauri()) return
 
+    const okno = getCurrentWindow()
     let czyEfektAktywny = true
+    let czyZamykanieOkna = false
     let odlaczObsluge: (() => void) | null = null
-    void getCurrentWindow().onCloseRequested((zdarzenie) => {
-      if (czyZamkniecieJednorazowoZatwierdzone.current) {
-        czyZamkniecieJednorazowoZatwierdzone.current = false
-        return
+    async function zamknijOkno() {
+      czyZamykanieOkna = true
+      try {
+        await okno.destroy()
+      } catch (blad) {
+        czyZamykanieOkna = false
+        throw blad
       }
-      if (!czyDokumentMaNiezapisaneZmiany()) return
-
-      zdarzenie.preventDefault()
-      ustawBladZapisuPrzedNawigacja('')
-      ustawNawigacjePoDecyzji(() => async () => {
-        czyZamkniecieJednorazowoZatwierdzone.current = true
-        try {
-          await getCurrentWindow().close()
-        } catch (blad) {
-          czyZamkniecieJednorazowoZatwierdzone.current = false
-          throw blad
-        }
+    }
+    function odlaczBezpiecznie(odlacz: () => void) {
+      void Promise.resolve().then(odlacz).catch((blad: unknown) => {
+        console.error('Nie udało się odłączyć ochrony przy zamknięciu okna.', blad)
       })
+    }
+    void okno.onCloseRequested((zdarzenie) => {
+      zdarzenie.preventDefault()
+      if (!czyEfektAktywny || czyZamykanieOkna || oczekujacaNawigacja.current || czyTrwaDecyzja.current) return
+      if (czyDokumentMaNiezapisaneZmiany() || czyTrwaZapisDokumentu()) {
+        poprosODecyzjePrzedNawigacja(zamknijOkno)
+      } else {
+        void zamknijOkno().catch((blad: unknown) => {
+          console.error('Nie udało się zamknąć okna.', blad)
+        })
+      }
     }).then((odlacz) => {
       if (czyEfektAktywny) odlaczObsluge = odlacz
-      else odlacz()
+      else odlaczBezpiecznie(odlacz)
     }).catch((blad: unknown) => {
       console.error('Nie udało się podłączyć ochrony zmian przy zamknięciu okna.', blad)
     })
 
     return () => {
       czyEfektAktywny = false
-      odlaczObsluge?.()
+      if (odlaczObsluge) odlaczBezpiecznie(odlaczObsluge)
     }
-  }, [])
+  }, [poprosODecyzjePrzedNawigacja])
 
   const nazwaGeneratora = konfiguracjePodmenuGeneratorow.find((konfiguracja) => konfiguracja.pozycje[0]?.widok === aktywnyWidok)?.etykieta
-  const czyTrwaZapisStraznika = pobierzObslugeNiezapisanegoDokumentu()?.czyTrwaZapis?.() ?? false
-  const czyZablokowacDecyzje = czyZapisywaniePrzedNawigacja || czyTrwaZapisStraznika
   const widok = <WidokAplikacji widok={aktywnyWidok} zmienZakladkeKartotek={zmienZakladkeKartotek} ustawAktywnyWidok={ustawWidok} wersjaProgramu={wersjaProgramu} wersjaFormularzaSzczegolow={wersjaFormularzaSzczegolow} otworzDokument={otworzDokument} uzytkownikIdProfilu={uzytkownikIdProfilu} wybierzProfil={otworzProfil} otworzRekordPulpitu={() => ustawWidok('zamkniete_szczegoly_organizacyjne_lista')} otworzDokumentyPulpitu={() => ustawWidok('dokumenty_wszystkie')} otworzPaczkePulpitu={() => ustawWidok('checklisty_paczek')} />
   return (
     <div ref={powloka} className={`uklad-aplikacji${stanMenu.czyPrzypiete && stanMenu.czyOtwarte ? ' uklad-aplikacji--menu-przypiete' : ''}`}>
@@ -779,14 +792,14 @@ export default function UkladAplikacji() {
         {czyDockWidoczny && <DockAplikacji skroty={preferencjePowloki.skroty} aktywnyWidok={aktywnyWidok} ustawWidok={ustawWidok} edytuj={() => ustawCzyEdytujeDock(true)} ukryj={() => zmienPreferencjePowloki({ widocznyDock: false })} />}
       </div>
       <OknoDialogowe otwarty={czyEdytujeDock} zamknij={() => ustawCzyEdytujeDock(false)} tytul="Skróty docka"><p>Wybierz widoki dostępne na dolnym pasku.</p><div className="dock-aplikacji__wybor">{pobierzDostepneSkroty().map(({ widok, opis }) => <label key={widok}><input type="checkbox" checked={preferencjePowloki.skroty.includes(widok)} onChange={(zdarzenie) => zmienPreferencjePowloki({ skroty: zdarzenie.target.checked ? [...preferencjePowloki.skroty, widok] : preferencjePowloki.skroty.filter((skrot) => skrot !== widok) })} />{opis}</label>)}</div>{bladPreferencji && <Komunikat status="error">{bladPreferencji}</Komunikat>}</OknoDialogowe>
-      {nawigacjaPoDecyzji && (
+      {czyOczekujeNaDecyzje && (
         <OknoDialogowe otwarty zamknij={anulujZmianeWidoku} tytul="Masz niezapisane zmiany" etykietaZamkniecia="ANULUJ" klasa="uklad-aplikacji__dialog-zmian" opisId="uklad-aplikacji__opis-zmian">
           <p id="uklad-aplikacji__opis-zmian">Wprowadzone zmiany nie zostały zapisane. Co chcesz zrobić?</p>
-          {czyZablokowacDecyzje && <p role="status">Trwa zapis…</p>}
+          {czyWykonywanieDecyzji && <p role="status">Trwa przygotowanie do przejścia…</p>}
           {bladZapisuPrzedNawigacja && <Komunikat status="error">{bladZapisuPrzedNawigacja}</Komunikat>}
           <div className="uklad-aplikacji__decyzje-zmian">
-            <Przycisk disabled={czyZablokowacDecyzje} onClick={() => void zapiszIPrzejdz()}>ZAPISZ I PRZEJDŹ</Przycisk>
-            <button className="uklad-aplikacji__porzuc-zmiany" disabled={czyZablokowacDecyzje} type="button" onClick={porzucIZmienWidok}>PORZUĆ ZMIANY</button>
+            <Przycisk disabled={czyWykonywanieDecyzji} onClick={() => void wykonajDecyzjePrzedNawigacja('zapisz')}>ZAPISZ I PRZEJDŹ</Przycisk>
+            <button className="uklad-aplikacji__porzuc-zmiany" disabled={czyWykonywanieDecyzji} type="button" onClick={() => void wykonajDecyzjePrzedNawigacja('porzuc')}>PORZUĆ ZMIANY</button>
           </div>
         </OknoDialogowe>
       )}

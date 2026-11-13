@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useState, type ChangeEvent } from 'react'
+import { useCallback, useState, type ChangeEvent } from 'react'
 import type { Uzytkownik } from '../../../kartoteki/uzytkownicy/typyUzytkownikow'
 import { czyMozeEdytowacMapeMagazynu } from '../../../kartoteki/uzytkownicy/uprawnienia'
 import type { LokalizacjaMapy, ProstokatMapy, StanZakupow } from '../modele/zakupy'
 import { pobierzLokalizacjeMagazynowe, zapiszLokalizacjeMagazynowe } from '../uslugi/magazynLokalizacji'
 import { pobierzSciezkeLokalizacji, typyLokalizacji, znajdzMiejscaProduktu } from '../logika/mapaMagazynu'
-import { ustawObslugeNiezapisanegoDokumentu } from '../../dokumenty/wspolne/strzeznikNiezapisanegoDokumentu'
+import { useOchronaNiezapisanegoDokumentu } from '../../dokumenty/wspolne/useStanDokumentu'
 import PlanMagazynu from './PlanMagazynu'
 import EdytorLokalizacji from './EdytorLokalizacji'
 import './mapaMagazynu.css'
@@ -41,12 +41,7 @@ export default function WidokMapyMagazynu({ dane, uzytkownik }: { dane: StanZaku
     return true
   }, [lokalizacje, konfiguracja.zapisBazowy, uzytkownik, czyWczytywanie])
 
-  useEffect(() => ustawObslugeNiezapisanegoDokumentu({ czySaNiezapisaneZmiany: () => czyNiezapisane || czyWczytywanie, zapiszPrzedWyjsciem: zapisz }), [czyNiezapisane, czyWczytywanie, zapisz])
-  useEffect(() => {
-    function ostrzez(zdarzenie: BeforeUnloadEvent) { if (czyNiezapisane || czyWczytywanie) zdarzenie.preventDefault() }
-    window.addEventListener('beforeunload', ostrzez)
-    return () => window.removeEventListener('beforeunload', ostrzez)
-  }, [czyNiezapisane, czyWczytywanie])
+  useOchronaNiezapisanegoDokumentu(czyNiezapisane || czyWczytywanie, zapisz)
 
   function zmien(lokalizacja: LokalizacjaMapy) {
     if (!czyEdycja || !czyMozeEdytowac) return

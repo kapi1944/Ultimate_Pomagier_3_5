@@ -36,7 +36,7 @@ export function DostawcaUzytkownika({ children }: { children: ReactNode }) {
   }, [])
   const wyloguj = useCallback(() => {
     if (czyTrybDemonstracyjny) { zakonczSesje(); ustawZalogowanegoUzytkownika(null); return }
-    void zakonczPotwierdzonaSesje().then(() => ustawZalogowanegoUzytkownika(null)).catch(() => window.alert('Nie udało się unieważnić sesji. Spróbuj wylogować się ponownie.'))
+    return zakonczPotwierdzonaSesje().then(() => ustawZalogowanegoUzytkownika(null)).catch(() => window.alert('Nie udało się unieważnić sesji. Spróbuj wylogować się ponownie.'))
   }, [])
   const wartosc = { zalogowanyUzytkownik, inicjalizacja, aktywniUzytkownicy: pobierzAktywnychUzytkownikowWedlugRoli(), zaloguj, wyloguj, odswiezUzytkownika }
   return <KontekstUzytkownika.Provider value={wartosc}>{children}</KontekstUzytkownika.Provider>

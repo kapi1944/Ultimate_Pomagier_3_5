@@ -6,7 +6,7 @@ export type WartoscKontekstuUzytkownika = {
   inicjalizacja: { aktywna: boolean; etap: string }
   aktywniUzytkownicy: Uzytkownik[]
   zaloguj: (uzytkownikId: string) => boolean
-  wyloguj: () => void
+  wyloguj: () => void | Promise<void>
   odswiezUzytkownika: (pokazEkranInicjalizacji?: boolean) => Promise<void>
 }
 
